@@ -1,0 +1,29 @@
+# ===== 敏感文件（含你的 API Key，绝不能上传！）=====
+user_config.json
+download_tasks.json
+
+# ===== 构建产物 =====
+build/
+dist/
+__pycache__/
+*.spec
+
+# ===== 打包缓存 / 临时文件 =====
+*.pyc
+*.log
+*.tmp
+
+# ===== 开发/截图/测试辅助（不需要进开源库）=====
+screens/
+shots/
+*_diag.py
+hwnd_diag.py
+theme_diag.py
+diag_patch.py
+fix_*.py
+make_screenshots.py
+proto_webview.py
+*_test.py
+test_*.py
+*.txt
+*.json
