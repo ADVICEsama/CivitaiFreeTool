@@ -1,69 +1,99 @@
+<div align="center">
+
 # CivitaiFreeTool
 
-免费、全功能的 Civitai 模型下载 / 管理 / 反向解析工具（独立实现，**无任何付费墙**）。
+**Civitai / HuggingFace 模型下载、管理、反向解析工具（免费 · 全功能 · 无付费墙）**
 
-## 运行方式
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11-0078d4.svg)](https://github.com/ADVICEsama/CivitaiFreeTool)
+[![Version](https://img.shields.io/badge/Version-1.4.1-orange.svg)](https://github.com/ADVICEsama/CivitaiFreeTool/releases)
 
-- **免安装版**：双击 `CivitaiFreeTool.exe`（单文件，无需 Python）
-- **源码版**：`python main.py`（需要 Python 3.10+；缩略图功能需 `pip install pillow`）
+因为受够了"又丑又收费"的模型下载器，所以自己写了一个：**免费、好看、全功能**。
 
-## 功能
+</div>
 
-### 1. 批量下载
-粘贴 Civitai 链接（每行一个）即可批量入队，支持三种格式：
-- `https://civitai.com/models/12345`
-- `https://civitai.com/models/12345?modelVersionId=678`
-- `https://civitai.com/api/download/models/678`
+---
 
-### 2. 下载管理
-- 并发下载（可调 1-20）、断点续传、暂停/重试/移除、任务持久化
-- 下载完成后自动 SHA256 校验（防损坏/被篡改）
-- **下载完成后弹窗询问移动位置**：选择目标文件夹，模型文件连同 json/预览图/封面等附属文件一起移动（可在设置页关闭此询问）
+## ✨ 功能一览
 
-### 3. 模型管理
-- **扫描模型**：递归扫描模型目录，可按子文件夹设置显示/隐藏（工具栏"文件夹显示"，例如只显示 `Lora`、`Stable-diffusion`，隐藏 VAE/embeddings 等用不上的）
-- **封面缩略图**：列表第一列异步加载模型封面（本地 cover/preview 图）
-- **双名称显示**：文件名 + C站模型名 两列（无元数据的模型可先"校验哈希/反向解析"补全）
-- **重命名C站名**：一键把模型重命名为 C 站文件名（仅同目录改名，json/预览图等附属文件同步改名，不移动目录）
-- **校验哈希**：多线程 SHA256 与 C 站对比（一致/未收录/失败）
-- **检查更新**：对比本地版本与 C 站最新版本
-- **整理模型**：按 C 站文件名改名 + 按 类型/基础模型 分类移动（如需按类型归档）
-- **一键清理**：删除 info/封面/示例图/HTML 附属文件（模型本体保留）
-- **生成 HTML 图例**：封面网格 + 名称 + 类型 + 触发词 + 链接
+### 📥 批量下载
+- 支持 **Civitai**（civitai.red / civitai.com）与 **HuggingFace**（仓库或文件直链）
+- 剪贴板多行链接**自动拆行批量入队**，回车新建一条
+- HF 仓库自动列出全部文件，勾选下载、**保留原始目录结构**
 
-### 4. 反向解析
-对本地"来路不明"的模型文件：SHA256 → Civitai 官方 `by-hash` 接口 → 自动生成 `civitai.info`（模型名/类型/触发词/标签/作者/统计等，可翻译描述）。
+### ⬇️ 下载管理
+- 断点续传 · 并发下载 · 速度实时显示 · 失败自动重试
+- 任务进度持久保存，**关掉软件再开不丢**
+- 下载完成自动 **SHA256 校验**
 
-### 5. metadata.json（SD 兼容）
-下载完成时自动生成模型元数据，格式可在设置页选择：
-- **sd**（默认）：扁平结构 `<模型名>.json` —— `name/model_id/version/base_model/trained_words/tags/description/author/url/file_name/preview/hashes` 等，SD 生态扩展易读
-- **civitai**：C 站原结构 `<模型名>.civitai.info`（civitai 助手扩展兼容）
-- **both**：两者都生成
+### 🧩 模型管理
+- 扫描模型目录，按子文件夹设置显示/隐藏
+- 封面缩略图 + 文件名 / C 站名双列对照
+- 一键**重命名为 C 站名称**（预览图/json/info 同步改名）
+- SHA256 校验 · 检查更新 · 分类整理规则 · 一键清理 · HTML 图例
 
-### 6. 界面
-- **Mica / 亚克力窗口风格**（Win11，设置页可选：mica=云母 / acrylic=亚克力 / none=经典；Win10 自动忽略）
+### 🖼️ 瀑布流视图
+- 封面大图卡片式浏览，点击勾选、右键直达操作
+- 全局 **Ctrl+滚轮缩放**，大屏小屏都舒服
 
-### 7. 设置
-API Key、下载目录、模型目录、并发数、哈希线程数、超时、代理、翻译开关、窗口风格、metadata 格式、下载后移动询问。
+### 🔍 反向解析
+- 本地模型 SHA256 → C 站反查，**模型名 / 触发词 / 封面 / 简介全部补回**
+- 生成 civitai.info / SD 兼容 json（可在设置页选格式）
+- 内置**百度翻译**，简介一键汉化
 
-## 数据与合规
+### 🎨 界面
+- 深色 / 浅色 / 现代浅色**三套主题**
+- HarmonyOS Sans 字体 · 自定义滚动条 · Mica 窗口效果（Win11）
+- 首次使用**三步引导**：选主题 → 设目录 → 填 API Key（含注册教程）
 
-- 数据来自 [Civitai 官方公开 API](https://docs.civitai.com/)，请遵守其服务条款
-- 模型版权归各作者所有，请遵守模型页面的许可协议
+---
+
+## 🚀 运行方式
+
+**免安装版（推荐）**：下载 `CivitaiFreeToolWeb.exe`（单文件，无需安装 Python）→ 双击运行
+
+**源码版**：
+```bash
+# 需要 Python 3.10+
+pip install pywebview pillow requests
+python main_web.py      # Web 界面版
+python main.py          # Tk 界面版（备选）
+```
+
+> ⚠️ **首次运行会自动弹出三步引导**：选择主题 → 设置下载目录（默认软件根目录 `downloads/models`）→ 填写 Civitai API Key（不填也能用，部分功能受限；获取方式见设置页"百度翻译申请指南"旁的内置引导）。
+
+---
+
+## 📸 截图
+
+| 模型管理（列表） | 瀑布流视图 | 批量下载 |
+|:---:|:---:|:---:|
+| ![模型管理](screenshots/models.png) | ![瀑布流](screenshots/masonry.png) | ![批量下载](screenshots/download.png) |
+
+---
+
+## ⚙️ 配置
+
+- 配置保存在程序同目录的 `user_config.json`（**请勿分享该文件，内含你的 API Key**）
+- API Key 获取：登录 [civitai.com](https://civitai.com) → 账号设置 → API Keys
+- 百度翻译（可选，用于简介汉化）：[百度翻译开放平台](https://fanyi-api.baidu.com/product/11) 免费申请
+
+---
+
+## 📦 Release 下载
+
+前往 **[Releases](https://github.com/ADVICEsama/CivitaiFreeTool/releases)** 下载最新的免安装 exe。
+
+---
+
+## 📄 License
+
+本项目采用 **MIT License**。字体资源 HarmonyOS Sans SC 版权归华为所有，仅供免费使用。
+
+---
+
+## ⚠️ 免责声明
+
+- 数据来自 Civitai / HuggingFace 官方公开 API，请遵守其服务条款
+- 模型版权归原作者所有，请遵守各模型页面的许可协议
 - 本工具为独立编写的免费软件，与任何商业软件无关
-
-## 目录结构
-
-```
-CivitaiFreeTool/
-├── CivitaiFreeTool.exe  # 打包好的单文件程序
-├── main.py / gui.py     # 入口与界面
-├── config.py            # 配置读写
-├── civitai_api.py       # Civitai API 封装
-├── downloader.py        # 并发下载器
-├── model_manager.py     # 扫描/哈希/改名/整理/清理/HTML
-├── reverse_parse.py     # 按哈希反查 + info/metadata 生成
-├── theme.py             # Mica/亚克力窗口效果
-├── translator.py        # 可选在线翻译
-└── user_config.json     # 本地配置（含你的 API Key）
-```
