@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>CivitaiFreeTool</title>
+<link rel="icon" type="image/x-icon" href="favicon.ico"/>
+<link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+<!-- WebGL shader 背景 -->
+<canvas id="bg"></canvas>
+
+<!-- 顶部胶囊导航 -->
+<nav class="nav-wrap">
+  <div class="nav">
+    <div class="nav-logo"><img src="logo.png" alt=""/></div>
+    <div class="nav-tabs" id="navTabs">
+      <button class="nav-tab active" data-page="download">📥 批量下载</button>
+      <button class="nav-tab" data-page="dlmanager">📁 下载管理</button>
+      <button class="nav-tab" data-page="models">🧩 模型管理</button>
+      <button class="nav-tab" data-page="reverse">🔍 反向解析</button>
+      <button class="nav-tab" data-page="workflow">🔬 工作流分析</button>
+      <button class="nav-tab" data-page="settings">⚙️ 设置</button>
+    </div>
+    <div class="nav-right">
+      <span id="statusText" class="status-pill">就绪</span>
+    </div>
+  </div>
+</nav>
+
+<main class="content">
+  <!-- 批量下载 -->
+  <section class="page active" id="page-download">
+    <div class="card">
+      <h2 class="page-title">批量下载</h2>
+      <p class="hint">Civitai / HuggingFace 链接（回车新建一条；支持 civitai.red / civitai.com / huggingface.co 仓库或文件直链）</p>
+      <div id="urlRows" class="url-rows"></div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btnParse">🔍 解析并加入下载队列</button>
+        <button class="btn" id="btnPaste">📋 粘贴剪贴板链接</button>
+        <button class="btn" id="btnClearUrls">🗑️ 清空全部</button>
+        <button class="btn" id="btnAddUrl">➕ 添加一条</button>
+        <button class="btn" id="btnTodo">⏰ 待办下载</button>
+      </div>
+      <div class="log" id="parseLog"></div>
+    </div>
+  </section>
+
+  <!-- 下载管理 -->
+  <section class="page" id="page-dlmanager">
+    <div class="card">
+      <h2 class="page-title">下载管理</h2>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="dlStartAll">▶️ 全部开始</button>
+        <button class="btn" id="dlPauseSel">⏸️ 暂停选中</button>
+        <button class="btn" id="dlRetrySel">🔄 重试选中</button>
+        <button class="btn" id="dlRemoveSel">🗑️ 移除选中</button>
+        <button class="btn" id="dlClearDone">🧹 清空已完成</button>
+        <button class="btn" id="dlSave">💾 保存任务列表</button>
+      </div>
+      <div class="table-wrap">
+        <table class="grid" id="dlTable">
+          <thead><tr><th class="c-file">文件名</th><th>状态</th><th>进度</th><th>速度</th><th>大小</th><th class="c-err">错误</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="detail" id="dlInfo"></div>
+    </div>
+  </section>
+
+  <!-- 模型管理 -->
+  <section class="page" id="page-models">
+    <div class="card">
+      <div class="title-row">
+        <h2 class="page-title">模型管理</h2>
+        <span class="status-pill" id="mmCount">未扫描</span>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="mmScan">🔍 扫描模型</button>
+        <button class="btn" id="mmRefresh">🔄 刷新</button>
+        <button class="btn" id="mmVerify">✅ 校验哈希</button>
+        <span class="btn-group" id="mmRenameGroup">
+          <button class="btn" id="mmRenameMain">✏️ 修改名称</button>
+          <div class="submenu" id="mmRenameSub">
+            <div class="submenu-item" data-act="custom">✏️ 自定义重命名</div>
+            <div class="submenu-item" data-act="rename_c">🏷️ 重命名C站名</div>
+            <div class="submenu-item" data-act="localize">🀄 汉化文件名</div>
+          </div>
+        </span>
+        <button class="btn" id="mmJson">📄 生成SD json</button>
+        <button class="btn" id="mmCovers">🖼️ 下载C站封面</button>
+        <button class="btn" id="mmTranslate">🌏 翻译简介</button>
+        <button class="btn" id="mmSendRp">📤 发送到反向解析</button>
+      </div>
+      <div class="btn-row">
+        <button class="btn" id="mmOrganize">📂 整理模型</button>
+        <button class="btn" id="mmRestore" style="display:none">🔧 恢复误整理</button>
+        <span class="folders-wrap" id="mmFoldersWrap">
+          <button class="btn" id="mmFolders">📁 文件夹显示</button>
+          <div class="folders-panel" id="mmFoldersPanel"></div>
+        </span>
+        <button class="btn btn-danger" id="mmCleanup">🗑️ 一键清理</button>
+      </div>
+      <div class="tool-row">
+        <input id="mmFilter" class="input" placeholder="筛选：文件名 / C站名 / 路径"/>
+        <button class="btn" id="mmFilterClear">清除</button>
+        <button class="btn" id="mmSelAll">全选</button>
+        <button class="btn" id="mmSelNone">清除勾选</button>
+        <button class="btn" id="mmSelInv">反选</button>
+        <button class="btn" id="mmViewToggle">🖼️ 瀑布流</button>
+        <span class="status-pill" id="mmCheckLabel">已勾选 0 个</span>
+      </div>
+      <div class="table-wrap" id="mmTableWrap">
+        <table class="grid" id="mmTable">
+          <thead><tr>
+            <th class="c-sel" data-col="sel" id="mmSelAllTh">☑️</th>
+            <th class="c-thumb" data-col="thumb">图</th>
+            <th class="c-name" data-col="name" data-sort="name">文件名</th>
+            <th class="c-name" data-col="cname" data-sort="cname">C站模型名</th>
+            <th class="c-tiny" data-col="type" data-sort="type">类型</th>
+            <th class="c-tiny" data-col="base" data-sort="base">基础</th>
+            <th class="c-ver" data-col="ver" data-sort="ver">版本</th>
+            <th class="c-tiny" data-col="update" data-sort="update">更新</th>
+            <th class="c-tiny" data-col="hash" data-sort="hash">哈希</th>
+            <th class="c-tiny" data-col="size" data-sort="size">大小</th>
+            <th class="c-time" data-col="mtime" data-sort="mtime">下载时间</th>
+            <th class="c-path" data-col="path">路径</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="masonry" id="mmMasonry" style="display:none"></div>
+      <div class="detail" id="mmDetail"></div>
+    </div>
+  </section>
+
+  <!-- 反向解析 -->
+  <section class="page" id="page-reverse">
+    <div class="card">
+      <h2 class="page-title">反向解析</h2>
+      <div class="btn-row">
+        <button class="btn" id="rpAddFiles">📂 添加文件</button>
+        <button class="btn" id="rpAddDir">📁 添加文件夹</button>
+        <button class="btn" id="rpRemoveSel">🗑️ 移除选中</button>
+        <button class="btn" id="rpClearAll">🧹 清空全部</button>
+        <button class="btn btn-primary" id="rpStart">▶️ 开始反查</button>
+        <button class="btn" id="rpPause" disabled>⏸️ 暂停</button>
+        <button class="btn" id="rpStop" disabled>⏹️ 停止</button>
+      </div>
+      <div class="tool-row">
+        <input id="rpFilter" class="input" placeholder="筛选：文件名 / 状态 / 模型"/>
+        <button class="btn" id="rpFilterClear">清除</button>
+      </div>
+      <div class="table-wrap">
+        <table class="grid" id="rpTable">
+          <thead><tr><th class="c-file">文件</th><th class="c-sha">SHA256</th><th>状态</th><th class="c-name">模型</th><th>版本</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- 工作流分析 -->
+  <section class="page" id="page-workflow">
+    <div class="card">
+      <div class="title-row"><span class="page-title">🔬 工作流分析</span><span class="hint">拖入 ComfyUI 工作流（.json）或带内嵌工作流的图片（.png），解析节点与引用的模型</span></div>
+      <div class="wf-drop" id="wfDrop">
+        <div class="wf-drop-icon">📥</div>
+        <div class="wf-drop-text">拖入文件到此处，或 <span class="wf-link" id="wfPick">点击选择</span></div>
+        <div class="wf-drop-sub">⚠️ 暂时只支持 ComfyUI 工作流格式 · 支持 .json（UI/API prompt）与 .png（内嵌 workflow/prompt）</div>
+      </div>
+      <div class="wf-result" id="wfResult" style="display:none">
+        <div class="wf-result-title" id="wfResultTitle"></div>
+        <div class="wf-grid">
+          <div class="wf-col">
+            <div class="wf-col-title">🧩 节点列表</div>
+            <div class="wf-nodes" id="wfNodes"></div>
+          </div>
+          <div class="wf-col">
+            <div class="wf-col-title">🤖 引用的模型（本地匹配 + SHA256）</div>
+            <div class="wf-models" id="wfModels"></div>
+          </div>
+        </div>
+        <div class="wf-col" style="margin-top:10px">
+          <div class="wf-col-title">💬 提示词</div>
+          <div class="wf-prompts" id="wfPrompts"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 设置 -->
+  <section class="page" id="page-settings">
+    <div class="card">
+      <h2 class="page-title">设置</h2>
+      <div id="settingsForm"></div>
+      <div class="btn-row sticky-actions" id="settingsActions">
+        <button class="btn btn-primary" id="btnSaveSettings">保存设置</button>
+        <button class="btn" id="btnTestApi">测试 API 连接</button>
+        <button class="btn" id="btnTestBaidu">测试百度翻译</button>
+        <button class="btn" id="btnOnboarding">📖 新手引导</button>
+      </div>
+    </div>
+  </section>
+  <!-- 模型详情二级界面 -->
+  <div class="detail-mask" id="detailMask" style="display:none">
+    <div class="detail-panel" id="detailPanel"></div>
+  </div>
+
+  <!-- 模型管理右键菜单 -->
+  <div class="ctx-menu" id="ctxMenu" style="display:none"></div>
+
+  <!-- 首次使用引导 -->
+  <div class="ob-mask" id="obMask" style="display:none">
+    <div class="ob-card">
+      <div class="ob-title">👋 欢迎使用 CivitaiFreeTool</div>
+      <div class="ob-steps" id="obSteps"></div>
+      <div class="ob-body" id="obBody"></div>
+      <div class="ob-actions">
+        <button class="btn" id="obPrev" style="display:none">上一步</button>
+        <button class="btn btn-primary" id="obNext">下一步</button>
+      </div>
+    </div>
+  </div>
+  <!-- 右下角关于浮窗 -->
+  <div class="bili-float" id="aboutFloat" title="关于">
+    <span class="bili-icon">ℹ️</span><span class="bili-text">关于</span>
+  </div>
+</main>
+
+<script src="shader.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

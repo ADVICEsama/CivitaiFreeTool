@@ -1,0 +1,41 @@
+# ===== 敏感文件（含你的 API Key，绝不能上传！）=====
+user_config.json
+download_tasks.json
+
+# ===== 构建产物 =====
+build/
+dist/
+__pycache__/
+*.spec
+
+# ===== 打包缓存 / 临时文件 =====
+*.pyc
+*.log
+*.tmp
+
+# ===== 开发临时脚本（不进入源码库）=====
+probe_*.py
+*_probe*.py
+bump_*.py
+repro_*.py
+round*.py
+e2e_test.py
+*_front_test.py
+*_diag.py
+fix_*.py
+check_web.py
+cft_screenshot.py
+make_ppt.py
+make_screenshots.py
+refresh_metadata.py
+update_origin.py
+proto_webview.py
+issue*.md
+README_new.md
+
+# ===== 运行数据 / 本地素材 =====
+organize_log.json
+*.pptx
+视频稿*.md
+screens/
+shots/

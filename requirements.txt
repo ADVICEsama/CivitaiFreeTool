@@ -1,0 +1,14 @@
+# CivitaiFreeTool 依赖
+# 安装：pip install -r requirements.txt
+
+# GUI（WebView2 / Chromium 壳）
+pywebview>=5.0
+
+# 图片处理（封面/缩略图/自定义封面）
+Pillow>=10.0
+
+# 窗口图标（仅 Windows，可选的 pythonnet）
+pythonnet>=3.0
+
+# 打包（可选，仅发布需要）
+# pyinstaller>=6.0
