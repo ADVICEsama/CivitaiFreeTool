@@ -613,6 +613,7 @@ textarea.rules {
 .ob-body .ob-label { font-weight: 600; margin-top: 10px; }
 .ob-hint { font-size: 12px; color: var(--text-dim); margin-top: 6px; line-height: 1.7; }
 .tip-inline { font-size: 12px; color: var(--text-dim); margin-top: 4px; line-height: 1.6; }
+.ob-skip-row { margin-top: 16px; padding-top: 10px; border-top: 1px dashed var(--border); }
 .ob-themes { display: flex; gap: 10px; margin-top: 8px; }
 .ob-theme {
   flex: 1; padding: 14px 8px;

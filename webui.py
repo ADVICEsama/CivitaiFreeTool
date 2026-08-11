@@ -501,6 +501,17 @@ class Api:
                     info = json.load(f)
             except Exception:
                 info = {}
+        images = info.get("images") or []
+
+        def _img_prompt(idx):
+            """按 C 站 images 序号取 prompt（下载图按 image_%02d 命名，一一对应）"""
+            try:
+                if 0 <= idx < len(images):
+                    return (images[idx].get("meta") or {}).get("prompt") or ""
+            except Exception:
+                pass
+            return ""
+
         covers = []
         # 本地封面：优先 <base>.images/ 目录全部图片
         base = os.path.splitext(path)[0]
@@ -513,6 +524,8 @@ class Api:
         cover = model_manager.find_cover(path)
         if img_files:
             cover = img_files[0]
+        # 本地封面占用 C 站前 N 张（下载图按 image_%02d 顺序），URL 图从 N 开始避免重复
+        url_start = len(img_files) if img_files else (1 if (cover and os.path.exists(cover)) else 0)
         if cover and os.path.exists(cover):
             try:
                 from PIL import Image
@@ -522,18 +535,21 @@ class Api:
                 im.thumbnail((512, 512))
                 buf = io.BytesIO()
                 im.save(buf, "JPEG", quality=85)
-                covers.append({"b64": _b64.b64encode(buf.getvalue()).decode(), "local": True})
+                covers.append({"b64": _b64.b64encode(buf.getvalue()).decode(),
+                               "local": True, "local_path": cover,
+                               "prompt": _img_prompt(0)})
             except Exception:
                 pass
-        # 本地已有图（images 目录）时不再追加 URL 图（避免空占位）
-        if not img_files:
-            for img in (info.get("images") or [])[:4]:
-                u = img.get("url")
-                if u and not any(c.get("url") == u for c in covers):
-                    covers.append({"url": u,
-                                   "prompt": (img.get("meta") or {}).get("prompt") or "",
-                                   "orig_url": img.get("url") or ""})
-        # 本地 images 目录其余图补入
+        # 追加 C 站 URL 图（跳过本地封面已占的序号 + url 去重）
+        for i, img in enumerate(images[:8]):
+            if i < url_start:
+                continue
+            u = img.get("url")
+            if u and not any(c.get("url") == u for c in covers):
+                covers.append({"url": u,
+                               "prompt": (img.get("meta") or {}).get("prompt") or "",
+                               "orig_url": img.get("url") or ""})
+        # 本地 images 目录其余图补入（文件名 image_%02d → 序号匹配 prompt）
         for fp in img_files[1:]:
             try:
                 from PIL import Image
@@ -543,7 +559,13 @@ class Api:
                 im.thumbnail((512, 512))
                 buf = _io.BytesIO()
                 im.save(buf, "JPEG", quality=82)
-                covers.append({"b64": _b64.b64encode(buf.getvalue()).decode(), "local": True})
+                idx = -1
+                fn = os.path.basename(fp)
+                if fn.lower().startswith("image_") and fn[6:8].isdigit():
+                    idx = int(fn[6:8]) - 1
+                covers.append({"b64": _b64.b64encode(buf.getvalue()).decode(),
+                               "local": True, "local_path": fp,
+                               "prompt": _img_prompt(idx)})
             except Exception:
                 pass
         return json.dumps({

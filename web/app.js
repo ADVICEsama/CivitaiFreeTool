@@ -1287,11 +1287,11 @@ $("#ctxMenu").addEventListener("click", async (e) => {
   const act = item.dataset.act;
   $("#ctxMenu").style.display = "none";
   try {
+    // 本地图文件路径：优先图自身 local_path（右键哪张就用哪张），本地图无路径时用模型文件兜底
+    const localImgPath = c.local_path || (c.local ? detailRow.path : null);
     if (act === "img_copy") {
-      // 优先本地图：复制文件路径；远程图：复制下载地址
-      const src = c.local ? (detailRow.path ? null : null) : null;
-      if (c.local && detailImgLocalPath) {
-        await window.__copyText(detailImgLocalPath);
+      if (c.local && localImgPath) {
+        await window.__copyText(localImgPath);
         setStatus("已复制图片路径");
       } else if (c.b64) {
         try {
@@ -1307,10 +1307,9 @@ $("#ctxMenu").addEventListener("click", async (e) => {
         setStatus("已复制图片链接");
       }
     } else if (act === "img_folder") {
-      const p = detailImgLocalPath;
-      if (p) await api.call("open_in_folder", p);
-      else if (c.orig_url) await api.call("open_url", c.orig_url);
-      else setStatus("无本地文件");
+      // 只打开本地文件夹；远程图没有本地文件时提示，不打开网站（打开网站走"打开原图片网站"）
+      if (localImgPath) await api.call("open_in_folder", localImgPath);
+      else setStatus("该图没有本地文件（可点「🖼️ 下载C站封面」或详情页下载全部图片）");
     } else if (act === "img_tags") {
       const tw = (detailRow && detailRow.trainedWords) ? detailRow.trainedWords : [];
       if (tw.length) {
@@ -2207,6 +2206,12 @@ function renderOnboarding() {
       await finishOnboarding();
     });
   }
+  // 每一步底部都有「跳过引导」：不填剩余项，直接保存已填内容并关闭
+  body.innerHTML +=
+    '<div class="ob-skip-row"><button class="btn" id="obSkipAll">⏭️ 跳过引导（剩余步骤不填，以后可随时在设置页重开）</button></div>';
+  $("#obSkipAll").addEventListener("click", async () => {
+    await finishOnboarding();
+  });
 }
 
 // 引导完成：保存全部配置
