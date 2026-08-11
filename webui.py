@@ -386,10 +386,23 @@ class Api:
         import subprocess
         try:
             if path and os.path.exists(path):
-                # explorer /select, 必须带引号：路径含空格时无引号会被 explorer
-                # 解析失败并打开默认位置（我的文档），这是历史 bug 根因
-                subprocess.Popen('explorer /select,"%s"' % path)
+                # 坑：直接 Popen("explorer /select,path") 会被已运行的桌面 explorer
+                # 进程通过 IPC 接管，引号在进程间传递时丢失 → 带空格路径解析失败
+                # → 回退打开桌面/我的文档。cmd /c start 会启动独立 explorer 实例，
+                # 引号由 cmd 正确保留；仍失败时用 os.startfile 打开所在目录兜底。
+                if os.path.isfile(path):
+                    subprocess.Popen('cmd /c start "" explorer /select,"%s"' % path)
+                else:
+                    os.startfile(path)
                 return {"ok": True}
+        except Exception:
+            pass
+        try:
+            if path and os.path.exists(path):
+                target = os.path.dirname(path) if os.path.isfile(path) else path
+                if target:
+                    os.startfile(target)
+                    return {"ok": True}
         except Exception:
             pass
         return {"ok": False, "msg": "路径不存在"}
