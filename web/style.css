@@ -689,9 +689,11 @@ textarea.rules {
 /* 迷你模式：点击功能卡片进入对应页面后，引导缩小悬浮在画面右侧，不中断 */
 .ob-mini-bar { display: none; }
 .ob-mask.mini {
-  align-items: flex-start; justify-content: flex-end;
+  align-items: flex-end; justify-content: flex-end;
   background: transparent;
   padding: 16px;
+  /* 底部避让右下角「关于」浮标（bottom:40px + 高约32px）——迷你引导窗显示在关于按钮上方 */
+  padding-bottom: 84px;
   pointer-events: none;
 }
 .ob-mask.mini .ob-card {
