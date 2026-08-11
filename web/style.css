@@ -263,6 +263,23 @@ body {
   background: var(--danger); border-color: var(--danger); color: #fff;
 }
 .btn-danger:hover { background: #f26b70; border-color: #f26b70; }
+/* 设置页保存按钮：红色显眼，文字始终白色（防主题 primary-fg 覆盖） */
+#btnSaveSettings {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #ffffff !important;
+  font-weight: 700;
+  padding: 7px 26px;
+  box-shadow: 0 2px 10px rgba(229, 72, 77, 0.35);
+}
+#btnSaveSettings:hover {
+  background: #e23b40;
+  border-color: #e23b40;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(229, 72, 77, 0.45);
+}
+#btnSaveSettings:active { transform: translateY(1px); }
+#btnSaveSettings:disabled { background: var(--danger); color: #ffffff !important; opacity: 0.6; }
 .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
 .tool-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 
