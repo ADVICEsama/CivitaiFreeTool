@@ -259,6 +259,13 @@ $("#btnClearUrls").addEventListener("click", () => {
 $("#btnParse").addEventListener("click", async () => {
   const urls = $$("#urlRows .url-row input").map((i) => i.value.trim()).filter(Boolean);
   if (!urls.length) { setStatus("请先输入链接"); return; }
+  // 立即跳转到下载管理页，并禁用按钮防止重复点击（用户反馈：等待期重复点击导致重复下载同一模型）
+  switchPage("dlmanager");
+  const btn = $("#btnParse");
+  btn.disabled = true;
+  const oldText = btn.textContent;
+  btn.textContent = "解析中...";
+  try {
   // 分流：HuggingFace 走文件选择；C 站图片页走批量模型下载；其余走 civitai 解析
   const imgUrls = urls.filter((u) => /civitai\.(red|com)\/images\//i.test(u));
   const hfUrls = urls.filter((u) => /huggingface\.co/i.test(u));
@@ -285,6 +292,10 @@ $("#btnParse").addEventListener("click", async () => {
       showImgDlResult(res);
       dlRefresh();
     } catch (e) { setStatus("图片解析失败: " + e); }
+  }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = oldText;
   }
 });
 
@@ -1942,7 +1953,18 @@ const SETTING_FIELDS = [
   ["🌏 翻译", "baidu_key", "百度翻译密钥", "password"],
   ["🌏 翻译", "auto_translate", "反向解析自动翻译", "bool"],
   ["🌏 翻译", "translate_filename", "下载文件名为中文", "bool"],
-  ["🎨 界面", "theme", "界面主题", "select", ["dark", "light", "modern"]],
+  ["🎨 界面", "theme", "界面主题", "select", [
+    ["dark", "🌙 深色"],
+    ["dark_purple", "🟣 暮紫（暗）"],
+    ["dark_blue", "🔵 深海（暗）"],
+    ["dark_green", "🟢 森林（暗）"],
+    ["dark_red", "🟠 熔岩（暗）"],
+    ["light", "☀️ 浅色"],
+    ["light_blue", "🔷 晴空（亮）"],
+    ["light_pink", "🌸 樱粉（亮）"],
+    ["light_green", "🌿 薄荷（亮）"],
+    ["modern", "🎨 现代浅色"],
+  ]],
   ["🎨 界面", "ui_zoom", "界面缩放", "select", ["80", "90", "100", "110", "125", "150"]],
   ["🎨 界面", "rename_menu_default", "改名默认动作", "select", [["custom", "自定义改名"], ["rename_c", "文件名改成C站名"], ["localize", "文件名翻中文"]]],
   ["🎨 界面", "confirm_buttons_flip", "确认弹窗按钮翻转", "bool"],
@@ -2244,8 +2266,15 @@ function renderOnboarding() {
     body.innerHTML =
       '<div class="ob-label">选择界面主题（可随时在设置页更换）</div>' +
       '<div class="ob-themes" id="obThemes">' +
-      '<div class="ob-theme" data-t="dark"><div class="sw" style="background:#171221"></div>🌙 深色</div>' +
+      '<div class="ob-theme" data-t="dark"><div class="sw" style="background:#171221;border:2px solid #0a84ff"></div>🌙 深色</div>' +
+      '<div class="ob-theme" data-t="dark_purple"><div class="sw" style="background:#16112b;border:2px solid #a06bff"></div>🟣 暮紫</div>' +
+      '<div class="ob-theme" data-t="dark_blue"><div class="sw" style="background:#0d1524;border:2px solid #38bdf8"></div>🔵 深海</div>' +
+      '<div class="ob-theme" data-t="dark_green"><div class="sw" style="background:#0e1a14;border:2px solid #34d399"></div>🟢 森林</div>' +
+      '<div class="ob-theme" data-t="dark_red"><div class="sw" style="background:#1d1010;border:2px solid #ff7a59"></div>🟠 熔岩</div>' +
       '<div class="ob-theme" data-t="light"><div class="sw" style="background:#f2f2f2;border:1px solid #ddd"></div>☀️ 浅色</div>' +
+      '<div class="ob-theme" data-t="light_blue"><div class="sw" style="background:#eef4fb;border:1px solid #2f7cf6"></div>🔷 晴空</div>' +
+      '<div class="ob-theme" data-t="light_pink"><div class="sw" style="background:#fdf2f4;border:1px solid #ec5d7a"></div>🌸 樱粉</div>' +
+      '<div class="ob-theme" data-t="light_green"><div class="sw" style="background:#f0f8f3;border:1px solid #2e9e63"></div>🌿 薄荷</div>' +
       '<div class="ob-theme" data-t="modern"><div class="sw" style="background:#efefef;border:1px solid #ddd"></div>🎨 现代浅色</div></div>';
     document.querySelectorAll("#obThemes .ob-theme").forEach((el) => {
       if (el.dataset.t === obTheme) el.classList.add("sel");

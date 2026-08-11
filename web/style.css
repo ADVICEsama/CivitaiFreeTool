@@ -51,6 +51,70 @@
 [data-theme="dark"] .status-pill { background: var(--surface2); }
 [data-theme="dark"] table.grid tbody tr:nth-child(even) { background: #201930; }
 
+/* ---- 暗色系扩展主题（继承 dark 结构，只换色板） ---- */
+[data-theme^="dark_"] .nav-logo { background: var(--primary); }
+[data-theme^="dark_"] .nav-tab.active { background: var(--surface2); }
+[data-theme^="dark_"] table.grid tbody tr:hover { background: var(--surface2) !important; }
+[data-theme^="dark_"] table.grid tbody tr.selected { background: color-mix(in srgb, var(--primary) 26%, var(--surface)) !important; }
+[data-theme^="dark_"] table.grid tbody tr.sel-row { background: color-mix(in srgb, var(--primary) 26%, var(--surface)) !important; }
+[data-theme^="dark_"] .cell-sel { color: var(--text); }
+[data-theme^="dark_"] .btn { background: var(--surface); border-color: var(--border); }
+[data-theme^="dark_"] .btn:hover { background: var(--surface2); }
+[data-theme^="dark_"] .status-pill { background: var(--surface2); }
+[data-theme^="dark_"] table.grid tbody tr:nth-child(even) { background: color-mix(in srgb, var(--bg) 55%, var(--surface)); }
+
+/* 暮紫（暗） */
+[data-theme="dark_purple"] {
+  --bg: #16112b; --surface: #241a3f; --surface2: #332658; --border: #4f3f78;
+  --text: #efeafd; --text-dim: #b3a6d6; --primary: #a06bff; --primary-hover: #b78aff;
+  --primary-fg: #ffffff; --danger: #ff5c5c;
+  --shadow: 0 2px 10px rgba(0, 0, 0, 0.45); --shadow-hover: 0 6px 20px rgba(0, 0, 0, 0.55);
+}
+/* 深海（暗） */
+[data-theme="dark_blue"] {
+  --bg: #0d1524; --surface: #16243c; --surface2: #203350; --border: #38507a;
+  --text: #e8f1fb; --text-dim: #9fb8d6; --primary: #38bdf8; --primary-hover: #63cdfb;
+  --primary-fg: #0d1524; --danger: #ff5c5c;
+  --shadow: 0 2px 10px rgba(0, 0, 0, 0.45); --shadow-hover: 0 6px 20px rgba(0, 0, 0, 0.55);
+}
+/* 森林（暗） */
+[data-theme="dark_green"] {
+  --bg: #0e1a14; --surface: #16281e; --surface2: #1f3829; --border: #35563f;
+  --text: #e9f6ee; --text-dim: #9fc2ab; --primary: #34d399; --primary-hover: #5ee0b2;
+  --primary-fg: #0e1a14; --danger: #ff5c5c;
+  --shadow: 0 2px 10px rgba(0, 0, 0, 0.45); --shadow-hover: 0 6px 20px rgba(0, 0, 0, 0.55);
+}
+/* 熔岩（暗） */
+[data-theme="dark_red"] {
+  --bg: #1d1010; --surface: #2d1919; --surface2: #402322; --border: #613737;
+  --text: #f9ecec; --text-dim: #cba5a5; --primary: #ff7a59; --primary-hover: #ff9878;
+  --primary-fg: #1d1010; --danger: #ff5c5c;
+  --shadow: 0 2px 10px rgba(0, 0, 0, 0.45); --shadow-hover: 0 6px 20px rgba(0, 0, 0, 0.55);
+}
+
+/* ---- 亮色系扩展主题（继承 :root 浅色结构） ---- */
+/* 晴空（亮） */
+[data-theme="light_blue"] {
+  --bg: #eef4fb; --surface: #ffffff; --surface2: #f4f8fd; --border: #d5e3f2;
+  --text: #16233a; --text-dim: #5f7bab; --primary: #2f7cf6; --primary-hover: #1f6ae0;
+  --primary-fg: #ffffff; --danger: #e5484d;
+  --shadow: 0 2px 10px rgba(0, 0, 0, 0.06); --shadow-hover: 0 6px 20px rgba(0, 0, 0, 0.10);
+}
+/* 樱粉（亮） */
+[data-theme="light_pink"] {
+  --bg: #fdf2f4; --surface: #ffffff; --surface2: #fdf6f8; --border: #f0d5da;
+  --text: #3a2026; --text-dim: #b07e88; --primary: #ec5d7a; --primary-hover: #df4a68;
+  --primary-fg: #ffffff; --danger: #e5484d;
+  --shadow: 0 2px 10px rgba(0, 0, 0, 0.06); --shadow-hover: 0 6px 20px rgba(0, 0, 0, 0.10);
+}
+/* 薄荷（亮） */
+[data-theme="light_green"] {
+  --bg: #f0f8f3; --surface: #ffffff; --surface2: #f4faf6; --border: #d3e8da;
+  --text: #1d3226; --text-dim: #6f9a80; --primary: #2e9e63; --primary-hover: #268a56;
+  --primary-fg: #ffffff; --danger: #e5484d;
+  --shadow: 0 2px 10px rgba(0, 0, 0, 0.06); --shadow-hover: 0 6px 20px rgba(0, 0, 0, 0.10);
+}
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 /* 自定义滚动条（WebView2 Chromium，随主题变色） */
