@@ -22,6 +22,8 @@ round*.py
 e2e_test.py
 *_front_test.py
 *_diag.py
+*_test.py
+test_*.py
 fix_*.py
 check_web.py
 cft_screenshot.py
