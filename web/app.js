@@ -1329,8 +1329,8 @@ $("#ctxMenu").addEventListener("click", async (e) => {
       // 只打开本地文件夹；远程图没有本地文件时提示，不打开网站（打开网站走"打开原图片网站"）
       if (localImgPath) {
         const r = await api.call("open_in_folder", localImgPath);
-        if (r && r.ok) showToast("已打开文件夹");
-        else showToast(r && r.msg ? r.msg : "打开失败");
+        if (r && r.ok) showToast("已打开文件夹：" + localImgPath);
+        else showToast(r && r.msg ? r.msg + "：" + localImgPath : "打开失败");
       } else {
         showToast("该图没有本地文件（可点「🖼️ 下载C站封面」或详情页下载全部图片）");
       }

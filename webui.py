@@ -382,30 +382,55 @@ class Api:
             return ""
 
     def open_in_folder(self, path):
-        """在资源管理器中打开并选中文件/文件夹"""
-        import subprocess
+        """在资源管理器中打开并选中文件/文件夹。
+        用 Windows Shell API（SHOpenFolderAndSelectItems）——这是资源管理器
+        「在文件夹中显示」的底层实现：无命令行解析、不闪黑窗、路径带空格也可靠。
+        之前 explorer /select 命令行方式会被桌面进程接管导致乱开桌面/我的文档。"""
+        import os
+        if not path or not os.path.exists(path):
+            return {"ok": False, "msg": "路径不存在"}
         try:
-            if path and os.path.exists(path):
-                # 坑：直接 Popen("explorer /select,path") 会被已运行的桌面 explorer
-                # 进程通过 IPC 接管，引号在进程间传递时丢失 → 带空格路径解析失败
-                # → 回退打开桌面/我的文档。cmd /c start 会启动独立 explorer 实例，
-                # 引号由 cmd 正确保留；仍失败时用 os.startfile 打开所在目录兜底。
-                if os.path.isfile(path):
-                    subprocess.Popen('cmd /c start "" explorer /select,"%s"' % path)
-                else:
-                    os.startfile(path)
+            import ctypes
+            from ctypes import wintypes
+            path = os.path.abspath(path)
+            target = path if os.path.isfile(path) else None
+            folder = os.path.dirname(path) if target else path
+            ctypes.windll.ole32.CoInitialize(None)
+            try:
+                folder_pidl = ctypes.c_void_p()
+                hr = ctypes.windll.shell32.SHParseDisplayName(
+                    wintypes.LPCWSTR(folder), None, ctypes.byref(folder_pidl), 0, None)
+                if hr != 0 or not folder_pidl.value:
+                    return {"ok": False, "msg": "无法解析目录"}
+                try:
+                    if target:
+                        file_pidl = ctypes.c_void_p()
+                        hr2 = ctypes.windll.shell32.SHParseDisplayName(
+                            wintypes.LPCWSTR(target), None, ctypes.byref(file_pidl), 0, None)
+                        if hr2 == 0 and file_pidl.value:
+                            pidls = (ctypes.c_void_p * 1)(file_pidl)
+                            ctypes.windll.shell32.SHOpenFolderAndSelectItems(
+                                folder_pidl, 1, pidls, 0)
+                            ctypes.windll.ole32.CoTaskMemFree(file_pidl)
+                        else:
+                            ctypes.windll.shell32.SHOpenFolderAndSelectItems(
+                                folder_pidl, 0, None, 0)
+                    else:
+                        ctypes.windll.shell32.SHOpenFolderAndSelectItems(
+                            folder_pidl, 0, None, 0)
+                finally:
+                    ctypes.windll.ole32.CoTaskMemFree(folder_pidl)
                 return {"ok": True}
+            finally:
+                ctypes.windll.ole32.CoUninitialize()
         except Exception:
-            pass
-        try:
-            if path and os.path.exists(path):
-                target = os.path.dirname(path) if os.path.isfile(path) else path
-                if target:
-                    os.startfile(target)
-                    return {"ok": True}
-        except Exception:
-            pass
-        return {"ok": False, "msg": "路径不存在"}
+            # 兜底：ShellExecute 打开所在目录
+            try:
+                import os as _os
+                _os.startfile(folder if not target else _os.path.dirname(path))
+                return {"ok": True}
+            except Exception:
+                return {"ok": False, "msg": "无法打开"}
 
     def dl_action(self, action, filenames=None):
         tasks = [t for t in self.dl.tasks if t.filename in (filenames or [])]
