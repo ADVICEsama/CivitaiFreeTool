@@ -653,31 +653,68 @@ textarea.rules {
   display: flex; align-items: center; justify-content: center;
 }
 .ob-card {
-  width: 480px;
+  width: 720px;
+  max-width: 94vw;
+  max-height: 92vh;
+  overflow: hidden;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 18px;
   box-shadow: var(--shadow-hover);
   padding: 24px;
+  display: flex;
+  flex-direction: column;
 }
-.ob-title { font-size: 17px; font-weight: 700; margin-bottom: 16px; }
-.ob-steps { display: flex; gap: 8px; margin-bottom: 16px; }
+.ob-title { font-size: 17px; font-weight: 700; margin-bottom: 14px; }
+.ob-steps { display: flex; gap: 8px; margin-bottom: 14px; flex-shrink: 0; }
 .ob-step {
   flex: 1; text-align: center;
-  font-size: 12px; color: var(--text-dim);
-  padding: 6px 0;
+  font-size: 12.5px; color: var(--text-dim);
+  padding: 6px 2px;
   border-radius: 999px;
   background: var(--surface2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   transition: background 0.2s ease, color 0.2s ease;
 }
 .ob-step.active { background: var(--primary); color: #fff; }
 .ob-step.done { background: rgba(40, 167, 69, 0.18); color: #28a745; }
-.ob-body { min-height: 190px; font-size: 13px; line-height: 1.8; color: var(--text); }
+.ob-body { min-height: 210px; max-height: 52vh; overflow-y: auto; font-size: 13px; line-height: 1.8; color: var(--text); flex: 1; }
+.ob-body .input { width: 100%; margin-top: 6px; }
+.ob-body .ob-label { font-weight: 600; margin-top: 10px; }
+.ob-hint { font-size: 12px; color: var(--text-dim); margin-top: 6px; line-height: 1.7; }
+.ob-main { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+
+/* 迷你模式：点击功能卡片进入对应页面后，引导缩小悬浮在画面右侧，不中断 */
+.ob-mini-bar { display: none; }
+.ob-mask.mini {
+  align-items: flex-start; justify-content: flex-end;
+  background: transparent;
+  padding: 16px;
+  pointer-events: none;
+}
+.ob-mask.mini .ob-card {
+  pointer-events: auto;
+  width: 320px;
+  max-width: 92vw;
+  padding: 12px 14px;
+  border-radius: 14px;
+}
+.ob-mask.mini .ob-mini-bar {
+  display: flex; align-items: center; gap: 8px;
+}
+.ob-mask.mini .ob-mini-title {
+  flex: 1; font-size: 12.5px; font-weight: 600; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ob-mask.mini .ob-main { display: none; }
+.ob-mask.mini .ob-mini-bar .btn { padding: 4px 10px; font-size: 12px; }
 .ob-body .input { width: 100%; margin-top: 6px; }
 .ob-body .ob-label { font-weight: 600; margin-top: 10px; }
 .ob-hint { font-size: 12px; color: var(--text-dim); margin-top: 6px; line-height: 1.7; }
 .tip-inline { font-size: 12px; color: var(--text-dim); margin-top: 4px; line-height: 1.6; }
-.ob-skip-row { margin-top: 16px; padding-top: 10px; border-top: 1px dashed var(--border); }
+.ob-skip-row { margin-top: 16px; padding-top: 10px; border-top: 1px dashed var(--border); flex-shrink: 0; }
 #toast {
   position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%);
   background: var(--surface2); color: var(--text);
@@ -687,19 +724,26 @@ textarea.rules {
   display: none; opacity: 0; transition: opacity 0.25s ease;
 }
 [data-theme='dark'] #toast { background: rgba(52, 44, 78, 0.97); }
-.ob-themes { display: flex; gap: 10px; margin-top: 8px; }
+.ob-themes {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+  margin-top: 10px;
+}
 .ob-theme {
-  flex: 1; padding: 14px 8px;
+  padding: 10px 4px;
   border: 2px solid var(--border);
   border-radius: 12px;
   text-align: center;
   cursor: pointer;
+  font-size: 12px;
+  white-space: nowrap;
   transition: border-color 0.2s ease;
 }
 .ob-theme:hover { border-color: var(--primary); }
 .ob-theme.sel { border-color: var(--primary); }
-.ob-theme .sw { width: 100%; height: 44px; border-radius: 8px; margin-bottom: 8px; }
-.ob-actions { display: flex; justify-content: space-between; gap: 8px; margin-top: 18px; }
+.ob-theme .sw { width: 100%; height: 38px; border-radius: 8px; margin-bottom: 6px; }
+.ob-actions { display: flex; justify-content: space-between; gap: 8px; margin-top: 14px; flex-shrink: 0; }
 .ob-actions #obNext { margin-left: auto; }
 .ob-actions .ob-spacer { flex: 1; }
 .ob-feat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }

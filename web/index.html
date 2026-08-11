@@ -214,12 +214,19 @@
   <!-- 首次使用引导 -->
   <div class="ob-mask" id="obMask" style="display:none">
     <div class="ob-card">
+      <div class="ob-mini-bar" id="obMiniBar">
+        <span class="ob-mini-title" id="obMiniTitle"></span>
+        <button class="btn" id="obMiniContinue">▶️ 继续引导</button>
+        <button class="btn" id="obMiniClose" title="结束引导">✖</button>
+      </div>
+      <div class="ob-main" id="obMain">
       <div class="ob-title">👋 欢迎使用 CivitaiFreeTool</div>
       <div class="ob-steps" id="obSteps"></div>
       <div class="ob-body" id="obBody"></div>
       <div class="ob-actions">
         <button class="btn" id="obPrev" style="display:none">上一步</button>
         <button class="btn btn-primary" id="obNext">下一步</button>
+      </div>
       </div>
     </div>
   </div>

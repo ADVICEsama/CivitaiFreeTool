@@ -2140,7 +2140,24 @@ $("#btnSaveSettings").addEventListener("click", async () => {
   await api.call("save_config", cfg);
   state.cfg = await api.call("get_config");
   setStatus("设置已保存");
-  window.location.reload();
+  // 不刷新页面：直接应用主题/缩放/表单（避免白屏闪烁）
+  applyZoom(Number(state.cfg.ui_zoom) || 100);
+  document.documentElement.dataset.theme = state.cfg.theme || "modern";
+  buildSettingsForm();
+});
+
+// 设置项即时生效：主题/缩放等改完立即应用，不必等「保存设置」（也不触发整页刷新）
+$("#settingsForm").addEventListener("change", (e) => {
+  const el = e.target.closest("[data-key]");
+  if (!el) return;
+  const key = el.dataset.key;
+  const val = el.type === "checkbox" ? el.checked : (el.type === "number" ? Number(el.value) : el.value);
+  if (key === "theme") {
+    state.cfg.theme = val;
+    document.documentElement.dataset.theme = val || "modern";
+  } else if (key === "ui_zoom") {
+    applyZoom(Number(val) || 100);
+  }
 });
 
 $("#btnTestApi").addEventListener("click", async () => {
@@ -2217,6 +2234,22 @@ let obTheme = "dark";
 let obDirVal = "";   // 跨步骤保存（输入框只在对应步骤渲染）
 let obKeyVal = "";
 let obModelDirs = []; // 模型管理目录（多目录）
+let obMini = false;   // 迷你模式：引导缩小悬浮右侧，不中断
+
+// 迷你模式切换：全屏 ⇄ 右下角小窗
+function setObMini(mini) {
+  obMini = mini;
+  const mask = $("#obMask");
+  mask.classList.toggle("mini", mini);
+  if (mini) {
+    $("#obMiniTitle").textContent = OB_STEPS[obStep] + "（第 " + (obStep + 1) + "/" + OB_STEPS.length + " 步）";
+  }
+}
+$("#obMiniContinue").addEventListener("click", () => setObMini(false));
+$("#obMiniClose").addEventListener("click", async () => {
+  setObMini(false);
+  await finishOnboarding();
+});
 function showOnboarding() {
   obStep = 0;
   obTheme = state.cfg.theme || "dark";
@@ -2224,6 +2257,8 @@ function showOnboarding() {
   obKeyVal = state.cfg.api_key || "";
   const md = state.cfg.models_dirs;
   obModelDirs = (Array.isArray(md) && md.length) ? md.slice() : (state.cfg.models_dir ? [state.cfg.models_dir] : []);
+  obMini = false;
+  $("#obMask").classList.remove("mini");
   $("#obMask").style.display = "flex";
   renderOnboarding();
 }
@@ -2256,9 +2291,10 @@ function renderOnboarding() {
     document.querySelectorAll(".ob-feat-btn").forEach((el) => {
       el.addEventListener("click", async () => {
         const page = el.dataset.page;
-        await finishOnboarding();
+        // 切换页面但不结束引导：引导缩小悬浮在画面右侧继续
         const tab = document.querySelector('.nav-tab[data-page="' + page + '"]');
         if (tab) tab.click();
+        setObMini(true);
       });
     });
     $("#obGithub").addEventListener("click", () => api.call("open_url", "https://github.com/ADVICEsama/CivitaiFreeTool"));
@@ -2280,6 +2316,9 @@ function renderOnboarding() {
       if (el.dataset.t === obTheme) el.classList.add("sel");
       el.addEventListener("click", () => {
         obTheme = el.dataset.t;
+        // 立即写入 state + 同步设置页下拉：中途保存设置不会把刚选的主题覆盖回旧值
+        if (state.cfg) state.cfg.theme = obTheme;
+        document.querySelectorAll('select[data-key="theme"]').forEach((sel) => { sel.value = obTheme; });
         document.documentElement.dataset.theme = obTheme;
         document.querySelectorAll("#obThemes .ob-theme").forEach((x) => x.classList.remove("sel"));
         el.classList.add("sel");
@@ -2359,8 +2398,10 @@ function renderOnboarding() {
     });
   }
   // 每一步底部都有「跳过引导」：不填剩余项，直接保存已填内容并关闭
-  body.innerHTML +=
-    '<div class="ob-skip-row"><button class="btn" id="obSkipAll">⏭️ 跳过引导（剩余步骤不填，以后可随时在设置页重开）</button></div>';
+  // 注意：必须用 insertAdjacentHTML 追加——innerHTML += 会重建整个 body、清空上面绑定的
+  // 功能卡/主题点击监听器（曾导致「点击无法进入」「主题切换无效」）
+  body.insertAdjacentHTML("beforeend",
+    '<div class="ob-skip-row"><button class="btn" id="obSkipAll">⏭️ 跳过引导（剩余步骤不填，以后可随时在设置页重开）</button></div>');
   $("#obSkipAll").addEventListener("click", async () => {
     await finishOnboarding();
   });
