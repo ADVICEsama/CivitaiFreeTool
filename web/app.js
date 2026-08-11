@@ -196,7 +196,7 @@ function openTodoDialog() {
   dlg.className = "rename-dialog";
   dlg.style.width = "520px";
   dlg.innerHTML =
-    '<div class="rd-title">⏰ 待办下载清单（到期打开软件时提醒）</div>' +
+    '<div class="rd-title">⏰ 到期提醒清单（到期打开软件时提醒）</div>' +
     '<div class="form-grid" style="grid-template-columns:90px 1fr">' +
     '<label>链接</label><input class="input" id="tdUrl" placeholder="https://civitai.red/models/..." />' +
     "</div>" +
@@ -818,18 +818,18 @@ $("#mmMasonry").addEventListener("contextmenu", (e) => {
   const menu = $("#ctxMenu");
   const r = ctxRow;
   menu.innerHTML =
-    '<div class="ctx-item" data-act="copy_name">📋 复制文件名</div>' +
-    '<div class="ctx-item" data-act="copy_cname">🀄 复制C站名</div>' +
-    '<div class="ctx-item" data-act="folder">📂 打开所在文件夹</div>' +
-    '<div class="ctx-item" data-act="site">🌐 打开C站</div>' +
-    '<div class="ctx-item" data-act="rename">✏️ 重命名</div>' +
-    '<div class="ctx-item" data-act="rename_c">🏷️ 重命名C站名</div>' +
-    '<div class="ctx-item" data-act="sdjson">📄 生成SD json</div>' +
-    '<div class="ctx-item" data-act="localize">🀄 汉化文件名</div>' +
-    '<div class="ctx-item" data-act="rp">📤 发送到反向解析</div>' +
-    '<div class="ctx-item" data-act="organize">📂 整理模型</div>' +
+    '<div class="ctx-item" data-act="copy_name" data-tip="复制当前本地文件名">📋 复制文件名</div>' +
+    '<div class="ctx-item" data-act="copy_cname" data-tip="复制 C 站上的模型名（不改本地文件）">🀄 复制C站模型名</div>' +
+    '<div class="ctx-item" data-act="folder" data-tip="打开资源管理器并选中该文件">📂 打开所在文件夹</div>' +
+    '<div class="ctx-item" data-act="site" data-tip="在浏览器打开该模型在 C 站的主页">🌐 打开C站</div>' +
+    '<div class="ctx-item" data-act="rename" data-tip="自定义改名（保留扩展名）">✏️ 改名</div>' +
+    '<div class="ctx-item" data-act="rename_c" data-tip="把本地文件名改成 C 站上的模型名（只改本地文件）">🏷️ 文件名改成C站名</div>' +
+    '<div class="ctx-item" data-act="sdjson" data-tip="生成 WebUI 能识别的「模型名.json」元数据文件">📄 生成SD可读json</div>' +
+    '<div class="ctx-item" data-act="localize" data-tip="把本地文件名翻译成中文">🀄 文件名翻中文</div>' +
+    '<div class="ctx-item" data-act="rp" data-tip="从 C 站匹配该模型的名字/触发词/封面">📤 识别模型信息</div>' +
+    '<div class="ctx-item" data-act="organize" data-tip="把该模型移动到分类文件夹（需先在设置选 🎯 目标环境）">📂 整理模型</div>' +
     '<hr class="ctx-sep"/>' +
-    '<div class="ctx-item danger" data-act="del">🗑️ 删除文件</div>';
+    '<div class="ctx-item danger" data-act="del" data-tip="把该模型文件移入回收站（可还原）">🗑️ 移入回收站</div>';
   menu.style.display = "block";
   const zf = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
   const mw = 200, mh = 280;
@@ -1096,13 +1096,13 @@ async function showModelDetail(path) {
     '<div class="detail-actions">' +
     '<button class="btn btn-primary" id="dEditInfo">✏️ 编辑信息</button>' +
     '<button class="btn" id="dCover">📤 自定义封面</button>' +
-    '<button class="btn" id="dSite">🌐 打开C站</button>' +
-    '<button class="btn" id="dRename">✏️ 重命名</button>' +
-    '<button class="btn" id="dRp">📤 发送到反向解析</button>' +
-    '<button class="btn" id="dTranslate">🌏 翻译简介</button>' +
-    '<button class="btn" id="dLocalize">🀄 汉化文件名</button>' +
-    '<button class="btn" id="dAllImgs">🖼️ 下载全部图片</button>' +
-    '<button class="btn" id="dJson">📄 生成SD json</button>' +
+    '<button class="btn" id="dSite" data-tip="在浏览器打开该模型在 C 站的主页">🌐 打开C站</button>' +
+    '<button class="btn" id="dRename" data-tip="自定义改名（保留扩展名）">✏️ 改名</button>' +
+    '<button class="btn" id="dRp" data-tip="从 C 站匹配该模型的名字/触发词/封面">📤 识别模型信息</button>' +
+    '<button class="btn" id="dTranslate" data-tip="把 C 站模型简介翻译成中文（需在设置配置百度翻译）">🌏 翻译成中文</button>' +
+    '<button class="btn" id="dLocalize" data-tip="把本地文件名翻译成中文">🀄 文件名翻中文</button>' +
+    '<button class="btn" id="dAllImgs" data-tip="把 C 站该模型的全部示例图下载到「模型名.images」文件夹">🖼️ 下载所有示例图</button>' +
+    '<button class="btn" id="dJson" data-tip="生成 WebUI 能识别的「模型名.json」元数据文件">📄 生成SD可读json</button>' +
     '<button class="btn" id="dClose">关闭</button></div></div>';
   $("#detailMask").style.display = "flex";
   // 自动加载所有 URL 缩略图（避免空占位）
@@ -1225,25 +1225,25 @@ async function showModelDetail(path) {
     });
   });
   $("#dTranslate", panel).addEventListener("click", async () => {
-    setStatus("翻译简介中...");
+    setStatus("翻译成中文中...");
     const r = await api.call("mm_translate_descs", [d.path]);
     setStatus(r && r.msg ? r.msg : "翻译完成");
     showModelDetail(d.path);  // 保持面板，刷新内容
   });
   $("#dLocalize", panel).addEventListener("click", async () => {
-    setStatus("汉化文件名中...");
+    setStatus("文件名翻中文中...");
     const r = await api.call("mm_localize", [d.path]);
     setStatus(r && r.msg ? r.msg : "汉化完成");
     showModelDetail(d.path);
   });
   $("#dAllImgs", panel).addEventListener("click", async () => {
-    setStatus("下载全部图片中 0%...");
+    setStatus("下载所有示例图中 0%...");
     const timer = setInterval(async () => {
       try {
         const st = JSON.parse((await api.call("get_img_dl_state")) || "{}");
         if (st.total > 0) {
           const pct = Math.round((st.done / st.total) * 100);
-          setStatus("下载全部图片中 " + pct + "% (" + st.done + "/" + st.total + ")");
+          setStatus("下载所有示例图中 " + pct + "% (" + st.done + "/" + st.total + ")");
         }
       } catch (e) {}
     }, 400);
@@ -1256,7 +1256,7 @@ async function showModelDetail(path) {
   $("#dRp", panel).addEventListener("click", async () => {
     await api.call("rp_add_paths", [d.path]);
     closeDetail();
-    setStatus("已发送到反向解析");
+    setStatus("已发送去识别模型信息");
     document.querySelector('.nav-tab[data-page="reverse"]').click();
   });
   $("#dJson", panel).addEventListener("click", async () => {
@@ -1278,12 +1278,12 @@ document.addEventListener("contextmenu", (e) => {
   detailImgCtx = { c, idx };
   const menu = $("#ctxMenu");
   menu.innerHTML =
-    '<div class="ctx-item" data-act="img_copy">📋 复制图片到剪贴板</div>' +
-    '<div class="ctx-item" data-act="img_prompt">💬 复制正面提示词</div>' +
-    '<div class="ctx-item" data-act="img_neg">💬 复制负面提示词</div>' +
-    '<div class="ctx-item" data-act="img_tags">🏷️ 复制触发词（模型 tags）</div>' +
-    '<div class="ctx-item" data-act="img_folder">📂 打开图片所在文件夹</div>' +
-    '<div class="ctx-item" data-act="img_orig">🌐 打开原图片网站</div>';
+    '<div class="ctx-item" data-act="img_copy" data-tip="把图片本身复制到剪贴板（可直接粘贴）">📋 复制图片到剪贴板</div>' +
+    '<div class="ctx-item" data-act="img_prompt" data-tip="复制该图片的正面提示词（本地 PNG 元数据 / C 站 info）">💬 复制正面提示词</div>' +
+    '<div class="ctx-item" data-act="img_neg" data-tip="复制该图片的负面提示词">💬 复制负面提示词</div>' +
+    '<div class="ctx-item" data-act="img_tags" data-tip="复制模型级触发词（与图片提示词分开）">🏷️ 复制触发词（模型 tags）</div>' +
+    '<div class="ctx-item" data-act="img_folder" data-tip="打开资源管理器并选中该图片">📂 打开图片所在文件夹</div>' +
+    '<div class="ctx-item" data-act="img_orig" data-tip="在浏览器打开该图片在 C 站的原页">🌐 打开原图片网站</div>';
   menu.style.display = "block";
   const zf = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
   menu.style.left = (e.clientX / zf) + "px";
@@ -1339,7 +1339,7 @@ $("#ctxMenu").addEventListener("click", async (e) => {
         if (r && r.ok) showToast("已打开文件夹：" + localImgPath);
         else showToast(r && r.msg ? r.msg + "：" + localImgPath : "打开失败");
       } else {
-        showToast("该图没有本地文件（可点「🖼️ 下载C站封面」或详情页下载全部图片）");
+        showToast("该图没有本地文件（可点「🖼️ 下载封面图」或详情页下载所有示例图）");
       }
     } else if (act === "img_tags") {
       const tw = (detailRow && detailRow.trainedWords) ? detailRow.trainedWords : [];
@@ -1496,7 +1496,7 @@ $("#aboutFloat").addEventListener("click", () => {
     "Civitai / HuggingFace 模型下载、管理、反向解析工具（免费全功能）<br/>" +
     '<div style="color:var(--text-dim)">' +
     "· 批量下载（civitai.red / civitai.com / huggingface.co）<br/>" +
-    "· 模型管理：扫描 / 校验 / 重命名 / 整理 / 封面 / 瀑布流<br/>" +
+    "· 模型管理：扫描 / 校验 / 改名 / 整理 / 封面 / 瀑布流<br/>" +
     "· 反向解析：SHA256 反查 + 百度翻译<br/>" +
     "· 断点续传 · 并发下载 · 主题 / 缩放 / 分类规则<br/>" +
     "界面字体：HarmonyOS Sans SC</div></div>" +
@@ -1555,18 +1555,18 @@ $("#mmTable tbody").addEventListener("contextmenu", (e) => {
   const menu = $("#ctxMenu");
   const r = ctxRow;
   menu.innerHTML =
-    '<div class="ctx-item" data-act="copy_name">📋 复制文件名</div>' +
-    '<div class="ctx-item" data-act="copy_cname">🀄 复制C站名</div>' +
-    '<div class="ctx-item" data-act="folder">📂 打开所在文件夹</div>' +
-    '<div class="ctx-item" data-act="site">🌐 打开C站</div>' +
-    '<div class="ctx-item" data-act="rename">✏️ 重命名</div>' +
-    '<div class="ctx-item" data-act="rename_c">🏷️ 重命名C站名</div>' +
-    '<div class="ctx-item" data-act="sdjson">📄 生成SD json</div>' +
-    '<div class="ctx-item" data-act="localize">🀄 汉化文件名</div>' +
-    '<div class="ctx-item" data-act="rp">📤 发送到反向解析</div>' +
-    '<div class="ctx-item" data-act="organize">📂 整理模型</div>' +
+    '<div class="ctx-item" data-act="copy_name" data-tip="复制当前本地文件名">📋 复制文件名</div>' +
+    '<div class="ctx-item" data-act="copy_cname" data-tip="复制 C 站上的模型名（不改本地文件）">🀄 复制C站模型名</div>' +
+    '<div class="ctx-item" data-act="folder" data-tip="打开资源管理器并选中该文件">📂 打开所在文件夹</div>' +
+    '<div class="ctx-item" data-act="site" data-tip="在浏览器打开该模型在 C 站的主页">🌐 打开C站</div>' +
+    '<div class="ctx-item" data-act="rename" data-tip="自定义改名（保留扩展名）">✏️ 改名</div>' +
+    '<div class="ctx-item" data-act="rename_c" data-tip="把本地文件名改成 C 站上的模型名（只改本地文件）">🏷️ 文件名改成C站名</div>' +
+    '<div class="ctx-item" data-act="sdjson" data-tip="生成 WebUI 能识别的「模型名.json」元数据文件">📄 生成SD可读json</div>' +
+    '<div class="ctx-item" data-act="localize" data-tip="把本地文件名翻译成中文">🀄 文件名翻中文</div>' +
+    '<div class="ctx-item" data-act="rp" data-tip="从 C 站匹配该模型的名字/触发词/封面">📤 识别模型信息</div>' +
+    '<div class="ctx-item" data-act="organize" data-tip="把该模型移动到分类文件夹（需先在设置选 🎯 目标环境）">📂 整理模型</div>' +
     '<hr class="ctx-sep"/>' +
-    '<div class="ctx-item danger" data-act="del">🗑️ 删除文件</div>';
+    '<div class="ctx-item danger" data-act="del" data-tip="把该模型文件移入回收站（可还原）">🗑️ 移入回收站</div>';
   menu.style.display = "block";
   const zf = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
   menu.style.left = (e.clientX / zf) + "px";
@@ -1601,7 +1601,7 @@ $("#ctxMenu").addEventListener("click", async (e) => {
       try { await window.__copyText(ctxRow.name || ""); setStatus("已复制文件名: " + ctxRow.name); }
       catch (e) { setStatus("复制失败"); }
     } else if (act === "copy_cname") {
-      try { await window.__copyText(ctxRow.civitai_name || "-"); setStatus("已复制C站名: " + (ctxRow.civitai_name || "-")); }
+      try { await window.__copyText(ctxRow.civitai_name || "-"); setStatus("已复制C站模型名: " + (ctxRow.civitai_name || "-")); }
       catch (e) { setStatus("复制失败"); }
     } else if (act === "site") {
       const url = ctxRow.url || ("https://" + (state.cfg.site_domain || "civitai.red") + "/models/" + (ctxRow.modelId || ""));
@@ -1610,7 +1610,7 @@ $("#ctxMenu").addEventListener("click", async (e) => {
       showRenameDialog(path, ctxRow.name);
     } else if (act === "rename_c") {
       await api.call("mm_rename", [path]);
-      setStatus("重命名完成，刷新中...");
+      setStatus("改名完成，刷新中...");
       await api.call("scan_models");
       pollMmScan();
     } else if (act === "sdjson") {
@@ -1625,7 +1625,7 @@ $("#ctxMenu").addEventListener("click", async (e) => {
       pollMmScan();
     } else if (act === "rp") {
       await api.call("rp_add_paths", [path]);
-      setStatus("已发送到反向解析");
+      setStatus("已发送去识别模型信息");
       document.querySelector('.nav-tab[data-page="reverse"]').click();
     } else if (act === "organize") {
       await api.call("mm_organize", [path]);
@@ -1644,7 +1644,7 @@ $("#ctxMenu").addEventListener("click", async (e) => {
   }
 });
 
-// 重命名弹窗
+// 改名弹窗
 function showRenameDialog(path, oldName) {
   const mask = document.createElement("div");
   mask.className = "rd-mask";
@@ -1652,7 +1652,7 @@ function showRenameDialog(path, oldName) {
   dlg.className = "rename-dialog";
   const oldBase = String(oldName || "").replace(/\.(safetensors|ckpt|pt|pth|bin|onnx|gguf|sft)$/i, "");
   dlg.innerHTML =
-    '<div class="rd-title">✏️ 重命名（保留扩展名）</div>' +
+    '<div class="rd-title">✏️ 改名（保留扩展名）</div>' +
     '<input class="input rd-input" id="rdInput" value="' + esc(oldBase) + '" placeholder="输入新文件名"/>' +
     '<div class="rd-actions">' +
     '<button class="btn" id="rdCancel">取消</button>' +
@@ -1670,7 +1670,7 @@ function showRenameDialog(path, oldName) {
     close();
     if (!name) return;
     const res = await api.call("rename_file", path, name);
-    setStatus(res && res.msg ? res.msg : "重命名完成");
+    setStatus(res && res.msg ? res.msg : "改名完成");
     await api.call("scan_models");
     pollMmScan();
   });
@@ -1759,7 +1759,7 @@ $("#mmRefresh").addEventListener("click", () => {
 });
 $("#mmScan").addEventListener("click", () => mmScan());
 
-// 修改名称：主按钮执行默认动作（设置可改），hover 显示二级菜单
+// 改名：主按钮执行默认动作（设置可改），hover 显示二级菜单
 function mmRenameRun(act) {
   const p = mmCheckedPaths();
   if (!p) { setStatus("请先勾选或选中模型"); return; }
@@ -1768,7 +1768,7 @@ function mmRenameRun(act) {
     if (first) { showRenameDialog(first.path, first.name); return; }
     setStatus("未找到选中模型"); return;
   }
-  setStatus((act === "rename_c" ? "重命名C站名" : "汉化文件名") + " 开始 ...");
+  setStatus((act === "rename_c" ? "文件名改成C站名" : "文件名翻中文") + " 开始 ...");
   api.call(act === "rename_c" ? "mm_rename" : "mm_localize", p).then(() => {
     setStatus("完成，刷新中 ...");
     api.call("scan_models");
@@ -1928,7 +1928,7 @@ const SETTING_FIELDS = [
   ["🌏 翻译", "translate_filename", "下载文件名为中文", "bool"],
   ["🎨 界面", "theme", "界面主题", "select", ["dark", "light", "modern"]],
   ["🎨 界面", "ui_zoom", "界面缩放", "select", ["80", "90", "100", "110", "125", "150"]],
-  ["🎨 界面", "rename_menu_default", "修改名称默认动作", "select", [["custom", "自定义重命名"], ["rename_c", "重命名C站名"], ["localize", "汉化文件名"]]],
+  ["🎨 界面", "rename_menu_default", "改名默认动作", "select", [["custom", "自定义改名"], ["rename_c", "文件名改成C站名"], ["localize", "文件名翻中文"]]],
   ["🎨 界面", "confirm_buttons_flip", "确认弹窗按钮翻转", "bool"],
   ["🎨 界面", "default_page", "启动默认页", "select", [["models", "🧩 模型管理"], ["download", "📥 批量下载"], ["dlmanager", "⬇️ 下载管理"], ["reverse", "🔍 反向解析"], ["workflow", "🔬 工作流分析"], ["settings", "⚙️ 设置"]]],
   ["🎨 界面", "default_view", "模型默认视图", "select", [["waterfall", "🖼️ 瀑布流"], ["list", "📋 列表"]]],
@@ -1958,7 +1958,7 @@ const SETTING_TIPS = {
   "translate_filename": "下载时把模型名翻译成中文作为文件名（需要配置百度翻译）",
   "theme": "界面主题：深色 / 浅色 / 现代浅色",
   "ui_zoom": "界面整体缩放比例（百分比）",
-  "rename_menu_default": "点「修改名称」默认执行的动作：自定义 / 直接改成 C 站名 / 汉化文件名",
+  "rename_menu_default": "点「改名」默认执行的动作：自定义 / 改成 C 站模型名 / 文件名翻中文",
   "confirm_buttons_flip": "交换确认弹窗中「确定/取消」按钮位置（防误点）",
   "default_page": "启动软件后默认打开的页面",
   "default_view": "模型管理默认展示方式：瀑布流（大图卡片）或列表（表格）",
@@ -2053,6 +2053,11 @@ function buildSettingsForm() {
     "</select></div>" +
     '<label>整理分类规则</label><div><textarea class="rules" id="organizeRules">' + esc((state.cfg.organize_rules || []).map((r) => (r.keywords || []).join(", ") + " -> " + r.folder).join("\n")) + "</textarea></div>" +
     "</div></fieldset>";
+  // 维护区块：清理伪 C 站图片缓存
+  form.innerHTML += '<fieldset class="form-section"><legend>🧹 维护</legend><div class="form-grid">' +
+    '<label data-tip="删除模型目录下所有「模型名.images」图片缓存文件夹（详情面板里下载的示例图），释放磁盘空间；封面缩略图不受影响">图片缓存清理</label>' +
+    '<div><button class="btn" id="btnCleanImgCache">🧹 删除下载的图片文件夹</button></div>' +
+    "</div></fieldset>";
 }
 
 // 密码框小眼睛（切换明文显示）
@@ -2110,6 +2115,33 @@ $("#btnTestBaidu").addEventListener("click", async () => {
   alert(r.ok ? r.msg : r.msg);
 });
 $("#btnOnboarding").addEventListener("click", () => showOnboarding());
+
+// 清理图片缓存（删除 *.images 文件夹）
+$("#settingsForm").addEventListener("click", async (e) => {
+  const btn = e.target.closest("#btnCleanImgCache");
+  if (!btn) return;
+  const r = JSON.parse(await api.call("cleanup_img_cache", true) || "{}");
+  if (!r.ok || !r.count) {
+    showToast(r.msg || "没有图片缓存文件夹（未下载过全部图片）");
+    return;
+  }
+  const mb = (r.size / 1048576).toFixed(1);
+  const list = r.dirs.slice(0, 5).map((d) => "· " + d.path).join("\n");
+  const more = r.dirs.length > 5 ? "\n… 等 " + r.dirs.length + " 个" : "";
+  const ok = await confirmBox(
+    "将删除 <b>" + r.count + "</b> 个图片缓存文件夹（共 <b>" + mb + " MB</b>）：<br/>" +
+    esc(list).replace(/\n/g, "<br/>") + esc(more).replace(/\n/g, "<br/>") +
+    "<br/><br/>删除后详情面板的本地示例图会清空（封面缩略图不受影响）。确定删除？");
+  if (!ok) return;
+  const r2 = JSON.parse(await api.call("cleanup_img_cache", false) || "{}");
+  if (r2 && r2.ok) {
+    showToast("已删除 " + (r2.removed || 0) + " 个图片缓存文件夹");
+    // 刷新模型管理（缩略图可能变化）
+    api.call("scan_models");
+  } else {
+    showToast("清理失败");
+  }
+});
 
 // ================= 启动 =================
 async function init() {

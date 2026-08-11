@@ -665,6 +665,40 @@ class Api:
         except Exception as e:
             return json.dumps({"ok": False, "msg": str(e)})
 
+    def cleanup_img_cache(self, preview=True):
+        """清理伪 C 站图片缓存：删除所有 <模型名>.images/ 目录（下载全部图片的产物）。
+        preview=True 只统计；False 执行删除。封面缩略图（preview.png）不受影响。"""
+        import shutil
+        roots = self._models_roots() or []
+        dirs = []
+        total_size = 0
+        for root in roots:
+            if not root or not os.path.isdir(root):
+                continue
+            for dirpath, dirnames, filenames in os.walk(root):
+                for d in list(dirnames):
+                    if d.lower().endswith(".images"):
+                        fp = os.path.join(dirpath, d)
+                        try:
+                            sz = sum(os.path.getsize(os.path.join(r, f))
+                                     for r, _, fs in os.walk(fp) for f in fs)
+                        except Exception:
+                            sz = 0
+                        dirs.append({"path": fp, "size": sz})
+                        total_size += sz
+                        dirnames.remove(d)  # 不深入该缓存目录
+        if preview:
+            return json.dumps({"ok": True, "count": len(dirs), "size": total_size, "dirs": dirs},
+                              ensure_ascii=False)
+        removed = 0
+        for d in dirs:
+            try:
+                shutil.rmtree(d["path"], ignore_errors=True)
+                removed += 1
+            except Exception:
+                pass
+        return json.dumps({"ok": True, "removed": removed}, ensure_ascii=False)
+
     def download_all_images(self, path):
         """download all C-site images to <base>.images/"""
         import urllib.request
