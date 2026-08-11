@@ -1481,37 +1481,53 @@ $("#wfPick").addEventListener("click", async () => {
 });
 
 
-// ===== 右下角关于浮窗 =====
-$("#aboutFloat").addEventListener("click", () => {
+// ===== 关于弹窗（右下角「关于」/左上角 logo） =====
+async function showAbout() {
   const mask = document.createElement("div");
   mask.className = "rd-mask";
   const dlg = document.createElement("div");
   dlg.className = "rename-dialog";
-  dlg.style.width = "460px";
+  dlg.style.width = "480px";
+  let ver = "v?";
+  try {
+    const r = JSON.parse(await api.call("get_version") || "{}");
+    if (r && r.ok) ver = "v" + r.version;
+  } catch (e) { /* 版本获取失败时显示占位 */ }
   dlg.innerHTML =
     '<div class="about-head">' +
     '<img class="about-logo" src="bili_face.png" alt=""/>' +
-    '<div><div class="about-name">CivitaiFreeTool <span class="about-ver">v1.3.0</span></div></div></div>' +
-    '<div style="font-size:13px;color:var(--text);line-height:1.9;margin-top:12px">' +
-    "Civitai / HuggingFace 模型下载、管理、反向解析工具（免费全功能）<br/>" +
+    '<div><div class="about-name">CivitaiFreeTool <span class="about-ver">' + esc(ver) + '</span></div>' +
+    '<div style="font-size:12px;color:var(--text-dim)">Civitai / HuggingFace 模型下载、管理、反向解析工具（免费全功能）</div></div></div>' +
+    '<div style="font-size:13px;color:var(--text);line-height:1.8;margin-top:12px">' +
+    '<div style="font-weight:600;margin-bottom:4px">🆕 最近更新（' + esc(ver) + '）：</div>' +
     '<div style="color:var(--text-dim)">' +
-    "· 批量下载（civitai.red / civitai.com / huggingface.co）<br/>" +
-    "· 模型管理：扫描 / 校验 / 改名 / 整理 / 封面 / 瀑布流<br/>" +
-    "· 反向解析：SHA256 反查 + 百度翻译<br/>" +
-    "· 断点续传 · 并发下载 · 主题 / 缩放 / 分类规则<br/>" +
-    "界面字体：HarmonyOS Sans SC</div></div>" +
+    "· 🧹 设置页新增「维护」：一键清理图片缓存文件夹<br/>" +
+    "· 🏷️ 歧义词全面优化：改名 / 文件名改成C站名 / 识别模型信息 / 到期提醒…<br/>" +
+    "· 💡 所有按钮/菜单项加 hover 浮窗备注<br/>" +
+    "· 📋 复制图片 = 图片本身进剪贴板；正/负面提示词分开复制<br/>" +
+    "· 🔍 本地 PNG 图片提示词走本地识别（A1111 元数据）<br/>" +
+    "· 📂 打开所在文件夹改走 Windows Shell API，不再闪黑窗<br/>" +
+    "· 💬 右键图片可复制正面+负面提示词；⏰ 到期提醒自动判断时间<br/>" +
+    "</div></div>" +
     '<div class="about-author">' +
     '<div class="rd-home" id="rdHome">👤 作者：爱德怀斯official —— 点击打开 B 站主页</div>' +
     '<div class="rd-group" id="rdGroup">🐧 粉丝群：909810278 —— 点击加入</div></div>' +
-    '<div class="rd-actions"><button class="btn btn-primary" id="aboutOk">知道了</button></div>';
+    '<div class="rd-actions">' +
+    '<button class="btn" id="aboutGithub">🌐 GitHub 仓库</button>' +
+    '<button class="btn btn-primary" id="aboutOk">知道了</button></div>';
   document.body.appendChild(mask);
   document.body.appendChild(dlg);
   const close = () => { mask.remove(); dlg.remove(); };
   $("#aboutOk").addEventListener("click", close);
   mask.addEventListener("click", close);
+  $("#aboutGithub").addEventListener("click", () => api.call("open_url", "https://github.com/ADVICEsama/CivitaiFreeTool"));
   $("#rdHome").addEventListener("click", () => api.call("open_url", "https://space.bilibili.com/273101122"));
   $("#rdGroup").addEventListener("click", () => api.call("open_url", "https://qm.qq.com/q/EbnuVZB4wE"));
-});
+}
+$("#aboutFloat").addEventListener("click", showAbout);
+// 左上角 logo 点击 = 关于页
+const _logoEl = document.querySelector(".nav-logo");
+if (_logoEl) _logoEl.addEventListener("click", showAbout);
 
 // ===== 全局悬浮提示（带动画，鼠标跟随） =====
 (function () {
@@ -2173,7 +2189,7 @@ async function init() {
 }
 
 // ===== 首次使用引导（主题 / 下载目录 / API key / 模型目录 / 反向解析） =====
-const OB_STEPS = ["🌗 主题", "📂 下载目录", "🔑 API Key", "📂 模型目录", "🔄 反向解析"];
+const OB_STEPS = ["✨ 功能", "🌗 主题", "📂 下载目录", "🔑 API Key", "📂 模型目录", "🔄 反向解析"];
 let obStep = 0;
 let obTheme = "dark";
 let obDirVal = "";   // 跨步骤保存（输入框只在对应步骤渲染）
@@ -2196,6 +2212,35 @@ function renderOnboarding() {
   $("#obNext").textContent = obStep === OB_STEPS.length - 1 ? "完成 🎉" : "下一步";
   const body = $("#obBody");
   if (obStep === 0) {
+    // 第一页：功能介绍 —— 六个按钮对应六个页面，hover 显示功能简介
+    const feats = [
+      ["📥", "批量下载", "download", "粘贴 C 站 / HuggingFace 链接，批量解析并下载；支持付费模型到期提醒"],
+      ["📁", "下载管理", "dlmanager", "查看下载进度、断点续传、暂停/重试/移除任务，完成后自动写元数据"],
+      ["🧩", "模型管理", "models", "扫描本地模型、缩略图瀑布流、改名/整理/校验完整性/一键清理"],
+      ["🔍", "反向解析", "reverse", "把已下载的模型文件识别出 C 站信息：名字、触发词、类型、封面"],
+      ["🔬", "工作流分析", "workflow", "拖入 ComfyUI 的 json/png 工作流，解析节点、模型引用与参数"],
+      ["⚙️", "设置", "settings", "下载目录、API Key、主题缩放、分类规则、清理缓存、新手引导"],
+    ];
+    body.innerHTML =
+      '<div class="ob-label">🚀 六个页面，各司其职（鼠标移上去查看功能介绍，点击直接进入）：</div>' +
+      '<div class="ob-feat-grid">' +
+      feats.map((f) =>
+        '<div class="ob-feat-btn" data-page="' + f[2] + '" data-tip="' + esc(f[3]) + '"><span>' + f[0] + "</span><span>" + f[1] + "</span></div>"
+      ).join("") +
+      "</div>" +
+      '<div style="margin-top:10px;text-align:center">' +
+      '<a class="ob-github" id="obGithub">🌐 GitHub 仓库（源码 / 更新 / 反馈）</a></div>' +
+      '<div style="color:var(--text-dim);font-size:12px;margin-top:8px;text-align:center">免费 · 全功能 · 无付费墙</div>';
+    document.querySelectorAll(".ob-feat-btn").forEach((el) => {
+      el.addEventListener("click", async () => {
+        const page = el.dataset.page;
+        await finishOnboarding();
+        const tab = document.querySelector('.nav-tab[data-page="' + page + '"]');
+        if (tab) tab.click();
+      });
+    });
+    $("#obGithub").addEventListener("click", () => api.call("open_url", "https://github.com/ADVICEsama/CivitaiFreeTool"));
+  } else if (obStep === 1) {
     body.innerHTML =
       '<div class="ob-label">选择界面主题（可随时在设置页更换）</div>' +
       '<div class="ob-themes" id="obThemes">' +
@@ -2211,7 +2256,7 @@ function renderOnboarding() {
         el.classList.add("sel");
       });
     });
-  } else if (obStep === 1) {
+  } else if (obStep === 2) {
     body.innerHTML =
       '<div class="ob-label">下载目录（模型下载后存放位置，可修改）</div>' +
       '<div style="display:flex;gap:8px"><input class="input" id="obDir" style="flex:1" value="' + esc(obDirVal) + '"/>' +
@@ -2222,7 +2267,8 @@ function renderOnboarding() {
       const picked = await api.call("pick_dir");
       if (picked) { obDirVal = picked; $("#obDir").value = picked; }
     });
-  } else if (obStep === 2) {
+    $("#obBrowse2") && null;
+  } else if (obStep === 3) {
     body.innerHTML =
       '<div class="ob-label">Civitai API Key（免费申请，用于查询模型信息与下载）</div>' +
       '<input class="input" id="obKey" type="password" value="' + esc(obKeyVal) + '" placeholder="粘贴你的 API Key"/>' +
@@ -2241,7 +2287,7 @@ function renderOnboarding() {
     });
     $("#obOpenApi").addEventListener("click", () => api.call("open_url", "https://civitai.com/user/account"));
     $("#obApiPage").addEventListener("click", () => api.call("open_url", "https://civitai.com/user/account"));
-  } else if (obStep === 3) {
+  } else if (obStep === 4) {
     // 模型管理目录：手把手选择（可多目录）
     body.innerHTML =
       '<div class="ob-label">📂 模型管理目录 —— 你本地存放模型的地方</div>' +
@@ -2317,6 +2363,8 @@ $("#obNext").addEventListener("click", async () => {
     obStep = 3;
   } else if (obStep === 3) {
     obStep = 4;
+  } else if (obStep === 4) {
+    obStep = 5;
   } else {
     // 完成：保存配置（obDirVal/obKeyVal/obModelDirs 跨步骤保存，输入框已不在 DOM）
     await finishOnboarding();

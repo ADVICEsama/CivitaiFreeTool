@@ -10,6 +10,8 @@ import time
 
 import webview
 
+APP_VERSION = "1.5.5.10"
+
 import civitai_api
 import config
 import downloader
@@ -664,6 +666,10 @@ class Api:
                                "mime": "image/png" if im.mode in ("RGBA", "LA") else "image/jpeg"})
         except Exception as e:
             return json.dumps({"ok": False, "msg": str(e)})
+
+    def get_version(self):
+        """当前软件版本号（关于弹窗/更新说明用）"""
+        return json.dumps({"ok": True, "version": APP_VERSION}, ensure_ascii=False)
 
     def cleanup_img_cache(self, preview=True):
         """清理伪 C 站图片缓存：删除所有 <模型名>.images/ 目录（下载全部图片的产物）。

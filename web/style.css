@@ -635,7 +635,27 @@ textarea.rules {
 .ob-theme:hover { border-color: var(--primary); }
 .ob-theme.sel { border-color: var(--primary); }
 .ob-theme .sw { width: 100%; height: 44px; border-radius: 8px; margin-bottom: 8px; }
-.ob-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+.ob-actions { display: flex; justify-content: space-between; gap: 8px; margin-top: 18px; }
+.ob-actions #obNext { margin-left: auto; }
+.ob-actions .ob-spacer { flex: 1; }
+.ob-feat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.ob-feat-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 9px 10px; border-radius: 10px;
+  background: var(--surface2); border: 1px solid var(--border);
+  font-size: 13px; color: var(--text); cursor: pointer; text-align: left;
+  transition: border-color .15s, background .15s;
+}
+.ob-feat-btn:hover { border-color: var(--primary); background: var(--surface); }
+.ob-feat-desc { font-size: 11px; color: var(--text-dim); margin-top: 2px; line-height: 1.5; }
+.ob-github {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-top: 12px; padding: 7px 12px;
+  border-radius: 999px; border: 1px solid var(--border);
+  background: var(--surface2); color: var(--text);
+  font-size: 12px; text-decoration: none; cursor: pointer;
+}
+.ob-github:hover { border-color: var(--primary); color: var(--primary); }
 .ob-actions2 { display: flex; gap: 8px; margin-top: 10px; }
 .ob-guide {
   margin-top: 10px;
