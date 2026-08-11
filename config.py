@@ -15,6 +15,7 @@ DEFAULTS = {
     "api_key": "",
     "download_dir": os.path.join(APP_DIR, "downloads", "models"),
     "models_dir": os.path.join(APP_DIR, "downloads", "models"),
+    "models_dirs": [],               # 多模型目录（每行一个；WebUI 与 ComfyUI 分开时都填）
     "max_concurrent_downloads": 3,
     "download_timeout": 300,
     "auto_translate": True,

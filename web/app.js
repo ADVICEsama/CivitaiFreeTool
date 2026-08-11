@@ -1260,6 +1260,7 @@ document.addEventListener("contextmenu", (e) => {
   const menu = $("#ctxMenu");
   menu.innerHTML =
     '<div class="ctx-item" data-act="img_copy">📋 复制当前图片</div>' +
+    '<div class="ctx-item" data-act="img_tags">🏷️ 复制触发词（tags）</div>' +
     '<div class="ctx-item" data-act="img_folder">📂 打开图片所在文件夹</div>' +
     '<div class="ctx-item" data-act="img_prompt">💬 复制提示词</div>' +
     '<div class="ctx-item" data-act="img_orig">🌐 打开原图片网站</div>';
@@ -1307,9 +1308,17 @@ $("#ctxMenu").addEventListener("click", async (e) => {
       }
     } else if (act === "img_folder") {
       const p = detailImgLocalPath;
-      if (p) await api.call("open_url", "explorer /select,\"" + p + "\"");
+      if (p) await api.call("open_in_folder", p);
       else if (c.orig_url) await api.call("open_url", c.orig_url);
       else setStatus("无本地文件");
+    } else if (act === "img_tags") {
+      const tw = (detailRow && detailRow.trainedWords) ? detailRow.trainedWords : [];
+      if (tw.length) {
+        await window.__copyText(tw.join(", "));
+        setStatus("触发词已复制（" + tw.length + " 套）");
+      } else {
+        setStatus("该模型没有触发词信息（可先反向解析）");
+      }
     } else if (act === "img_prompt") {
       const t = c.prompt || "（该图片无提示词信息）";
       await window.__copyText(t);
@@ -1504,6 +1513,7 @@ $("#mmTable tbody").addEventListener("contextmenu", (e) => {
   menu.innerHTML =
     '<div class="ctx-item" data-act="copy_name">📋 复制文件名</div>' +
     '<div class="ctx-item" data-act="copy_cname">🀄 复制C站名</div>' +
+    '<div class="ctx-item" data-act="folder">📂 打开所在文件夹</div>' +
     '<div class="ctx-item" data-act="site">🌐 打开C站</div>' +
     '<div class="ctx-item" data-act="rename">✏️ 重命名</div>' +
     '<div class="ctx-item" data-act="rename_c">🏷️ 重命名C站名</div>' +
@@ -1856,7 +1866,7 @@ function pollRp() {
 const SETTING_FIELDS = [
   ["🔑 基本", "api_key", "Civitai API Key", "password"],
   ["🔑 基本", "download_dir", "下载目录", "text"],
-  ["🔑 基本", "models_dir", "模型管理目录", "text"],
+  ["🔑 基本", "models_dirs", "模型管理目录（每行一个）", "dirs"],
   ["🔑 基本", "site_domain", "站点域名", "select", ["civitai.red", "civitai.com"]],
   ["🌐 网络", "proxy_enabled", "启用代理", "bool"],
   ["🌐 网络", "ssl_verify", "启用证书验证", "bool"],
@@ -1881,6 +1891,39 @@ const SETTING_FIELDS = [
   ["🎨 界面", "zebra_rows", "模型列表斑马纹", "bool"],
   ["🎨 界面", "ambient_bg", "顶部氛围动态背景", "bool"],
 ];
+
+// 设置项 hover 说明（鼠标移到标签上显示功能作用）
+const SETTING_TIPS = {
+  "api_key": "Civitai 账号免费生成的 API Key，用于查询模型信息、下载与反向解析。在 civitai.com/user/account 登录后点「New API Key」生成",
+  "download_dir": "模型下载后存放的位置，可填任意文件夹（如 D:\\models）",
+  "models_dirs": "本地模型管理目录：软件从这里扫描模型并显示封面/触发词。WebUI 与 ComfyUI 分开存放时每行填一个（如 D:\\sd-webui-forge-neo\\webui\\models 和 D:\\ComfyUI\\models），扫描会合并显示",
+  "site_domain": "打开 C 站页面用的域名：网络异常时可在 civitai.red 与 civitai.com 之间切换",
+  "proxy_enabled": "开启后所有请求走代理（科学上网工具），解析/下载失败时可尝试开启",
+  "ssl_verify": "关闭后跳过 TLS 证书验证：代理软件开了 HTTPS 解密（MITM）导致报证书错误时取消勾选即可恢复",
+  "proxy_address": "代理软件地址，如 127.0.0.1:7897（Clash 默认端口）",
+  "max_concurrent_downloads": "同时下载的任务数：越大越快，但占用更多带宽",
+  "download_timeout": "单个文件下载无响应超过该秒数判定失败并重试",
+  "hash_threads": "计算文件哈希（校验/反向解析用）的线程数",
+  "gen_metadata": "下载完成后自动生成 <模型名>.civitai.info / .json 元数据；没有它，模型管理里看不到名称/触发词",
+  "download_cover": "下载完成后自动把 C 站预览图保存到模型目录（模型管理显示缩略图用）",
+  "ask_move_after_download": "下载完成后询问是否把文件移动到指定文件夹（适合按类型归档）",
+  "metadata_format": "sd = WebUI 能直接识别的扁平 json；civitai = C 站原始 info 结构；both = 两个都生成",
+  "baidu_appid": "百度翻译开放平台 APP ID（免费申请），用于反向解析自动翻译模型名/简介",
+  "baidu_key": "百度翻译开放平台密钥，与 APP ID 配套",
+  "auto_translate": "反向解析时自动把模型名/简介翻译成中文",
+  "translate_filename": "下载时把模型名翻译成中文作为文件名（需要配置百度翻译）",
+  "theme": "界面主题：深色 / 浅色 / 现代浅色",
+  "ui_zoom": "界面整体缩放比例（百分比）",
+  "rename_menu_default": "点「修改名称」默认执行的动作：自定义 / 直接改成 C 站名 / 汉化文件名",
+  "confirm_buttons_flip": "交换确认弹窗中「确定/取消」按钮位置（防误点）",
+  "default_page": "启动软件后默认打开的页面",
+  "default_view": "模型管理默认展示方式：瀑布流（大图卡片）或列表（表格）",
+  "zebra_rows": "模型列表行间斑马纹，便于横向对齐查看",
+  "ambient_bg": "顶部氛围动态背景（渐变光晕）",
+  "target_env": "你的模型最终要放进哪个部署环境：WebUI/Forge 用 Lora、Stable-diffusion 目录；ComfyUI 用 loras、checkpoints 目录。整理前必须选择",
+  "organize_mode": "整理方式：手动 = 每个模型弹窗让你选文件夹；C 站 tags = 按 C 站分类自动归档（需先反向解析生成 info）；自定义规则 = 按你填的关键词规则归档",
+  "organize_rules": "每行一条：关键词1, 关键词2 -> 目标文件夹（如：NoobAI, noob -> NoobAI）",
+};
 
 // 设置分组折叠
 $("#settingsForm").addEventListener("click", (e) => {
@@ -1920,8 +1963,9 @@ function buildSettingsForm() {
     const body = fields.map(([key, label, type, opts]) => {
       const v = state.cfg[key];
       let input = "";
+      const tip = SETTING_TIPS[key] || "";
       if (type === "bool") {
-        input = '<label class="check"><input type="checkbox" data-key="' + key + '" ' + (v ? "checked" : "") + "/> " + esc(label) + "</label>";
+        input = '<label class="check"' + (tip ? ' data-tip="' + esc(tip) + '"' : "") + '><input type="checkbox" data-key="' + key + '" ' + (v ? "checked" : "") + "/> " + esc(label) + "</label>";
       } else if (type === "select") {
         input = '<select data-key="' + key + '">' + opts.map((o) => {
           const val = Array.isArray(o) ? o[0] : o;
@@ -1933,11 +1977,15 @@ function buildSettingsForm() {
       } else if (type === "password") {
         input = '<div class="pwd-wrap"><input class="input" type="password" data-key="' + key + '" value="' + esc(v || "") + '"/>' +
           '<span class="pwd-eye" data-eye="' + key + '">👁️</span></div>';
+      } else if (type === "dirs") {
+        const list = (Array.isArray(v) && v.length) ? v : (state.cfg.models_dir ? [state.cfg.models_dir] : []);
+        input = '<textarea class="input" rows="3" data-key="' + key + '" placeholder="D:\\sd-webui-forge-neo\\webui\\models">' + esc(list.join("\n")) + '</textarea>' +
+          '<div class="tip-inline">每行一个文件夹；WebUI 与 ComfyUI 分开存放时都填进来，扫描会合并显示（推荐填你实际的 webui\\models 和 comfyui\\models 目录）</div>';
       } else {
         input = '<input class="input" data-key="' + key + '" value="' + esc(v || "") + '"/>';
       }
       if (type === "bool") return '<div class="form-item">' + input + "</div>";
-      return '<label>' + esc(label) + "</label><div>" + input + "</div>";
+      return '<label' + (tip ? ' data-tip="' + esc(tip) + '"' : "") + ">" + esc(label) + "</label><div>" + input + "</div>";
     }).join("");
     // 翻译组追加百度申请链接
     let extra = "";
@@ -1994,6 +2042,7 @@ $("#btnSaveSettings").addEventListener("click", async () => {
     const k = el.dataset.key;
     if (el.type === "checkbox") cfg[k] = el.checked;
     else if (el.type === "number") cfg[k] = Number(el.value);
+    else if (el.tagName === "TEXTAREA") cfg[k] = el.value.split("\n").map((s) => s.trim()).filter(Boolean);
     else cfg[k] = el.value;
   });
   updateOrganizeBtns();
@@ -2047,17 +2096,20 @@ async function init() {
   }
 }
 
-// ===== 首次使用引导（主题 / 下载目录 / API key） =====
-const OB_STEPS = ["🌗 主题", "📂 下载目录", "🔑 API Key"];
+// ===== 首次使用引导（主题 / 下载目录 / API key / 模型目录 / 反向解析） =====
+const OB_STEPS = ["🌗 主题", "📂 下载目录", "🔑 API Key", "📂 模型目录", "🔄 反向解析"];
 let obStep = 0;
 let obTheme = "dark";
 let obDirVal = "";   // 跨步骤保存（输入框只在对应步骤渲染）
 let obKeyVal = "";
+let obModelDirs = []; // 模型管理目录（多目录）
 function showOnboarding() {
   obStep = 0;
   obTheme = state.cfg.theme || "dark";
   obDirVal = state.cfg.download_dir || "";
   obKeyVal = state.cfg.api_key || "";
+  const md = state.cfg.models_dirs;
+  obModelDirs = (Array.isArray(md) && md.length) ? md.slice() : (state.cfg.models_dir ? [state.cfg.models_dir] : []);
   $("#obMask").style.display = "flex";
   renderOnboarding();
 }
@@ -2094,7 +2146,7 @@ function renderOnboarding() {
       const picked = await api.call("pick_dir");
       if (picked) { obDirVal = picked; $("#obDir").value = picked; }
     });
-  } else {
+  } else if (obStep === 2) {
     body.innerHTML =
       '<div class="ob-label">Civitai API Key（免费申请，用于查询模型信息与下载）</div>' +
       '<input class="input" id="obKey" type="password" value="' + esc(obKeyVal) + '" placeholder="粘贴你的 API Key"/>' +
@@ -2113,27 +2165,79 @@ function renderOnboarding() {
     });
     $("#obOpenApi").addEventListener("click", () => api.call("open_url", "https://civitai.com/user/account"));
     $("#obApiPage").addEventListener("click", () => api.call("open_url", "https://civitai.com/user/account"));
+  } else if (obStep === 3) {
+    // 模型管理目录：手把手选择（可多目录）
+    body.innerHTML =
+      '<div class="ob-label">📂 模型管理目录 —— 你本地存放模型的地方</div>' +
+      '<div class="ob-hint">软件从这里扫描模型、显示封面和触发词。WebUI 与 ComfyUI 分开存放的，把两个目录都填上（每行一个）：</div>' +
+      '<textarea class="input" id="obModelDirs" rows="3" style="width:100%;box-sizing:border-box">' + esc(obModelDirs.join("\n")) + '</textarea>' +
+      '<div class="ob-actions2"><button class="btn" id="obBrowseModels">📁 选择文件夹</button>' +
+      '<button class="btn" id="obBrowseModels2">📁 再添加一个</button></div>' +
+      '<div style="color:var(--text-dim);font-size:12px;margin-top:6px">常见路径：D:\\sd-webui-forge-neo\\webui\\models（WebUI）、D:\\ComfyUI\\models（ComfyUI）</div>';
+    const sync = () => { obModelDirs = $("#obModelDirs").value.split("\n").map((s) => s.trim()).filter(Boolean); };
+    $("#obModelDirs").addEventListener("input", sync);
+    const addDir = async () => {
+      const picked = await api.call("pick_dir");
+      if (!picked) return;
+      sync();
+      if (!obModelDirs.includes(picked)) obModelDirs.push(picked);
+      $("#obModelDirs").value = obModelDirs.join("\n");
+    };
+    $("#obBrowseModels").addEventListener("click", async () => {
+      const picked = await api.call("pick_dir");
+      if (!picked) return;
+      obModelDirs = [picked];
+      $("#obModelDirs").value = picked;
+    });
+    $("#obBrowseModels2").addEventListener("click", addDir);
+  } else {
+    // 反向解析：推荐但可跳过
+    body.innerHTML =
+      '<div class="ob-label">🔄 反向解析（强烈推荐，也可跳过）</div>' +
+      '<div class="ob-hint">把你已下载的模型文件识别出 C 站信息：自动匹配模型名、触发词（tags）、类型和基础模型，并生成封面。</div>' +
+      '<div class="ob-hint" style="margin-top:4px">✅ 做完后，模型管理里每个模型才有名字和触发词可复制；<b>跳过也不影响其他功能</b>。</div>' +
+      '<div class="ob-actions2"><button class="btn btn-primary" id="obGoRp">🚀 立即体验（推荐）</button>' +
+      '<button class="btn" id="obSkipRp">⏭️ 跳过（以后在 🔍 反向解析 页随时可用）</button></div>';
+    $("#obGoRp").addEventListener("click", async () => {
+      await finishOnboarding();
+      document.querySelector(".nav-tab[data-page=\"reverse\"]").click();
+      setStatus("已进入反向解析页，拖入或选择模型文件即可开始");
+    });
+    $("#obSkipRp").addEventListener("click", async () => {
+      await finishOnboarding();
+    });
   }
+}
+
+// 引导完成：保存全部配置
+async function finishOnboarding() {
+  state.cfg.api_key = (obKeyVal || "").trim();
+  state.cfg.download_dir = (obDirVal || state.cfg.download_dir || "").trim();
+  state.cfg.theme = obTheme;
+  const dirs = obModelDirs.filter(Boolean);
+  state.cfg.models_dirs = dirs;
+  if (dirs.length) state.cfg.models_dir = dirs[0];
+  document.documentElement.dataset.theme = obTheme;
+  await api.call("save_config", state.cfg);
+  state.cfg = await api.call("get_config");
+  buildSettingsForm();
+  applyZoom(Number(state.cfg.ui_zoom) || 100);
+  document.documentElement.dataset.theme = state.cfg.theme || "modern";
+  $("#obMask").style.display = "none";
+  setStatus("设置完成，欢迎使用！");
 }
 $("#obNext").addEventListener("click", async () => {
   if (obStep === 0) {
     obStep = 1;
   } else if (obStep === 1) {
     obStep = 2;
+  } else if (obStep === 2) {
+    obStep = 3;
+  } else if (obStep === 3) {
+    obStep = 4;
   } else {
-    // 完成：保存配置（obDirVal/obKeyVal 跨步骤保存，输入框已不在 DOM）
-    state.cfg.api_key = (obKeyVal || "").trim();
-    state.cfg.download_dir = (obDirVal || state.cfg.download_dir || "").trim();
-    state.cfg.theme = obTheme;
-    document.documentElement.dataset.theme = obTheme;
-    await api.call("save_config", state.cfg);
-    state.cfg = await api.call("get_config");
-    // 重新渲染设置页/主题/缩放，确保引导中的修改立即反映到设置页
-    buildSettingsForm();
-    applyZoom(Number(state.cfg.ui_zoom) || 100);
-    document.documentElement.dataset.theme = state.cfg.theme || "modern";
-    $("#obMask").style.display = "none";
-    setStatus("设置完成，欢迎使用！");
+    // 完成：保存配置（obDirVal/obKeyVal/obModelDirs 跨步骤保存，输入框已不在 DOM）
+    await finishOnboarding();
     return;
   }
   renderOnboarding();

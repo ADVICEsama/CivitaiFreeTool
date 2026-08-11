@@ -38,10 +38,10 @@
       <div id="urlRows" class="url-rows"></div>
       <div class="btn-row">
         <button class="btn btn-primary" id="btnParse">🔍 解析并加入下载队列</button>
-        <button class="btn" id="btnPaste">📋 粘贴剪贴板链接</button>
-        <button class="btn" id="btnClearUrls">🗑️ 清空全部</button>
-        <button class="btn" id="btnAddUrl">➕ 添加一条</button>
-        <button class="btn" id="btnTodo">⏰ 待办下载</button>
+        <button class="btn" id="btnPaste" data-tip="读取剪贴板中的链接并加入下载列表">📋 粘贴剪贴板链接</button>
+        <button class="btn" id="btnClearUrls" data-tip="清空所有待解析的链接">🗑️ 清空全部</button>
+        <button class="btn" id="btnAddUrl" data-tip="添加一行空链接输入框">➕ 添加一条</button>
+        <button class="btn" id="btnTodo" data-tip="待办下载：记录需要等免费/到期的模型，到期自动提醒">⏰ 待办下载</button>
       </div>
       <div class="log" id="parseLog"></div>
     </div>
@@ -52,9 +52,9 @@
     <div class="card">
       <h2 class="page-title">下载管理</h2>
       <div class="btn-row">
-        <button class="btn btn-primary" id="dlStartAll">▶️ 全部开始</button>
-        <button class="btn" id="dlPauseSel">⏸️ 暂停选中</button>
-        <button class="btn" id="dlRetrySel">🔄 重试选中</button>
+        <button class="btn btn-primary" id="dlStartAll" data-tip="开始下载所有未完成的任务">▶️ 全部开始</button>
+        <button class="btn" id="dlPauseSel" data-tip="暂停选中的下载任务">⏸️ 暂停选中</button>
+        <button class="btn" id="dlRetrySel" data-tip="重试选中的失败任务">🔄 重试选中</button>
         <button class="btn" id="dlRemoveSel">🗑️ 移除选中</button>
         <button class="btn" id="dlClearDone">🧹 清空已完成</button>
         <button class="btn" id="dlSave">💾 保存任务列表</button>
@@ -77,9 +77,9 @@
         <span class="status-pill" id="mmCount">未扫描</span>
       </div>
       <div class="btn-row">
-        <button class="btn btn-primary" id="mmScan">🔍 扫描模型</button>
-        <button class="btn" id="mmRefresh">🔄 刷新</button>
-        <button class="btn" id="mmVerify">✅ 校验哈希</button>
+        <button class="btn btn-primary" id="mmScan" data-tip="扫描所有模型管理目录，发现模型并读取元数据/封面">🔍 扫描模型</button>
+        <button class="btn" id="mmRefresh" data-tip="重新扫描（不读元数据，只刷新列表）">🔄 刷新</button>
+        <button class="btn" id="mmVerify" data-tip="计算文件哈希并与 C 站比对，校验是否完整/最新">✅ 校验哈希</button>
         <span class="btn-group" id="mmRenameGroup">
           <button class="btn" id="mmRenameMain">✏️ 修改名称</button>
           <div class="submenu" id="mmRenameSub">
@@ -94,13 +94,13 @@
         <button class="btn" id="mmSendRp">📤 发送到反向解析</button>
       </div>
       <div class="btn-row">
-        <button class="btn" id="mmOrganize">📂 整理模型</button>
-        <button class="btn" id="mmRestore" style="display:none">🔧 恢复误整理</button>
+        <button class="btn" id="mmOrganize" data-tip="把选中的模型按规则移动到分类文件夹（需先在设置选 🎯 目标环境）">📂 整理模型</button>
+        <button class="btn" id="mmRestore" style="display:none" data-tip="恢复误整理的模型到原位置（按移动日志回退）">🔧 恢复误整理</button>
         <span class="folders-wrap" id="mmFoldersWrap">
           <button class="btn" id="mmFolders">📁 文件夹显示</button>
           <div class="folders-panel" id="mmFoldersPanel"></div>
         </span>
-        <button class="btn btn-danger" id="mmCleanup">🗑️ 一键清理</button>
+        <button class="btn btn-danger" id="mmCleanup" data-tip="一键清理：删除失效 info/孤儿封面等冗余文件">🗑️ 一键清理</button>
       </div>
       <div class="tool-row">
         <input id="mmFilter" class="input" placeholder="筛选：文件名 / C站名 / 路径"/>
@@ -108,7 +108,7 @@
         <button class="btn" id="mmSelAll">全选</button>
         <button class="btn" id="mmSelNone">清除勾选</button>
         <button class="btn" id="mmSelInv">反选</button>
-        <button class="btn" id="mmViewToggle">🖼️ 瀑布流</button>
+        <button class="btn" id="mmViewToggle" data-tip="切换瀑布流 / 列表视图">🖼️ 瀑布流</button>
         <span class="status-pill" id="mmCheckLabel">已勾选 0 个</span>
       </div>
       <div class="table-wrap" id="mmTableWrap">

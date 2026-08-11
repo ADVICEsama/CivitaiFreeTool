@@ -116,6 +116,34 @@ class Api:
         return {"ok": True, "msg": "已移动 %d 个文件到 %s" % (len(moved), dest_dir)}
 
     # ---------------- 配置 ----------------
+    def _models_roots(self):
+        """有效的模型管理目录列表（多目录支持：models_dirs + 兼容 models_dir）"""
+        dirs = self.cfg.get("models_dirs") or []
+        if not isinstance(dirs, list):
+            dirs = [dirs] if dirs else []
+        dirs = [str(d).strip().rstrip("/\\") for d in dirs if str(d) and str(d).strip()]
+        legacy = (self.cfg.get("models_dir") or "").strip().rstrip("/\\")
+        if legacy and legacy not in dirs:
+            dirs.insert(0, legacy)
+        # 去重保序 + 只留存在的目录
+        seen, out = set(), []
+        for d in dirs:
+            if d not in seen:
+                seen.add(d)
+                if os.path.isdir(d):
+                    out.append(d)
+        return out
+
+    def _root_of(self, path):
+        """返回包含该文件的模型目录根（多目录时定位归属）"""
+        roots = self._models_roots() or [(self.cfg.get("models_dir") or "").strip().rstrip("/\\")]
+        p = (path or "").replace("\\", "/").lower()
+        for r in roots:
+            rn = r.replace("\\", "/").lower().rstrip("/")
+            if p == rn or p.startswith(rn + "/"):
+                return r
+        return roots[0] if roots else ""
+
     def get_config(self):
         return self.cfg
 
@@ -123,6 +151,21 @@ class Api:
         # 真 merge：只更新传入字段，绝不回退未传入的已保存设置
         for k, v in (new_cfg or {}).items():
             self.cfg[k] = v
+        # 多目录规范化：去空、去重、保序；空列表时兼容回退 models_dir
+        dirs = self.cfg.get("models_dirs") or []
+        if not isinstance(dirs, list):
+            dirs = [dirs] if dirs else []
+        seen, out = set(), []
+        for d in dirs:
+            d = str(d).strip()
+            if d and d not in seen:
+                seen.add(d)
+                out.append(d)
+        self.cfg["models_dirs"] = out
+        if not out:
+            self.cfg["models_dirs"] = []
+        elif self.cfg.get("models_dir") not in out:
+            self.cfg["models_dir"] = out[0]
         self.cfg["api_key"] = str(self.cfg.get("api_key") or "").strip()
         ok = config.save(self.cfg)
         self.api = self._new_api()
@@ -343,7 +386,8 @@ class Api:
         import subprocess
         try:
             if path and os.path.exists(path):
-                subprocess.Popen(["explorer", "/select,", path])
+                # explorer /select, 必须与路径合成一个参数（含空格路径才有效）
+                subprocess.Popen(["explorer", "/select," + path])
                 return {"ok": True}
         except Exception:
             pass
@@ -376,14 +420,16 @@ class Api:
     # ---------------- 模型管理 ----------------
     def scan_models(self):
         """后台扫描；返回立即，进度/结果轮询 get_scan_state"""
-        root = (self.cfg.get("models_dir") or "").strip()
         if self.mm_scan_state["running"]:
             return {"started": False}
         self.mm_scan_state = {"running": True, "rows": [], "msg": ""}
 
         def work():
             try:
-                files = model_manager.scan_models(root) if root and os.path.isdir(root) else []
+                roots = self._models_roots()
+                files = []
+                for root in roots:
+                    files.extend(model_manager.scan_models(root))
                 hidden = set(self.cfg.get("hidden_model_folders", []))
                 show_root = self.cfg.get("show_root_models", True)
                 files = [f for f in files if _folder_visible(f["rel"], hidden, show_root)]
@@ -1131,11 +1177,11 @@ class Api:
             config.save(self.cfg)
         except Exception:
             pass
-        # 立即应用：重算显示行（_folder_visible 需要相对路径）
+        # 立即应用：重算显示行（_folder_visible 需要相对路径，多目录按各自根计算）
         if self.model_rows:
-            root = (self.cfg.get("models_dir") or "").replace("\\", "/").rstrip("/")
             hidden_set = set(self.cfg["hidden_model_folders"])
             def _rel(p):
+                root = self._root_of(p).replace("\\", "/").rstrip("/")
                 p2 = p.replace("\\", "/")
                 return p2[len(root) + 1:] if root and p2.startswith(root + "/") else p2
             rows = [r for r in self.model_rows
@@ -1407,7 +1453,6 @@ class Api:
 
     def mm_organize(self, paths=None):
         rows = [r for r in self.model_rows if r["path"] in (paths or [])] or list(self.model_rows)
-        root = (self.cfg.get("models_dir") or "").strip()
         rules = self.cfg.get("organize_rules") or None
         env = self.cfg.get("target_env") or ""
         mode = self.cfg.get("organize_mode") or "manual"
@@ -1418,6 +1463,7 @@ class Api:
         def work():
             for r in rows:
                 try:
+                    root = self._root_of(r["path"])
                     _, msgs = model_manager.organize_model(
                         r["path"], root, dry_run=False, rules=rules, env=env, mode=mode)
                     self.mm_progress["result"].append(msgs)
@@ -1638,37 +1684,40 @@ class Api:
             except Exception:
                 pass
 
-        # 2) 扫描非标准目录：有 info 的已知类型模型不在标准目录下
+        # 2) 扫描非标准目录：有 info 的已知类型模型不在标准目录下（多目录各扫一遍）
         known_exts = (".safetensors", ".ckpt", ".pt", ".pth", ".bin", ".onnx", ".gguf", ".sft")
-        for dirpath, dirnames, filenames in os.walk(root):
-            rel = os.path.relpath(dirpath, root)
-            top = rel.split(os.sep)[0] if rel != "." else ""
-            if top in std_dirs:
-                dirnames[:] = []
+        for root in self._models_roots() or [(self.cfg.get("models_dir") or "").strip()]:
+            if not root or not os.path.isdir(root):
                 continue
-            for fn in filenames:
-                if not fn.lower().endswith(known_exts):
+            for dirpath, dirnames, filenames in os.walk(root):
+                rel = os.path.relpath(dirpath, root)
+                top = rel.split(os.sep)[0] if rel != "." else ""
+                if top in std_dirs:
+                    dirnames[:] = []
                     continue
-                fp = os.path.join(dirpath, fn)
-                info_path = mm.find_info_file(fp)
-                if not info_path:
-                    continue
-                try:
-                    with open(info_path, "r", encoding="utf-8") as f:
-                        meta = json.load(f)
-                except Exception:
-                    continue
-                mtype = (meta.get("type") or meta.get("model_type") or "").strip()
-                tdir = env_map.get(mtype)
-                if not tdir:
-                    continue
-                std_dir = os.path.join(root, tdir)
-                if os.path.normpath(dirpath).startswith(os.path.normpath(std_dir)):
-                    continue
-                dest = os.path.join(std_dir, fn)
-                if os.path.exists(dest):
-                    continue
-                add_item(fp, dest, "类型「%s」不在标准目录 %s/" % (mtype or "?", tdir))
+                for fn in filenames:
+                    if not fn.lower().endswith(known_exts):
+                        continue
+                    fp = os.path.join(dirpath, fn)
+                    info_path = mm.find_info_file(fp)
+                    if not info_path:
+                        continue
+                    try:
+                        with open(info_path, "r", encoding="utf-8") as f:
+                            meta = json.load(f)
+                    except Exception:
+                        continue
+                    mtype = (meta.get("type") or meta.get("model_type") or "").strip()
+                    tdir = env_map.get(mtype)
+                    if not tdir:
+                        continue
+                    std_dir = os.path.join(root, tdir)
+                    if os.path.normpath(dirpath).startswith(os.path.normpath(std_dir)):
+                        continue
+                    dest = os.path.join(std_dir, fn)
+                    if os.path.exists(dest):
+                        continue
+                    add_item(fp, dest, "类型「%s」不在标准目录 %s/" % (mtype or "?", tdir))
 
         if preview:
             return {"ok": True, "count": len(items), "items": items, "msg": "预览完成"}
