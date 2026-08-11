@@ -1,5 +1,6 @@
-/* WebGL 氛围背景：流动橙色色带 + 柔和噪点（近似原设计的 ChromaFlow/Swirl）
-   全屏 quad + fragment shader，requestAnimationFrame 驱动 */
+/* WebGL 氛围背景：流动色带 + 柔和噪点（ChromaFlow/Swirl 近似）
+   底色取当前主题 --bg、流色取 --primary，主题切换实时跟随；
+   暗色系（dark / dark_*）全部识别为暗色模式 */
 "use strict";
 
 (function () {
@@ -22,15 +23,16 @@
     uniform vec2 u_res;
     uniform float u_time;
     uniform float u_dark;
+    uniform vec3 u_bg_top;
+    uniform vec3 u_bg_bottom;
+    uniform vec3 u_flow;
     float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
     void main(){
       vec2 uv = gl_FragCoord.xy / u_res;
       float t = u_time * 0.12;
-      // 底色：暗色主题暗紫底，浅色主题白到浅灰
-      vec3 base = u_dark > 0.5
-        ? mix(vec3(0.078, 0.058, 0.125), vec3(0.13, 0.10, 0.19), uv.y)
-        : mix(vec3(0.965), vec3(0.92), uv.y);
-      // 流动色带（暗色用紫色，浅色用橙色）
+      // 底色：主题 --bg 自上而下轻微加深
+      vec3 base = mix(u_bg_top, u_bg_bottom, uv.y);
+      // 流动色带（流色 = 主题 --primary）
       float bands = 0.0;
       for (int i = 0; i < 3; i++) {
         float fi = float(i);
@@ -38,16 +40,14 @@
         float w = exp(-pow(fract(y) - 0.5, 2.0) * 14.0);
         bands += w * (0.22 + 0.10 * sin(t + fi));
       }
-      vec3 purple = vec3(0.55, 0.33, 0.92);    // #8c54eb
-      vec3 orange = vec3(1.0, 0.373, 0.012);   // #ff5f03
-      vec3 flow = u_dark > 0.5 ? purple : orange;
-      vec3 col = base + flow * bands * (u_dark > 0.5 ? 0.30 : 1.0);
+      vec3 flow = u_flow;
+      vec3 col = base + flow * bands * (u_dark > 0.5 ? 0.30 : 0.45);
       // 柔和噪点（FilmGrain 近似）
       float n = hash(uv * u_res / 3.0 + fract(t) * 17.0);
       col += (n - 0.5) * 0.018;
       // 右上角轻微氛围光（Swirl 感）
       float glow = exp(-distance(uv, vec2(0.82, 0.15)) * 2.6);
-      col += flow * glow * (u_dark > 0.5 ? 0.08 : 0.10);
+      col += flow * glow * (u_dark > 0.5 ? 0.08 : 0.12);
       gl_FragColor = vec4(col, 1.0);
     }
   `;
@@ -87,10 +87,58 @@
   const uRes = gl.getUniformLocation(prog, "u_res");
   const uTime = gl.getUniformLocation(prog, "u_time");
   const uDark = gl.getUniformLocation(prog, "u_dark");
+  const uBgTop = gl.getUniformLocation(prog, "u_bg_top");
+  const uBgBottom = gl.getUniformLocation(prog, "u_bg_bottom");
+  const uFlow = gl.getUniformLocation(prog, "u_flow");
 
+  // 暗色判断：dark 以及全部 dark_* 扩展主题
   function isDark() {
-    return document.documentElement.dataset.theme === "dark";
+    const t = document.documentElement.dataset.theme || "";
+    return t === "dark" || t.indexOf("dark_") === 0;
   }
+
+  function hexToRgb(hex) {
+    const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || "").trim());
+    if (!m) return null;
+    const v = parseInt(m[1], 16);
+    return [(v >> 16) & 255, (v >> 8) & 255, v & 255].map((x) => x / 255);
+  }
+
+  function themeColors() {
+    const cs = getComputedStyle(document.documentElement);
+    const bg = hexToRgb(cs.getPropertyValue("--bg"));
+    const pr = hexToRgb(cs.getPropertyValue("--primary"));
+    return {
+      bg: bg || [0.96, 0.96, 0.96],
+      primary: pr || (isDark() ? [0.55, 0.33, 0.92] : [1.0, 0.373, 0.012]),
+    };
+  }
+
+  function applyTheme() {
+    const { bg, primary } = themeColors();
+    const dark = isDark();
+    // 底部微调：向下压一点形成细微渐变（暗色压向更暗，浅色压向浅灰）
+    const bottom = dark
+      ? [bg[0] * 0.86, bg[1] * 0.86, bg[2] * 0.86]
+      : [bg[0] * 0.95, bg[1] * 0.95, bg[2] * 0.95];
+    gl.uniform3f(uBgTop, bg[0], bg[1], bg[2]);
+    gl.uniform3f(uBgBottom, bottom[0], bottom[1], bottom[2]);
+    gl.uniform3f(uFlow, primary[0], primary[1], primary[2]);
+    gl.uniform1f(uDark, dark ? 1.0 : 0.0);
+  }
+  applyTheme();
+
+  // 测试钩子：供自动化验证（dark 标志 + 当前底色/流色）
+  window.__bgInfo = function () {
+    const { bg, primary } = themeColors();
+    return { dark: isDark(), bg: bg, primary: primary };
+  };
+
+  // 主题切换（data-theme 属性变化）时实时更新背景色
+  new MutationObserver(applyTheme).observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["data-theme"],
+  });
 
   function resize() {
     const dpr = window.devicePixelRatio || 1;
@@ -99,19 +147,17 @@
     if (canvas.width !== w || canvas.height !== h) {
       canvas.width = w;
       canvas.height = h;
+      gl.viewport(0, 0, w, h);
     }
-    gl.viewport(0, 0, canvas.width, canvas.height);
   }
   window.addEventListener("resize", resize);
   resize();
 
-  const t0 = performance.now();
-  function frame(now) {
+  function draw(ts) {
+    gl.uniform1f(uTime, ts * 0.001);
     gl.uniform2f(uRes, canvas.width, canvas.height);
-    gl.uniform1f(uTime, (now - t0) / 1000);
-    gl.uniform1f(uDark, isDark() ? 1.0 : 0.0);
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
-    requestAnimationFrame(frame);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    requestAnimationFrame(draw);
   }
-  requestAnimationFrame(frame);
+  requestAnimationFrame(draw);
 })();
