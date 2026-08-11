@@ -614,6 +614,15 @@ textarea.rules {
 .ob-hint { font-size: 12px; color: var(--text-dim); margin-top: 6px; line-height: 1.7; }
 .tip-inline { font-size: 12px; color: var(--text-dim); margin-top: 4px; line-height: 1.6; }
 .ob-skip-row { margin-top: 16px; padding-top: 10px; border-top: 1px dashed var(--border); }
+#toast {
+  position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%);
+  background: var(--surface2); color: var(--text);
+  border: 1px solid var(--border); border-radius: 10px;
+  padding: 10px 18px; font-size: 13px; max-width: 70vw;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.35); z-index: 9999;
+  display: none; opacity: 0; transition: opacity 0.25s ease;
+}
+[data-theme='dark'] #toast { background: rgba(52, 44, 78, 0.97); }
 .ob-themes { display: flex; gap: 10px; margin-top: 8px; }
 .ob-theme {
   flex: 1; padding: 14px 8px;

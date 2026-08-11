@@ -71,6 +71,25 @@ document.addEventListener("wheel", (e) => {
 
 function setStatus(t) { $("#statusText").textContent = t; }
 
+// 醒目 toast 提示（底部悬浮，2.6s 自动消失）——用于右键等快捷操作的反馈
+let toastTimer = null;
+function showToast(msg) {
+  let t = document.getElementById("toast");
+  if (!t) {
+    t = document.createElement("div");
+    t.id = "toast";
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.display = "block";
+  requestAnimationFrame(() => { t.style.opacity = "1"; });
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    t.style.opacity = "0";
+    setTimeout(() => { t.style.display = "none"; }, 300);
+  }, 2600);
+}
+
 function confirmBox(msg) {
   // 自定义确认弹窗（原生 confirm 显示地址栏太丑）
   return new Promise((resolve) => {
@@ -1308,8 +1327,13 @@ $("#ctxMenu").addEventListener("click", async (e) => {
       }
     } else if (act === "img_folder") {
       // 只打开本地文件夹；远程图没有本地文件时提示，不打开网站（打开网站走"打开原图片网站"）
-      if (localImgPath) await api.call("open_in_folder", localImgPath);
-      else setStatus("该图没有本地文件（可点「🖼️ 下载C站封面」或详情页下载全部图片）");
+      if (localImgPath) {
+        const r = await api.call("open_in_folder", localImgPath);
+        if (r && r.ok) showToast("已打开文件夹");
+        else showToast(r && r.msg ? r.msg : "打开失败");
+      } else {
+        showToast("该图没有本地文件（可点「🖼️ 下载C站封面」或详情页下载全部图片）");
+      }
     } else if (act === "img_tags") {
       const tw = (detailRow && detailRow.trainedWords) ? detailRow.trainedWords : [];
       if (tw.length) {

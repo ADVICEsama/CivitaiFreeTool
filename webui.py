@@ -386,8 +386,9 @@ class Api:
         import subprocess
         try:
             if path and os.path.exists(path):
-                # explorer /select, 必须与路径合成一个参数（含空格路径才有效）
-                subprocess.Popen(["explorer", "/select," + path])
+                # explorer /select, 必须带引号：路径含空格时无引号会被 explorer
+                # 解析失败并打开默认位置（我的文档），这是历史 bug 根因
+                subprocess.Popen('explorer /select,"%s"' % path)
                 return {"ok": True}
         except Exception:
             pass
