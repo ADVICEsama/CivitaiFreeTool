@@ -1279,9 +1279,9 @@ document.addEventListener("contextmenu", (e) => {
   const menu = $("#ctxMenu");
   menu.innerHTML =
     '<div class="ctx-item" data-act="img_copy">📋 复制当前图片</div>' +
-    '<div class="ctx-item" data-act="img_tags">🏷️ 复制触发词（tags）</div>' +
+    '<div class="ctx-item" data-act="img_prompt">💬 复制提示词（正面+负面）</div>' +
+    '<div class="ctx-item" data-act="img_tags">🏷️ 复制触发词（模型 tags）</div>' +
     '<div class="ctx-item" data-act="img_folder">📂 打开图片所在文件夹</div>' +
-    '<div class="ctx-item" data-act="img_prompt">💬 复制提示词</div>' +
     '<div class="ctx-item" data-act="img_orig">🌐 打开原图片网站</div>';
   menu.style.display = "block";
   const zf = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
@@ -1343,9 +1343,16 @@ $("#ctxMenu").addEventListener("click", async (e) => {
         setStatus("该模型没有触发词信息（可先反向解析）");
       }
     } else if (act === "img_prompt") {
-      const t = c.prompt || "（该图片无提示词信息）";
-      await window.__copyText(t);
-      setStatus(t === "（该图片无提示词信息）" ? t : "提示词已复制");
+      // 复制图片的正面 + 负面提示词（C 站图片 meta 的 prompt / negativePrompt）
+      const p = c.prompt || "";
+      const n = c.negative || "";
+      if (p || n) {
+        const text = n ? (p + "\n\nNegative prompt: " + n) : p;
+        await window.__copyText(text);
+        showToast(n ? "正面+负面提示词已复制" : "提示词已复制");
+      } else {
+        showToast("该图片没有提示词信息（C 站未提供）");
+      }
     } else if (act === "img_orig") {
       if (c.orig_url) await api.call("open_url", c.orig_url);
       else setStatus("无原图链接");

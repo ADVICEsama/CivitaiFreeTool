@@ -543,13 +543,14 @@ class Api:
         images = info.get("images") or []
 
         def _img_prompt(idx):
-            """按 C 站 images 序号取 prompt（下载图按 image_%02d 命名，一一对应）"""
+            """按 C 站 images 序号取 (正面, 负面) 提示词（下载图按 image_%02d 命名，一一对应）"""
             try:
                 if 0 <= idx < len(images):
-                    return (images[idx].get("meta") or {}).get("prompt") or ""
+                    meta = images[idx].get("meta") or {}
+                    return meta.get("prompt") or "", meta.get("negativePrompt") or ""
             except Exception:
                 pass
-            return ""
+            return "", ""
 
         covers = []
         # 本地封面：优先 <base>.images/ 目录全部图片
@@ -574,9 +575,10 @@ class Api:
                 im.thumbnail((512, 512))
                 buf = io.BytesIO()
                 im.save(buf, "JPEG", quality=85)
+                _p, _n = _img_prompt(0)
                 covers.append({"b64": _b64.b64encode(buf.getvalue()).decode(),
                                "local": True, "local_path": cover,
-                               "prompt": _img_prompt(0)})
+                               "prompt": _p, "negative": _n})
             except Exception:
                 pass
         # 追加 C 站 URL 图（跳过本地封面已占的序号 + url 去重）
@@ -587,6 +589,7 @@ class Api:
             if u and not any(c.get("url") == u for c in covers):
                 covers.append({"url": u,
                                "prompt": (img.get("meta") or {}).get("prompt") or "",
+                               "negative": (img.get("meta") or {}).get("negativePrompt") or "",
                                "orig_url": img.get("url") or ""})
         # 本地 images 目录其余图补入（文件名 image_%02d → 序号匹配 prompt）
         for fp in img_files[1:]:
@@ -602,9 +605,10 @@ class Api:
                 fn = os.path.basename(fp)
                 if fn.lower().startswith("image_") and fn[6:8].isdigit():
                     idx = int(fn[6:8]) - 1
+                _p, _n = _img_prompt(idx)
                 covers.append({"b64": _b64.b64encode(buf.getvalue()).decode(),
                                "local": True, "local_path": fp,
-                               "prompt": _img_prompt(idx)})
+                               "prompt": _p, "negative": _n})
             except Exception:
                 pass
         return json.dumps({
