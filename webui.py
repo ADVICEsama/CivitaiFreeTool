@@ -552,6 +552,25 @@ class Api:
                 pass
             return "", ""
 
+        def _local_img_prompt(fp):
+            """从本地图片文件读元数据（PNG tEXt 的 parameters / A1111 格式）。
+            返回 (正面, 负面)，无元数据返回 (None, None)"""
+            try:
+                from PIL import Image
+                im = Image.open(fp)
+                params = (im.info or {}).get("parameters") or (im.info or {}).get("prompt") or ""
+                if not params:
+                    return None, None
+                neg = ""
+                p = params
+                if "\nNegative prompt:" in p:
+                    head, rest = p.split("\nNegative prompt:", 1)
+                    p = head
+                    neg = rest.split("\n")[0].strip() if rest else ""
+                return p.strip(), neg
+            except Exception:
+                return None, None
+
         covers = []
         # 本地封面：优先 <base>.images/ 目录全部图片
         base = os.path.splitext(path)[0]
@@ -575,7 +594,9 @@ class Api:
                 im.thumbnail((512, 512))
                 buf = io.BytesIO()
                 im.save(buf, "JPEG", quality=85)
-                _p, _n = _img_prompt(0)
+                _p, _n = _local_img_prompt(cover)
+                if _p is None:
+                    _p, _n = _img_prompt(0)
                 covers.append({"b64": _b64.b64encode(buf.getvalue()).decode(),
                                "local": True, "local_path": cover,
                                "prompt": _p, "negative": _n})
@@ -605,7 +626,9 @@ class Api:
                 fn = os.path.basename(fp)
                 if fn.lower().startswith("image_") and fn[6:8].isdigit():
                     idx = int(fn[6:8]) - 1
-                _p, _n = _img_prompt(idx)
+                _p, _n = _local_img_prompt(fp)
+                if _p is None:
+                    _p, _n = _img_prompt(idx)
                 covers.append({"b64": _b64.b64encode(buf.getvalue()).decode(),
                                "local": True, "local_path": fp,
                                "prompt": _p, "negative": _n})
@@ -618,6 +641,29 @@ class Api:
             "info": info,
             "covers": covers,
         }, ensure_ascii=False)
+
+    def get_local_img_b64(self, path):
+        """读取本地图片原图 → base64（用于复制图片到剪贴板）。超大图限制 4096px"""
+        try:
+            if not path or not os.path.exists(path):
+                return json.dumps({"ok": False, "msg": "图片不存在"})
+            from PIL import Image
+            import io
+            import base64 as _b64
+            im = Image.open(path)
+            if max(im.size) > 4096:
+                im.thumbnail((4096, 4096), Image.LANCZOS)
+            buf = io.BytesIO()
+            if im.mode in ("RGBA", "LA"):
+                im.save(buf, "PNG")
+            else:
+                im = im.convert("RGB")
+                im.save(buf, "JPEG", quality=95)
+            return json.dumps({"ok": True,
+                               "b64": _b64.b64encode(buf.getvalue()).decode(),
+                               "mime": "image/png" if im.mode in ("RGBA", "LA") else "image/jpeg"})
+        except Exception as e:
+            return json.dumps({"ok": False, "msg": str(e)})
 
     def download_all_images(self, path):
         """download all C-site images to <base>.images/"""

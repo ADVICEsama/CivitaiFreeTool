@@ -1278,8 +1278,9 @@ document.addEventListener("contextmenu", (e) => {
   detailImgCtx = { c, idx };
   const menu = $("#ctxMenu");
   menu.innerHTML =
-    '<div class="ctx-item" data-act="img_copy">📋 复制当前图片</div>' +
-    '<div class="ctx-item" data-act="img_prompt">💬 复制提示词（正面+负面）</div>' +
+    '<div class="ctx-item" data-act="img_copy">📋 复制图片到剪贴板</div>' +
+    '<div class="ctx-item" data-act="img_prompt">💬 复制正面提示词</div>' +
+    '<div class="ctx-item" data-act="img_neg">💬 复制负面提示词</div>' +
     '<div class="ctx-item" data-act="img_tags">🏷️ 复制触发词（模型 tags）</div>' +
     '<div class="ctx-item" data-act="img_folder">📂 打开图片所在文件夹</div>' +
     '<div class="ctx-item" data-act="img_orig">🌐 打开原图片网站</div>';
@@ -1309,21 +1310,27 @@ $("#ctxMenu").addEventListener("click", async (e) => {
     // 本地图文件路径：优先图自身 local_path（右键哪张就用哪张），本地图无路径时用模型文件兜底
     const localImgPath = c.local_path || (c.local ? detailRow.path : null);
     if (act === "img_copy") {
-      if (c.local && localImgPath) {
-        await window.__copyText(localImgPath);
-        setStatus("已复制图片路径");
-      } else if (c.b64) {
+      // 复制图片本身到剪贴板（本地图读原图；远程图用已加载的 b64；都没有才复制路径/链接）
+      let b64 = null;
+      if (c.local_path) {
         try {
-          const blob = await (await fetch("data:image/jpeg;base64," + c.b64)).blob();
+          const r = JSON.parse(await api.call("get_local_img_b64", c.local_path) || "{}");
+          if (r && r.ok && r.b64) b64 = r.b64;
+        } catch (e) { b64 = null; }
+      }
+      if (!b64 && c.b64) b64 = c.b64;
+      if (b64) {
+        try {
+          const blob = await (await fetch("data:image/jpeg;base64," + b64)).blob();
           await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-          setStatus("图片已复制到剪贴板");
+          showToast("图片已复制到剪贴板，可直接粘贴");
         } catch (e2) {
-          await window.__copyText(c.orig_url || c.url || "");
-          setStatus("已复制图片链接");
+          await window.__copyText(c.local_path || c.orig_url || c.url || "");
+          showToast("剪贴板写入失败，已复制路径/链接");
         }
       } else {
-        await window.__copyText(c.orig_url || c.url || "");
-        setStatus("已复制图片链接");
+        await window.__copyText(c.local_path || c.orig_url || c.url || "");
+        showToast("已复制路径/链接");
       }
     } else if (act === "img_folder") {
       // 只打开本地文件夹；远程图没有本地文件时提示，不打开网站（打开网站走"打开原图片网站"）
@@ -1343,15 +1350,22 @@ $("#ctxMenu").addEventListener("click", async (e) => {
         setStatus("该模型没有触发词信息（可先反向解析）");
       }
     } else if (act === "img_prompt") {
-      // 复制图片的正面 + 负面提示词（C 站图片 meta 的 prompt / negativePrompt）
+      // 复制图片的正面提示词（本地识别 PNG 元数据 / C 站 info 兜底）
       const p = c.prompt || "";
-      const n = c.negative || "";
-      if (p || n) {
-        const text = n ? (p + "\n\nNegative prompt: " + n) : p;
-        await window.__copyText(text);
-        showToast(n ? "正面+负面提示词已复制" : "提示词已复制");
+      if (p) {
+        await window.__copyText(p);
+        showToast("正面提示词已复制");
       } else {
-        showToast("该图片没有提示词信息（C 站未提供）");
+        showToast("该图片没有正面提示词信息");
+      }
+    } else if (act === "img_neg") {
+      // 复制图片的负面提示词
+      const n = c.negative || "";
+      if (n) {
+        await window.__copyText(n);
+        showToast("负面提示词已复制");
+      } else {
+        showToast("该图片没有负面提示词信息");
       }
     } else if (act === "img_orig") {
       if (c.orig_url) await api.call("open_url", c.orig_url);
