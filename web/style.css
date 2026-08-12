@@ -900,6 +900,8 @@ textarea.rules {
   display: inline-flex; align-items: center; justify-content: center;
 }
 .detail-tag-txt { flex: 1; }
+.detail-tag-orig { font-size: 11px; color: var(--text-dim); margin-left: 6px; word-break: break-all; }
+.detail-desc-orig { font-size: 11px; color: var(--text-dim); margin-top: 6px; border-top: 1px dashed var(--border); padding-top: 6px; word-break: break-word; }
 .detail-hint { font-size: 11px; color: var(--text-dim); font-weight: 400; margin-left: 8px; }
 .detail-desc {
   font-size: 13px; color: var(--text-dim);

@@ -1167,7 +1167,9 @@ async function showModelDetail(path) {
   const v = info.version || {};
   const creator = (info.creator && info.creator.username) || info.creator || "";
   const trained = Array.isArray(info.trainedWords) ? info.trainedWords : [];
-  const desc = String(info.description || "").replace(/<[^>]+>/g, "");
+  const trainedZh = Array.isArray(info.trainedWords_zh) ? info.trainedWords_zh : [];
+  const descRaw = String(info.description || "").replace(/<[^>]+>/g, "");
+  const desc = String(info.description_zh || info.description || "").replace(/<[^>]+>/g, "");
   const covers = d.covers || [];
   detailImgIdx = 0;
   detailImgLocalPath = null;
@@ -1196,12 +1198,17 @@ async function showModelDetail(path) {
 
     (info.nsfw ? '<span class="detail-chip" style="color:var(--danger)">NSFW</span>' : "") +
     "</div>" +
-    '<div class="detail-sec-title">🎯 触发词（Trigger Words）<span class="detail-hint">点击任一触发词串单独复制</span></div>' +
-    '<div class="detail-tags">' + (trained.length ? trained.map((t, ti) => '<div class="detail-tag copy-tag" data-tip="点击复制这一套">' +
-      (trained.length > 1 ? '<span class="detail-tag-idx">' + (ti + 1) + "</span>" : "") +
-      '<span class="detail-tag-txt">' + esc(t) + "</span></div>").join("") : '<span style="font-size:12px;color:var(--text-dim)">无触发词信息</span>') + "</div>" +
+    '<div class="detail-sec-title">🎯 触发词（Trigger Words）<span class="detail-hint">点击任一触发词串单独复制（复制英文原文）</span></div>' +
+    '<div class="detail-tags">' + (trained.length ? trained.map((t, ti) => {
+      const zh = trainedZh[ti] || "";
+      return '<div class="detail-tag copy-tag" data-orig="' + esc(t) + '" data-tip="点击复制这一套">' +
+        (trained.length > 1 ? '<span class="detail-tag-idx">' + (ti + 1) + "</span>" : "") +
+        '<span class="detail-tag-txt">' + esc(zh || t) + "</span>" +
+        (zh ? '<span class="detail-tag-orig">' + esc(t) + "</span>" : "") +
+        "</div>";
+    }).join("") : '<span style="font-size:12px;color:var(--text-dim)">无触发词信息</span>') + "</div>" +
     '<div class="detail-sec-title">📝 简介</div>' +
-    '<div class="detail-desc">' + (desc ? esc(desc) : "暂无简介") + "</div>" +
+    '<div class="detail-desc">' + (desc ? esc(desc) + (descRaw && descRaw !== desc ? '<div class="detail-desc-orig">' + esc(descRaw) + "</div>" : "") : "暂无简介") + "</div>" +
     '<div class="detail-sec-title">📦 文件</div>' +
     '<div class="detail-meta"><span class="detail-chip">' + esc(d.name || "") + "</span></div>" +
     '<div class="detail-actions">' +
@@ -1274,9 +1281,11 @@ async function showModelDetail(path) {
   });
   panel.querySelectorAll(".copy-tag").forEach((tg) => {
     tg.addEventListener("click", async () => {
+      // 优先复制英文原文（data-orig）——WebUI 触发词必须用英文；没有翻译时回退显示文本
+      const orig = tg.dataset.orig;
       const el = tg.querySelector(".detail-tag-txt") || tg;
-      const ok = await window.__copyText(el.textContent.trim());
-      setStatus(ok ? "已复制该套触发词" : "复制失败");
+      const ok = await window.__copyText(orig || el.textContent.trim());
+      setStatus(ok ? "已复制该套触发词（英文原文）" : "复制失败");
     });
   });
   $("#dCover").addEventListener("click", () => {
