@@ -661,6 +661,24 @@ textarea.rules {
   vertical-align: middle;
 }
 .about-slogan { font-size: 12px; color: var(--text-dim); margin-top: 3px; }
+/* 最近更新区（条目卡片样式） */
+.about-updates {
+  margin-top: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface2);
+  padding: 10px 12px;
+}
+.about-up-title { font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+.about-up-body { max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 7px; }
+.about-up-item {
+  font-size: 12.5px; line-height: 1.65;
+  color: var(--text);
+  background: var(--surface);
+  border-radius: 8px;
+  padding: 7px 10px;
+}
+.about-up-item b { color: var(--primary); }
 
 /* 首次使用引导 */
 .ob-mask {

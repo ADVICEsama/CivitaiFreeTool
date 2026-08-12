@@ -1618,17 +1618,14 @@ async function showAbout() {
     '<img class="about-logo" src="bili_face.png" alt=""/>' +
     '<div><div class="about-name">CivitaiFreeTool <span class="about-ver">' + esc(ver) + '</span></div>' +
     '<div style="font-size:12px;color:var(--text-dim)">Civitai / HuggingFace 模型下载、管理、反向解析工具（免费全功能）</div></div></div>' +
-    '<div style="font-size:13px;color:var(--text);line-height:1.8;margin-top:12px">' +
-    '<div style="font-weight:600;margin-bottom:4px">🆕 最近更新（' + esc(ver) + '）：</div>' +
-    '<div style="color:var(--text-dim)">' +
-    "· 🧹 设置页新增「维护」：一键清理图片缓存文件夹<br/>" +
-    "· 🏷️ 歧义词全面优化：改名 / 文件名改成C站名 / 识别模型信息 / 到期提醒…<br/>" +
-    "· 💡 所有按钮/菜单项加 hover 浮窗备注<br/>" +
-    "· 📋 复制图片 = 图片本身进剪贴板；正/负面提示词分开复制<br/>" +
-    "· 🔍 本地 PNG 图片提示词走本地识别（A1111 元数据）<br/>" +
-    "· 📂 打开所在文件夹改走 Windows Shell API，不再闪黑窗<br/>" +
-    "· 💬 右键图片可复制正面+负面提示词；⏰ 到期提醒自动判断时间<br/>" +
-    "</div></div>" +
+    '<div class="about-updates">' +
+    '<div class="about-up-title">🆕 最近更新（' + esc(ver) + '）</div>' +
+    '<div class="about-up-body">' +
+    '<div class="about-up-item">🐛 <b>修复「翻译成中文」不生效</b>：简介+触发词一起翻，写回 info 与 json，英文原文保留，复制触发词仍为英文原文（WebUI 用）</div>' +
+    '<div class="about-up-item">📥 <b>下载体验</b>：批量下载跳转弹窗提示；移动分类弹窗显示模型缩略图；下载列表新增缩略图列+行右键菜单（打开文件夹/复制文件名/打开C站）</div>' +
+    '<div class="about-up-item">🧭 <b>新手引导大修</b>：点击功能卡片/主题切换即刻生效；引导缩小为右下角小窗不中断；保存设置不再白屏刷新</div>' +
+    '<div class="about-up-item">🎨 10 套主题 + 氛围背景跟随主题；设置页「保存设置」红色显眼</div>' +
+    '</div></div>' +
     '<div class="about-author">' +
     '<div class="rd-home" id="rdHome">👤 作者：爱德怀斯official —— 点击打开 B 站主页</div>' +
     '<div class="rd-group" id="rdGroup">🐧 粉丝群：909810278 —— 点击加入</div></div>' +
