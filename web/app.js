@@ -133,6 +133,8 @@ const state = {
   mmView: "list",
   rpRunning: false,
   dlTimer: null,
+  dlTasks: [],
+  dlThumbs: {},   // 下载管理列表缩略图缓存（filename → base64）
 };
 
 // ---------- 页面切换 ----------
@@ -256,11 +258,31 @@ $("#btnClearUrls").addEventListener("click", () => {
   $("#urlRows").innerHTML = "";
   addUrlRow();
 });
+// 批量下载跳转提示：告诉用户任务已排队，等待即可（4 秒自动关闭，也可点按钮）
+function showDlNotice() {
+  const mask = document.createElement("div");
+  mask.className = "rd-mask";
+  const dlg = document.createElement("div");
+  dlg.className = "rename-dialog";
+  dlg.style.width = "380px";
+  dlg.innerHTML =
+    '<div class="rd-title">✅ 已在下载队列中</div>' +
+    '<div style="font-size:13px;color:var(--text-dim);line-height:1.8">任务已开始解析并入队，请在本页等待，无需重复点击「解析」。</div>' +
+    '<div class="rd-actions"><button class="btn btn-primary" id="dnOk">知道了</button></div>';
+  document.body.appendChild(mask);
+  document.body.appendChild(dlg);
+  const timer = setTimeout(close, 4000);
+  function close() { clearTimeout(timer); mask.remove(); dlg.remove(); }
+  $("#dnOk", dlg).addEventListener("click", close);
+  mask.addEventListener("click", close);
+}
+
 $("#btnParse").addEventListener("click", async () => {
   const urls = $$("#urlRows .url-row input").map((i) => i.value.trim()).filter(Boolean);
   if (!urls.length) { setStatus("请先输入链接"); return; }
   // 立即跳转到下载管理页，并禁用按钮防止重复点击（用户反馈：等待期重复点击导致重复下载同一模型）
   switchPage("dlmanager");
+  showDlNotice();
   const btn = $("#btnParse");
   btn.disabled = true;
   const oldText = btn.textContent;
@@ -439,15 +461,40 @@ async function dlRefresh() {
       const prog = t.status === "downloading" ? t.progress.toFixed(1) + "%" : st;
       const speed = t.speed ? (t.speed / 1048576).toFixed(1) + " MB/s" : "";
       const size = t.total ? fmtSize(t.downloaded) + " / " + fmtSize(t.total) : fmtSize(t.downloaded);
+      const thumb = state.dlThumbs[t.filename] ? '<img class="thumb" src="data:image/jpeg;base64,' + state.dlThumbs[t.filename] + '" alt=""/>' : '<span class="thumb thumb-empty"></span>';
       return '<tr data-fn="' + esc(t.filename) + '" class="' + (selPaths.has(t.filename) ? "sel-row" : "") + '">' +
-        "<td class='c-file'>" + esc(t.filename) + "</td><td>" + esc(st) + "</td><td>" + esc(prog) + "</td>" +
+        "<td class='c-thumb'>" + thumb + "</td><td class='c-file'>" + esc(t.filename) + "</td><td>" + esc(st) + "</td><td>" + esc(prog) + "</td>" +
         "<td>" + esc(speed) + "</td><td>" + esc(size) + "</td><td class='c-err'>" + esc(t.error || "") + "</td></tr>";
     }).join("");
+    loadDlThumbs(state.dlTasks || []);
     // 下载受限（Early Access/付费）→ 弹窗选择
     maybeAskRestricted(tasks || []);
     // 下载完成 → 询问移动分类（ask_move_after_download 开启且本次会话未询问过）
     maybeAskMove(tasks || []);
   } catch (e) { /* 未就绪 */ }
+}
+
+// 下载管理列表缩略图：按文件名缓存，已加载的不重复请求（get_covers 传模型文件路径自动找同目录封面）
+const _dlThumbLoading = new Set();
+function loadDlThumbs(tasks) {
+  const todo = tasks.filter((t) =>
+    t.dest_dir && t.status === "done" && !state.dlThumbs[t.filename] && !_dlThumbLoading.has(t.filename)).slice(0, 40);
+  if (!todo.length) return;
+  todo.forEach((t) => _dlThumbLoading.add(t.filename));
+  api.call("get_covers", todo.map((t) => t.dest_dir + "\\" + t.filename), 96).then((json) => {
+    try {
+      const covers = JSON.parse(json || "{}");
+      for (const [p, b64] of Object.entries(covers)) {
+        const fn = todo.find((t) => (t.dest_dir + "\\" + t.filename).toLowerCase() === p.toLowerCase());
+        if (fn) {
+          state.dlThumbs[fn.filename] = b64;
+          const img = $("#dlTable tbody tr[data-fn='" + CSS.escape(fn.filename) + "'] .thumb");
+          if (img) img.src = "data:image/jpeg;base64," + b64;
+        }
+      }
+    } catch (e) { /* 忽略 */ }
+    todo.forEach((t) => _dlThumbLoading.delete(t.filename));
+  }).catch(() => todo.forEach((t) => _dlThumbLoading.delete(t.filename)));
 }
 
 // 下载受限（C 站限制）弹窗选择：花费积分重试 / 加入待办并移除 / 浏览器打开
@@ -510,13 +557,25 @@ function maybeAskMove(tasks) {
   dlg.className = "rename-dialog";
   dlg.innerHTML =
     '<div class="rd-title">📂 下载完成：' + esc(done.filename) + "</div>" +
+    '<div style="display:flex;gap:14px;align-items:flex-start">' +
+    '<div id="mvThumb" style="width:112px;height:112px;border-radius:12px;background:var(--surface2);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;border:1px solid var(--border)"><span style="font-size:30px">🖼️</span></div>' +
+    '<div style="flex:1;min-width:0">' +
     '<div style="font-size:13px;color:var(--text-dim);line-height:1.8">是否移动到分类文件夹？（主文件与 json/封面等附属一起移动）</div>' +
-    '<div class="rd-actions">' +
+    '<div class="rd-actions" style="margin-top:10px">' +
     '<button class="btn" id="mvNo">不移动</button>' +
-    '<button class="btn btn-primary" id="mvYes">选择文件夹</button></div>';
+    '<button class="btn btn-primary" id="mvYes">选择文件夹</button></div>' +
+    "</div></div>";
   document.body.appendChild(mask);
   document.body.appendChild(dlg);
   const close = () => { mask.remove(); dlg.remove(); _moveAsking = false; };
+  // 左侧显示模型缩略图（同目录 preview.png 封面；没有则保留占位）
+  api.call("get_covers", [done.dest_dir + "\\" + done.filename], 112).then((json) => {
+    try {
+      const covers = JSON.parse(json || "{}");
+      const b64 = Object.values(covers)[0];
+      if (b64) $("#mvThumb", dlg).innerHTML = '<img src="data:image/jpeg;base64,' + b64 + '" style="width:100%;height:100%;object-fit:cover"/>';
+    } catch (e) { /* 无封面保持占位 */ }
+  });
   $("#mvNo", dlg).addEventListener("click", close);
   mask.addEventListener("click", close);
   $("#mvYes", dlg).addEventListener("click", async () => {
@@ -554,6 +613,47 @@ $("#dlRetrySel").addEventListener("click", () => dlAct("retry"));
 $("#dlRemoveSel").addEventListener("click", () => dlAct("remove"));
 $("#dlClearDone").addEventListener("click", () => dlAct("clear_done"));
 $("#dlSave").addEventListener("click", () => dlAct("save"));
+
+// 下载管理行右键菜单：打开所在文件夹 / 复制文件名 / 打开C站（复用全局 ctxMenu，act 前缀 dl_）
+$("#dlTable tbody").addEventListener("contextmenu", (e) => {
+  const tr = e.target.closest("tr");
+  if (!tr) return;
+  const t = (state.dlTasks || []).find((x) => x.filename === tr.dataset.fn);
+  if (!t) return;
+  e.preventDefault();
+  const menu = $("#ctxMenu");
+  menu.innerHTML =
+    '<div class="ctx-item" data-act="dl_folder" data-tip="打开资源管理器并选中该文件">📂 打开所在文件夹</div>' +
+    '<div class="ctx-item" data-act="dl_copy" data-tip="复制当前文件名">📋 复制文件名</div>' +
+    '<div class="ctx-item" data-act="dl_site" data-tip="在浏览器打开该模型在 C 站的主页">🌐 打开C站</div>';
+  menu.style.display = "block";
+  const zf = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
+  menu.style.left = (e.clientX / zf) + "px";
+  menu.style.top = (e.clientY / zf) + "px";
+  const mr = menu.getBoundingClientRect();
+  if (mr.right > window.innerWidth) menu.style.left = Math.max(0, window.innerWidth - mr.width) + "px";
+  if (mr.bottom > window.innerHeight) menu.style.top = Math.max(0, window.innerHeight - mr.height) + "px";
+});
+$("#ctxMenu").addEventListener("click", async (e) => {
+  const item = e.target.closest("[data-act^=dl_]");
+  if (!item) return;
+  const tr = document.querySelector("#dlTable tbody tr.sel-row");
+  const t = tr && (state.dlTasks || []).find((x) => x.filename === tr.dataset.fn);
+  $("#ctxMenu").style.display = "none";
+  const act = item.dataset.act;
+  if (!t) return;
+  if (act === "dl_copy") {
+    await window.__copyText(t.filename);
+    setStatus("文件名已复制: " + t.filename);
+  } else if (act === "dl_folder") {
+    const full = (t.dest_dir ? t.dest_dir + "\\" : "") + t.filename;
+    const r = JSON.parse(await api.call("open_in_folder", full) || "{}");
+    setStatus((r && r.ok) ? "已打开所在文件夹" : ((r && r.msg) || "文件不存在或已被移动"));
+  } else if (act === "dl_site") {
+    const url = t.url || ("https://" + (state.cfg.site_domain || "civitai.red") + "/models/" + t.filename);
+    api.call("open_url", url);
+  }
+});
 
 // ================= 模型管理 =================
 function mmScanIfNeeded() {
