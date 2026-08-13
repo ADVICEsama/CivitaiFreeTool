@@ -10,7 +10,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.0.8"
+APP_VERSION = "2.0.9"
 
 import civitai_api
 import config
@@ -1369,7 +1369,7 @@ class Api:
                             r["base"] = v["baseModel"]
                         if not r.get("trainedWords") and v.get("trainedWords"):
                             r["trainedWords"] = v["trainedWords"]
-                        # 补全完整元数据（.civitai.info + .json）
+                        # 补全完整元数据（详情页实际读取的 info 文件 + .json）
                         try:
                             if r.get("modelId"):
                                 m = api.get_model(r["modelId"])
@@ -1378,7 +1378,8 @@ class Api:
                                 fi = reverse_parse.build_info(m, v, site_base)
                                 fs = reverse_parse.build_sd_metadata(m, v, site_base)
                                 b, _ = os.path.splitext(r["path"])
-                                with open(b + ".civitai.info", "w", encoding="utf-8") as f:
+                                info_target = model_manager.find_info_file(r["path"]) or (b + ".civitai.info")
+                                with open(info_target, "w", encoding="utf-8") as f:
                                     json.dump(fi, f, ensure_ascii=False, indent=2)
                                 with open(b + ".json", "w", encoding="utf-8") as f:
                                     json.dump(fs, f, ensure_ascii=False, indent=2)
@@ -1533,7 +1534,8 @@ class Api:
         return {"started": True}
 
     def mm_translate_descs(self, paths=None):
-        """把模型简介翻译成中文，写回 .civitai.info 与 .json（保留英文原文，新增 description_zh 字段）。
+        """把模型简介翻译成中文，写回详情页实际读取的元数据文件（find_info_file 同源）
+        与 .json（保留英文原文，新增 description_zh 字段）。
         只翻译简介，不翻译触发词——触发词需保持英文原文用于提示词。"""
         appid = self.cfg.get("baidu_appid", "").strip()
         key = self.cfg.get("baidu_key", "").strip()
@@ -1547,11 +1549,11 @@ class Api:
             for r in rows:
                 b, _ = os.path.splitext(r["path"])
                 try:
-                    info_path = b + ".civitai.info"
+                    info_path = model_manager.find_info_file(r["path"])
                     json_path = b + ".json"
                     info = {}
                     sd = {}
-                    if os.path.exists(info_path):
+                    if info_path:
                         with open(info_path, "r", encoding="utf-8") as f:
                             info = json.load(f)
                     if os.path.exists(json_path):
@@ -1559,19 +1561,26 @@ class Api:
                             sd = json.load(f)
                     changed = False
                     desc = (info.get("description") or sd.get("description") or "").strip()
-                    desc_zh_existing = info.get("description_zh") or sd.get("description_zh")
+                    zh_in_info = info.get("description_zh")
+                    zh_in_sd = sd.get("description_zh")
                     if not desc:
                         no_desc += 1
-                    elif desc_zh_existing:
+                    elif zh_in_info:
                         already += 1
+                    elif zh_in_sd:
+                        # 详情页同源文件缺中文但 .json 已有（旧版翻译只写了 .json）→ 同步过来
+                        info["description_zh"] = zh_in_sd
+                        changed = True
                     elif not translator._is_cjk(desc):
                         zh = translator.translate(desc, appid, key)
                         if zh and zh != desc:
                             info["description_zh"] = zh
                             sd["description_zh"] = zh
                             changed = True
+                    else:
+                        already += 1
                     if changed:
-                        if os.path.exists(info_path):
+                        if info_path:
                             with open(info_path, "w", encoding="utf-8") as f:
                                 json.dump(info, f, ensure_ascii=False, indent=2)
                         if os.path.exists(json_path):
