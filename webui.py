@@ -10,7 +10,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.0.7"
+APP_VERSION = "2.0.8"
 
 import civitai_api
 import config
@@ -1533,8 +1533,8 @@ class Api:
         return {"started": True}
 
     def mm_translate_descs(self, paths=None):
-        """把模型简介 + 触发词翻译成中文，写回 .civitai.info 与 .json（保留英文原文，新增 *_zh 字段）。
-        无百度 key 时回退 MyMemory；翻译失败跳过该项。"""
+        """把模型简介翻译成中文，写回 .civitai.info 与 .json（保留英文原文，新增 description_zh 字段）。
+        只翻译简介，不翻译触发词——触发词需保持英文原文用于提示词。"""
         appid = self.cfg.get("baidu_appid", "").strip()
         key = self.cfg.get("baidu_key", "").strip()
         rows = [r for r in self.model_rows if r["path"] in (paths or [])] or list(self.model_rows)
@@ -1542,6 +1542,8 @@ class Api:
 
         def work():
             ok = 0
+            no_desc = 0
+            already = 0
             for r in rows:
                 b, _ = os.path.splitext(r["path"])
                 try:
@@ -1556,35 +1558,17 @@ class Api:
                         with open(json_path, "r", encoding="utf-8") as f:
                             sd = json.load(f)
                     changed = False
-                    # 简介（已有 *_zh 视为已翻译，跳过）
                     desc = (info.get("description") or sd.get("description") or "").strip()
                     desc_zh_existing = info.get("description_zh") or sd.get("description_zh")
-                    if desc and not translator._is_cjk(desc) and not desc_zh_existing:
+                    if not desc:
+                        no_desc += 1
+                    elif desc_zh_existing:
+                        already += 1
+                    elif not translator._is_cjk(desc):
                         zh = translator.translate(desc, appid, key)
                         if zh and zh != desc:
                             info["description_zh"] = zh
                             sd["description_zh"] = zh
-                            changed = True
-                    # 触发词（逐条翻译，保留英文原文；新字段 trainedWords_zh 供界面显示中文）
-                    tw = info.get("trainedWords") or sd.get("trainedWords") or []
-                    tw_zh_existing = info.get("trainedWords_zh") or sd.get("trainedWords_zh")
-                    if isinstance(tw, list) and tw and not tw_zh_existing:
-                        zh_list = []
-                        need = False
-                        for w in tw:
-                            w = str(w or "").strip()
-                            if w and not translator._is_cjk(w) and len(w) <= 300:
-                                z = translator.translate(w, appid, key)
-                                if z and z != w:
-                                    zh_list.append(z)
-                                    need = True
-                                else:
-                                    zh_list.append("")
-                            else:
-                                zh_list.append("")
-                        if need:
-                            info["trainedWords_zh"] = zh_list
-                            sd["trainedWords_zh"] = zh_list
                             changed = True
                     if changed:
                         if os.path.exists(info_path):
@@ -1599,8 +1583,15 @@ class Api:
                 self.mm_progress["done"] += 1
             self.mm_progress["running"] = False
             self.mm_progress["result"] = ok
-            self.mm_progress["msg"] = ("简介/触发词翻译完成" if ok
-                                       else "没有可翻译的内容（或翻译服务不可用，请检查设置 → 百度翻译配置）")
+            if ok:
+                msg = "简介已翻译成中文（触发词保持英文原文，不参与翻译）"
+            elif no_desc == len(rows):
+                msg = "该模型暂无简介可翻译（触发词保持英文原文，不参与翻译）"
+            elif already == len(rows):
+                msg = "简介已经是中文（已翻译过）"
+            else:
+                msg = "没有可翻译的内容（或翻译服务不可用，请检查设置 → 百度翻译配置）"
+            self.mm_progress["msg"] = msg
 
         threading.Thread(target=work, daemon=True).start()
         return {"started": True}

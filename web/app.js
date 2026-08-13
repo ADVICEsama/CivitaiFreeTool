@@ -1167,7 +1167,6 @@ async function showModelDetail(path) {
   const v = info.version || {};
   const creator = (info.creator && info.creator.username) || info.creator || "";
   const trained = Array.isArray(info.trainedWords) ? info.trainedWords : [];
-  const trainedZh = Array.isArray(info.trainedWords_zh) ? info.trainedWords_zh : [];
   const descRaw = String(info.description || "").replace(/<[^>]+>/g, "");
   const desc = String(info.description_zh || info.description || "").replace(/<[^>]+>/g, "");
   const covers = d.covers || [];
@@ -1198,13 +1197,11 @@ async function showModelDetail(path) {
 
     (info.nsfw ? '<span class="detail-chip" style="color:var(--danger)">NSFW</span>' : "") +
     "</div>" +
-    '<div class="detail-sec-title">🎯 触发词（Trigger Words）<span class="detail-hint">点击任一触发词串单独复制（复制英文原文）</span></div>' +
+    '<div class="detail-sec-title">🎯 触发词（Trigger Words）<span class="detail-hint">点击任一触发词串单独复制（保持英文原文，不翻译）</span></div>' +
     '<div class="detail-tags">' + (trained.length ? trained.map((t, ti) => {
-      const zh = trainedZh[ti] || "";
       return '<div class="detail-tag copy-tag" data-orig="' + esc(t) + '" data-tip="点击复制这一套">' +
         (trained.length > 1 ? '<span class="detail-tag-idx">' + (ti + 1) + "</span>" : "") +
-        '<span class="detail-tag-txt">' + esc(zh || t) + "</span>" +
-        (zh ? '<span class="detail-tag-orig">' + esc(t) + "</span>" : "") +
+        '<span class="detail-tag-txt">' + esc(t) + "</span>" +
         "</div>";
     }).join("") : '<span style="font-size:12px;color:var(--text-dim)">无触发词信息</span>') + "</div>" +
     '<div class="detail-sec-title">📝 简介</div>' +
