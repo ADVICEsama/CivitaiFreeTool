@@ -10,7 +10,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.1.1"
+APP_VERSION = "2.1.2"
 
 import civitai_api
 import config
@@ -29,7 +29,7 @@ class Api:
         self.api = self._new_api()
         self.dl = downloader.Downloader(self.cfg, on_update=self._on_dl_update)
         # 浏览器桥：Chrome 扩展一键下载当前页面（127.0.0.1 本地 HTTP，静默失败）
-        browser_bridge.set_download_handler(self.dl_enqueue_url)
+        browser_bridge.set_download_handler(self.dl_enqueue_url_sync)
         browser_bridge.start(version=APP_VERSION)
         self._dl_asked_move = set()   # 本次会话已询问过移动的任务 id
         self.lock = threading.Lock()
@@ -788,64 +788,93 @@ class Api:
         st = getattr(self, "_img_dl_state", None)
         return json.dumps(st or {"total": 0, "done": 0})
 
+    def _enqueue_one(self, url):
+        """同步解析单条 URL 并入队（忽略付费状态）。返回 item dict：{url, ok, msg, task_id?}"""
+        api = self.api
+        u = (url or "").strip()
+        item = {"url": u, "ok": False, "msg": ""}
+        try:
+            model_id, version_id = api.resolve_url(u)
+            if not version_id:
+                m = api.get_model(model_id)
+                vs = m.get("modelVersions") or []
+                if not vs:
+                    item["msg"] = "模型没有可用版本"
+                    return item
+                version_id = vs[0]["id"]
+            version = api.get_model_version(version_id)
+            f, _ = api.pick_file(version)
+            hashes = f.get("hashes") or {}
+            model_obj = None
+            model_name = ""
+            if model_id:
+                try:
+                    model_obj = api.get_model(model_id)
+                    model_name = model_obj.get("name") or ""
+                except civitai_api.CivitaiError:
+                    pass
+            src_ext = os.path.splitext(f.get("name") or "")[1] or ".safetensors"
+            base_name = os.path.splitext(f.get("name") or "")[0]
+            base_name = model_manager.sanitize_filename(base_name) or model_name
+            ver = (version.get("name") or "").strip()
+            if ver:
+                base_name = "%s %s" % (base_name, ver)
+            info = {"source": "civitai", "model_name": model_name or base_name}
+            if model_id:
+                info["model_id"] = model_id
+                info["url"] = "https://%s/models/%s" % ((self.cfg.get("site_domain") or "civitai.red"), model_id)
+            if version_id:
+                info["version_id"] = version_id
+            dest_dir = (self.cfg.get("download_dir") or "").strip() or os.getcwd()
+            dl_url = f.get("downloadUrl") or ""
+            if not dl_url:
+                item["msg"] = "无下载链接"
+                return item
+            task = downloader.DownloadTask(
+                url=dl_url, dest_dir=dest_dir, filename=base_name + src_ext,
+                expected_sha256=hashes.get("SHA256") or "", info=info)
+            self.dl.add_task(task)
+            item.update({"ok": True, "msg": "已加入队列: %s" % (base_name + src_ext), "task_id": task.id})
+        except civitai_api.CivitaiError as e:
+            item["msg"] = _friendly_api_error(str(e))[:300]
+        except Exception as e:
+            item["msg"] = str(e)[:200]
+        return item
+
     def dl_enqueue_url(self, url):
-        """强制解析单条 URL 并入队（忽略付费状态，用于「仍要下载」）"""
+        """强制解析单条 URL 并入队（忽略付费状态，用于「仍要下载」，后台执行）"""
         state = {"running": True, "total": 1, "done": 0, "items": [], "finished": False}
         self._parse_state = state
 
         def work():
-            api = self.api
-            u = url
-            try:
-                model_id, version_id = api.resolve_url(u)
-                if not version_id:
-                    m = api.get_model(model_id)
-                    vs = m.get("modelVersions") or []
-                    if not vs:
-                        state["items"].append({"url": u, "ok": False, "msg": "模型没有可用版本"})
-                        return
-                    version_id = vs[0]["id"]
-                version = api.get_model_version(version_id)
-                f, _ = api.pick_file(version)
-                hashes = f.get("hashes") or {}
-                model_obj = None
-                model_name = ""
-                if model_id:
-                    try:
-                        model_obj = api.get_model(model_id)
-                        model_name = model_obj.get("name") or ""
-                    except civitai_api.CivitaiError:
-                        pass
-                src_ext = os.path.splitext(f.get("name") or "")[1] or ".safetensors"
-                base_name = os.path.splitext(f.get("name") or "")[0]
-                base_name = model_manager.sanitize_filename(base_name) or model_name
-                ver = (version.get("name") or "").strip()
-                if ver:
-                    base_name = "%s %s" % (base_name, ver)
-                info = {"source": "civitai", "model_name": model_name or base_name}
-                if model_id:
-                    info["model_id"] = model_id
-                    info["url"] = "https://%s/models/%s" % ((self.cfg.get("site_domain") or "civitai.red"), model_id)
-                if version_id:
-                    info["version_id"] = version_id
-                dest_dir = (self.cfg.get("download_dir") or "").strip() or os.getcwd()
-                dl_url = f.get("downloadUrl") or ""
-                if not dl_url:
-                    state["items"].append({"url": u, "ok": False, "msg": "无下载链接"})
-                    return
-                self.dl.add_task(downloader.DownloadTask(
-                    url=dl_url, dest_dir=dest_dir, filename=base_name + src_ext,
-                    sha256=hashes.get("SHA256"), info=info))
-                state["items"].append({"url": u, "ok": True, "msg": "已加入队列: %s" % (base_name + src_ext)})
-            except Exception as e:
-                state["items"].append({"url": u, "ok": False, "msg": str(e)[:100]})
-            finally:
-                state["done"] += 1
-                state["finished"] = True
-                state["running"] = False
+            item = self._enqueue_one(url)
+            state["items"].append(item)
+            state["done"] += 1
+            state["finished"] = True
+            state["running"] = False
 
         threading.Thread(target=work, daemon=True).start()
         return {"started": True}
+
+    def dl_enqueue_url_sync(self, url):
+        """同步解析并入队（Chrome 扩展桥用）：返回 {ok, msg, task_id?}，失败立即返回具体原因"""
+        item = self._enqueue_one(url)
+        if item.get("ok"):
+            self._notify_ext_download_started()
+        return {"ok": item.get("ok"), "msg": item.get("msg"), "task_id": item.get("task_id")}
+
+    @staticmethod
+    def _notify_ext_download_started():
+        """入队成功后通知前端自动切到「下载管理」页（pywebview evaluate_js，失败静默）"""
+        try:
+            import webview as _wv
+            for w in _wv.windows:
+                try:
+                    w.evaluate_js("window.__extDownloadStarted && window.__extDownloadStarted()")
+                except Exception:
+                    pass
+        except Exception:
+            pass
 
     def parse_image_models(self, url):
         """C 站图片链接 → 图片页用到的模型列表（__NEXT_DATA__ 提取 resources）"""

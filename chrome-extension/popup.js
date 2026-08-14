@@ -75,11 +75,11 @@ async function init() {
 async function startDownload() {
   const btn = $("btnDownload");
   btn.disabled = true;
-  btn.textContent = "正在提交…";
+  btn.textContent = "正在解析并下载…";
   try {
     const url = $("modelUrl").textContent;
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 8000);
+    const timer = setTimeout(() => ctrl.abort(), 15000);
     let res;
     try {
       res = await fetch(BRIDGE + "/api/download", {

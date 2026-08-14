@@ -277,8 +277,16 @@ function showDlNotice() {
   mask.addEventListener("click", close);
 }
 
-$("#btnParse").addEventListener("click", async () => {
-  const urls = $$("#urlRows .url-row input").map((i) => i.value.trim()).filter(Boolean);
+// Chrome 扩展一键下载成功 → 后端推送：自动切到下载管理页并刷新
+window.__extDownloadStarted = function () {
+  try {
+    switchPage("dlmanager");
+    dlRefresh();
+    showDlNotice();
+  } catch (e) { /* 忽略 */ }
+};
+
+$("#btnParse").addEventListener("click", async () => {  const urls = $$("#urlRows .url-row input").map((i) => i.value.trim()).filter(Boolean);
   if (!urls.length) { setStatus("请先输入链接"); return; }
   // 立即跳转到下载管理页，并禁用按钮防止重复点击（用户反馈：等待期重复点击导致重复下载同一模型）
   switchPage("dlmanager");
