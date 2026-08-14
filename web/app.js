@@ -575,15 +575,27 @@ function maybeAskMove(tasks) {
     "</div></div>";
   document.body.appendChild(mask);
   document.body.appendChild(dlg);
-  const close = () => { mask.remove(); dlg.remove(); _moveAsking = false; };
-  // 左侧显示模型缩略图（同目录 preview.png 封面；没有则保留占位）
-  api.call("get_covers", [done.dest_dir + "\\" + done.filename], 112).then((json) => {
-    try {
-      const covers = JSON.parse(json || "{}");
-      const b64 = Object.values(covers)[0];
-      if (b64) $("#mvThumb", dlg).innerHTML = '<img src="data:image/jpeg;base64,' + b64 + '" style="width:100%;height:100%;object-fit:cover"/>';
-    } catch (e) { /* 无封面保持占位 */ }
-  });
+  const close = () => { clearTimeout(mvTimer); mask.remove(); dlg.remove(); _moveAsking = false; };
+  // 左侧显示模型缩略图（同目录 preview.png 封面；封面下载是后台任务，可能稍后才落盘，最多重试 4 次）
+  let mvTries = 0;
+  let mvTimer = null;
+  (function loadMvThumb() {
+    api.call("get_covers", [done.dest_dir + "\\" + done.filename], 112).then((json) => {
+      try {
+        const covers = JSON.parse(json || "{}");
+        const b64 = Object.values(covers)[0];
+        if (b64) {
+          $("#mvThumb", dlg).innerHTML = '<img src="data:image/jpeg;base64,' + b64 + '" style="width:100%;height:100%;object-fit:cover"/>';
+          return;
+        }
+      } catch (e) { /* 忽略 */ }
+      // 封面还没落盘：等 2.5s 后重试（最多 4 次，约 10s 内追上封面下载；弹窗关闭则停止）
+      if (mvTries < 4 && document.body.contains(dlg)) {
+        mvTries++;
+        mvTimer = setTimeout(loadMvThumb, 2500);
+      }
+    }).catch(() => { /* 无封面保持占位 */ });
+  })();
   $("#mvNo", dlg).addEventListener("click", close);
   mask.addEventListener("click", close);
   $("#mvYes", dlg).addEventListener("click", async () => {
