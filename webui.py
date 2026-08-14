@@ -10,7 +10,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.1.2"
+APP_VERSION = "2.1.3"
 
 import civitai_api
 import config
@@ -819,14 +819,27 @@ class Api:
             ver = (version.get("name") or "").strip()
             if ver:
                 base_name = "%s %s" % (base_name, ver)
-            info = {"source": "civitai", "model_name": model_name or base_name}
+            info = {"source": "civitai", "model_name": model_name or base_name,
+                    "modelName": model_name, "versionName": version.get("name", "")}
             if model_id:
                 info["model_id"] = model_id
                 info["url"] = "https://%s/models/%s" % ((self.cfg.get("site_domain") or "civitai.red"), model_id)
             if version_id:
                 info["version_id"] = version_id
+            # 构建 meta（info + sd 元数据）→ 下载完成后自动生成 json 与封面缩略图
+            sd_d = (self.cfg.get("site_domain", "civitai.red") or "civitai.red").strip("/")
+            site_base = sd_d if "://" in sd_d else "https://" + sd_d
+            meta = {}
+            try:
+                meta = {
+                    "info": reverse_parse.build_info(model_obj, version, site_base),
+                    "sd": reverse_parse.build_sd_metadata(model_obj, version, site_base),
+                }
+            except Exception:
+                pass
+            info["meta"] = meta
             dest_dir = (self.cfg.get("download_dir") or "").strip() or os.getcwd()
-            dl_url = f.get("downloadUrl") or ""
+            dl_url = api.build_download_url(version_id, f.get("id")) if version_id else (f.get("downloadUrl") or "")
             if not dl_url:
                 item["msg"] = "无下载链接"
                 return item
