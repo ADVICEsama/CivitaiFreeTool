@@ -10,7 +10,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.1.3"
+APP_VERSION = "2.1.4"
 
 import civitai_api
 import config
@@ -77,12 +77,14 @@ class Api:
                             json.dump(sd, f, ensure_ascii=False, indent=2)
                 except Exception:
                     pass
-            # 2) 封面下载（后台，已存在则跳过）
+            # 2) 封面下载（后台，已存在则跳过；走代理，直连 C 站图片 CDN 会被墙）
             if self.cfg.get("download_cover", True):
                 imgs = (meta.get("info") or {}).get("images") or []
                 if imgs and imgs[0].get("url"):
                     try:
-                        _download_image(imgs[0]["url"], base + ".preview.png")
+                        _download_image(imgs[0]["url"], base + ".preview.png",
+                                        proxy=self.cfg.get("proxy_address") if self.cfg.get("proxy_enabled") else None,
+                                        verify=self.cfg.get("ssl_verify", True))
                     except Exception:
                         pass
         except Exception:
@@ -1566,7 +1568,9 @@ class Api:
                         if not u:
                             continue
                         for _ in range(3):
-                            if _download_image(u, dest):
+                            if _download_image(u, dest,
+                                               proxy=self.cfg.get("proxy_address") if self.cfg.get("proxy_enabled") else None,
+                                               verify=self.cfg.get("ssl_verify", True)):
                                 ok += 1
                                 break
                         if os.path.exists(dest):

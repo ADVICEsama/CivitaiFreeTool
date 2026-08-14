@@ -1607,7 +1607,9 @@ class CivitaiFreeGUI(tk.Tk):
                         if not u:
                             continue
                         for attempt in range(3):
-                            if _download_image(u, dest, timeout=60):
+                            if _download_image(u, dest, timeout=60,
+                                               proxy=self.cfg.get("proxy_address") if self.cfg.get("proxy_enabled") else None,
+                                               verify=self.cfg.get("ssl_verify", True)):
                                 with lock:
                                     ok_count[0] += 1
                                 break
@@ -2253,6 +2255,13 @@ def _friendly_api_error(s):
     """把底层异常翻译成可操作的中文提示（超时/代理/权限等）"""
     s = str(s)
     low = s.lower()
+    if "unexpected eof" in low or "eof occurred" in low or "connection reset" in low or "connection aborted" in low:
+        return ("连接 Civitai 被中断（SSL/网络错误）。\n"
+                "可能原因：\n"
+                "· 代理节点不稳定或已失效（在代理软件里切换节点后重试）\n"
+                "· 网络波动（稍后重试）\n"
+                "· 若已开启代理仍频繁出现，可尝试关闭「证书验证」（设置 → 网络）\n\n"
+                "详细信息：\n%s" % s)
     if "10060" in s or "10061" in s or "timed out" in low or "超时" in s:
         return ("连接 Civitai 超时。\n"
                 "可能原因：\n"
@@ -2285,12 +2294,14 @@ def _is_image_bytes(data):
             or data.startswith(b"II*\x00"))
 
 
-def _download_image(url, dest, timeout=60):
-    """下载图片到本地文件（先验证内容为图片格式再写 .tmp + 原子替换；非图片/失败返回 False）"""
+def _download_image(url, dest, timeout=60, proxy=None, verify=True):
+    """下载图片到本地文件（先验证内容为图片格式再写 .tmp + 原子替换；非图片/失败返回 False）
+    proxy: 代理地址（如 127.0.0.1:7897），None 直连；verify: TLS 证书验证"""
     try:
         import urllib.request
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=timeout) as r:
+        opener = civitai_api.build_opener(proxy, verify)
+        with opener.open(req, timeout=timeout) as r:
             data = r.read()
         if data and len(data) > 100 and _is_image_bytes(data):
             tmp = dest + ".tmp"
