@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="card">
+    <div class="head">
+      <img class="logo" src="icons/icon32.png" alt="" />
+      <div class="title">CivitaiFreeTool 一键下载</div>
+    </div>
+
+    <div id="view-loading" class="view">
+      <div class="spinner"></div>
+      <div class="hint">正在读取当前页面…</div>
+    </div>
+
+    <div id="view-bad" class="view hidden">
+      <div class="icon-big">⚠️</div>
+      <div class="bad-title">当前页面不是 Civitai 模型页</div>
+      <div class="hint">请打开 civitai.red / civitai.com 的模型详情页后重试</div>
+    </div>
+
+    <div id="view-offline" class="view hidden">
+      <div class="icon-big">🔌</div>
+      <div class="bad-title">未连接到 CivitaiFreeTool</div>
+      <div class="hint">请先打开 CivitaiFreeTool.exe（v2.1.0+），再点击下载</div>
+    </div>
+
+    <div id="view-ready" class="view hidden">
+      <div class="model-name" id="modelName">…</div>
+      <div class="url" id="modelUrl"></div>
+      <div class="meta" id="modelMeta"></div>
+      <button class="btn primary" id="btnDownload">⬇️ 开始下载</button>
+    </div>
+
+    <div id="view-done" class="view hidden">
+      <div class="icon-big">✅</div>
+      <div class="bad-title">已开始下载</div>
+      <div class="hint">在 CivitaiFreeTool「下载管理」页可查看进度</div>
+      <button class="btn" id="btnClose">完成</button>
+    </div>
+
+    <div id="view-error" class="view hidden">
+      <div class="icon-big">❌</div>
+      <div class="bad-title" id="errTitle">下载失败</div>
+      <div class="hint" id="errMsg"></div>
+      <button class="btn" id="btnRetry">重试</button>
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

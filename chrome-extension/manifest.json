@@ -1,15 +1,23 @@
 {
   "manifest_version": 3,
-  "name": "CivitaiFreeTool 一键添加",
-  "version": "1.0.0",
-  "description": "点击图标把当前 Civitai 模型页一键添加到 CivitaiFreeTool 批量下载列表（需先打开 CivitaiFreeTool.exe）",
-  "permissions": ["tabs", "contextMenus"],
-  "host_permissions": ["http://127.0.0.1/*", "http://localhost/*"],
+  "name": "CivitaiFreeTool 一键下载",
+  "version": "1.1.0",
+  "description": "点击图标弹出确认窗，一键把当前 Civitai 模型页下载到 CivitaiFreeTool（需先打开 CivitaiFreeTool.exe）",
+  "permissions": ["tabs", "scripting", "contextMenus"],
+  "host_permissions": [
+    "http://127.0.0.1/*",
+    "http://localhost/*",
+    "https://civitai.red/*",
+    "https://civitai.com/*",
+    "https://www.civitai.red/*",
+    "https://www.civitai.com/*"
+  ],
   "background": {
     "service_worker": "background.js"
   },
   "action": {
-    "default_title": "添加到 CivitaiFreeTool",
+    "default_title": "CivitaiFreeTool 一键下载",
+    "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png",

@@ -10,7 +10,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.1.0"
+APP_VERSION = "2.1.1"
 
 import civitai_api
 import config
@@ -28,7 +28,8 @@ class Api:
         self.cfg = config.load()
         self.api = self._new_api()
         self.dl = downloader.Downloader(self.cfg, on_update=self._on_dl_update)
-        # 浏览器桥：Chrome 扩展把当前页面添加到工具（127.0.0.1 本地 HTTP，静默失败）
+        # 浏览器桥：Chrome 扩展一键下载当前页面（127.0.0.1 本地 HTTP，静默失败）
+        browser_bridge.set_download_handler(self.dl_enqueue_url)
         browser_bridge.start(version=APP_VERSION)
         self._dl_asked_move = set()   # 本次会话已询问过移动的任务 id
         self.lock = threading.Lock()
@@ -47,11 +48,6 @@ class Api:
             self.cfg.get("api_key", ""), 20,
             self.cfg.get("proxy_address") if self.cfg.get("proxy_enabled") else None,
             self.cfg.get("ssl_verify", True))
-
-    # ---------------- 浏览器扩展（Chrome 一键添加） ----------------
-    def browser_pending(self):
-        """取走浏览器扩展添加的 URL 列表（前端批量下载页合并进 URL 行）"""
-        return browser_bridge.take_pending()
 
     # ---------------- 下载完成回调 ----------------
     def _on_dl_update(self, task):
