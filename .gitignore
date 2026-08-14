@@ -36,6 +36,7 @@ issue*.md
 README_new.md
 
 # ===== 运行数据 / 本地素材 =====
+browser_queue.json
 organize_log.json
 *.pptx
 视频稿*.md
