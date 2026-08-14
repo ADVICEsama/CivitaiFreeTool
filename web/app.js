@@ -138,10 +138,36 @@ const state = {
 };
 
 // ---------- 页面切换 ----------
+let _brTimer = null;
 function switchPage(name) {
   $$(".nav-tab").forEach((t) => t.classList.toggle("active", t.dataset.page === name));
   $$(".page").forEach((p) => p.classList.toggle("active", p.id === "page-" + name));
   if (name === "models") mmScanIfNeeded();
+  if (name === "download") { pullBrowserUrls(); startBrPoll(); } else { stopBrPoll(); }
+}
+
+// ===== 浏览器扩展一键添加（Chrome 点击图标 → 链接进入批量下载行）=====
+async function pullBrowserUrls() {
+  try {
+    const r = await api.call("browser_pending");
+    if (!r || !r.urls || !r.urls.length) return;
+    const exist = new Set($$("#urlRows .url-row input").map((i) => i.value.trim()).filter(Boolean));
+    let added = 0;
+    for (const u of r.urls) {
+      if (!u || exist.has(u)) continue;
+      addUrlRow(u);
+      exist.add(u);
+      added++;
+    }
+    if (added) setStatus("🌐 已从浏览器添加 " + added + " 条链接，点「解析」开始下载");
+  } catch (e) { /* 忽略 */ }
+}
+function startBrPoll() {
+  if (_brTimer) return;
+  _brTimer = setInterval(pullBrowserUrls, 3000);
+}
+function stopBrPoll() {
+  if (_brTimer) { clearInterval(_brTimer); _brTimer = null; }
 }
 $("#navTabs").addEventListener("click", (e) => {
   const b = e.target.closest(".nav-tab");
