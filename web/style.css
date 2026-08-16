@@ -1203,6 +1203,8 @@ textarea.rules {
   gap: 8px;
   margin-top: 14px;
 }
+/* 设置页内容底部留白，避免固定操作栏遮挡最后的内容 */
+#page-settings .card { padding-bottom: 90px; }
 
 /* ===== 设置分组折叠按钮 ===== */
 fieldset.form-section > legend { cursor: pointer; display: flex; align-items: center; gap: 6px; }
