@@ -1284,7 +1284,7 @@ async function showModelDetail(path) {
   });
   // 操作
   $("#dSite", panel).addEventListener("click", () => {
-    const mid = info.modelId || info.id;
+    const mid = info.modelId || info.id || info.model_id;
     api.call("open_url", "https://" + (state.cfg.site_domain || "civitai.red") + "/models/" + (mid || ""));
   });
 

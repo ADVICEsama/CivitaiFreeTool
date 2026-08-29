@@ -10,7 +10,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.1.4"
+APP_VERSION = "2.1.5"
 
 import civitai_api
 import config
@@ -492,6 +492,8 @@ class Api:
                             meta = {}
                     v = meta.get("version")
                     ver = v.get("name", "") if isinstance(v, dict) else (v or "")
+                    tw = meta.get("trainedWords") or meta.get("trained_words") \
+                        or meta.get("trigger_words") or []
                     rows.append({
                         "path": f["path"], "name": f["name"], "size": f["size"],
                         "mtime": f.get("mtime") or 0,
@@ -501,7 +503,7 @@ class Api:
                         "verId": meta.get("versionId") or meta.get("version_id", ""),
                         "modelId": meta.get("modelId") or meta.get("model_id", ""),
                         "url": meta.get("url", ""),
-                        "trainedWords": meta.get("trainedWords", []),
+                        "trainedWords": tw,
                         "civitai_name": meta.get("name", ""),
                         "info": meta,
                     })
@@ -548,6 +550,9 @@ class Api:
                     info = json.load(f)
             except Exception:
                 info = {}
+        # 字段归一化：扁平 json（trained_words/trigger_words）→ 全结构 trainedWords
+        if info and not info.get("trainedWords"):
+            info["trainedWords"] = info.get("trained_words") or info.get("trigger_words") or []
         images = info.get("images") or []
 
         def _img_prompt(idx):
@@ -1014,7 +1019,11 @@ class Api:
         d = os.path.dirname(path)
         old_base = os.path.splitext(os.path.basename(path))[0]
         ext = os.path.splitext(os.path.basename(path))[1] or ".safetensors"
-        if os.path.splitext(new_name)[1]:
+        # 只有用户输入以真实模型扩展名结尾时才视为自带扩展名，否则一律追加原扩展名
+        # （避免输入含点（如 "v1.8 xxx"、"2026.8.15 xxx"）被 splitext 误判吃掉扩展名）
+        _KNOWN_EXT = (".safetensors", ".ckpt", ".pt", ".pth", ".sft", ".safetensors", ".bin",
+                      ".onnx", ".gguf", ".patch")
+        if new_name.lower().endswith(_KNOWN_EXT):
             new_base = new_name
             new_name = os.path.splitext(new_name)[0]
         else:

@@ -174,6 +174,7 @@ def build_sd_metadata(model, version, site_base="https://civitai.red"):
         "type": m.get("type") or "",
         "base_model": v.get("baseModel") or "",
         "trained_words": tw,
+        "trainedWords": tw,  # 驼峰冗余：C 站扩展/A1111 卡片等读取兼容
         "trigger_words": tw,
         "activation_text": ", ".join(tw) if tw else "",
         "activation text": ", ".join(tw) if tw else "",  # Forge/A1111 卡片读取的标准字段名（带空格）
@@ -220,6 +221,7 @@ def info_to_sd_metadata(info):
         "type": info.get("type") or "",
         "base_model": info.get("baseModel") or info.get("base_model") or "",
         "trained_words": tw,
+        "trainedWords": tw,  # 驼峰冗余：C 站扩展/A1111 卡片等读取兼容
         "trigger_words": tw,
         "activation_text": ", ".join(tw),
         "activation text": ", ".join(tw),  # Forge/A1111 标准字段
