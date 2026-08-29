@@ -3,6 +3,7 @@
 用法: python main_web.py  （或打包后 CivitaiFreeToolWeb.exe）"""
 import os
 import sys
+import time
 
 import webview
 
