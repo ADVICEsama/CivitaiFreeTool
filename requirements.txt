@@ -1,14 +1,23 @@
 # CivitaiFreeTool 依赖
 # 安装：pip install -r requirements.txt
 
-# GUI（WebView2 / Chromium 壳）
+# GUI（Windows: WebView2 / Linux+macOS: Qt WebEngine）
 pywebview>=5.0
 
 # 图片处理（封面/缩略图/自定义封面）
 Pillow>=10.0
 
-# 窗口图标（仅 Windows，可选的 pythonnet）
-pythonnet>=3.0
+# 图片元信息抓取（webui 图片下载）
+requests>=2.28
+
+# Linux/macOS：pywebview Qt 后端（QWebEngineView）所需绑定 shim。
+# Qt 本体建议用系统包安装（避免与系统 Qt 冲突）：
+#   Arch: sudo pacman -S pyside6 qt6-webengine python-qtpy wl-clipboard
+#   pip 替代: pip install PySide6   # 自带 WebEngine
+QtPy>=2.4; sys_platform != "win32"
+
+# 窗口图标（仅 Windows，WinForms/pythonnet）
+pythonnet>=3.0; sys_platform == "win32"
 
 # 打包（可选，仅发布需要）
 # pyinstaller>=6.0

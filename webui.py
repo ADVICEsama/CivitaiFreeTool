@@ -16,6 +16,7 @@ import civitai_api
 import config
 import downloader
 import model_manager
+import posix_compat
 import reverse_parse
 import translator
 import browser_bridge
@@ -312,7 +313,9 @@ class Api:
             return out
 
     def copy_text(self, text):
-        """写入系统剪贴板（Win32，64 位安全 argtypes）"""
+        """写入系统剪贴板（Windows: Win32，64 位安全 argtypes；其他: wl-copy/xclip）"""
+        if not posix_compat.IS_WINDOWS:
+            return posix_compat.copy_clipboard_text(text)
         import ctypes
         try:
             u = ctypes.windll.user32
@@ -352,7 +355,9 @@ class Api:
             return False
 
     def get_clipboard(self):
-        """读取系统剪贴板文本（Win32；注意 64 位 HGLOBAL 指针需显式 argtypes/restype）"""
+        """读取系统剪贴板文本（Windows: Win32；其他: wl-paste/xclip）"""
+        if not posix_compat.IS_WINDOWS:
+            return posix_compat.get_clipboard_text()
         import ctypes
         try:
             u = ctypes.windll.user32
@@ -397,6 +402,8 @@ class Api:
         import os
         if not path or not os.path.exists(path):
             return {"ok": False, "msg": "路径不存在"}
+        if not posix_compat.IS_WINDOWS:
+            return posix_compat.open_in_folder(path)
         try:
             import ctypes
             from ctypes import wintypes
@@ -1051,12 +1058,16 @@ class Api:
 
     def rm_file(self, path):
         """右键删除：移入回收站（含附属文件）"""
-        from gui import _recycle_to_trash
+        if posix_compat.IS_WINDOWS:
+            from gui import _recycle_to_trash
         path = (path or "").strip()
         if not path or not os.path.exists(path):
             return {"ok": False, "msg": "文件不存在"}
         try:
-            ok = _recycle_to_trash([path])
+            if posix_compat.IS_WINDOWS:
+                ok = _recycle_to_trash([path])
+            else:
+                ok = posix_compat.trash([path])
         except Exception as e:
             return {"ok": False, "msg": "删除失败: %s" % e}
         if not ok:
@@ -1064,10 +1075,14 @@ class Api:
         d = os.path.dirname(path)
         base = os.path.splitext(os.path.basename(path))[0]
         try:
-            _recycle_to_trash([os.path.join(d, base + s) for s in
-                               (".preview.png", ".preview.jpg", ".preview.webp",
-                                ".txt", ".json", ".civitai.info")
-                               if os.path.exists(os.path.join(d, base + s))])
+            sidecars = [os.path.join(d, base + s) for s in
+                        (".preview.png", ".preview.jpg", ".preview.webp",
+                         ".txt", ".json", ".civitai.info")
+                        if os.path.exists(os.path.join(d, base + s))]
+            if posix_compat.IS_WINDOWS:
+                _recycle_to_trash(sidecars)
+            else:
+                posix_compat.trash(sidecars)
         except Exception:
             pass
         return {"ok": True, "msg": "已移入回收站"}
@@ -1248,6 +1263,8 @@ class Api:
         return json.dumps(out, ensure_ascii=False)
 
     def open_url(self, url):
+        if not posix_compat.IS_WINDOWS:
+            return posix_compat.open_url(url)
         try:
             os.startfile(url)
             return True
@@ -1670,7 +1687,10 @@ class Api:
             return False
         url = r.get("url") or ""
         if url:
-            os.startfile(url)
+            if posix_compat.IS_WINDOWS:
+                os.startfile(url)
+            else:
+                posix_compat.open_url(url)
             return True
         return False
 
