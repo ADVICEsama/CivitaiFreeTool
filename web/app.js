@@ -2551,3 +2551,12 @@ window.addEventListener("pywebviewready", init);
 if (window.pywebview) init();
 // 就绪守卫：init 未完成前禁止依赖 js_api 的操作（首次桥接可能慢）
 window.__ready = false;
+
+// 通用外链：任何带 data-url 的可点击元素（如批量下载页 hint 里的仓库链接）点击后交由后端打开系统浏览器
+// 排除设置页 .bd-link（已由 #settingsForm 委托处理），避免重复打开
+document.addEventListener("click", (e) => {
+  const el = e.target.closest("[data-url]");
+  if (!el || el.closest("#settingsForm .bd-link")) return;
+  e.preventDefault();
+  api.call("open_url", el.dataset.url);
+});
