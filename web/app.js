@@ -2552,11 +2552,10 @@ if (window.pywebview) init();
 // 就绪守卫：init 未完成前禁止依赖 js_api 的操作（首次桥接可能慢）
 window.__ready = false;
 
-// 通用外链：任何带 data-url 的可点击元素（如批量下载页 hint 里的仓库链接）点击后交由后端打开系统浏览器
-// 排除设置页 .bd-link（已由 #settingsForm 委托处理），避免重复打开
+// 批量下载页 hint 仓库域名外链：仅处理 .ob-link（定向委托，避免误伤其他 data-url 元素）
 document.addEventListener("click", (e) => {
-  const el = e.target.closest("[data-url]");
-  if (!el || el.closest("#settingsForm .bd-link")) return;
+  const el = e.target.closest("#page-download .card .ob-link[data-url]");
+  if (!el) return;
   e.preventDefault();
   api.call("open_url", el.dataset.url);
 });
