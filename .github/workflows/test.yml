@@ -1,0 +1,19 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      # BridgeTest 只依赖标准库（browser_bridge + http.server），可在无 GUI 环境运行
+      - name: Run bridge unit tests
+        run: python -m unittest test_browser_bridge.BridgeTest -v
