@@ -51,7 +51,7 @@ class FramelessTitlebar:
         self.bar.pack_propagate(False)
         # 拖动区域 + 标题
         self.title_lbl = tk.Label(self.bar, text=root.title(), bg=ui.CURRENT["surface2"],
-                                  fg=ui.CURRENT["text_dim"], font=("Microsoft YaHei UI", 10),
+                                  fg=ui.CURRENT["text_dim"], font=ui.main_font(10),
                                   anchor="w")
         self.title_lbl.pack(side="left", fill="x", expand=True, padx=(14, 4))
         self._make_btn("─", self._minimize)
@@ -66,7 +66,7 @@ class FramelessTitlebar:
 
     def _make_btn(self, text, cmd, danger=False):
         b = tk.Label(self.bar, text=text, width=3, bg=ui.CURRENT["surface2"],
-                     fg=ui.CURRENT["text_dim"], font=("Segoe UI", 10))
+                     fg=ui.CURRENT["text_dim"], font=ui.main_font(10))
         b.pack(side="right", fill="y")
         b.bind("<Enter>", lambda e, b=b, d=danger: b.configure(
             bg=ui.CURRENT["danger"] if d else ui.CURRENT["hover"],

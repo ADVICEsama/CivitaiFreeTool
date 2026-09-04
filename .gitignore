@@ -42,3 +42,6 @@ organize_log.json
 视频稿*.md
 screens/
 shots/
+
+# uv 虚拟环境
+.venv/

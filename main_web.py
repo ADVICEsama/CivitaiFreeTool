@@ -7,6 +7,7 @@ import time
 
 import webview
 
+import posix_compat
 import webui
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -43,6 +44,25 @@ def apply_mica():
         pass
 
 
+def _check_qt_backend():
+    """非 Windows：pywebview Qt 后端需要 qtpy + QtWebEngine 绑定。
+    缺失时提前给出安装指引，而不是让 pywebview 抛裸 traceback。"""
+    if posix_compat.IS_WINDOWS:
+        return
+    try:
+        from qtpy import QtWebEngineWidgets  # noqa: F401
+    except Exception as e:
+        print("=" * 60, file=sys.stderr)
+        print("Qt 后端不可用：pywebview gui='qt' 需要 qtpy + QtWebEngine", file=sys.stderr)
+        print("当前错误: %r" % (e,), file=sys.stderr)
+        print("安装方法（任选其一）:", file=sys.stderr)
+        print("  Arch:   sudo pacman -S pyside6 qt6-webengine python-qtpy", file=sys.stderr)
+        print("  pip:    pip install PySide6 qtpy   (PySide6 自带 WebEngine)", file=sys.stderr)
+        print("  其他发行版: 安装 PySide6/PyQt6 及其 WebEngine 组件 + qtpy", file=sys.stderr)
+        print("=" * 60, file=sys.stderr)
+        sys.exit(1)
+
+
 def main():
     api = webui.Api()
     window = webview.create_window(
@@ -54,7 +74,18 @@ def main():
         min_size=(980, 640),
         background_color="#1c1c1e",
     )
-    webview.start(lambda: (time.sleep(0.8), apply_mica(), set_window_icon()), debug=False)
+    # Linux: force the Qt backend (QWebEngineView + QWebChannel, PySide6/PyQt6
+    # bindings via qtpy). Best fit for KDE Plasma; GTK stack not needed.
+    # Windows keeps the default EdgeChromium (WebView2) backend.
+    start_kwargs = {}
+    if not posix_compat.IS_WINDOWS:
+        start_kwargs["gui"] = "qt"
+        _check_qt_backend()
+    webview.start(
+        lambda: (time.sleep(0.8), apply_mica(), set_window_icon()),
+        debug=False,
+        **start_kwargs,
+    )
 
 
 def set_window_icon():

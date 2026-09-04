@@ -16,10 +16,19 @@ import config
 import downloader
 import frameless
 import model_manager
+import posix_compat
 import reverse_parse
 import theme
 import translator
 import ui
+
+
+def _os_start(target):
+    """os.startfile 的跨平台替代（Linux/macOS 走 xdg-open / open）"""
+    if posix_compat.IS_WINDOWS:
+        os.startfile(target)
+    else:
+        posix_compat.open_url(target)
 
 ST_TEXT = {
     downloader.ST_PENDING: "等待中",
@@ -106,14 +115,12 @@ class CivitaiFreeGUI(tk.Tk):
         )
 
     def _setup_fonts(self):
-        """全局指定中文字体，避免打包 exe 中 Tk 默认字体把中文渲染成方框"""
+        """全局指定中文字体，避免打包 exe 中 Tk 默认字体把中文渲染成方框。
+        跨平台：Windows 微软雅黑 / macOS 苹方 / Linux Noto CJK、文泉驿等。"""
         try:
-            import tkinter.font as tkfont
-            fams = set(tkfont.families())
-            for fam in ("Microsoft YaHei UI", "Microsoft YaHei", "SimHei", "SimSun"):
-                if fam in fams:
-                    self.option_add("*Font", (fam, 10))
-                    return
+            fam = ui.resolve_font_family(self)
+            if fam:
+                self.option_add("*Font", (fam, 10))
         except Exception:
             pass
 
@@ -1055,7 +1062,7 @@ class CivitaiFreeGUI(tk.Tk):
             messagebox.showinfo("提示", "该模型没有 C 站链接（无元数据，可先 校验哈希/反向解析）")
             return
         try:
-            os.startfile(url)
+            _os_start(url)
         except Exception as e:
             messagebox.showerror("打开失败", str(e))
 
@@ -1234,7 +1241,7 @@ class CivitaiFreeGUI(tk.Tk):
         if not rows:
             messagebox.showinfo("提示", "请先选中一行")
             return
-        os.startfile(os.path.dirname(rows[0]["path"]))
+        _os_start(os.path.dirname(rows[0]["path"]))
 
     def _mm_copy_path(self):
         rows = self._mm_selected()
@@ -1555,7 +1562,7 @@ class CivitaiFreeGUI(tk.Tk):
                 return
             self.status_var.set("图例已生成: %s" % p)
             if messagebox.askyesno("完成", "图例已生成：\n%s\n是否打开？" % p):
-                os.startfile(p)
+                _os_start(p)
 
         Worker(self, work, done)
 
@@ -1776,7 +1783,7 @@ class CivitaiFreeGUI(tk.Tk):
     def _mm_open_dir(self):
         d = self.cfg.get("models_dir") or self.cfg.get("download_dir")
         if d and os.path.isdir(d):
-            os.startfile(d)
+            _os_start(d)
         else:
             messagebox.showinfo("提示", "模型目录不存在: %s" % d)
 
@@ -2040,7 +2047,7 @@ class CivitaiFreeGUI(tk.Tk):
         if sel:
             r = self.rp_id_map.get(sel[0])
             if r:
-                os.startfile(os.path.dirname(r["path"]))
+                _os_start(os.path.dirname(r["path"]))
                 return
         messagebox.showinfo("提示", "请先在列表中选择一项")
 
@@ -2343,7 +2350,10 @@ def _text_to_rules(text):
 
 
 def _recycle_to_trash(paths):
-    """通过 Win32 SHFileOperation 把文件移入回收站（可恢复）。返回是否成功。"""
+    """通过 Win32 SHFileOperation 把文件移入回收站（可恢复）。返回是否成功。
+    非 Windows 走 gio trash（freedesktop 回收站）。"""
+    if not posix_compat.IS_WINDOWS:
+        return posix_compat.trash(paths)
     import ctypes
     from ctypes import wintypes
     FO_DELETE = 3
