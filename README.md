@@ -78,6 +78,8 @@ CivitaiFreeTool 是一款开箱即用的 AI 模型管理桌面工具：**批量�
 3. 「加载已解压的扩展程序」→ 选择 `chrome-extension` 文件夹
 4. 打开 CivitaiFreeTool（v2.1.0+）→ 浏览 C 站模型页 → 点击扩展图标一键下载
 
+> 📄 图文安装说明与最新下载：**https://advicesama.github.io/CivitaiFreeTool/**（软件 + 扩展项目主页）
+
 ## 🧩 源码构建
 
 ```bash

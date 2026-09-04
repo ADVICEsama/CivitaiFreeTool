@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>CivitaiFreeTool 一键下载 · Chrome 扩展</title>
-<meta name="description" content="CivitaiFreeTool Chrome 扩展：浏览 Civitai 模型页一键下载到 CivitaiFreeTool。免费、开源、无付费墙。"/>
+<title>CivitaiFreeTool · 免费开源模型下载/管理/反向解析工具</title>
+<meta name="description" content="CivitaiFreeTool：Civitai / HuggingFace 模型下载、管理、反向解析工具，免费开源无付费墙。配套 Chrome 扩展一键下载。"/>
 <style>
 :root {
   --bg: #0f0f11; --card: rgba(255,255,255,0.05); --border: rgba(255,255,255,0.09);
@@ -19,8 +19,8 @@ body {
               var(--bg);
   color: var(--text); min-height: 100vh; line-height: 1.7;
 }
-.wrap { max-width: 860px; margin: 0 auto; padding: 48px 20px 80px; }
-.logo-row { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+.wrap { max-width: 880px; margin: 0 auto; padding: 48px 20px 80px; }
+.logo-row { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
 .logo { width: 56px; height: 56px; border-radius: 14px; }
 .badge {
   display: inline-block; font-size: 12px; padding: 3px 10px; border-radius: 999px;
@@ -28,6 +28,7 @@ body {
 }
 h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.3px; }
 .sub { color: var(--dim); font-size: 14px; margin-top: 4px; }
+.intro { font-size: 14.5px; color: rgba(245,245,247,0.85); margin-top: 6px; }
 .card {
   background: var(--card); border: 1px solid var(--border); border-radius: 16px;
   padding: 24px; margin-top: 22px;
@@ -37,6 +38,13 @@ h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.3px; }
 .card h2 { font-size: 17px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
 .card p, .card li { font-size: 14px; color: rgba(245,245,247,0.88); }
 .card ul { padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.feat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; }
+.feat {
+  background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+  border-radius: 12px; padding: 12px 14px; font-size: 13px;
+}
+.feat .ft { display: block; font-weight: 700; font-size: 13.5px; margin-bottom: 3px; }
+.feat .fd { color: var(--dim); font-size: 12px; line-height: 1.55; }
 .steps { counter-reset: s; list-style: none; padding-left: 0 !important; }
 .steps li { counter-increment: s; display: flex; gap: 12px; align-items: flex-start; }
 .steps li::before {
@@ -54,9 +62,10 @@ h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.3px; }
 }
 .btn:active { transform: scale(0.97); }
 .btn.ghost { background: rgba(127,127,127,0.2); color: var(--text); }
-.btn.small { padding: 8px 14px; font-size: 13px; }
-.ver-tag { font-size: 13px; color: var(--dim); }
+.btn.violet { background: linear-gradient(180deg, var(--accent2), #4038cc); }
+.ver-tag { font-size: 13px; color: var(--dim); margin-top: 8px; }
 .note { font-size: 12.5px; color: var(--dim); margin-top: 10px; }
+.note a { color: var(--accent); }
 code {
   background: rgba(255,255,255,0.08); padding: 2px 7px; border-radius: 6px;
   font-size: 12.5px; font-family: Consolas, monospace;
@@ -74,7 +83,6 @@ code {
 .faq p { margin-top: 8px; }
 .footer { text-align: center; color: var(--dim); font-size: 12.5px; margin-top: 40px; }
 .footer a { color: var(--dim); }
-.hidden { display: none; }
 @media (prefers-color-scheme: light) {
   :root {
     --bg: #f5f5f7; --card: rgba(255,255,255,0.75); --border: rgba(0,0,0,0.08);
@@ -82,7 +90,7 @@ code {
   }
   .card p, .card li { color: rgba(28,28,30,0.85); }
   code { background: rgba(0,0,0,0.06); }
-  .flow .step-chip { background: rgba(0,0,0,0.04); }
+  .flow .step-chip, .feat { background: rgba(0,0,0,0.04); }
 }
 </style>
 </head>
@@ -92,98 +100,115 @@ code {
   <div class="logo-row">
     <img class="logo" src="icon128.png" alt="CivitaiFreeTool" onerror="this.style.display='none'"/>
     <div>
-      <h1>CivitaiFreeTool 一键下载 <span class="badge">Chrome 扩展</span></h1>
-      <div class="sub">浏览 Civitai 模型页 → 点击图标 → 一键下载到 CivitaiFreeTool</div>
+      <h1>CivitaiFreeTool <span class="badge">免费 · 开源 · 无付费墙</span></h1>
+      <div class="sub">Civitai / HuggingFace 模型下载、管理、反向解析工具</div>
     </div>
   </div>
+  <p class="intro">开箱即用的 AI 模型管理桌面工具：批量下载、本地模型管理（缩略图 / 改名 / 整理 / 校验）、反向解析、ComfyUI 工作流分析。支持 Windows / Linux / macOS，配套 Chrome 扩展一键下载。</p>
 
   <div class="card">
-    <h2>⬇️ 下载扩展</h2>
+    <h2>🖥️ 下载软件</h2>
     <div class="dl-row">
-      <a class="btn" id="dlZip" href="#" target="_blank">📦 下载最新扩展 zip</a>
-      <a class="btn ghost" href="https://github.com/ADVICEsama/CivitaiFreeTool/releases" target="_blank">🌐 查看所有 Release</a>
+      <a class="btn" id="dlExe" href="#" target="_blank">⬇️ 下载 Windows 版（exe）</a>
+      <a class="btn ghost" href="https://github.com/ADVICEsama/CivitaiFreeTool/releases" target="_blank">🌐 所有版本 / Linux·macOS</a>
+      <a class="btn ghost" href="https://github.com/ADVICEsama/CivitaiFreeTool" target="_blank">🧩 源码仓库</a>
     </div>
     <div class="ver-tag" id="verTag">正在获取最新版本…</div>
-    <div class="note">需要配套 <b>CivitaiFreeTool v2.1.0+</b>（<a href="https://github.com/ADVICEsama/CivitaiFreeTool/releases" target="_blank">下载软件</a>）——扩展通过软件内置的本地桥服务（127.0.0.1:47531）投递下载任务。</div>
+    <div class="note"><b>Windows</b>：下载 exe 免安装双击即用（需 Win10/11）。<b>Linux / macOS</b>：见仓库 <a href="https://github.com/ADVICEsama/CivitaiFreeTool/blob/main/LINUX.md" target="_blank">LINUX.md</a> 安装说明。首次启动有新手引导。</div>
   </div>
 
   <div class="card">
-    <h2>🛠️ 安装步骤</h2>
-    <ul class="steps">
+    <h2>✨ 功能一览</h2>
+    <div class="feat-grid">
+      <div class="feat"><span class="ft">📥 批量下载</span><span class="fd">civitai.red / civitai.com / HuggingFace 直链；断点续传、并发、自动生成 json + 触发词</span></div>
+      <div class="feat"><span class="ft">📁 下载管理</span><span class="fd">实时进度、暂停重试、缩略图列表、完成自动分类移动</span></div>
+      <div class="feat"><span class="ft">🧩 模型管理</span><span class="fd">多目录扫描、瀑布流/列表视图、改名（C站名/中文）、整理分类、恢复误整理</span></div>
+      <div class="feat"><span class="ft">🔍 反向解析</span><span class="fd">已下载模型自动识别 C 站信息：名字、触发词、类型、封面</span></div>
+      <div class="feat"><span class="ft">🔬 工作流分析</span><span class="fd">ComfyUI json/png 工作流：节点、模型引用、正负面提示词</span></div>
+      <div class="feat"><span class="ft">⚙️ 深度设置</span><span class="fd">10 套主题、代理（C站被墙）、API Key、百度翻译、界面缩放</span></div>
+      <div class="feat"><span class="ft">🔒 隐私安全</span><span class="fd">配置仅存本地 user_config.json；删除走回收站可恢复；开源可审计</span></div>
+      <div class="feat"><span class="ft">🤝 社区共建</span><span class="fd">CI 自动测试 + 分支保护；已有社区贡献者：@guanhaisen、@LckHot</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>🧩 Chrome 扩展「一键下载」</h2>
+    <div class="dl-row">
+      <a class="btn violet" id="dlZip" href="#" target="_blank">📦 下载扩展 zip</a>
+    </div>
+    <p class="note">浏览 C 站模型页 → 点扩展图标 → 确认小窗 → 一键下载到软件下载管理。</p>
+    <p style="margin-top:10px;font-weight:600">安装步骤：</p>
+    <ul class="steps" style="margin-top:8px">
       <li>解压下载的 zip，得到 <code>chrome-extension</code> 文件夹</li>
       <li>打开 Chrome，地址栏进入 <code>chrome://extensions/</code></li>
-      <li>右上角打开「开发者模式」</li>
-      <li>点「加载已解压的扩展程序」，选择 <code>chrome-extension</code> 文件夹</li>
-      <li>工具栏固定扩展图标（可右键图标 → 固定）</li>
+      <li>右上角开启「开发者模式」→「加载已解压的扩展程序」→ 选择该文件夹</li>
+      <li>工具栏固定图标；需配套 CivitaiFreeTool v2.1.0+</li>
     </ul>
-    <p class="note">💡 扩展每次更新需重新加载：<code>chrome://extensions/</code> → 扩展卡片上点「重新加载」</p>
-  </div>
-
-  <div class="card">
-    <h2>⚡ 使用流程</h2>
-    <div class="flow">
-      <span class="step-chip">1️⃣ 打开 CivitaiFreeTool</span>
-      <span class="arrow">→</span>
-      <span class="step-chip">2️⃣ 浏览器打开 C 站模型页</span>
-      <span class="arrow">→</span>
-      <span class="step-chip">3️⃣ 点击扩展图标</span>
-      <span class="arrow">→</span>
-      <span class="step-chip">4️⃣ 确认小窗点「开始下载」</span>
-      <span class="arrow">→</span>
-      <span class="step-chip">5️⃣ 软件自动切到下载管理页 ✅</span>
+    <div class="flow" style="margin-top:14px">
+      <span class="step-chip">1️⃣ 打开软件</span><span class="arrow">→</span>
+      <span class="step-chip">2️⃣ 浏览模型页</span><span class="arrow">→</span>
+      <span class="step-chip">3️⃣ 点图标</span><span class="arrow">→</span>
+      <span class="step-chip">4️⃣ 确认下载</span><span class="arrow">→</span>
+      <span class="step-chip">5️⃣ 自动切到下载管理 ✅</span>
     </div>
-    <p class="note">支持 <code>civitai.red</code> / <code>civitai.com</code> 模型页（含版本链接、API 下载链接、HuggingFace 直链）。右键页面/链接也可直达下载。C 站被墙时请先在软件设置里启用代理。</p>
   </div>
 
   <div class="card faq">
     <h2>❓ 常见问题</h2>
     <details open>
-      <summary>点击图标没有任何反应？</summary>
-      <p>确认扩展已加载成功（chrome://extensions 里已启用）；模型页必须是 civitai.red / civitai.com 的模型详情页。</p>
+      <summary>软件下载模型很慢 / 连接超时？</summary>
+      <p>C 站被墙需要代理：软件「设置」→ 勾选「启用代理」并确认地址（如 127.0.0.1:7897）。插件小窗报 SSL 错误时同样处理（切换代理节点或稍后重试）。</p>
     </details>
     <details>
-      <summary>小窗提示「未连接到 CivitaiFreeTool」？</summary>
-      <p>软件未运行或版本过旧（需 v2.1.0+）。先打开 CivitaiFreeTool，再点扩展图标。</p>
+      <summary>扩展点图标没反应 / 提示未连接？</summary>
+      <p>确认扩展已加载（chrome://extensions 已启用）且 CivitaiFreeTool 已打开（需 v2.1.0+）；页面必须是 civitai.red / civitai.com 模型详情页。</p>
     </details>
     <details>
-      <summary>点「开始下载」后提示连接超时/SSL 错误？</summary>
-      <p>C 站被墙时需要代理：软件「设置」页勾选「启用代理」并确认地址（如 127.0.0.1:7897）；若代理节点不稳定，切换节点后重试。</p>
+      <summary>下载的模型没有触发词 / 缩略图？</summary>
+      <p>使用最新版本（v2.1.5+ 已修复触发词与封面代理问题）；旧模型可在模型管理页重新「校验/补全元数据」或重新下载封面。</p>
     </details>
     <details>
-      <summary>扩展安全吗？</summary>
-      <p>开源（MIT），代码在 <a href="https://github.com/ADVICEsama/CivitaiFreeTool/tree/main/chrome-extension" target="_blank">chrome-extension/</a> 目录。扩展只做两件事：读取当前标签页 URL、向本机 127.0.0.1:47531 发送下载请求；桥服务仅监听本机且校验来源，外部网站无法向你的软件提交下载。</p>
+      <summary>浏览器提示扩展不受信任？</summary>
+      <p>未上架 Chrome 应用商店的扩展会显示该提示，属正常现象。扩展源码完全开源可审计，只向本机 127.0.0.1:47531 发送下载请求，可放心使用。</p>
     </details>
     <details>
-      <summary>浏览器右上角提示扩展不安全？</summary>
-      <p>未上架 Chrome 应用商店的扩展会显示该提示，属正常现象；源码完全开源可审计，可放心使用。</p>
+      <summary>如何反馈问题或参与开发？</summary>
+      <p>GitHub Issues 反馈；欢迎提 PR（main 分支有 CI 自动测试 + 分支保护）。作者 B 站：爱德怀斯official；粉丝群：909810278。</p>
     </details>
   </div>
 
   <div class="footer">
-    <a href="https://github.com/ADVICEsama/CivitaiFreeTool" target="_blank">CivitaiFreeTool 开源仓库</a> ·
+    <a href="https://github.com/ADVICEsama/CivitaiFreeTool" target="_blank">GitHub 仓库</a> ·
     <a href="https://github.com/ADVICEsama/CivitaiFreeTool/releases" target="_blank">Releases</a> ·
-    <a href="https://github.com/ADVICEsama/CivitaiFreeTool/issues" target="_blank">反馈</a>
+    <a href="https://github.com/ADVICEsama/CivitaiFreeTool/issues" target="_blank">反馈</a> ·
+    MIT License
   </div>
 </div>
 
 <script>
-// 自动获取最新 Release 中的扩展 zip 下载链接（失败时回退到 v2.1.9 链接）
+// 从最新 Release 自动获取 exe / 扩展 zip 下载链接（失败回退到 v2.1.9）
 (function () {
+  const exeBtn = document.getElementById("dlExe");
   const zipBtn = document.getElementById("dlZip");
   const verTag = document.getElementById("verTag");
-  const fallback = "https://github.com/ADVICEsama/CivitaiFreeTool/releases/download/v2.1.9/CivitaiFreeTool-ChromeExtension-v2.1.9.zip";
+  const fbExe = "https://github.com/ADVICEsama/CivitaiFreeTool/releases/download/v2.1.9/CivitaiFreeToolWeb.exe";
+  const fbZip = "https://github.com/ADVICEsama/CivitaiFreeTool/releases/download/v2.1.9/CivitaiFreeTool-ChromeExtension-v2.1.9.zip";
   fetch("https://api.github.com/repos/ADVICEsama/CivitaiFreeTool/releases/latest")
     .then((r) => (r.ok ? r.json() : Promise.reject()))
     .then((rel) => {
-      const asset = (rel.assets || []).find((a) => /ChromeExtension/.test(a.name));
-      if (asset && asset.browser_download_url) {
-        zipBtn.href = asset.browser_download_url;
-        verTag.textContent = "最新版本：" + rel.tag_name + " · 支持 Chrome / Edge（Chromium 内核）";
+      const assets = rel.assets || [];
+      const exe = assets.find((a) => /Web\.exe$/.test(a.name) || /^CivitaiFreeToolWeb/.test(a.name));
+      const zip = assets.find((a) => /ChromeExtension/.test(a.name));
+      if (exe && exe.browser_download_url) {
+        exeBtn.href = exe.browser_download_url;
+        verTag.textContent = "最新版本：" + rel.tag_name + " · 约 " + Math.round(exe.size / 1048576) + " MB · Win10/11";
       } else throw 0;
+      if (zip && zip.browser_download_url) zipBtn.href = zip.browser_download_url;
     })
     .catch(() => {
-      zipBtn.href = fallback;
-      verTag.textContent = "最新版本：v2.1.9 · 支持 Chrome / Edge（Chromium 内核）";
+      exeBtn.href = fbExe;
+      zipBtn.href = fbZip;
+      verTag.textContent = "最新版本：v2.1.9 · Win10/11";
     });
 })();
 </script>
