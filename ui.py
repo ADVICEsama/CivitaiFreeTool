@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """UI 引擎：深浅色板、全局主题、GlowButton 光晕按钮、列表行 hover
 Modern Flat + Subtle Depth；动效基于帧插值（16ms/帧，ease-out 曲线）。"""
+import os
 import time
 import tkinter as tk
 import tkinter.font as tkfont
@@ -39,6 +40,48 @@ THEMES = {"dark": DARK, "light": LIGHT, "modern": MODERN_LIGHT}
 THEME_LABELS = {"dark": "深色", "light": "浅色", "modern": "现代浅色"}
 
 
+# ---------------- CJK 字体（跨平台） ----------------
+# 运行时由 resolve_font_family() 按平台实际可用字体解析覆盖；
+# 未探测到时 Windows 保持雅黑默认，其他平台回退 Tk 通用族 Helvetica
+# （中文字形由 fontconfig 逐字回退渲染；注意 Tk9 打包异常时 families()
+#  可能只报告核心 X 字体，探测必然失败，此时同样走该回退）。
+FONT_FAMILY = "Microsoft YaHei UI"
+_FONT_RESOLVED = False
+
+_FONT_CANDIDATES = (
+    "Microsoft YaHei UI", "Microsoft YaHei",                   # Windows
+    "PingFang SC", "Hiragino Sans GB",                         # macOS
+    "Noto Sans CJK SC", "Noto Sans SC", "Source Han Sans SC",  # Linux 主流
+    "LXGW WenKai",                                             # Linux 常见手装中文字体
+    "WenQuanYi Micro Hei", "WenQuanYi Zen Hei",                # Linux 轻量
+    "SimHei", "SimSun",
+)
+
+
+def resolve_font_family(root):
+    """探测当前平台第一个可用的 CJK 字体族，写入全局 FONT_FAMILY 并返回；
+    找不到返回 None（调用方应保留默认字体，不要强行指定）。幂等，可重复调用。"""
+    global FONT_FAMILY, _FONT_RESOLVED
+    try:
+        fams = set(tkfont.families(root))
+        for fam in _FONT_CANDIDATES:
+            if fam in fams:
+                FONT_FAMILY = fam
+                _FONT_RESOLVED = True
+                return fam
+    except Exception:
+        pass
+    return None
+
+
+def main_font(size=10):
+    """主字体元组 (family, size)。探测失败时：Windows 用雅黑默认，
+    其他平台用 Tk 全平台保证的 Helvetica（中文靠字形回退）。"""
+    if _FONT_RESOLVED or os.name == "nt":
+        return (FONT_FAMILY, size)
+    return ("Helvetica", size)
+
+
 def _hex_to_rgb(c):
     c = c.lstrip("#")
     return tuple(int(c[i:i + 2], 16) for i in (0, 2, 4))
@@ -74,6 +117,7 @@ def apply_theme(root, style, theme="dark"):
     global CURRENT
     C = THEMES.get(theme, DARK)
     CURRENT = C
+    resolve_font_family(root)
     try:
         root.configure(bg=C["bg"])
     except Exception:
@@ -83,7 +127,7 @@ def apply_theme(root, style, theme="dark"):
     except Exception:
         pass
     style.configure(".", background=C["bg"], foreground=C["text"], borderwidth=0,
-                    focuscolor=C["primary"], font=("Microsoft YaHei UI", 10))
+                    focuscolor=C["primary"], font=main_font(10))
     style.configure("TFrame", background=C["bg"])
     style.configure("TLabel", background=C["bg"], foreground=C["text"])
     if theme == "modern":
@@ -189,7 +233,7 @@ class GlowButton(tk.Canvas):
 
     def __init__(self, master, text="", command=None, kind="ghost", height=34,
                  padx=16, font=None, state="normal", **kw):
-        self._font = font or ("Microsoft YaHei UI", 10)
+        self._font = font or main_font(10)
         f = tkfont.Font(root=master, font=self._font)
         width = f.measure(text or "") + padx * 2 + 4
         super().__init__(master, height=height, width=width, highlightthickness=0,
