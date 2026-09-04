@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CivitaiFreeTool 一键下载 · Chrome 扩展</title>
+<meta name="description" content="CivitaiFreeTool Chrome 扩展：浏览 Civitai 模型页一键下载到 CivitaiFreeTool。免费、开源、无付费墙。"/>
+<style>
+:root {
+  --bg: #0f0f11; --card: rgba(255,255,255,0.05); --border: rgba(255,255,255,0.09);
+  --text: #f5f5f7; --dim: #98989d; --accent: #0a84ff; --accent2: #5e5ce6;
+  --ok: #32d74b;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+  background: radial-gradient(1200px 600px at 20% -10%, rgba(10,132,255,0.18), transparent 60%),
+              radial-gradient(1000px 500px at 90% 10%, rgba(94,92,230,0.14), transparent 60%),
+              var(--bg);
+  color: var(--text); min-height: 100vh; line-height: 1.7;
+}
+.wrap { max-width: 860px; margin: 0 auto; padding: 48px 20px 80px; }
+.logo-row { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+.logo { width: 56px; height: 56px; border-radius: 14px; }
+.badge {
+  display: inline-block; font-size: 12px; padding: 3px 10px; border-radius: 999px;
+  background: rgba(50,215,75,0.15); color: var(--ok); border: 1px solid rgba(50,215,75,0.3);
+}
+h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.3px; }
+.sub { color: var(--dim); font-size: 14px; margin-top: 4px; }
+.card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+  padding: 24px; margin-top: 22px;
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+}
+.card h2 { font-size: 17px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.card p, .card li { font-size: 14px; color: rgba(245,245,247,0.88); }
+.card ul { padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.steps { counter-reset: s; list-style: none; padding-left: 0 !important; }
+.steps li { counter-increment: s; display: flex; gap: 12px; align-items: flex-start; }
+.steps li::before {
+  content: counter(s); flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%;
+  background: var(--accent); color: #fff; font-size: 13px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; margin-top: 2px;
+}
+.dl-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 6px; }
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: linear-gradient(180deg, var(--accent), #0071e3);
+  color: #fff; text-decoration: none; font-weight: 600; font-size: 14px;
+  padding: 11px 20px; border-radius: 12px; border: none; cursor: pointer;
+  transition: transform 0.08s ease, opacity 0.15s ease;
+}
+.btn:active { transform: scale(0.97); }
+.btn.ghost { background: rgba(127,127,127,0.2); color: var(--text); }
+.btn.small { padding: 8px 14px; font-size: 13px; }
+.ver-tag { font-size: 13px; color: var(--dim); }
+.note { font-size: 12.5px; color: var(--dim); margin-top: 10px; }
+code {
+  background: rgba(255,255,255,0.08); padding: 2px 7px; border-radius: 6px;
+  font-size: 12.5px; font-family: Consolas, monospace;
+}
+.flow { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+.flow .step-chip {
+  background: rgba(255,255,255,0.07); border: 1px solid var(--border);
+  border-radius: 10px; padding: 8px 12px; font-size: 13px;
+}
+.flow .arrow { color: var(--dim); }
+.faq details { border-top: 1px solid var(--border); padding: 12px 0; }
+.faq summary { cursor: pointer; font-weight: 600; font-size: 14px; list-style: none; position: relative; padding-right: 20px; }
+.faq summary::after { content: "+"; position: absolute; right: 0; color: var(--dim); }
+.faq details[open] summary::after { content: "–"; }
+.faq p { margin-top: 8px; }
+.footer { text-align: center; color: var(--dim); font-size: 12.5px; margin-top: 40px; }
+.footer a { color: var(--dim); }
+.hidden { display: none; }
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f5f5f7; --card: rgba(255,255,255,0.75); --border: rgba(0,0,0,0.08);
+    --text: #1c1c1e; --dim: #86868b;
+  }
+  .card p, .card li { color: rgba(28,28,30,0.85); }
+  code { background: rgba(0,0,0,0.06); }
+  .flow .step-chip { background: rgba(0,0,0,0.04); }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="logo-row">
+    <img class="logo" src="icon128.png" alt="CivitaiFreeTool" onerror="this.style.display='none'"/>
+    <div>
+      <h1>CivitaiFreeTool 一键下载 <span class="badge">Chrome 扩展</span></h1>
+      <div class="sub">浏览 Civitai 模型页 → 点击图标 → 一键下载到 CivitaiFreeTool</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>⬇️ 下载扩展</h2>
+    <div class="dl-row">
+      <a class="btn" id="dlZip" href="#" target="_blank">📦 下载最新扩展 zip</a>
+      <a class="btn ghost" href="https://github.com/ADVICEsama/CivitaiFreeTool/releases" target="_blank">🌐 查看所有 Release</a>
+    </div>
+    <div class="ver-tag" id="verTag">正在获取最新版本…</div>
+    <div class="note">需要配套 <b>CivitaiFreeTool v2.1.0+</b>（<a href="https://github.com/ADVICEsama/CivitaiFreeTool/releases" target="_blank">下载软件</a>）——扩展通过软件内置的本地桥服务（127.0.0.1:47531）投递下载任务。</div>
+  </div>
+
+  <div class="card">
+    <h2>🛠️ 安装步骤</h2>
+    <ul class="steps">
+      <li>解压下载的 zip，得到 <code>chrome-extension</code> 文件夹</li>
+      <li>打开 Chrome，地址栏进入 <code>chrome://extensions/</code></li>
+      <li>右上角打开「开发者模式」</li>
+      <li>点「加载已解压的扩展程序」，选择 <code>chrome-extension</code> 文件夹</li>
+      <li>工具栏固定扩展图标（可右键图标 → 固定）</li>
+    </ul>
+    <p class="note">💡 扩展每次更新需重新加载：<code>chrome://extensions/</code> → 扩展卡片上点「重新加载」</p>
+  </div>
+
+  <div class="card">
+    <h2>⚡ 使用流程</h2>
+    <div class="flow">
+      <span class="step-chip">1️⃣ 打开 CivitaiFreeTool</span>
+      <span class="arrow">→</span>
+      <span class="step-chip">2️⃣ 浏览器打开 C 站模型页</span>
+      <span class="arrow">→</span>
+      <span class="step-chip">3️⃣ 点击扩展图标</span>
+      <span class="arrow">→</span>
+      <span class="step-chip">4️⃣ 确认小窗点「开始下载」</span>
+      <span class="arrow">→</span>
+      <span class="step-chip">5️⃣ 软件自动切到下载管理页 ✅</span>
+    </div>
+    <p class="note">支持 <code>civitai.red</code> / <code>civitai.com</code> 模型页（含版本链接、API 下载链接、HuggingFace 直链）。右键页面/链接也可直达下载。C 站被墙时请先在软件设置里启用代理。</p>
+  </div>
+
+  <div class="card faq">
+    <h2>❓ 常见问题</h2>
+    <details open>
+      <summary>点击图标没有任何反应？</summary>
+      <p>确认扩展已加载成功（chrome://extensions 里已启用）；模型页必须是 civitai.red / civitai.com 的模型详情页。</p>
+    </details>
+    <details>
+      <summary>小窗提示「未连接到 CivitaiFreeTool」？</summary>
+      <p>软件未运行或版本过旧（需 v2.1.0+）。先打开 CivitaiFreeTool，再点扩展图标。</p>
+    </details>
+    <details>
+      <summary>点「开始下载」后提示连接超时/SSL 错误？</summary>
+      <p>C 站被墙时需要代理：软件「设置」页勾选「启用代理」并确认地址（如 127.0.0.1:7897）；若代理节点不稳定，切换节点后重试。</p>
+    </details>
+    <details>
+      <summary>扩展安全吗？</summary>
+      <p>开源（MIT），代码在 <a href="https://github.com/ADVICEsama/CivitaiFreeTool/tree/main/chrome-extension" target="_blank">chrome-extension/</a> 目录。扩展只做两件事：读取当前标签页 URL、向本机 127.0.0.1:47531 发送下载请求；桥服务仅监听本机且校验来源，外部网站无法向你的软件提交下载。</p>
+    </details>
+    <details>
+      <summary>浏览器右上角提示扩展不安全？</summary>
+      <p>未上架 Chrome 应用商店的扩展会显示该提示，属正常现象；源码完全开源可审计，可放心使用。</p>
+    </details>
+  </div>
+
+  <div class="footer">
+    <a href="https://github.com/ADVICEsama/CivitaiFreeTool" target="_blank">CivitaiFreeTool 开源仓库</a> ·
+    <a href="https://github.com/ADVICEsama/CivitaiFreeTool/releases" target="_blank">Releases</a> ·
+    <a href="https://github.com/ADVICEsama/CivitaiFreeTool/issues" target="_blank">反馈</a>
+  </div>
+</div>
+
+<script>
+// 自动获取最新 Release 中的扩展 zip 下载链接（失败时回退到 v2.1.9 链接）
+(function () {
+  const zipBtn = document.getElementById("dlZip");
+  const verTag = document.getElementById("verTag");
+  const fallback = "https://github.com/ADVICEsama/CivitaiFreeTool/releases/download/v2.1.9/CivitaiFreeTool-ChromeExtension-v2.1.9.zip";
+  fetch("https://api.github.com/repos/ADVICEsama/CivitaiFreeTool/releases/latest")
+    .then((r) => (r.ok ? r.json() : Promise.reject()))
+    .then((rel) => {
+      const asset = (rel.assets || []).find((a) => /ChromeExtension/.test(a.name));
+      if (asset && asset.browser_download_url) {
+        zipBtn.href = asset.browser_download_url;
+        verTag.textContent = "最新版本：" + rel.tag_name + " · 支持 Chrome / Edge（Chromium 内核）";
+      } else throw 0;
+    })
+    .catch(() => {
+      zipBtn.href = fallback;
+      verTag.textContent = "最新版本：v2.1.9 · 支持 Chrome / Edge（Chromium 内核）";
+    });
+})();
+</script>
+</body>
+</html>
