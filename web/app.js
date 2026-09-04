@@ -1643,6 +1643,9 @@ async function showAbout() {
     '<div class="about-up-item">🧭 <b>新手引导大修</b>：点击功能卡片/主题切换即刻生效；引导缩小为右下角小窗不中断；保存设置不再白屏刷新</div>' +
     '<div class="about-up-item">🎨 10 套主题 + 氛围背景跟随主题；设置页「保存设置」红色显眼</div>' +
     '</div></div>' +
+    '<div class="about-thanks">' +
+    '<div class="about-up-title">🤝 感谢 Contributors</div>' +
+    '<div class="about-contribs" id="aboutContribs">加载中…</div></div>' +
     '<div class="about-author">' +
     '<div class="rd-home" id="rdHome">👤 作者：爱德怀斯official —— 点击打开 B 站主页</div>' +
     '<div class="rd-group" id="rdGroup">🐧 粉丝群：909810278 —— 点击加入</div></div>' +
@@ -1657,6 +1660,24 @@ async function showAbout() {
   $("#aboutGithub").addEventListener("click", () => api.call("open_url", "https://github.com/ADVICEsama/CivitaiFreeTool"));
   $("#rdHome").addEventListener("click", () => api.call("open_url", "https://space.bilibili.com/273101122"));
   $("#rdGroup").addEventListener("click", () => api.call("open_url", "https://qm.qq.com/q/EbnuVZB4wE"));
+  // 贡献者：动态拉取 GitHub contributors（排除作者本人），失败回退静态致谢
+  const box = $("#aboutContribs", dlg);
+  const fallback = '<div class="about-contrib">感谢 <a href="#" data-gh="guanhaisen">@guanhaisen</a>、<a href="#" data-gh="LckHot">@LckHot</a> 的社区贡献 ❤️</div>';
+  fetch("https://api.github.com/repos/ADVICEsama/CivitaiFreeTool/contributors?per_page=10")
+    .then((r) => (r.ok ? r.json() : Promise.reject()))
+    .then((list) => {
+      const others = (list || []).filter((c) => c.login !== "ADVICEsama");
+      if (!others.length) { box.innerHTML = fallback; return; }
+      box.innerHTML = others.map((c) =>
+        '<a class="about-contrib" href="#" data-gh="' + esc(c.login) + '" title="' + c.contributions + ' 次提交">' +
+        (c.avatar_url ? '<img class="about-contrib-avatar" src="' + esc(c.avatar_url) + '&s=48" alt=""/>' : "") +
+        '<span>@' + esc(c.login) + '<em>' + c.contributions + " 次提交</em></span></a>").join("");
+    })
+    .catch(() => { box.innerHTML = fallback; });
+  box.addEventListener("click", (e) => {
+    const a = e.target.closest("[data-gh]");
+    if (a) { e.preventDefault(); api.call("open_url", "https://github.com/" + a.dataset.gh); }
+  });
 }
 $("#aboutFloat").addEventListener("click", showAbout);
 // 左上角 logo 点击 = 关于页

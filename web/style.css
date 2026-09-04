@@ -680,6 +680,31 @@ textarea.rules {
 }
 .about-up-item b { color: var(--primary); }
 
+/* 关于弹窗：贡献者致谢 */
+.about-thanks {
+  margin-top: 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface2);
+  padding: 10px 12px;
+}
+.about-contribs { display: flex; flex-wrap: wrap; gap: 8px; font-size: 12.5px; }
+.about-contrib {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--text);
+  background: var(--surface);
+  border-radius: 8px;
+  padding: 5px 10px;
+  text-decoration: none;
+  transition: transform 0.08s ease, background 0.15s ease;
+}
+.about-contrib:hover { background: var(--border); transform: translateY(-1px); }
+.about-contrib em { font-style: normal; color: var(--text-dim); margin-left: 4px; font-size: 11px; }
+.about-contrib-avatar {
+  width: 20px; height: 20px; border-radius: 50%;
+  object-fit: cover; flex-shrink: 0;
+}
+
 /* 首次使用引导 */
 .ob-mask {
   position: fixed; z-index: 95;
