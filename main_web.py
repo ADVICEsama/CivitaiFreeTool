@@ -16,6 +16,8 @@ if getattr(sys, "frozen", False):
     BASE_DIR = sys._MEIPASS
 INDEX = os.path.join(BASE_DIR, "web", "index.html")
 
+_mutex_handle = None  # 单实例互斥体句柄（保持存活至进程结束）
+
 
 def apply_mica():
     """给窗口启用 Win11 Mica 背景（失败静默回退）"""
@@ -63,7 +65,77 @@ def _check_qt_backend():
         sys.exit(1)
 
 
+def _rm_lock(lock_dir):
+    try:
+        os.rmdir(lock_dir)
+    except Exception:
+        pass
+
+
+def _single_instance():
+    """单实例保护：已有实例运行时，激活其主窗口并让新进程退出。
+    防止多实例抢占本地桥端口（47531）导致插件连不上。
+    返回 True 表示当前进程是唯一实例，可继续启动。"""
+    MUTEX_NAME = "Global\\CivitaiFreeToolWeb_SingleInstance"
+    global _mutex_handle
+    if posix_compat.IS_WINDOWS:
+        import ctypes
+        from ctypes import wintypes
+        u = ctypes.windll.user32
+        k = ctypes.windll.kernel32
+        # 打开已有互斥体：存在 = 已有实例在运行
+        h = k.OpenMutexW(wintypes.DWORD(0x001F0001), False, MUTEX_NAME)  # MUTEX_ALL_ACCESS
+        if h:
+            # 激活已有实例的主窗口
+            try:
+                w = u.FindWindowW(None, "CivitaiFreeTool")
+                if w:
+                    u.ShowWindow(w, 9)  # SW_RESTORE
+                    u.SetForegroundWindow(w)
+            except Exception:
+                pass
+            k.CloseHandle(h)
+            return False
+        # 句柄必须保持存活至进程结束，互斥体才会持续存在
+        _mutex_handle = k.CreateMutexW(None, False, MUTEX_NAME)
+        return True
+    # Linux/macOS：锁文件（fcntl 不可用时用原子目录锁 + PID 过期检测）
+    import tempfile
+    lock_dir = os.path.join(tempfile.gettempdir(), "civitai_free_tool_web.lock")
+    try:
+        os.mkdir(lock_dir)
+        try:
+            with open(os.path.join(lock_dir, "pid"), "w", encoding="utf-8") as f:
+                f.write(str(os.getpid()))
+        except Exception:
+            pass
+        # 正常退出时清理锁目录（崩溃残留由 PID 检测接管）
+        import atexit
+        atexit.register(lambda: _rm_lock(lock_dir))
+        return True
+    except FileExistsError:
+        # 已有锁：检查 PID 是否还活着（残留锁则接管）
+        try:
+            with open(os.path.join(lock_dir, "pid"), "r", encoding="utf-8") as f:
+                old = int(f.read().strip() or "0")
+            import subprocess
+            if old and subprocess.run(["kill", "-0", str(old)],
+                                      stdout=subprocess.DEVNULL,
+                                      stderr=subprocess.DEVNULL).returncode != 0:
+                try:
+                    os.rmdir(lock_dir)
+                except Exception:
+                    pass
+                return True
+        except Exception:
+            pass
+        return False
+
+
 def main():
+    if not _single_instance():
+        print("CivitaiFreeTool 已在运行，本次启动自动退出（已激活已有窗口）", file=sys.stderr)
+        sys.exit(0)
     api = webui.Api()
     window = webview.create_window(
         "CivitaiFreeTool",
