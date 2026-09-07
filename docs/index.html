@@ -186,13 +186,13 @@ code {
 </div>
 
 <script>
-// 从最新 Release 自动获取 exe / 扩展 zip 下载链接（失败回退到 v2.1.9）
+// 从最新 Release 自动获取 exe / 扩展 zip 下载链接（失败回退到 v2.1.11）
 (function () {
   const exeBtn = document.getElementById("dlExe");
   const zipBtn = document.getElementById("dlZip");
   const verTag = document.getElementById("verTag");
-  const fbExe = "https://github.com/ADVICEsama/CivitaiFreeTool/releases/download/v2.1.9/CivitaiFreeToolWeb.exe";
-  const fbZip = "https://github.com/ADVICEsama/CivitaiFreeTool/releases/download/v2.1.9/CivitaiFreeTool-ChromeExtension-v2.1.9.zip";
+  const fbExe = "https://github.com/ADVICEsama/CivitaiFreeTool/releases/download/v2.1.11/CivitaiFreeToolWeb.exe";
+  const fbZip = "https://github.com/ADVICEsama/CivitaiFreeTool/releases/download/v2.1.11/CivitaiFreeTool-ChromeExtension-v2.1.11.zip";
   fetch("https://api.github.com/repos/ADVICEsama/CivitaiFreeTool/releases/latest")
     .then((r) => (r.ok ? r.json() : Promise.reject()))
     .then((rel) => {
@@ -208,7 +208,7 @@ code {
     .catch(() => {
       exeBtn.href = fbExe;
       zipBtn.href = fbZip;
-      verTag.textContent = "最新版本：v2.1.9 · Win10/11";
+      verTag.textContent = "最新版本：v2.1.11 · Win10/11";
     });
 })();
 </script>
