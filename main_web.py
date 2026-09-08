@@ -10,6 +10,19 @@ import posix_compat
 _mutex_handle = None  # 单实例互斥体句柄（保持存活至进程结束）
 
 
+def _startup_log(msg):
+    """启动里程碑日志（%LOCALAPPDATA%\\CivitaiFreeToolWeb\\startup.log）。
+    用于定位「有后台无前台」类启动卡死：写出每个启动步骤，卡在哪一目了然。"""
+    try:
+        d = os.path.join(os.environ.get("LOCALAPPDATA") or os.path.expanduser("~"),
+                         "CivitaiFreeToolWeb")
+        os.makedirs(d, exist_ok=True)
+        with open(os.path.join(d, "startup.log"), "a", encoding="utf-8") as f:
+            f.write("%s [%d] %s\n" % (time.strftime("%Y-%m-%d %H:%M:%S"), os.getpid(), msg))
+    except Exception:
+        pass
+
+
 def _app_dir():
     """PyInstaller 打包后 web 资源在 _MEIPASS；源码运行用脚本所在目录"""
     if getattr(sys, "frozen", False):
@@ -94,13 +107,32 @@ def _single_instance():
 
 
 def _webview_storage_path():
-    """WebView2 用户数据目录：固定到 %LOCALAPPDATA%\\CivitaiFreeToolWeb\\webview。
+    """WebView2 用户数据目录：每次启动用独立目录（%LOCALAPPDATA%\\CivitaiFreeToolWeb\\wv2\\<pid>）。
 
-    避免每次启动使用临时目录（受临时目录堆积 / 杀软扫描影响），
-    并与其他 pywebview 应用隔离。失败返回 None → 回退 pywebview 默认（临时目录）。"""
+    为什么不用固定目录：
+    - pywebview 默认 private_mode=True，退出时会把数据目录整目录删除——固定目录没有持久化收益；
+    - 固定目录会被残留/并发的浏览器进程锁住（WebView2 单例锁），环境初始化直接卡死，
+      这正是「有后台无前台」间歇性出现的元凶之一；
+    - 按 PID 独立目录彻底消除跨实例/跨会话锁争用，退出由 webview 自动清理。
+    顺带清理 7 天前的过期残留目录。失败返回 None → 回退 pywebview 默认（临时目录）。"""
     try:
         base = os.environ.get("LOCALAPPDATA") or os.path.join(os.path.expanduser("~"), "AppData", "Local")
-        p = os.path.join(base, "CivitaiFreeToolWeb", "webview")
+        root = os.path.join(base, "CivitaiFreeToolWeb", "wv2")
+        os.makedirs(root, exist_ok=True)
+        # 清理过期残留（异常退出遗留的目录，正常退出由 pywebview 删除）
+        try:
+            now = time.time()
+            for name in os.listdir(root):
+                d = os.path.join(root, name)
+                try:
+                    if os.path.isdir(d) and now - os.path.getmtime(d) > 7 * 86400:
+                        import shutil
+                        shutil.rmtree(d, ignore_errors=True)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        p = os.path.join(root, "wv2_%d" % os.getpid())
         os.makedirs(p, exist_ok=True)
         if not os.access(p, os.W_OK):
             return None
@@ -109,13 +141,93 @@ def _webview_storage_path():
         return None
 
 
+def _self_visible_window():
+    """当前进程是否有可见顶层窗口（ctypes EnumWindows，失败返回 False）"""
+    try:
+        import ctypes
+        from ctypes import wintypes
+        u = ctypes.windll.user32
+        pid = ctypes.windll.kernel32.GetCurrentProcessId()
+        found = []
+
+        def cb(h, _):
+            p = wintypes.DWORD()
+            u.GetWindowThreadProcessId(h, ctypes.byref(p))
+            if p.value == pid and u.IsWindowVisible(h):
+                found.append(h)
+                return False  # 找到即停
+            return True
+
+        WNDENUMPROC = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+        u.EnumWindows(WNDENUMPROC(cb), 0)
+        return bool(found)
+    except Exception:
+        return False
+
+
+def _show_startup_fail_msg():
+    """启动失败提示框（原生 MessageBox，双保险：正常应该由自家窗口兜底）"""
+    try:
+        import ctypes
+        ctypes.windll.user32.MessageBoxW(
+            0,
+            "CivitaiFreeTool 窗口启动超时（WebView2 初始化卡住）。\n\n"
+            "已自动尝试重启一次仍未成功，请按以下步骤处理：\n"
+            "1. 任务管理器结束所有 CivitaiFreeToolWeb.exe 和 msedgewebview2.exe\n"
+            "2. 关闭正在使用 WebView2 的程序（如游戏串流/搜索类软件）后重试\n"
+            "3. 若仍失败，重启电脑后再试\n\n"
+            "启动日志：%LOCALAPPDATA%\\CivitaiFreeToolWeb\\startup.log",
+            "CivitaiFreeTool 启动失败", 0x10)
+    except Exception:
+        pass
+
+
+def _watchdog_startup():
+    """启动看门狗：轮询主窗口是否出现。
+    - 30 秒内出现 → 正常，退出线程；
+    - 超时且未重试过 → 自动重启本程序一次（环境变量防循环）；
+    - 已重试仍超时 → 弹窗给出处理指引，继续保持运行等待。"""
+    deadline = time.time() + 30
+    while time.time() < deadline:
+        time.sleep(2)
+        if _self_visible_window():
+            _startup_log("watchdog: window visible, ok")
+            return
+    _startup_log("watchdog: window NOT visible after 30s")
+    if os.environ.get("CFT_STARTUP_RETRY") != "1":
+        _startup_log("watchdog: auto-restart once")
+        try:
+            import subprocess
+            env = dict(os.environ)
+            env["CFT_STARTUP_RETRY"] = "1"
+            subprocess.Popen([sys.executable] + sys.argv, env=env)
+            time.sleep(2)
+            os._exit(0)  # 立即让出互斥体，让新进程成为唯一实例
+        except Exception:
+            _show_startup_fail_msg()
+    else:
+        _startup_log("watchdog: retry failed, showing guidance")
+        _show_startup_fail_msg()
+
+
 def main():
+    _startup_log("start: begin")
     if not _single_instance():
         print("CivitaiFreeTool 已在运行，本次启动自动退出（已激活已有窗口）", file=sys.stderr)
-        sys.exit(0)
+        try:
+            sys.stdout.flush()
+            sys.stderr.flush()
+        except Exception:
+            pass
+        # os._exit：跳过 Python 完整收尾（pythonnet/CLR 卸载等），让第二实例瞬间消失，
+        # 避免 bootloader 父进程长时间残留造成「很多后台进程」的观感。
+        # 此处无任何需要清理的状态（互斥体句柄由系统在进程退出时释放）。
+        os._exit(0)
+    _startup_log("single-instance ok")
 
     import webview
     import webui
+    _startup_log("imports ok")
 
     BASE_DIR = _app_dir()
     INDEX = os.path.join(BASE_DIR, "web", "index.html")
@@ -181,6 +293,7 @@ def main():
             sys.exit(1)
 
     api = webui.Api()
+    _startup_log("Api() ok")
     window = webview.create_window(
         "CivitaiFreeTool",
         url=INDEX,
@@ -198,14 +311,28 @@ def main():
         start_kwargs["gui"] = "qt"
         _check_qt_backend()
     else:
+        # 降低 WebView2 (Chromium) 在本机偶发初始化卡死概率：
+        # 禁用 GPU 进程（虚拟显示适配器/显卡驱动异常时 Chrome_WidgetWin 初始化会挂）；
+        # 本应用 UI 为本地页面，软件渲染无感。
+        try:
+            extra = os.environ.get("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", "").strip()
+            if "--disable-gpu" not in extra:
+                os.environ["WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS"] = (extra + " --disable-gpu").strip()
+        except Exception:
+            pass
         sp = _webview_storage_path()
         if sp:
             start_kwargs["storage_path"] = sp
+    _startup_log("create_window ok, storage=%s" % (start_kwargs.get("storage_path") or "default"))
+    # 启动看门狗：30 秒无可见窗口 → 自动重启一次 → 仍失败弹窗指引
+    import threading
+    threading.Thread(target=_watchdog_startup, daemon=True).start()
     webview.start(
         lambda: (time.sleep(0.8), apply_mica(), set_window_icon()),
         debug=False,
         **start_kwargs,
     )
+    _startup_log("app exited")
 
 
 if __name__ == "__main__":
