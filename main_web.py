@@ -51,7 +51,10 @@ def _spawn_external_watchdog():
         if posix_compat.IS_WINDOWS:
             flags = (getattr(subprocess, "DETACHED_PROCESS", 0)
                      | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0))
-        subprocess.Popen(args, creationflags=flags, close_fds=True,
+        # env 必须剥掉 PyInstaller 解包目录变量（_PYI_APPLICATION_HOME_DIR 等）：
+        # 不剥的话看门狗会复用宿主的 _MEI 目录 —— 宿主 bootloader 清理失败弹警告框，
+        # 且看门狗会把宿主目录钉住不放。
+        subprocess.Popen(args, creationflags=flags, close_fds=True, env=watchdog_ext.clean_env(),
                          stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                          stderr=subprocess.DEVNULL)
         _startup_log("external watchdog spawned: %s" % " ".join(args))

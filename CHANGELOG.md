@@ -1,6 +1,31 @@
-# CivitaiFreeTool 更新日志（v1.5.1 → v2.1.14）
+# CivitaiFreeTool 更新日志（v1.5.1 → v2.1.15）
 
 > 免费 · 全功能 · 无付费墙
+
+---
+
+## 🧯 看门狗重启链路的真实坑（v2.1.15）
+
+v2.1.13 上线外部看门狗后**当场实测到一次真卡死**（22:36 启动后窗口没出现），看门狗按预期判定并杀进程重启，
+**但重启的实例崩溃、旧进程还弹了警告框**。抓到两条对话框原文：
+
+```
+Unhandled exception in script:
+  Failed to execute script 'pyi_rth__tkinter' due to unhandled exception:
+  Tcl data directory "C:\...\Temp\_MEI120642\_tcl_data" not found.
+Warning:
+  Failed to remove temporary directory: C:\...\Temp\_MEI120642
+```
+
+### 根因
+PyInstaller（onefile）用环境变量 `_PYI_APPLICATION_HOME_DIR`（及 `_MEIPASS`/`_PYI_ARCHIVE_FILE`/
+`_PYI_PARENT_PROCESS_LEVEL`）把**解包目录**传给子进程。原实现用 `dict(os.environ)` 拉起新进程 →
+两个后遗症：① 看门狗会复用宿主（app）的解包目录并一直占着它 → 宿主 bootloader 清理失败弹警告框；
+② 重启的实例以为自己还在老目录里 → 启动即崩（Tcl 数据找不到）。
+
+### 修复
+`watchdog_ext.clean_env()`：拉起任何新进程（看门狗自己、看门狗重启的实例）前**剥掉全部 PyInstaller 解包目录变量**，
+让新进程老老实实重新解包。主程序拉看门狗、看门狗重启宿主，两处都已切换。
 
 ---
 

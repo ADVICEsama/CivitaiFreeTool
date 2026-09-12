@@ -70,6 +70,25 @@ def _pid_file():
     return os.path.join(_app_dir(), "app_pid.txt")
 
 
+# PyInstaller（onefile）用这些环境变量把「解包目录」传给子进程。
+# 冻结程序里它们指向本进程自己的 _MEI 目录；若原样传给新拉起的进程，
+# 新进程会**复用那个目录**而不是重新解包：
+#   - 看门狗会一直占着宿主的解包目录 → 宿主 bootloader 清理失败，弹
+#     「Failed to remove temporary directory」警告框；
+#   - 重启的实例以为自己还是老 _MEI → 启动即崩（实测：Tcl data directory ... not found）。
+# 所以拉起任何新实例前必须剥掉。
+_PYI_ENV_KEYS = ("_MEIPASS", "_MEIPASS2", "_PYI_APPLICATION_HOME_DIR",
+                 "_PYI_ARCHIVE_FILE", "_PYI_PARENT_PROCESS_LEVEL", "_PYI_SPLASH_IPC")
+
+
+def clean_env():
+    """去掉 PyInstaller 解包目录相关的环境变量，返回可直接传给新进程的 env 副本"""
+    env = dict(os.environ)
+    for k in _PYI_ENV_KEYS:
+        env.pop(k, None)
+    return env
+
+
 def _owner_file():
     return os.path.join(_app_dir(), "watchdog_owner.json")
 
@@ -287,7 +306,8 @@ def _relaunch(app_name):
         cmd = [sys.executable]
         if not getattr(sys, "frozen", False):
             cmd.append(os.path.abspath(sys.argv[0]))
-    env = dict(os.environ)
+    # 关键：剥掉 PyInstaller 解包目录环境变量，否则新实例会复用旧 _MEI 直接崩溃
+    env = clean_env()
     flags = 0
     if IS_WINDOWS:
         flags = getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
