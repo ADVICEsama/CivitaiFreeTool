@@ -31,6 +31,7 @@ DEFAULTS = {
     # —— 新增功能配置 ——
     "window_style": "mica",             # mica / acrylic / none
     "ask_move_after_download": True,    # 下载完成后询问移动位置
+    "download_target_dir": "",          # 下载落地文件夹（下载页/设置里选；空 = 用 download_dir）
     "gen_metadata": True,               # 下载完成后自动生成 json/info
     "download_cover": True,             # 下载完成后自动下载封面
     "hidden_model_folders": [],         # 模型管理目录中隐藏的子文件夹

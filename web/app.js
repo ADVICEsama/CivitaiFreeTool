@@ -159,6 +159,7 @@ function switchPage(name) {
   $$(".nav-tab").forEach((t) => t.classList.toggle("active", t.dataset.page === name));
   $$(".page").forEach((p) => p.classList.toggle("active", p.id === "page-" + name));
   if (name === "models") mmScanIfNeeded();
+  if (name === "download") refreshDlTarget();
 }
 $("#navTabs").addEventListener("click", (e) => {
   const b = e.target.closest(".nav-tab");
@@ -474,6 +475,172 @@ function showPaidDialog(items) {
   }));
 }
 
+// ================= 下载目标文件夹（下载页选择 / 设置里预设） =================
+async function refreshDlTarget() {
+  const el = $("#dlTargetPath");
+  if (!el) return;
+  try {
+    const t = JSON.parse((await api.call("get_download_target")) || "{}");
+    if (t.target) {
+      el.textContent = t.target;
+      el.classList.add("dl-target-set");
+    } else {
+      el.textContent = "默认下载目录：" + (t.default || "（未设置）");
+      el.classList.remove("dl-target-set");
+    }
+  } catch (e) { /* 忽略 */ }
+}
+
+// 从模型目录树里选文件夹（数据源与模型管理页同源：get_folders）
+async function pickFolderModal() {
+  let data = {};
+  try { data = JSON.parse((await api.call("get_folders")) || "{}"); } catch (e) { data = {}; }
+  const root = (data.root || "").replace(/\/$/, "");
+  const rows = [{ path: root, label: "模型目录根目录（直接放根下）", depth: 0 }];
+  (function walk(nodes, depth) {
+    (nodes || []).forEach((n) => {
+      rows.push({ path: root + "\\" + String(n.path || "").replace(/\//g, "\\"), label: n.name, depth: depth + 1 });
+      walk(n.children, depth + 1);
+    });
+  })(data.tree || [], 0);
+
+  const mask = document.createElement("div");
+  mask.className = "rd-mask";
+  const dlg = document.createElement("div");
+  dlg.className = "rename-dialog";
+  dlg.style.width = "560px";
+  dlg.innerHTML =
+    '<div class="rd-title">📂 选择下载落地的文件夹</div>' +
+    '<div style="font-size:12px;color:var(--text-dim);margin-bottom:8px">下载的模型（连 json/封面一起）直接放进这个文件夹；选中后不再弹「移动分类」询问</div>' +
+    '<div id="fpList" style="max-height:330px;overflow:auto;border:1px solid var(--border);border-radius:10px;padding:6px"></div>' +
+    '<div class="rd-actions"><button class="btn" id="fpCancel">取消</button><button class="btn btn-primary" id="fpOk">确定</button></div>';
+  document.body.appendChild(mask);
+  document.body.appendChild(dlg);
+  let sel = rows[0] ? rows[0].path : "";
+  const list = $("#fpList", dlg);
+  list.innerHTML = rows.map((r) =>
+    '<div class="fp-item" data-path="' + esc(r.path) + '" style="padding:6px 8px;border-radius:8px;cursor:pointer;margin-left:' + (r.depth * 16) + 'px">' +
+    (r.depth ? "📁 " : "🏠 ") + esc(r.label) +
+    '<div style="font-size:11px;color:var(--text-dim);word-break:break-all">' + esc(r.path) + "</div></div>").join("");
+  const mark = () => {
+    list.querySelectorAll(".fp-item").forEach((d) => {
+      const on = d.dataset.path === sel;
+      d.style.background = on ? "var(--accent, #4da3ff)" : "";
+      d.style.color = on ? "#fff" : "";
+    });
+  };
+  list.addEventListener("click", (e) => {
+    const it = e.target.closest(".fp-item");
+    if (!it) return;
+    sel = it.dataset.path;
+    mark();
+  });
+  mark();
+  const close = () => { mask.remove(); dlg.remove(); };
+  mask.addEventListener("click", close);
+  $("#fpCancel", dlg).addEventListener("click", close);
+  return new Promise((resolve) => {
+    $("#fpOk", dlg).addEventListener("click", () => { close(); resolve(sel); });
+  });
+}
+
+async function applyDownloadTarget(p) {
+  const r = JSON.parse((await api.call("set_download_target", p)) || "{}");
+  if (r.ok) {
+    state.cfg.download_target_dir = p || "";
+    setStatus(p ? "下载将直接保存到：" + p : "已恢复为默认下载目录");
+    await refreshDlTarget();
+  } else {
+    setStatus(r.msg || "设置失败");
+  }
+  return r.ok;
+}
+
+if ($("#btnDlTarget")) $("#btnDlTarget").addEventListener("click", async () => {
+  const p = await pickFolderModal();
+  if (p) await applyDownloadTarget(p);
+});
+if ($("#btnDlTargetReset")) $("#btnDlTargetReset").addEventListener("click", () => applyDownloadTarget(""));
+
+// ================= SHA256 查重 =================
+function fmtBytes(n) {
+  const u = ["B", "KB", "MB", "GB", "TB"];
+  let i = 0;
+  n = Number(n) || 0;
+  while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
+  return (i === 0 ? n + " B" : n.toFixed(1) + " " + u[i]);
+}
+
+async function mmDedupeFlow() {
+  const r = await api.call("mm_dedupe", null);
+  if (!r || !r.started) { setStatus((r && r.msg) || "查重未开始"); return; }
+  setStatus("查重中：正在计算文件哈希（大库需要一会儿）…");
+  const timer = setInterval(async () => {
+    const p = await api.call("get_mm_progress");
+    if (!p) return;
+    if (p.running) { setStatus("查重中 " + (p.done || 0) + "/" + (p.total || 0)); return; }
+    clearInterval(timer);
+    setStatus(p.msg || "查重完成");
+    if (Array.isArray(p.result) && p.result.length) showDedupeDialog(p.result);
+  }, 800);
+}
+
+function showDedupeDialog(groups) {
+  const totalDups = groups.reduce((s, g) => s + g.dups.length, 0);
+  const totalSize = groups.reduce((s, g) => s + g.dups.reduce((x, d) => x + (d.size || 0), 0), 0);
+  const body = groups.map((g, gi) =>
+    '<div class="dedup-group">' +
+    '<div class="dedup-keep">✅ 保留 <b>' + esc(g.keep_name) + "</b>" +
+    '<div class="dedup-dir">' + esc(g.keep_dir) + "</div></div>" +
+    g.dups.map((d, di) =>
+      '<label class="dedup-dup"><input type="checkbox" data-g="' + gi + '" data-d="' + di + '" checked/> ' +
+      "<span>" + esc(d.name) + '</span><div class="dedup-dir">' + esc(d.dir) + " · " + fmtBytes(d.size) + "</div></label>").join("") +
+    "</div>").join("");
+
+  const mask = document.createElement("div");
+  mask.className = "rd-mask";
+  const dlg = document.createElement("div");
+  dlg.className = "rename-dialog";
+  dlg.style.width = "640px";
+  dlg.innerHTML =
+    '<div class="rd-title">🧬 查重结果：' + groups.length + " 组重复，可清理 " + totalDups + " 个文件（约 " + fmtBytes(totalSize) + "）</div>" +
+    '<div style="font-size:12px;color:var(--text-dim);margin-bottom:8px">同名同内容的模型只留一份：默认勾选的是「多余的副本」（会移入回收站，可还原）。每组第一行是要保留的那份。</div>' +
+    '<div style="max-height:360px;overflow:auto">' + body + "</div>" +
+    '<div class="rd-actions"><button class="btn" id="ddSelAll">全选</button><button class="btn" id="ddSelNone">全不选</button>' +
+    '<button class="btn" id="ddClose">关闭</button><button class="btn btn-danger" id="ddDel">🗑️ 移入回收站</button></div>';
+  document.body.appendChild(mask);
+  document.body.appendChild(dlg);
+  const close = () => { mask.remove(); dlg.remove(); };
+  mask.addEventListener("click", close);
+  $("#ddClose", dlg).addEventListener("click", close);
+  $("#ddSelAll", dlg).addEventListener("click", () => dlg.querySelectorAll("input[type=checkbox]").forEach((c) => (c.checked = true)));
+  $("#ddSelNone", dlg).addEventListener("click", () => dlg.querySelectorAll("input[type=checkbox]").forEach((c) => (c.checked = false)));
+  $("#ddDel", dlg).addEventListener("click", async () => {
+    const picked = [];
+    dlg.querySelectorAll("input[type=checkbox]:checked").forEach((c) => {
+      const g = groups[Number(c.dataset.g)];
+      const d = g && g.dups[Number(c.dataset.d)];
+      if (d) picked.push(d);
+    });
+    if (!picked.length) { setStatus("没有勾选任何要清理的文件"); return; }
+    const lines = picked.map((d) => "· " + esc(d.name) + "<div class='dedup-dir'>" + esc(d.dir) + "</div>").join("");
+    const ok = await confirmBox(
+      "<div style='font-size:12px;line-height:1.9;max-height:240px;overflow:auto'>将把以下 <b>" + picked.length +
+      "</b> 个文件移入回收站（可还原）：<br/>" + lines + "</div>", "🧬 清理重复模型");
+    if (!ok) return;
+    let done = 0;
+    for (const d of picked) {
+      try { await api.call("rm_file", d.path); done++; } catch (e) { /* 单个失败不影响其它 */ }
+    }
+    close();
+    setStatus("已移入回收站 " + done + " / " + picked.length + " 个文件");
+    await api.call("scan_models");
+    pollMmScan();
+  });
+}
+
+if ($("#mmDedupe")) $("#mmDedupe").addEventListener("click", mmDedupeFlow);
+
 // ================= 下载管理 =================
 async function dlRefresh() {
   try {
@@ -575,6 +742,8 @@ const _moveAsked = new Set();
 let _moveAsking = false;
 function maybeAskMove(tasks) {
   if (_moveAsking || !(state.cfg && state.cfg.ask_move_after_download)) return;
+  // 已在下载页/设置里选了「下载目标文件夹」→ 下载完成会自动归位，不再弹窗询问
+  if (state.cfg && (state.cfg.download_target_dir || "").trim()) return;
   const done = tasks.find((t) => t.status === "done" && t.dest_dir && !_moveAsked.has(t.id));
   if (!done) return;
   _moveAsked.add(done.id);
@@ -2113,6 +2282,7 @@ const SETTING_FIELDS = [
   ["⬇️ 下载", "gen_metadata", "完成后自动生成 json/info", "bool"],
   ["⬇️ 下载", "download_cover", "完成后自动下载封面", "bool"],
   ["⬇️ 下载", "ask_move_after_download", "完成后询问移动分类", "bool"],
+  ["⬇️ 下载", "download_target_dir", "下载目标文件夹（预设）", "dir"],
   ["⬇️ 下载", "rename_clean_rules", "文件名清理符号", "select", [["", "不清理"], ["comma", "去逗号（推荐）"], ["comma,paren", "去逗号 + 括号"], ["comma,paren,dash", "去逗号+括号，横线/下划线→空格"]]],
   ["⬇️ 下载", "metadata_format", "metadata 格式", "select", ["sd", "civitai", "both"]],
   ["🌏 翻译", "baidu_appid", "百度翻译 APP ID", "text"],
@@ -2156,7 +2326,8 @@ const SETTING_TIPS = {
   "hash_threads": "计算文件哈希（校验/反向解析用）的线程数",
   "gen_metadata": "下载完成后自动生成 <模型名>.civitai.info / .json 元数据；没有它，模型管理里看不到名称/触发词",
   "download_cover": "下载完成后自动把 C 站预览图保存到模型目录（模型管理显示缩略图用）",
-  "ask_move_after_download": "下载完成后询问是否把文件移动到指定文件夹（适合按类型归档）",
+  "ask_move_after_download": "下载完成后询问是否把文件移动到指定文件夹（适合按类型归档；设了「下载目标文件夹」后本项自动不弹）",
+  "download_target_dir": "预设下载落地文件夹（在模型目录里选）：下载的模型连 json/封面直接放进它，不再弹窗询问。也可在「批量下载」页临时选择",
   "metadata_format": "sd = WebUI 能直接识别的扁平 json；civitai = C 站原始 info 结构；both = 两个都生成",
   "baidu_appid": "百度翻译开放平台 APP ID（免费申请），用于反向解析自动翻译模型名/简介",
   "baidu_key": "百度翻译开放平台密钥，与 APP ID 配套",
@@ -2231,6 +2402,10 @@ function buildSettingsForm() {
         const list = (Array.isArray(v) && v.length) ? v : (state.cfg.models_dir ? [state.cfg.models_dir] : []);
         input = '<textarea class="input" rows="3" data-key="' + key + '" placeholder="D:\\sd-webui-forge-neo\\webui\\models">' + esc(list.join("\n")) + '</textarea>' +
           '<div class="tip-inline">每行一个文件夹；WebUI 与 ComfyUI 分开存放时都填进来，扫描会合并显示（推荐填你实际的 webui\\models 和 comfyui\\models 目录）</div>';
+      } else if (type === "dir") {
+        input = '<div class="dir-pick"><input class="input" data-key="' + key + '" value="' + esc(v || "") + '" readonly placeholder="（未设置：用默认下载目录，完成后弹窗询问）"/>' +
+          '<button type="button" class="btn btn-tiny" data-dirpick="' + key + '">选择</button>' +
+          '<button type="button" class="btn btn-tiny" data-dirclear="' + key + '">清除</button></div>';
       } else {
         input = '<input class="input" data-key="' + key + '" value="' + esc(v || "") + '"/>';
       }
@@ -2314,6 +2489,26 @@ $("#btnSaveSettings").addEventListener("click", async () => {
   buildSettingsForm();
 });
 
+// 设置里「下载目标文件夹」的选择/清除（点击即时保存，不依赖底部「保存设置」）
+$("#settingsForm").addEventListener("click", async (e) => {
+  const pick = e.target.closest("[data-dirpick]");
+  if (pick) {
+    const p = await pickFolderModal();
+    if (p && await applyDownloadTarget(p)) {
+      const inp = $('#settingsForm [data-key="' + pick.dataset.dirpick + '"]');
+      if (inp) inp.value = p;
+    }
+    return;
+  }
+  const clr = e.target.closest("[data-dirclear]");
+  if (clr) {
+    if (await applyDownloadTarget("")) {
+      const inp = $('#settingsForm [data-key="' + clr.dataset.dirclear + '"]');
+      if (inp) inp.value = "";
+    }
+  }
+});
+
 // 设置项即时生效：主题/缩放等改完立即应用，不必等「保存设置」（也不触发整页刷新）
 $("#settingsForm").addEventListener("change", (e) => {
   const el = e.target.closest("[data-key]");
@@ -2370,6 +2565,7 @@ $("#settingsForm").addEventListener("click", async (e) => {
 async function init() {
   state.cfg = await api.call("get_config");
   window.__ready = true;
+  refreshDlTarget();
   // 应用主题（dark / light / modern）
   const theme = state.cfg.theme || "modern";
   document.documentElement.dataset.theme = theme;

@@ -35,6 +35,12 @@
     <div class="card">
       <h2 class="page-title">批量下载</h2>
       <p class="hint">Civitai / HuggingFace 链接（回车新建一条；支持 <a class="ob-link" href="#" data-url="https://civitai.red/">civitai.red</a> / <a class="ob-link" href="#" data-url="https://civitai.com/">civitai.com</a> / <a class="ob-link" href="#" data-url="https://huggingface.co/login">huggingface.co</a> 仓库或文件直链）</p>
+      <div class="dl-target-row" id="dlTargetRow" data-tip="下载落地文件夹：不选则用默认下载目录；选了以后下载完成不再弹窗询问">
+        <span class="dl-target-label">📥 保存到：</span>
+        <span class="dl-target-path" id="dlTargetPath">默认下载目录</span>
+        <button class="btn btn-tiny" id="btnDlTarget" data-tip="从模型目录里选一个文件夹，之后下载的模型直接放进它">选择文件夹</button>
+        <button class="btn btn-tiny" id="btnDlTargetReset" data-tip="改回默认下载目录">用默认</button>
+      </div>
       <div id="urlRows" class="url-rows"></div>
       <div class="btn-row">
         <button class="btn btn-primary" id="btnParse">🔍 解析并加入下载队列</button>
@@ -80,6 +86,7 @@
         <button class="btn btn-primary" id="mmScan" data-tip="扫描所有模型管理目录，发现模型并读取元数据/封面">🔍 扫描模型</button>
         <button class="btn" id="mmRefresh" data-tip="重新扫描（不读元数据，只刷新列表）">🔄 刷新</button>
         <button class="btn" id="mmVerify" data-tip="计算文件哈希并与 C 站比对，校验文件是否完整">✅ 校验完整性</button>
+        <button class="btn" id="mmDedupe" data-tip="按 SHA256 查找重复模型（同一文件放了多份），可勾选把多余的移入回收站">🧬 查重</button>
         <span class="btn-group" id="mmRenameGroup">
           <button class="btn" id="mmRenameMain" data-tip="改文件名：自定义 / 改成 C 站模型名 / 翻译成中文">✏️ 改名</button>
           <div class="submenu" id="mmRenameSub">

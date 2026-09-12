@@ -1261,3 +1261,23 @@ fieldset.form-section[data-collapsed="1"] .fold-btn { transform: rotate(-90deg);
   font-size: 12px;
   padding: 4px 6px;
 }
+
+/* ===== 下载目标文件夹（下载页选择行） ===== */
+.dl-target-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 6px 0 10px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface2, transparent); }
+.dl-target-label { font-size: 13px; color: var(--text-dim); }
+.dl-target-path { font-size: 13px; word-break: break-all; flex: 1; min-width: 160px; }
+.dl-target-path.dl-target-set { color: var(--accent, #4da3ff); font-weight: 600; }
+
+/* ===== 文件夹选择弹窗 ===== */
+.fp-item:hover { background: var(--surface2, rgba(127,127,127,.12)); }
+
+/* ===== 查重结果 ===== */
+.dedup-group { border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; margin-bottom: 10px; }
+.dedup-keep { font-size: 13px; padding: 4px 0; border-bottom: 1px dashed var(--border); margin-bottom: 6px; }
+.dedup-dup { display: block; font-size: 13px; padding: 4px 6px; border-radius: 8px; cursor: pointer; }
+.dedup-dup:hover { background: var(--surface2, rgba(127,127,127,.12)); }
+.dedup-dir { font-size: 11px; color: var(--text-dim); word-break: break-all; }
+
+/* ===== 设置里「下载目标文件夹」选择器 ===== */
+.dir-pick { display: flex; gap: 6px; align-items: center; }
+.dir-pick .input { flex: 1; }

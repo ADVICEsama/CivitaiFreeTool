@@ -10,7 +10,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.1.16"
+APP_VERSION = "2.1.17"
 
 import civitai_api
 import config
@@ -88,6 +88,13 @@ class Api:
                                         verify=self.cfg.get("ssl_verify", True))
                     except Exception:
                         pass
+            # 3) 预设了「下载目标文件夹」但文件不在那里（如扩展/老任务/HF 流程）→ 自动归位，不再弹窗询问
+            tgt = (self.cfg.get("download_target_dir") or "").strip()
+            if tgt and os.path.isdir(tgt) and os.path.abspath(os.path.dirname(dest)) != os.path.abspath(tgt):
+                try:
+                    self.move_file_to(dest, tgt)
+                except Exception:
+                    pass
         except Exception:
             pass
 
@@ -123,6 +130,44 @@ class Api:
         except Exception:
             pass
         return {"ok": True, "msg": "已移动 %d 个文件到 %s" % (len(moved), dest_dir)}
+
+    # ---------------- 下载目标文件夹（下载页选择 / 设置里预设） ----------------
+    def _dest_dir(self):
+        """下载落地目录：优先「下载目标文件夹」，否则默认下载目录"""
+        t = (self.cfg.get("download_target_dir") or "").strip()
+        if t and os.path.isdir(t):
+            return t
+        return (self.cfg.get("download_dir") or "").strip()
+
+    def get_download_target(self):
+        """当前下载目标文件夹（空 = 默认下载目录）"""
+        t = (self.cfg.get("download_target_dir") or "").strip()
+        return json.dumps({
+            "ok": True,
+            "target": t if (t and os.path.isdir(t)) else "",
+            "default": self.cfg.get("download_dir") or "",
+            "models_root": self.cfg.get("models_dir") or "",
+        }, ensure_ascii=False)
+
+    def set_download_target(self, path):
+        """设置下载落地文件夹（必须位于模型管理目录内；传空 = 恢复默认下载目录）"""
+        p = (path or "").strip()
+        if p:
+            if not os.path.isdir(p):
+                return json.dumps({"ok": False, "msg": "文件夹不存在: %s" % p}, ensure_ascii=False)
+            ap = os.path.abspath(p)
+            roots = [os.path.abspath(r) for r in (self._models_roots() or [])]
+            dl = (self.cfg.get("download_dir") or "").strip()
+            if dl:
+                roots.append(os.path.abspath(dl))
+            if not any(ap == r or ap.startswith(r + os.sep) for r in roots if r):
+                return json.dumps({"ok": False, "msg": "请选择模型目录内的文件夹"}, ensure_ascii=False)
+        self.cfg["download_target_dir"] = p
+        try:
+            config.save(self.cfg)
+        except Exception:
+            pass
+        return json.dumps({"ok": True, "target": p}, ensure_ascii=False)
 
     # ---------------- 配置 ----------------
     def _models_roots(self):
@@ -279,7 +324,7 @@ class Api:
                         pass
                     task = downloader.DownloadTask(
                         url=api.build_download_url(version_id, f.get("id")),
-                        dest_dir=self.cfg.get("download_dir") or "downloads/models",
+                        dest_dir=self._dest_dir() or "downloads/models",
                         filename=fname,
                         expected_sha256=hashes.get("SHA256") or "",
                         info={"modelName": model_name,
@@ -858,7 +903,7 @@ class Api:
             except Exception:
                 pass
             info["meta"] = meta
-            dest_dir = (self.cfg.get("download_dir") or "").strip() or os.getcwd()
+            dest_dir = self._dest_dir() or os.getcwd()
             dl_url = api.build_download_url(version_id, f.get("id")) if version_id else (f.get("downloadUrl") or "")
             if not dl_url:
                 item["msg"] = "无下载链接"
@@ -1377,7 +1422,7 @@ class Api:
     def hf_enqueue(self, repo, rev, paths):
         """把 HuggingFace 文件加入下载队列（保留相对子目录结构）"""
         import downloader
-        base = self.cfg.get("download_dir") or ""
+        base = self._dest_dir() or ""
         n = 0
         for p in (paths or []):
             rel = p.replace("\\", "/")
@@ -1480,6 +1525,95 @@ class Api:
 
     def get_mm_progress(self):
         return self.mm_progress
+
+    def mm_dedupe(self, paths=None):
+        """SHA256 查重（后台线程）：同哈希且多于 1 个文件的为一组。
+
+        结果放 self.mm_progress["result"]：每组的 keep（建议保留，路径层级最浅的）与 dups（可清理）。
+        删除走前端调用 rm_file（移入回收站），本方法只算不删。"""
+        rows = [r for r in self.model_rows if (not paths or r["path"] in paths)]
+        if not rows:
+            return {"started": False, "msg": "请先在模型管理页扫描模型"}
+        self.mm_progress = {"running": True, "total": len(rows), "done": 0, "msg": "计算哈希…", "result": None}
+
+        def work():
+            import collections
+            import concurrent.futures as cf
+            try:
+                threads = max(1, int(self.cfg.get("hash_threads", 4) or 4))
+            except Exception:
+                threads = 4
+            roots = [os.path.abspath(r) for r in (self._models_roots() or [])]
+            by_hash = collections.defaultdict(list)
+            lock = threading.Lock()
+            done = 0
+
+            def one(r):
+                try:
+                    return r, (model_manager.compute_sha256(r["path"]) or "")
+                except Exception:
+                    return r, ""
+
+            with cf.ThreadPoolExecutor(max_workers=threads) as ex:
+                for r, sha in ex.map(one, rows):
+                    with lock:
+                        done += 1
+                        self.mm_progress["done"] = done
+                    if sha:
+                        by_hash[sha].append(r)
+
+            def rank(it):
+                p = os.path.abspath(it["path"])
+                rel = p
+                for root in roots:
+                    if p == root or p.startswith(root + os.sep):
+                        rel = os.path.relpath(p, root)
+                        break
+                try:
+                    size = os.path.getsize(p)
+                except Exception:
+                    size = 0
+                # 优先保留：层级最浅（直接放在类型目录下）→ 体积大 → 路径短
+                return (rel.count(os.sep), -size, len(p))
+
+            groups = []
+            for sha, items in by_hash.items():
+                if len(items) < 2:
+                    continue
+                items = sorted(items, key=rank)
+                keep = items[0]
+                dups = []
+                for it in items[1:]:
+                    try:
+                        size = os.path.getsize(it["path"])
+                    except Exception:
+                        size = 0
+                    dups.append({"path": it["path"], "name": it.get("name") or os.path.basename(it["path"]),
+                                 "dir": os.path.dirname(it["path"]), "size": size})
+                try:
+                    total_size = os.path.getsize(keep["path"])
+                except Exception:
+                    total_size = 0
+                groups.append({"sha256": sha[:16], "keep": keep["path"],
+                               "keep_name": keep.get("name") or os.path.basename(keep["path"]),
+                               "keep_dir": os.path.dirname(keep["path"]), "size": total_size,
+                               "dups": dups})
+            groups.sort(key=lambda g: -sum(d["size"] for d in g["dups"]))
+            total = sum(len(g["dups"]) for g in groups)
+            waste = sum(d["size"] for g in groups for d in g["dups"])
+
+            def fmt(n):
+                for u in ("B", "KB", "MB", "GB", "TB"):
+                    if n < 1024 or u == "TB":
+                        return ("%d %s" % (n, u)) if u == "B" else ("%.1f %s" % (n, u))
+                    n /= 1024.0
+            self.mm_progress["result"] = groups
+            self.mm_progress["running"] = False
+            self.mm_progress["msg"] = ("查重完成：%d 组重复，可清理 %d 个文件（约 %s）"
+                                       % (len(groups), total, fmt(waste))) if groups else "查重完成：没有发现重复模型 ✅"
+
+        threading.Thread(target=work, daemon=True).start()
+        return {"started": True}
 
     def _site_url(self, model_id, version_id=None):
         d = (self.cfg.get("site_domain", "civitai.red") or "civitai.red").strip("/")
