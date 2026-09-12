@@ -102,11 +102,16 @@ def read_app_pid():
         return None
 
 
-def _write_owner(pid):
+def _write_owner(pid, started=None):
+    """写看门狗归属文件（带心跳时间戳）。
+
+    心跳的用处：`watchdog_alive()` 只靠 PID 判断会被 Windows 的 PID 复用骗到
+    （实测：被杀的看门狗 PID 被系统回收给了别的进程 → 新实例误判「看门狗已在跑」
+    → 跳过拉狗 → 那个实例卡死后没人救）。所以要求心跳新鲜才算活着。"""
     try:
         _ensure_dir(_app_dir())
         with open(_owner_file(), "w", encoding="utf-8") as f:
-            json.dump({"pid": pid, "started": time.time()}, f)
+            json.dump({"pid": pid, "started": started or time.time(), "beat": time.time()}, f)
     except Exception:
         pass
 
@@ -119,11 +124,18 @@ def _read_owner():
         return {}
 
 
-def watchdog_alive():
-    """主程序用：是否已有活着的看门狗（有则不必再拉）"""
+def watchdog_alive(max_age=25.0):
+    """主程序用：是否已有活着的看门狗（有则不必再拉）。
+
+    要求 PID 存活 **且** 心跳新鲜（看门狗每 2 秒刷新一次），避免 PID 复用误判。"""
     o = _read_owner()
-    pid = int(o.get("pid") or 0)
-    return bool(pid and pid != os.getpid() and pid_alive(pid))
+    try:
+        pid = int(o.get("pid") or 0)
+        beat = float(o.get("beat") or 0)
+    except Exception:
+        return False
+    return bool(pid and pid != os.getpid() and pid_alive(pid)
+                and (time.time() - beat) < max_age)
 
 
 # --------------------------------------------------------------------------
@@ -282,6 +294,32 @@ def kill_app_tree(app_pid, exclude=()):
     _log("killed tree of %s (%d descendants, excluded %s)" % (app_pid, len(victims), list(exclude)))
 
 
+_ORPHAN_PS = ("Get-CimInstance Win32_Process -Filter \"Name='msedgewebview2.exe'\" | "
+              "Where-Object { $_.CommandLine -like '*CivitaiFreeToolWeb\\wv2*' } | "
+              "ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue; "
+              "$_.ProcessId }")
+
+
+def kill_orphan_webview2():
+    """清掉属于本工具的孤儿 msedgewebview2（卡死实例的残留子进程）。
+
+    它们的命令行 user-data-dir 里带 CivitaiFreeToolWeb\\wv2，所以绝不会误杀其它 WebView2 应用。
+    残留在卡死实例被强杀后会出现（父进程没了、浏览器进程还活着），会占着存储目录与显卡资源。"""
+    if not IS_WINDOWS:
+        return 0
+    try:
+        r = subprocess.run(["powershell", "-NoProfile", "-Command", _ORPHAN_PS],
+                           capture_output=True, text=True, timeout=40,
+                           creationflags=_no_window_flags())
+        pids = [p for p in (r.stdout or "").split() if p.strip().isdigit()]
+        if pids:
+            _log("killed %d orphan webview2: %s" % (len(pids), ",".join(pids[:8])))
+        return len(pids)
+    except Exception as e:
+        _log("orphan webview2 cleanup failed: %r" % (e,))
+        return 0
+
+
 def _message(title, text):
     if os.environ.get("CFT_WD_NO_MSGBOX") == "1":
         _log("msgbox suppressed: %s" % text.replace("\n", " / "))
@@ -299,6 +337,8 @@ def _message(title, text):
 
 def _relaunch(app_name):
     """重新拉起应用（与自身同 exe；源码模式下用 python + 脚本）"""
+    # 先清掉属于本工具的孤儿 WebView2（卡死实例残留，占着存储目录/显卡资源，会拖累新实例启动）
+    kill_orphan_webview2()
     override = os.environ.get("CFT_WD_APP_CMD")
     if override:
         cmd = json.loads(override)
@@ -330,7 +370,7 @@ def run(grace=None, exe_name=None):
     own = os.getpid()
     started = time.time()
     app_name = (exe_name or (os.path.basename(sys.executable) if getattr(sys, "frozen", False) else "python.exe")).lower()
-    _write_owner(own)
+    _write_owner(own, started)
     _log("watchdog start (grace=%ss, app_name=%s, exe=%s)" % (grace, app_name, sys.executable))
 
     healthy = False
@@ -352,6 +392,9 @@ def run(grace=None, exe_name=None):
         if other and other != own and other_started > started and pid_alive(other):
             _log("newer watchdog %s took over, exiting" % other)
             return
+        # 心跳：让主程序判断「看门狗是否真活着」时不受 PID 复用影响。
+        # 必须在交班检查之后写：否则会把新看门狗的归属条目覆盖回自己，交班判断失效。
+        _write_owner(own, started)
 
         pid = read_app_pid()
         if pid and pid != own and pid_alive(pid):
