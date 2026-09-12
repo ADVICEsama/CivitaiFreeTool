@@ -10,7 +10,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.1.17"
+APP_VERSION = "2.1.18"
 
 import civitai_api
 import config
@@ -155,12 +155,7 @@ class Api:
         if p:
             if not os.path.isdir(p):
                 return json.dumps({"ok": False, "msg": "文件夹不存在: %s" % p}, ensure_ascii=False)
-            ap = os.path.abspath(p)
-            roots = [os.path.abspath(r) for r in (self._models_roots() or [])]
-            dl = (self.cfg.get("download_dir") or "").strip()
-            if dl:
-                roots.append(os.path.abspath(dl))
-            if not any(ap == r or ap.startswith(r + os.sep) for r in roots if r):
+            if not self._target_allowed(p):
                 return json.dumps({"ok": False, "msg": "请选择模型目录内的文件夹"}, ensure_ascii=False)
         self.cfg["download_target_dir"] = p
         try:
@@ -168,6 +163,68 @@ class Api:
         except Exception:
             pass
         return json.dumps({"ok": True, "target": p}, ensure_ascii=False)
+
+    def _target_allowed(self, p):
+        """目标文件夹是否允许（必须在模型管理目录或默认下载目录内，防误设到别处）"""
+        if not p:
+            return False
+        ap = os.path.abspath(p)
+        roots = [os.path.abspath(r) for r in (self._models_roots() or [])]
+        dl = (self.cfg.get("download_dir") or "").strip()
+        if dl:
+            roots.append(os.path.abspath(dl))
+        return any(ap == r or ap.startswith(r + os.sep) for r in roots if r)
+
+    def set_task_target(self, task_id, path):
+        """给**单个**下载任务指定保存文件夹（下载管理列表「保存到」列点选）。
+
+        - 等待中/暂停/失败/已取消：改目标；已有 .part 半成品一并搬过去（断点续传进度不丢）
+        - 已完成：把文件（含 json/封面等附属）移动到新文件夹
+        - 下载中：先暂停再改（避免下载半途换目录）
+        """
+        p = (path or "").strip()
+        if not p or not os.path.isdir(p):
+            return {"ok": False, "msg": "目标文件夹无效"}
+        if not self._target_allowed(p):
+            return {"ok": False, "msg": "请选择模型目录内的文件夹"}
+        t = next((x for x in self.dl.tasks if x.id == task_id), None)
+        if t is None:
+            return {"ok": False, "msg": "任务不存在（可能已被移除）"}
+        if t.status == downloader.ST_DOWNLOADING:
+            return {"ok": False, "msg": "该任务正在下载：先「暂停选中」再改保存位置"}
+        if os.path.abspath(t.dest_dir or "") == os.path.abspath(p):
+            return {"ok": True, "msg": "已在该文件夹"}
+        if t.status == downloader.ST_DONE:
+            src = os.path.join(t.dest_dir or "", t.filename)
+            if os.path.exists(src):
+                r = self.move_file_to(src, p)
+                if r.get("ok"):
+                    return {"ok": True, "msg": "已移动到 %s" % p}
+                return r
+            t.dest_dir = p
+            try:
+                self.dl.save_tasks()
+            except Exception:
+                pass
+            return {"ok": True, "msg": "已更新保存位置（原位置找不到文件，未移动）"}
+        # pending / paused / error / canceled：改目标，半成品搬家保证续传
+        old = t.dest_dir or ""
+        if old:
+            part = os.path.join(old, t.filename + ".part")
+            if os.path.exists(part):
+                try:
+                    os.makedirs(p, exist_ok=True)
+                    dest_part = os.path.join(p, t.filename + ".part")
+                    if not os.path.exists(dest_part):
+                        shutil.move(part, dest_part)
+                except Exception as e:
+                    return {"ok": False, "msg": "半成品搬移失败: %s" % e}
+        t.dest_dir = p
+        try:
+            self.dl.save_tasks()
+        except Exception:
+            pass
+        return {"ok": True, "msg": "保存位置已改为 %s" % p}
 
     # ---------------- 配置 ----------------
     def _models_roots(self):

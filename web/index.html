@@ -62,12 +62,13 @@
         <button class="btn" id="dlPauseSel" data-tip="暂停选中的下载任务">⏸️ 暂停选中</button>
         <button class="btn" id="dlRetrySel" data-tip="重试选中的失败任务">🔄 重试选中</button>
         <button class="btn" id="dlRemoveSel">🗑️ 移除选中</button>
+        <button class="btn" id="dlSetTarget" data-tip="给选中（未勾选=全部）的任务指定保存文件夹；也可以直接点每行「保存到」列单独设置">📂 设置保存到</button>
         <button class="btn" id="dlClearDone">🧹 清空已完成</button>
         <button class="btn" id="dlSave">💾 保存任务列表</button>
       </div>
       <div class="table-wrap">
         <table class="grid" id="dlTable">
-          <thead><tr><th class="c-thumb">图</th><th class="c-file">文件名</th><th>状态</th><th>进度</th><th>速度</th><th>大小</th><th class="c-err">错误</th></tr></thead>
+          <thead><tr><th class="c-thumb">图</th><th class="c-file">文件名</th><th class="c-dest">保存到</th><th>状态</th><th>进度</th><th>速度</th><th>大小</th><th class="c-err">错误</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>

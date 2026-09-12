@@ -657,8 +657,18 @@ async function dlRefresh() {
       const errCell = t.error
         ? "<td class='c-err err-copy' title='点击复制完整报错'>" + esc(t.error) + "</td>"
         : "<td class='c-err'></td>";
+      // 「保存到」列：显示相对模型目录的路径；点一下就能给这一个任务单独换文件夹
+      const destFull = t.dest_dir || "";
+      let destShow = destFull;
+      const md = (state.cfg && state.cfg.models_dir) || "";
+      if (md && destFull && destFull.toLowerCase().indexOf(md.toLowerCase()) === 0) {
+        destShow = destFull.slice(md.length).replace(/^[\\/]+/, "");
+      }
+      const destCell = destFull
+        ? "<td class='c-dest cell-dest' data-task='" + esc(t.id) + "' title='" + esc(destFull + "\\n点击选择该文件的保存文件夹") + "'>📁 " + esc(destShow || destFull) + "</td>"
+        : "<td class='c-dest cell-dest' data-task='" + esc(t.id) + "' title='点击选择该文件的保存文件夹'>📁 默认</td>";
       return '<tr data-fn="' + esc(t.filename) + '" class="' + (selPaths.has(t.filename) ? "sel-row" : "") + '">' +
-        "<td class='c-thumb'>" + thumb + "</td><td class='c-file'>" + esc(t.filename) + "</td><td>" + esc(st) + "</td><td>" + esc(prog) + "</td>" +
+        "<td class='c-thumb'>" + thumb + "</td><td class='c-file'>" + esc(t.filename) + "</td>" + destCell + "<td>" + esc(st) + "</td><td>" + esc(prog) + "</td>" +
         "<td>" + esc(speed) + "</td><td>" + esc(size) + "</td>" + errCell + "</tr>";
     }).join("");
     loadDlThumbs(state.dlTasks || []);
@@ -788,7 +798,7 @@ function maybeAskMove(tasks) {
   $("#mvNo", dlg).addEventListener("click", close);
   mask.addEventListener("click", close);
   $("#mvYes", dlg).addEventListener("click", async () => {
-    const dir = await api.call("pick_dir");
+    const dir = await pickFolderModal();   // 应用内文件夹树（与模型管理同源），不用系统弹窗
     close();
     if (!dir) return;
     const res = await api.call("move_file_to", done.dest_dir + "\\" + done.filename, dir);
@@ -797,7 +807,18 @@ function maybeAskMove(tasks) {
   });
 }
 
-$("#dlTable tbody").addEventListener("click", (e) => {
+$("#dlTable tbody").addEventListener("click", async (e) => {
+  // 「保存到」列：给这一个任务单独选文件夹（应用内文件夹树，不用系统弹窗）
+  const destCell = e.target.closest(".cell-dest");
+  if (destCell) {
+    const tid = destCell.dataset.task;
+    const p = await pickFolderModal();
+    if (!p) return;
+    const r = await api.call("set_task_target", tid, p);
+    setStatus((r && r.msg) || "已更新保存位置");
+    dlRefresh();
+    return;
+  }
   const tr = e.target.closest("tr");
   if (!tr) return;
   const ctrl = e.ctrlKey || e.metaKey;
@@ -820,6 +841,21 @@ $("#dlStartAll").addEventListener("click", () => dlAct("start_all"));
 $("#dlPauseSel").addEventListener("click", () => dlAct("pause"));
 $("#dlRetrySel").addEventListener("click", () => dlAct("retry"));
 $("#dlRemoveSel").addEventListener("click", () => dlAct("remove"));
+// 批量/单选：给任务指定保存文件夹（应用内文件夹树；未勾选=全部任务）
+$("#dlSetTarget").addEventListener("click", async () => {
+  const sel = dlSel();
+  const tasks = (state.dlTasks || []).filter((t) => !sel.length || sel.indexOf(t.filename) >= 0);
+  if (!tasks.length) { setStatus(sel.length ? "选中的任务里没有可设置的" : "任务列表为空"); return; }
+  const p = await pickFolderModal();
+  if (!p) return;
+  let ok = 0, fail = 0, msg = "";
+  for (const t of tasks) {
+    const r = await api.call("set_task_target", t.id, p);
+    if (r && r.ok) ok++; else { fail++; msg = (r && r.msg) || msg; }
+  }
+  setStatus("已设置 " + ok + " 个任务的保存位置" + (fail ? ("，失败 " + fail + (msg ? "：" + msg : "")) : ""));
+  dlRefresh();
+});
 $("#dlClearDone").addEventListener("click", () => dlAct("clear_done"));
 $("#dlSave").addEventListener("click", () => dlAct("save"));
 

@@ -1281,3 +1281,8 @@ fieldset.form-section[data-collapsed="1"] .fold-btn { transform: rotate(-90deg);
 /* ===== 设置里「下载目标文件夹」选择器 ===== */
 .dir-pick { display: flex; gap: 6px; align-items: center; }
 .dir-pick .input { flex: 1; }
+
+/* ===== 下载管理「保存到」列（点击可给单个任务换文件夹） ===== */
+.c-dest { min-width: 130px; }
+td.cell-dest { cursor: pointer; font-size: 12px; word-break: break-all; }
+td.cell-dest:hover { color: var(--accent, #4da3ff); text-decoration: underline dotted; }
