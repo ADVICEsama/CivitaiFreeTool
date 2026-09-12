@@ -10,7 +10,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.1.21"
+APP_VERSION = "2.1.22"
 
 import civitai_api
 import config
@@ -234,8 +234,11 @@ class Api:
         t = next((x for x in self.dl.tasks if x.id == task_id), None)
         if t is None:
             return {"ok": False, "msg": "任务不存在（可能已被移除）"}
+        was_downloading = False
         if t.status == downloader.ST_DOWNLOADING:
             # 正在下载就自动暂停 → 等下载线程真正停下（_active_ids 清空，避免边写边搬）→ 再改
+            # 注意：改完必须自动继续，否则用户会看到「只是换个文件夹，下载却停了」
+            was_downloading = True
             try:
                 self.dl.pause_task(t)
             except Exception:
@@ -282,6 +285,13 @@ class Api:
             self.dl.save_tasks()
         except Exception:
             pass
+        if was_downloading:
+            # 自动继续：整个换目录过程只中断约 1 秒（等下载线程停 → 搬半成品 → 立即续传），用户基本无感
+            try:
+                self.dl.resume_task(t)
+                return {"ok": True, "msg": "已改为 %s，下载已自动继续（断点续传）" % p}
+            except Exception as e:
+                return {"ok": True, "msg": "已改为 %s（自动继续失败，请手动点继续：%s）" % (p, str(e)[:60])}
         return {"ok": True, "msg": "保存位置已改为 %s" % p}
 
     # ---------------- 配置 ----------------
