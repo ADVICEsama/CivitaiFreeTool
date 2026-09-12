@@ -10,11 +10,13 @@ import urllib.request
 
 API_BASE = "https://civitai.com/api/v1"
 MODEL_URL_RE = re.compile(
-    r"civitai\.(?:com|red)/models/(\d+)(?:\?modelVersionId=(\d+))?", re.IGNORECASE
+    r"civitai\.(?:com|red)/models/(\d+)", re.IGNORECASE
 )
 DOWNLOAD_URL_RE = re.compile(
     r"civitai\.(?:com|red)/api/download/models/(\d+)", re.IGNORECASE
 )
+# 版本号可能出现在查询串里（任意位置/顺序）：modelVersionId=123 / modelVersionId=123 等
+_VERSION_QUERY_KEYS = ("modelversionid", "modelversion", "versionid")
 
 
 class CivitaiError(Exception):
@@ -114,14 +116,32 @@ class CivitaiAPI:
         return None, v
 
     def resolve_url(self, url):
-        """解析支持的三类 URL，返回 (model_id, version_id) 或抛错"""
-        url = url.strip()
+        """解析 URL，返回 (model_id, version_id)（均可为 None，至少一个非空）或抛错。
+
+        版本号从查询串里取，**不依赖它在 URL 中的位置**：
+        真实 C 站链接是 /models/<id>/<slug>?modelVersionId=<vid>（带 slug），
+        旧正则要求 ?modelVersionId= 紧跟模型 ID，带 slug 时匹配不到 →
+        调用方回退成「最新版」——即用户报的「选了非最新版却下载了最新版」。
+        """
+        url = (url or "").strip()
         m = DOWNLOAD_URL_RE.search(url)
         if m:
             return None, m.group(1)
         m = MODEL_URL_RE.search(url)
-        if m:
-            return m.group(1), m.group(2)
+        model_id = m.group(1) if m else None
+        version_id = None
+        try:
+            qs = urllib.parse.urlsplit(url).query
+            for k, v in urllib.parse.parse_qsl(qs, keep_blank_values=True):
+                if k.lower() in _VERSION_QUERY_KEYS and (v or "").strip().isdigit():
+                    version_id = v.strip()
+                    break
+        except Exception:
+            version_id = None
+        if model_id:
+            return model_id, version_id
+        if version_id:
+            return None, version_id
         raise CivitaiError("无法解析 URL: %s" % url)
 
     def pick_file(self, version):

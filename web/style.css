@@ -390,6 +390,9 @@ table.grid tbody tr.selectable { cursor: pointer; }
 .c-path { min-width: 120px; }
 .c-sha { min-width: 150px; }
 .c-err { min-width: 160px; }
+/* 报错单元格可点击复制（点一下把完整报错复制走，方便去搜） */
+td.err-copy { cursor: pointer; text-decoration: underline dotted; }
+td.err-copy:hover { color: var(--accent, #4da3ff); }
 
 .cell-sel { text-align: center; cursor: pointer; user-select: none; font-size: 15px; }
 

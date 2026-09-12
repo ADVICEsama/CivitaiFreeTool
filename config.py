@@ -18,6 +18,7 @@ DEFAULTS = {
     "models_dirs": [],               # 多模型目录（每行一个；WebUI 与 ComfyUI 分开时都填）
     "max_concurrent_downloads": 3,
     "download_timeout": 300,
+    "download_retry": 5,                 # 网络中断（SSL EOF/超时）自动重试次数，每次断点续传
     "auto_translate": True,
     "save_raw_json": True,
     "save_translated_json": True,
@@ -50,6 +51,7 @@ DEFAULTS = {
     "ui_zoom": 100,                     # 界面缩放百分比（80-150）
     "rename_menu_default": "custom",
     "default_view": "waterfall",  # 模型管理默认视图 list / waterfall  # 修改名称按钮默认动作：custom/rename_c/localize
+    "rename_clean_rules": "comma,paren",  # 改名/下载命名时清理符号：comma 逗号→空格 / paren 括号删除 / dash 横线下划线→空格
     "confirm_buttons_flip": False,   # 确认弹窗按钮翻转：False=确定左/取消右，True=取消左/确定右
     "default_page": "models",         # 启动默认页
     "default_page": "models",           # 启动默认页（download/dlmanager/models/reverse/settings）

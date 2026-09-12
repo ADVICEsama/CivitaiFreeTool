@@ -194,6 +194,54 @@ class Downloader:
                     self._active_ids.discard(task.id)
 
     def _download_impl(self, task):
+        """带退避自动重试的下载包装。
+
+        为什么需要：C 站文件要经代理节点下载，节点/线路抽风会随时掐断 TLS 连接
+        （SSL EOF / 连接超时），单次失败就报错会白扔掉已经下好的几百 MB。
+        每次重试都由 _download_once 从 .part 现有大小续传（Range），不重下。
+        """
+        try:
+            attempts = max(0, int(self.cfg.get("download_retry", 5) or 5))
+        except Exception:
+            attempts = 5
+        for attempt in range(attempts + 1):
+            self._download_once(task)
+            if task.status in (ST_DONE, ST_CANCELED, ST_PAUSED):
+                return
+            err = task.error or ""
+            # 重试无意义的错误：HTTP 状态错误（403/404/416…）、C 站限制、证书错误、哈希不符
+            if (err.startswith("HTTP ") or "暂不可下载" in err
+                    or "SHA256 校验失败" in err or "CERTIFICATE" in err.upper()
+                    or "certificate" in err):
+                return
+            if attempt >= attempts:
+                break
+            delay = min(30, 2 ** (attempt + 1))  # 2,4,8,16,30 秒
+            task.status = ST_PENDING
+            task.error = "网络中断，%d 秒后自动重试(%d/%d)。原始错误：%s" % (
+                delay, attempt + 1, attempts, err[:100])
+            self._notify(task)
+            waited = 0.0
+            while waited < delay:
+                if self._cancel_events.get(task.id, threading.Event()).is_set():
+                    task.status = ST_CANCELED
+                    self._notify(task)
+                    return
+                if self._pause_events.get(task.id, threading.Event()).is_set():
+                    task.status = ST_PAUSED
+                    self._notify(task)
+                    return
+                time.sleep(0.25)
+                waited += 0.25
+        # 重试耗尽
+        task.status = ST_ERROR
+        task.error = ("网络中断（连接被掐断/超时，常见于代理节点不稳定）：已自动重试 %d 次仍失败。"
+                      "已下载部分保留，点「重试/开始」可从断点续传。原始错误：%s"
+                      % (attempts, (task.error or "")[:120]))
+        self._notify(task)
+
+    def _download_once(self, task):
+        """单次下载尝试（从 .part 断点续传；失败交给 _download_impl 的重试包装）。"""
         task.error = ""
         self._notify(task)
         dest = os.path.join(task.dest_dir, task.filename)
@@ -206,6 +254,30 @@ class Downloader:
         if os.path.exists(tmp):
             start_byte = os.path.getsize(tmp)
         task.downloaded = start_byte
+        # 收尾被掐断（数据其实已收全：字节数已达 Content-Length）→ 不重试也不发 416 请求，直接收尾
+        if start_byte and task.total and start_byte >= task.total:
+            if task.expected_sha256:
+                try:
+                    h = hashlib.sha256()
+                    with open(tmp, "rb") as f:
+                        for b in iter(lambda: f.read(CHUNK), b""):
+                            h.update(b)
+                    if h.hexdigest().lower() != task.expected_sha256.lower():
+                        task.status = ST_ERROR
+                        task.error = "SHA256 校验失败（文件已保留；可能为 C 站哈希不匹配或下载不完整）"
+                        self._notify(task)
+                        return
+                except OSError:
+                    pass
+            try:
+                os.replace(tmp, dest)
+            except OSError:
+                pass
+            task.status = ST_DONE
+            task.progress = 100.0
+            task.speed = 0.0
+            self._notify(task)
+            return
 
         headers = {"User-Agent": "Mozilla/5.0 (CivitaiFreeTool)"}
         if self.cfg.get("api_key"):
@@ -264,6 +336,11 @@ class Downloader:
                         if total:
                             task.progress = min(100.0, task.downloaded * 100.0 / total)
                         self._notify(task)
+                # 静默断流检测：有 Content-Length 但实际字节数不足 = 连接被掐断（不是下载完成）
+                # ——不补这一刀的话，截断文件会被当作「下载完成」直接去校验，报「SHA256 校验失败」且不重试
+                if total and task.downloaded < total:
+                    raise IOError("连接提前结束（%d / %d 字节），网络中断"
+                                  % (task.downloaded, total))
             # 下载完成：校验哈希（期间响应暂停/取消）
             if task.expected_sha256:
                 h = hashlib.sha256()

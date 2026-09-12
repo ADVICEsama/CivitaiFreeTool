@@ -121,6 +121,23 @@ window.__copyText = async function (t) {
   catch (e) { return false; }
 };
 
+// 报错一键复制：点下载管理里标了 .err-copy 的报错单元格、或点批量下载的解析日志区，直接复制去搜
+document.addEventListener("click", function (e) {
+  let txt = "";
+  const cell = e.target && e.target.closest ? e.target.closest("td.err-copy") : null;
+  if (cell) {
+    txt = (cell.textContent || "").trim();
+  } else if (e.target && e.target.id === "parseLog") {
+    txt = (e.target.textContent || "").trim();
+  } else {
+    return;
+  }
+  if (!txt) return;
+  window.__copyText(txt).then(function (ok) {
+    setStatus(ok ? "✅ 已复制报错到剪贴板，可直接搜索" : "复制失败（可手动选中复制）");
+  });
+});
+
 // ---------- 状态 ----------
 const state = {
   cfg: null,
@@ -470,9 +487,12 @@ async function dlRefresh() {
       const speed = t.speed ? (t.speed / 1048576).toFixed(1) + " MB/s" : "";
       const size = t.total ? fmtSize(t.downloaded) + " / " + fmtSize(t.total) : fmtSize(t.downloaded);
       const thumb = state.dlThumbs[t.filename] ? '<img class="thumb" src="data:image/jpeg;base64,' + state.dlThumbs[t.filename] + '" alt=""/>' : '<span class="thumb thumb-empty"></span>';
+      const errCell = t.error
+        ? "<td class='c-err err-copy' title='点击复制完整报错'>" + esc(t.error) + "</td>"
+        : "<td class='c-err'></td>";
       return '<tr data-fn="' + esc(t.filename) + '" class="' + (selPaths.has(t.filename) ? "sel-row" : "") + '">' +
         "<td class='c-thumb'>" + thumb + "</td><td class='c-file'>" + esc(t.filename) + "</td><td>" + esc(st) + "</td><td>" + esc(prog) + "</td>" +
-        "<td>" + esc(speed) + "</td><td>" + esc(size) + "</td><td class='c-err'>" + esc(t.error || "") + "</td></tr>";
+        "<td>" + esc(speed) + "</td><td>" + esc(size) + "</td>" + errCell + "</tr>";
     }).join("");
     loadDlThumbs(state.dlTasks || []);
     // 下载受限（Early Access/付费）→ 弹窗选择
@@ -2088,10 +2108,12 @@ const SETTING_FIELDS = [
   ["🌐 网络", "proxy_address", "代理地址", "text"],
   ["🌐 网络", "max_concurrent_downloads", "并发下载数", "number"],
   ["🌐 网络", "download_timeout", "下载超时(秒)", "number"],
+  ["🌐 网络", "download_retry", "断流自动重试次数", "number"],
   ["🌐 网络", "hash_threads", "哈希线程数", "number"],
   ["⬇️ 下载", "gen_metadata", "完成后自动生成 json/info", "bool"],
   ["⬇️ 下载", "download_cover", "完成后自动下载封面", "bool"],
   ["⬇️ 下载", "ask_move_after_download", "完成后询问移动分类", "bool"],
+  ["⬇️ 下载", "rename_clean_rules", "文件名清理符号", "select", [["", "不清理"], ["comma", "去逗号（推荐）"], ["comma,paren", "去逗号 + 括号"], ["comma,paren,dash", "去逗号+括号，横线/下划线→空格"]]],
   ["⬇️ 下载", "metadata_format", "metadata 格式", "select", ["sd", "civitai", "both"]],
   ["🌏 翻译", "baidu_appid", "百度翻译 APP ID", "text"],
   ["🌏 翻译", "baidu_key", "百度翻译密钥", "password"],
@@ -2129,6 +2151,8 @@ const SETTING_TIPS = {
   "proxy_address": "代理软件地址，如 127.0.0.1:7897（Clash 默认端口）",
   "max_concurrent_downloads": "同时下载的任务数：越大越快，但占用更多带宽",
   "download_timeout": "单个文件下载无响应超过该秒数判定失败并重试",
+  "download_retry": "连接被掐断（SSL EOF / 超时，代理节点不稳定时常见）自动重试次数：每次从已下载的断点续传，不重下。0 = 不重试",
+  "rename_clean_rules": "下载命名与「改成 C 站名」一键改名时清理符号：ComfyUI 会把文件名里的逗号当成提示词分隔符，导致找不到 lora（如 py,ill,xl 这种名字）。推荐「去逗号」",
   "hash_threads": "计算文件哈希（校验/反向解析用）的线程数",
   "gen_metadata": "下载完成后自动生成 <模型名>.civitai.info / .json 元数据；没有它，模型管理里看不到名称/触发词",
   "download_cover": "下载完成后自动把 C 站预览图保存到模型目录（模型管理显示缩略图用）",

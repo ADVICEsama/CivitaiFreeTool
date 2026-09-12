@@ -10,7 +10,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.1.13"
+APP_VERSION = "2.1.14"
 
 import civitai_api
 import config
@@ -263,6 +263,9 @@ class Api:
                     ver = (version.get("name") or "").strip()
                     if ver:
                         base_name = "%s %s" % (base_name, model_manager.sanitize_filename(ver))
+                    # 按设置清理逗号/括号等符号（防 ComfyUI 提示词解析把逗号当分隔导致找不到 lora）
+                    base_name = model_manager.clean_model_name(
+                        base_name, self.cfg.get("rename_clean_rules")) or base_name
                     fname = base_name + src_ext
                     sd_d = (self.cfg.get("site_domain", "civitai.red") or "civitai.red").strip("/")
                     site_base = sd_d if "://" in sd_d else "https://" + sd_d
@@ -833,6 +836,9 @@ class Api:
             ver = (version.get("name") or "").strip()
             if ver:
                 base_name = "%s %s" % (base_name, ver)
+            # 按设置清理逗号/括号等符号（防 ComfyUI 提示词解析把逗号当分隔导致找不到 lora）
+            base_name = model_manager.clean_model_name(
+                base_name, self.cfg.get("rename_clean_rules")) or base_name
             info = {"source": "civitai", "model_name": model_name or base_name,
                     "modelName": model_name, "versionName": version.get("name", "")}
             if model_id:
@@ -1484,16 +1490,18 @@ class Api:
         return u
 
     def mm_rename(self, paths=None):
-        """重命名为 C 站模型名（后台线程）"""
+        """重命名为 C 站模型名（后台线程）；按设置里的清理规则去掉逗号/括号等符号"""
         rows = [r for r in self.model_rows if r["path"] in (paths or [])] or list(self.model_rows)
         if not rows:
             return {"started": False, "msg": "没有可重命名的模型"}
         self.mm_progress = {"running": True, "total": len(rows), "done": 0, "msg": "", "result": []}
+        _clean = self.cfg.get("rename_clean_rules") or ""
 
         def work():
             for r in rows:
                 try:
-                    _, msgs = model_manager.rename_to_civitai(r["path"], r.get("info") or {})
+                    _, msgs = model_manager.rename_to_civitai(
+                        r["path"], r.get("info") or {}, clean_rules=_clean)
                     self.mm_progress["result"].append({"path": r["path"], "msgs": msgs})
                 except Exception as e:
                     self.mm_progress["result"].append({"path": r["path"], "msgs": [str(e)]})
@@ -1522,7 +1530,8 @@ class Api:
                     if zh and zh != name:
                         meta2 = dict(info)
                         meta2["name"] = zh
-                        model_manager.rename_to_civitai(r["path"], meta2)
+                        model_manager.rename_to_civitai(
+                            r["path"], meta2, clean_rules=self.cfg.get("rename_clean_rules") or "")
                         self.mm_progress["result"].append({"path": r["path"], "ok": True})
                 except Exception:
                     pass

@@ -98,6 +98,36 @@ def sanitize_filename(name):
     return name[:180] or "model"
 
 
+# 模型名清理规则：修掉会破坏 ComfyUI / WebUI 提示词解析的符号
+# （ComfyUI 把逗号当提示词分隔符，"a, b" 会被切成两个 lora 名 → 找不到模型报错）
+_CLEAN_RULES = {
+    "comma": (",，", " "),      # 英文/中文逗号 → 空格
+    "paren": ("()（）[]【】{}", " "),  # 各类括号 → 空格（直接删会把前后词粘在一起）
+    "dash": ("-_", " "),        # 横线/下划线 → 空格
+}
+
+
+def clean_model_name(name, rules=None):
+    """按规则清理模型名中的特殊符号（幂等）。
+
+    rules：字符串（逗号分隔，如 "comma,paren"）或列表；None/空 = 原样返回。
+    清理后若为空则回退原值，避免把名字清没。"""
+    if not name:
+        return name or ""
+    if isinstance(rules, str):
+        rules = [r.strip().lower() for r in rules.split(",") if r.strip()]
+    applied = [r for r in (rules or []) if r in _CLEAN_RULES]
+    if not applied:
+        return name
+    out = name
+    for r in applied:
+        chars, repl = _CLEAN_RULES[r]
+        for ch in chars:
+            out = out.replace(ch, repl)
+    out = re.sub(r"\s{2,}", " ", out).strip(" .-_")
+    return out or name
+
+
 def find_cover(model_path):
     """查找模型封面图（本地优先）：<名>.cover.* / <名>.preview.png / 同名图片 / info.cover"""
     base, _ = os.path.splitext(model_path)
@@ -109,7 +139,7 @@ def find_cover(model_path):
     return None
 
 
-def rename_to_civitai(model_path, meta, dry_run=False, log_cb=None):
+def rename_to_civitai(model_path, meta, dry_run=False, log_cb=None, clean_rules=None):
     """同目录下把模型重命名为 C 站文件名（files 主文件 name，回退模型名），
     并同步改名附属文件（info/json/预览图/示例图/txt 等），返回 (新路径, 消息列表)。
     不移动目录，避免破坏 SD 的模型文件夹结构。"""
@@ -130,6 +160,8 @@ def rename_to_civitai(model_path, meta, dry_run=False, log_cb=None):
     if not new_base:
         return model_path, ["无法确定 C 站文件名，跳过: %s" % os.path.basename(model_path)]
     new_base = sanitize_filename(new_base)
+    # 按设置清理特殊符号（逗号/括号等，防 ComfyUI 提示词解析把逗号当分隔符导致找不到 lora）
+    new_base = clean_model_name(new_base, clean_rules) or new_base
 
     src_base, ext = os.path.splitext(model_path)
     # 去掉 C 站文件名里可能重复的扩展名
