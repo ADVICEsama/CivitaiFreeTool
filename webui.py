@@ -10,7 +10,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.1.19"
+APP_VERSION = "2.1.20"
 
 import civitai_api
 import config
@@ -88,13 +88,16 @@ class Api:
                                         verify=self.cfg.get("ssl_verify", True))
                     except Exception:
                         pass
-            # 3) 预设了「下载目标文件夹」但文件不在那里（如扩展/老任务/HF 流程）→ 自动归位，不再弹窗询问
-            tgt = (self.cfg.get("download_target_dir") or "").strip()
-            if tgt and os.path.isdir(tgt) and os.path.abspath(os.path.dirname(dest)) != os.path.abspath(tgt):
-                try:
-                    self.move_file_to(dest, tgt)
-                except Exception:
-                    pass
+            # 3) 「当前目标」与任务实际落地目录不一致时自动归位（不再弹窗询问）：
+            #    - 没被单独指定过的任务：跟当前全局目标（HF 任务带相对子目录，不丢结构）
+            #    - 单独指定过的任务：以其指定目录为准，这里不动它
+            try:
+                want = self._task_intended_dir(task)
+                if want and os.path.abspath(os.path.dirname(dest)) != os.path.abspath(want):
+                    os.makedirs(want, exist_ok=True)
+                    self.move_file_to(dest, want)
+            except Exception:
+                pass
         except Exception:
             pass
 
@@ -182,6 +185,17 @@ class Api:
             msg += "（顺带移动了 %d 个已完成的文件）" % moved
         return json.dumps({"ok": True, "target": p, "msg": msg, "moved": moved}, ensure_ascii=False)
 
+    def _task_intended_dir(self, task):
+        """任务「应该」落在哪：单独指定过的以指定为准；否则按当前全局目标（HF 任务带相对子目录）"""
+        if (task.info or {}).get("dest_explicit"):
+            return task.dest_dir or ""
+        t = (self.cfg.get("download_target_dir") or "").strip()
+        base = t if (t and os.path.isdir(t)) else (self.cfg.get("download_dir") or "").strip()
+        rel = ((task.info or {}).get("hf_rel") or "").strip().strip("/\\")
+        if rel and base:
+            return os.path.join(base, rel.replace("/", os.sep))
+        return base
+
     def _target_allowed(self, p):
         """目标文件夹是否允许（必须在模型管理目录或默认下载目录内，防误设到别处）"""
         if not p:
@@ -222,6 +236,10 @@ class Api:
                 time.sleep(0.2)
         if os.path.abspath(t.dest_dir or "") == os.path.abspath(p):
             return {"ok": True, "msg": "已在该文件夹"}
+        # 标记为「单独指定」：完成时的自动归位不再把它搬回全局目标
+        if not isinstance(t.info, dict):
+            t.info = {}
+        t.info["dest_explicit"] = True
         if t.status == downloader.ST_DONE:
             src = os.path.join(t.dest_dir or "", t.filename)
             if os.path.exists(src):

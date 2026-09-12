@@ -172,14 +172,19 @@ class Downloader:
                 pass
 
     def _resolve_dest(self, task):
-        """决定任务落地目录：显式指定优先；否则「当前」全局目标 → 默认下载目录。
+        """决定任务落地目录：单独指定过的最优先；否则「当前」全局目标（含 HF 相对子目录）；
+        再退回任务自带目录 → 默认下载目录。
 
-        HF 任务把相对子目录放在 info["hf_rel"]，跟随全局目标拼接。"""
-        if task.dest_dir:
+        注意：老任务（v2.1.18 及以前）的 dest_dir 是入队时烤进去的旧全局目标，
+        没有 dest_explicit 标记，所以按「当前全局目标」走 —— 用户改了目标就跟着改。"""
+        info = task.info or {}
+        if info.get("dest_explicit") and task.dest_dir:
             return task.dest_dir
         t = (self.cfg.get("download_target_dir") or "").strip()
-        base = t if (t and os.path.isdir(t)) else (self.cfg.get("download_dir") or "").strip()
-        rel = ((task.info or {}).get("hf_rel") or "").strip().strip("/\\")
+        base = t if (t and os.path.isdir(t)) else ""
+        if not base:
+            base = (task.dest_dir or "").strip() or (self.cfg.get("download_dir") or "").strip()
+        rel = (info.get("hf_rel") or "").strip().strip("/\\")
         if rel and base:
             return os.path.join(base, rel.replace("/", os.sep))
         return base or os.getcwd()
