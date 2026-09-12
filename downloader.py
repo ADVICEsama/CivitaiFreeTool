@@ -171,6 +171,19 @@ class Downloader:
             except Exception:
                 pass
 
+    def _resolve_dest(self, task):
+        """决定任务落地目录：显式指定优先；否则「当前」全局目标 → 默认下载目录。
+
+        HF 任务把相对子目录放在 info["hf_rel"]，跟随全局目标拼接。"""
+        if task.dest_dir:
+            return task.dest_dir
+        t = (self.cfg.get("download_target_dir") or "").strip()
+        base = t if (t and os.path.isdir(t)) else (self.cfg.get("download_dir") or "").strip()
+        rel = ((task.info or {}).get("hf_rel") or "").strip().strip("/\\")
+        if rel and base:
+            return os.path.join(base, rel.replace("/", os.sep))
+        return base or os.getcwd()
+
     def _worker(self):
         while not self._stop:
             try:
@@ -200,6 +213,9 @@ class Downloader:
         （SSL EOF / 连接超时），单次失败就报错会白扔掉已经下好的几百 MB。
         每次重试都由 _download_once 从 .part 现有大小续传（Range），不重下。
         """
+        # 落地目录在「下载开始这一刻」决定：任务没显式指定时用当前全局目标，
+        # 而不是入队时的旧值 —— 否则用户入队后再选文件夹就不生效（实测踩过）。
+        task.dest_dir = self._resolve_dest(task)
         try:
             attempts = max(0, int(self.cfg.get("download_retry", 5) or 5))
         except Exception:

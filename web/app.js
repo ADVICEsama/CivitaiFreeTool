@@ -548,7 +548,7 @@ async function applyDownloadTarget(p) {
   const r = JSON.parse((await api.call("set_download_target", p)) || "{}");
   if (r.ok) {
     state.cfg.download_target_dir = p || "";
-    setStatus(p ? "下载将直接保存到：" + p : "已恢复为默认下载目录");
+    setStatus(r.msg || (p ? "下载将直接保存到：" + p : "已恢复为默认下载目录"));
     await refreshDlTarget();
   } else {
     setStatus(r.msg || "设置失败");
@@ -657,16 +657,16 @@ async function dlRefresh() {
       const errCell = t.error
         ? "<td class='c-err err-copy' title='点击复制完整报错'>" + esc(t.error) + "</td>"
         : "<td class='c-err'></td>";
-      // 「保存到」列：显示相对模型目录的路径；点一下就能给这一个任务单独换文件夹
+      // 「保存到」列：显示该任务会落在哪（未单独指定时显示全局目标）；点一下可单独换
       const destFull = t.dest_dir || "";
-      let destShow = destFull;
+      const effFull = destFull || (state.cfg ? (state.cfg.download_target_dir || state.cfg.download_dir || "") : "");
       const md = (state.cfg && state.cfg.models_dir) || "";
-      if (md && destFull && destFull.toLowerCase().indexOf(md.toLowerCase()) === 0) {
-        destShow = destFull.slice(md.length).replace(/^[\\/]+/, "");
+      let destShow = effFull;
+      if (md && effFull && effFull.toLowerCase().indexOf(md.toLowerCase()) === 0) {
+        destShow = effFull.slice(md.length).replace(/^[\\/]+/, "");
       }
-      const destCell = destFull
-        ? "<td class='c-dest cell-dest' data-task='" + esc(t.id) + "' title='" + esc(destFull + "\\n点击选择该文件的保存文件夹") + "'>📁 " + esc(destShow || destFull) + "</td>"
-        : "<td class='c-dest cell-dest' data-task='" + esc(t.id) + "' title='点击选择该文件的保存文件夹'>📁 默认</td>";
+      const destTip = (destFull ? destFull : (effFull + "\n（全局目标）")) + "\n点击选择该文件的保存文件夹";
+      const destCell = "<td class='c-dest cell-dest' data-task='" + esc(t.id) + "' title='" + esc(destTip) + "'>📁 " + esc(destShow || effFull || "未设置") + (destFull ? "" : " <span class='dest-def'>默认</span>") + "</td>";
       return '<tr data-fn="' + esc(t.filename) + '" class="' + (selPaths.has(t.filename) ? "sel-row" : "") + '">' +
         "<td class='c-thumb'>" + thumb + "</td><td class='c-file'>" + esc(t.filename) + "</td>" + destCell + "<td>" + esc(st) + "</td><td>" + esc(prog) + "</td>" +
         "<td>" + esc(speed) + "</td><td>" + esc(size) + "</td>" + errCell + "</tr>";

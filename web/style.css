@@ -1286,3 +1286,6 @@ fieldset.form-section[data-collapsed="1"] .fold-btn { transform: rotate(-90deg);
 .c-dest { min-width: 130px; }
 td.cell-dest { cursor: pointer; font-size: 12px; word-break: break-all; }
 td.cell-dest:hover { color: var(--accent, #4da3ff); text-decoration: underline dotted; }
+
+/* 「保存到」列里的“默认”小标 */
+.dest-def { font-size: 10px; color: var(--text-dim); border: 1px solid var(--border); border-radius: 6px; padding: 0 4px; }

@@ -10,7 +10,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.1.18"
+APP_VERSION = "2.1.19"
 
 import civitai_api
 import config
@@ -162,7 +162,25 @@ class Api:
             config.save(self.cfg)
         except Exception:
             pass
-        return json.dumps({"ok": True, "target": p}, ensure_ascii=False)
+        # 顺带把「已完成但落在别处」的任务文件搬过去：用户选文件夹的预期就是文件到那儿去
+        moved = 0
+        if p:
+            for t in list(self.dl.tasks):
+                if t.status != downloader.ST_DONE:
+                    continue
+                if os.path.abspath(t.dest_dir or "") == os.path.abspath(p):
+                    continue
+                src = os.path.join(t.dest_dir or "", t.filename)
+                if os.path.exists(src):
+                    try:
+                        if self.move_file_to(src, p).get("ok"):
+                            moved += 1
+                    except Exception:
+                        pass
+        msg = "下载目标已设为：%s" % (p or "默认下载目录")
+        if moved:
+            msg += "（顺带移动了 %d 个已完成的文件）" % moved
+        return json.dumps({"ok": True, "target": p, "msg": msg, "moved": moved}, ensure_ascii=False)
 
     def _target_allowed(self, p):
         """目标文件夹是否允许（必须在模型管理目录或默认下载目录内，防误设到别处）"""
@@ -191,7 +209,17 @@ class Api:
         if t is None:
             return {"ok": False, "msg": "任务不存在（可能已被移除）"}
         if t.status == downloader.ST_DOWNLOADING:
-            return {"ok": False, "msg": "该任务正在下载：先「暂停选中」再改保存位置"}
+            # 正在下载就自动暂停 → 等下载线程真正停下（_active_ids 清空，避免边写边搬）→ 再改
+            try:
+                self.dl.pause_task(t)
+            except Exception:
+                ev = self.dl._pause_events.get(t.id)
+                if ev:
+                    ev.set()
+            for _ in range(60):
+                if t.id not in self.dl._active_ids:
+                    break
+                time.sleep(0.2)
         if os.path.abspath(t.dest_dir or "") == os.path.abspath(p):
             return {"ok": True, "msg": "已在该文件夹"}
         if t.status == downloader.ST_DONE:
@@ -381,7 +409,7 @@ class Api:
                         pass
                     task = downloader.DownloadTask(
                         url=api.build_download_url(version_id, f.get("id")),
-                        dest_dir=self._dest_dir() or "downloads/models",
+                        dest_dir="",   # 下载开始时才解析落地目录（入队后再换文件夹也生效）
                         filename=fname,
                         expected_sha256=hashes.get("SHA256") or "",
                         info={"modelName": model_name,
@@ -960,7 +988,7 @@ class Api:
             except Exception:
                 pass
             info["meta"] = meta
-            dest_dir = self._dest_dir() or os.getcwd()
+            dest_dir = ""   # 下载开始时才解析落地目录（入队后再换文件夹也生效）
             dl_url = api.build_download_url(version_id, f.get("id")) if version_id else (f.get("downloadUrl") or "")
             if not dl_url:
                 item["msg"] = "无下载链接"
@@ -1479,21 +1507,16 @@ class Api:
     def hf_enqueue(self, repo, rev, paths):
         """把 HuggingFace 文件加入下载队列（保留相对子目录结构）"""
         import downloader
-        base = self._dest_dir() or ""
         n = 0
         for p in (paths or []):
             rel = p.replace("\\", "/")
             dl_url = "https://huggingface.co/%s/resolve/%s/%s" % (repo, rev, rel)
-            dest_dir = os.path.dirname(os.path.join(base, rel)) if base else ""
-            try:
-                os.makedirs(dest_dir, exist_ok=True)
-            except Exception:
-                pass
+            sub = os.path.dirname(rel)
             task = downloader.DownloadTask(
                 url=dl_url,
-                dest_dir=dest_dir,
+                dest_dir="",   # 落地目录到下载开始时按「当前目标 + hf_rel」解析
                 filename=os.path.basename(rel),
-                info={"source": "hf", "repo": repo, "rel_path": rel},
+                info={"source": "hf", "repo": repo, "rel_path": rel, "hf_rel": sub},
             )
             try:
                 self.dl.add_task(task)
