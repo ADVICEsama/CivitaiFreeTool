@@ -1,6 +1,41 @@
-# CivitaiFreeTool 更新日志（v1.5.1 → v2.1.12）
+# CivitaiFreeTool 更新日志（v1.5.1 → v2.1.13）
 
 > 免费 · 全功能 · 无付费墙
+
+---
+
+## 🩺 外部看门狗：进程内自愈为什么救不了、现在怎么救（v2.1.13）
+
+### 复现与根因（py-spy 进程栈转储实测）
+卡死时用 `py-spy dump` 抓栈，现象固定：
+
+| 线程 | 卡点 | 说明 |
+|---|---|---|
+| 主线程 | `pywebview/winforms.py:834` `thread.Join(500)` 循环 | 等 STA 线程建窗，永远等不到 |
+| STA 线程 | `pywebview/edgechromium.py:120` `EnsureCoreWebView2Async` | .NET 互操作卡住不返回 |
+| 内置看门狗线程 | `main_web.py` 的 `time.sleep(2)` 后无法继续 | **GIL 被上面那个 .NET 调用占死** |
+| 桥接/HTTP 线程 | 全部 idle | 同样被 GIL 饿死 → health 超时、CLOSE_WAIT |
+
+结论：WebView2 的 browser/gpu/network/renderer 子进程其实**全部起来了**，卡的是宿主窗口的 WinForms 建窗握手；
+卡住时 pythonnet 的 .NET 互操作把 **GIL 永久占住**，进程内所有 Python 线程一起饿死。
+所以 v2.1.12 的进程内看门狗**连「超时」日志都写不出来**，自动重启从未发生——自愈形同虚设。
+（单实例保护仍然有效：卡死时只有一个实例，不再叠加进程。）
+
+### 修复
+1. **新增独立进程看门狗 `watchdog_ext.py`**（纯 stdlib + ctypes，**绝不导入 pywebview/clr**）：
+   宿主启动 45 秒内没出现可见顶层窗口 → 杀掉宿主整棵进程树（含全部 WebView2 子进程，逐 PID 精确杀，
+   看门狗自己排除在外）→ 重新拉起；再失败 → 再次重启 + 原生提示框给出处理指引；之后保持监控不再重启风暴。
+   进程有自己的 GIL 和线程，宿主再死也影响不到它。
+2. **主程序以 `--watchdog` 参数拉看门狗**：该分支在任何重量级导入**之前**分流（见 `main_web.py` main 开头），
+   保证看门狗进程完全不碰 .NET。
+3. **进程内原来的自动重启已移除**，只保留窗口里程碑日志（它在此死锁下不可靠，留着会与外部狗抢着重启）。
+4. **不误杀**：只在「宿主进程活着但 grace 秒内没有任何可见顶层窗口」时才动手；窗口一旦出现即回到健康态；
+   宿主正常关闭 → 看门狗自行退出，不留残留；PID 复用有进程名校验兜底。
+
+### 📋 日志
+- `%LOCALAPPDATA%\CivitaiFreeToolWeb\startup.log` —— 宿主启动里程碑（含「external watchdog spawned」）
+- `%LOCALAPPDATA%\CivitaiFreeToolWeb\watchdog.log` —— 看门狗判定与动作（healthy / stage0 / stage1 / 退出）
+- `%LOCALAPPDATA%\CivitaiFreeToolWeb\app_pid.txt`、`watchdog_owner.json` —— 二者握手用的状态文件
 
 ---
 

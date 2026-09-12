@@ -10,6 +10,55 @@ import posix_compat
 _mutex_handle = None  # 单实例互斥体句柄（保持存活至进程结束）
 
 
+def _app_dir_log():
+    """日志/状态目录（%LOCALAPPDATA%\\CivitaiFreeToolWeb）"""
+    return os.path.join(os.environ.get("LOCALAPPDATA") or os.path.expanduser("~"),
+                        "CivitaiFreeToolWeb")
+
+
+def _write_app_pid():
+    """把真实实例 PID 写给外部看门狗（必须在单实例检查通过后调用）。
+
+    看门狗靠它找到宿主进程：窗口超时未出现就杀这棵树并重启。"""
+    try:
+        d = _app_dir_log()
+        os.makedirs(d, exist_ok=True)
+        with open(os.path.join(d, "app_pid.txt"), "w", encoding="utf-8") as f:
+            f.write(str(os.getpid()))
+    except Exception:
+        pass
+
+
+def _spawn_external_watchdog():
+    """拉起独立进程看门狗。
+
+    为什么必须独立进程：卡死点在 pywebview/WebView2 建窗的 .NET 互操作里，GIL 被永久占住，
+    进程内所有 Python 线程（含旧版内置看门狗）都会饿死——连日志都写不出来，自愈必然失效。
+    独立进程有自己的 GIL 与线程，不碰 .NET，才能真正做到「超时即杀 + 重启」。"""
+    try:
+        import watchdog_ext
+        if watchdog_ext.watchdog_alive():
+            _startup_log("external watchdog already running, skip spawn")
+            return
+        import subprocess
+        exe = sys.executable
+        if getattr(sys, "frozen", False):
+            args = [exe, "--watchdog", "--app-name", os.path.basename(exe)]
+        else:
+            args = [exe, os.path.abspath(__file__), "--watchdog", "--app-name",
+                    os.path.basename(sys.executable)]
+        flags = 0
+        if posix_compat.IS_WINDOWS:
+            flags = (getattr(subprocess, "DETACHED_PROCESS", 0)
+                     | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0))
+        subprocess.Popen(args, creationflags=flags, close_fds=True,
+                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                         stderr=subprocess.DEVNULL)
+        _startup_log("external watchdog spawned: %s" % " ".join(args))
+    except Exception as e:
+        _startup_log("external watchdog spawn failed: %r" % (e,))
+
+
 def _startup_log(msg):
     """启动里程碑日志（%LOCALAPPDATA%\\CivitaiFreeToolWeb\\startup.log）。
     用于定位「有后台无前台」类启动卡死：写出每个启动步骤，卡在哪一目了然。"""
@@ -182,35 +231,27 @@ def _show_startup_fail_msg():
         pass
 
 
-def _watchdog_startup():
-    """启动看门狗：轮询主窗口是否出现。
-    - 30 秒内出现 → 正常，退出线程；
-    - 超时且未重试过 → 自动重启本程序一次（环境变量防循环）；
-    - 已重试仍超时 → 弹窗给出处理指引，继续保持运行等待。"""
+def _watchdog_log_only():
+    """进程内窗口观察者（**只记录，不重启**）。
+
+    重启职责已交给独立进程看门狗（watchdog_ext）：建窗死锁会把 GIL 占死，
+    本线程连日志都可能写不出来，留在进程内做重启毫无意义。此处仅用于健康时的里程碑记录。"""
     deadline = time.time() + 30
     while time.time() < deadline:
         time.sleep(2)
         if _self_visible_window():
-            _startup_log("watchdog: window visible, ok")
+            _startup_log("in-process observer: window visible, ok")
             return
-    _startup_log("watchdog: window NOT visible after 30s")
-    if os.environ.get("CFT_STARTUP_RETRY") != "1":
-        _startup_log("watchdog: auto-restart once")
-        try:
-            import subprocess
-            env = dict(os.environ)
-            env["CFT_STARTUP_RETRY"] = "1"
-            subprocess.Popen([sys.executable] + sys.argv, env=env)
-            time.sleep(2)
-            os._exit(0)  # 立即让出互斥体，让新进程成为唯一实例
-        except Exception:
-            _show_startup_fail_msg()
-    else:
-        _startup_log("watchdog: retry failed, showing guidance")
-        _show_startup_fail_msg()
+    _startup_log("in-process observer: window NOT visible after 30s (external watchdog owns recovery)")
 
 
 def main():
+    # 外部看门狗模式：必须在**任何重量级导入（pywebview/clr/pythonnet）之前**分流，
+    # 保证看门狗进程完全不碰 .NET（那些东西正是会把 GIL 弄死的元凶）。
+    if "--watchdog" in sys.argv:
+        import watchdog_ext
+        return watchdog_ext.main([a for a in sys.argv[1:] if a != "--watchdog"])
+
     _startup_log("start: begin")
     if not _single_instance():
         print("CivitaiFreeTool 已在运行，本次启动自动退出（已激活已有窗口）", file=sys.stderr)
@@ -224,6 +265,10 @@ def main():
         # 此处无任何需要清理的状态（互斥体句柄由系统在进程退出时释放）。
         os._exit(0)
     _startup_log("single-instance ok")
+    # 单实例确认后才写 PID / 拉看门狗：第二实例（秒退）绝不能覆盖 app_pid.txt，
+    # 否则看门狗会误判宿主已死。
+    _write_app_pid()
+    _spawn_external_watchdog()
 
     import webview
     import webui
@@ -324,9 +369,9 @@ def main():
         if sp:
             start_kwargs["storage_path"] = sp
     _startup_log("create_window ok, storage=%s" % (start_kwargs.get("storage_path") or "default"))
-    # 启动看门狗：30 秒无可见窗口 → 自动重启一次 → 仍失败弹窗指引
+    # 进程内观察者：只记录窗口里程碑（重启已由独立进程看门狗负责——建窗死锁会饿死本线程）
     import threading
-    threading.Thread(target=_watchdog_startup, daemon=True).start()
+    threading.Thread(target=_watchdog_log_only, daemon=True).start()
     webview.start(
         lambda: (time.sleep(0.8), apply_mica(), set_window_icon()),
         debug=False,
