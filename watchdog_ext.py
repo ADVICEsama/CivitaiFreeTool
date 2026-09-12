@@ -335,8 +335,12 @@ def _message(title, text):
 # --------------------------------------------------------------------------
 
 
-def _relaunch(app_name):
-    """重新拉起应用（与自身同 exe；源码模式下用 python + 脚本）"""
+def _relaunch(app_name, browser=False):
+    """重新拉起应用（与自身同 exe；源码模式下用 python + 脚本）
+
+    browser=True：以浏览器模式重启（窗口两次起不来时的兜底：界面改用系统浏览器打开，
+    后端照常运行，不再依赖 WebView2 建窗）。
+    """
     # 先清掉属于本工具的孤儿 WebView2（卡死实例残留，占着存储目录/显卡资源，会拖累新实例启动）
     kill_orphan_webview2()
     override = os.environ.get("CFT_WD_APP_CMD")
@@ -346,6 +350,8 @@ def _relaunch(app_name):
         cmd = [sys.executable]
         if not getattr(sys, "frozen", False):
             cmd.append(os.path.abspath(sys.argv[0]))
+    if browser and "--browser" not in cmd:
+        cmd.append("--browser")
     # 关键：剥掉 PyInstaller 解包目录环境变量，否则新实例会复用旧 _MEI 直接崩溃
     env = clean_env()
     flags = 0
@@ -376,6 +382,7 @@ def run(grace=None, exe_name=None):
     healthy = False
     stage = 0
     msg_shown = False
+    browser_fallback = False     # 切了浏览器模式后不再要求窗口
     deadline = time.time() + grace
     relaunch_until = 0.0
 
@@ -402,6 +409,13 @@ def run(grace=None, exe_name=None):
             nm = _proc_name(pid)
             if nm and nm != app_name and not nm.startswith(app_name.split(".")[0].lower()):
                 _log("pid %s is %s (not our app), ignore" % (pid, nm))
+
+            if browser_fallback:
+                # 已切浏览器模式：没有窗口是正常的，只确认后端还活着
+                if not healthy:
+                    _log("browser fallback: backend alive (pid %s)" % pid)
+                    healthy = True
+                continue
 
             if has_visible_window([pid]) or has_visible_window(_descendants(pid)):
                 if not healthy:
@@ -431,18 +445,19 @@ def run(grace=None, exe_name=None):
                 deadline = time.time() + grace
                 started = time.time()
             elif stage == 1:
-                _log("stage1: still no window (%ss) -> kill tree + relaunch + guidance" % elapsed)
+                _log("stage1: still no window (%ss) -> kill tree + relaunch in BROWSER mode" % elapsed)
                 kill_app_tree(pid)
                 time.sleep(1.0)
-                _relaunch(app_name)
-                _message("CivitaiFreeTool 启动失败",
-                         "窗口启动超时（WebView2 初始化卡住），已自动重启仍失败。\n\n"
-                         "请按以下步骤处理：\n"
-                         "1. 任务管理器结束所有 CivitaiFreeToolWeb.exe 和 msedgewebview2.exe\n"
-                         "2. 关闭正在使用 WebView2 的程序（如游戏串流/搜索类软件）后重试\n"
-                         "3. 若仍失败，重启电脑后再试\n\n"
+                _relaunch(app_name, browser=True)
+                _message("CivitaiFreeTool 窗口启动失败，已切换浏览器模式",
+                         "窗口连续两次启动超时（WebView2 初始化卡住）。\n\n"
+                         "已自动改用「浏览器模式」重启：软件在后台照常运行（下载不受影响），"
+                         "界面稍后会在系统浏览器里打开。\n\n"
+                         "任务栏托盘图标可随时打开界面或退出软件；\n"
+                         "想切回窗口模式：设置 → 界面 → 界面模式。\n\n"
                          "日志：%LOCALAPPDATA%\\CivitaiFreeToolWeb\\（startup.log / watchdog.log）")
                 stage, healthy, msg_shown = 2, False, True
+                browser_fallback = True
                 relaunch_until = time.time() + 120
                 deadline = time.time() + 120
                 started = time.time()

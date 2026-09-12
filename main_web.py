@@ -3,6 +3,7 @@
 用法: python main_web.py  （或打包后 CivitaiFreeToolWeb.exe）"""
 import os
 import sys
+import threading
 import time
 
 import posix_compat
@@ -248,12 +249,141 @@ def _watchdog_log_only():
     _startup_log("in-process observer: window NOT visible after 30s (external watchdog owns recovery)")
 
 
+def _tray_icon(api, url):
+    """浏览器模式：托盘图标（打开界面 / 打开下载文件夹 / 退出软件）"""
+    try:
+        import pystray
+        from PIL import Image
+        try:
+            img = Image.open(os.path.join(_app_dir(), "web", "favicon.ico"))
+        except Exception:
+            img = Image.new("RGBA", (64, 64), (40, 44, 52, 255))
+
+        def _open(icon=None, item=None):
+            try:
+                import webbrowser
+                webbrowser.open(url)
+            except Exception:
+                pass
+
+        def _open_dl(icon=None, item=None):
+            try:
+                d = (api.cfg.get("download_dir") or "").strip()
+                if d and os.path.isdir(d):
+                    os.startfile(d)
+            except Exception:
+                pass
+
+        def _quit(icon=None, item=None):
+            _startup_log("browser mode: tray quit")
+            try:
+                icon.stop()
+            except Exception:
+                pass
+            os._exit(0)
+
+        menu = pystray.Menu(
+            pystray.MenuItem("打开界面", _open, default=True),
+            pystray.MenuItem("打开下载文件夹", _open_dl),
+            pystray.Menu.SEPARATOR,
+            pystray.MenuItem("退出软件", _quit),
+        )
+        icon = pystray.Icon("CivitaiFreeTool", img, "CivitaiFreeTool（浏览器模式运行中）", menu)
+        threading.Thread(target=icon.run, daemon=True).start()
+        _startup_log("browser mode: tray ok")
+    except Exception as e:
+        _startup_log("browser mode: tray failed %r" % (e,))
+
+
+def _watch_page_close(api):
+    """浏览器模式：开着「关页面后自动退出」时，页面心跳消失且没有下载在跑 → 退出"""
+    if not api.cfg.get("exit_when_page_closed", False):
+        return
+    import browser_bridge   # 本地导入：与窗口模式共享同一套桥服务
+    # 时间参数（测试可用环境变量压缩，正式默认：20s 启动宽限 / 8s 静默判定 / 8s 确认）
+    grace = float(os.environ.get("CFT_PAGE_CLOSE_GRACE") or 20)
+    silence = float(os.environ.get("CFT_PAGE_CLOSE_SILENCE") or 8)
+    confirm = float(os.environ.get("CFT_PAGE_CLOSE_CONFIRM") or 8)
+
+    def work():
+        time.sleep(grace)      # 启动宽限：浏览器还在打开、首屏还没发请求
+        idle_since = 0.0
+        while True:
+            time.sleep(1)
+            if browser_bridge.page_alive(silence):
+                idle_since = 0.0
+                continue
+            # 有任务正在下载就先不退（否则等于关页面掐断下载）
+            busy = any(getattr(t, "status", "") == "downloading" for t in api.dl.tasks)
+            if busy:
+                idle_since = 0.0
+                continue
+            if idle_since == 0.0:
+                idle_since = time.time()
+            elif time.time() - idle_since > confirm:
+                _startup_log("browser mode: page closed and idle -> exit")
+                os._exit(0)
+
+    threading.Thread(target=work, daemon=True).start()
+
+
+def _browser_mode():
+    """浏览器模式（A/C 方案）：后端常驻 + 系统浏览器显示界面。
+
+    与窗口模式的唯一区别是「显示器」：界面文件由本机 127.0.0.1 的桥服务提供，
+    前端通过 /api/rpc 调同一套 Api 方法（web/app.js 顶部的 shim）。
+    好处：界面卡死/崩溃不拖死下载任务（刷新或重开页面即可），启动也不再解 63MB 包建窗。
+    """
+    import webbrowser
+    import webui
+    import browser_bridge
+    _startup_log("browser mode: start")
+    if not _single_instance():
+        try:
+            webbrowser.open("http://127.0.0.1:%d/" % browser_bridge.DEFAULT_PORT)
+        except Exception:
+            pass
+        os._exit(0)
+    _startup_log("browser mode: single-instance ok")
+    _write_app_pid()
+    api = webui.Api()
+    web_root = os.path.join(_app_dir(), "web")
+    browser_bridge.set_api(api, web_root)
+    port = browser_bridge.port() or browser_bridge.DEFAULT_PORT
+    url = "http://127.0.0.1:%d/" % port
+    _startup_log("browser mode: ui at %s" % url)
+    if os.environ.get("CFT_NO_BROWSER_OPEN"):
+        _startup_log("browser mode: CFT_NO_BROWSER_OPEN set, skip opening browser")
+    else:
+        try:
+            webbrowser.open(url)
+        except Exception as e:
+            _startup_log("browser mode: open browser failed %r" % (e,))
+    if api.cfg.get("tray_icon", True):
+        _tray_icon(api, url)
+    _watch_page_close(api)
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        _startup_log("browser mode: interrupted, exit")
+
+
 def main():
     # 外部看门狗模式：必须在**任何重量级导入（pywebview/clr/pythonnet）之前**分流，
     # 保证看门狗进程完全不碰 .NET（那些东西正是会把 GIL 弄死的元凶）。
     if "--watchdog" in sys.argv:
         import watchdog_ext
         return watchdog_ext.main([a for a in sys.argv[1:] if a != "--watchdog"])
+
+    # 界面模式路由：设置里选「浏览器」、或命令行 --browser 强制；--window 强制窗口
+    try:
+        import config
+        _cfg = config.load()
+    except Exception:
+        _cfg = {}
+    if ("--browser" in sys.argv) or (_cfg.get("ui_mode") == "browser" and "--window" not in sys.argv):
+        return _browser_mode()
 
     _startup_log("start: begin")
     if not _single_instance():

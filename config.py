@@ -54,7 +54,10 @@ DEFAULTS = {
     "default_view": "waterfall",  # 模型管理默认视图 list / waterfall  # 修改名称按钮默认动作：custom/rename_c/localize
     "rename_clean_rules": "comma,paren",  # 改名/下载命名时清理符号：comma 逗号→空格 / paren 括号删除 / dash 横线下划线→空格
     "confirm_buttons_flip": False,   # 确认弹窗按钮翻转：False=确定左/取消右，True=取消左/确定右
-    "default_page": "models",         # 启动默认页
+    # —— 界面模式（浏览器模式 = 后端常驻 + 系统浏览器显示界面，界面卡死不拖死下载）——
+    "ui_mode": "window",                # window（原生窗口，默认）/ browser（浏览器）
+    "tray_icon": True,                  # 浏览器模式：显示托盘图标（打开界面/退出软件）
+    "exit_when_page_closed": False,     # 浏览器模式：关闭页面后自动退出（有任务在下载时不退）
     "default_page": "models",           # 启动默认页（download/dlmanager/models/reverse/settings）
 }
 

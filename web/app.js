@@ -2,6 +2,36 @@
 "use strict";
 
 // ---------- js_api 封装 ----------
+// ============ 浏览器模式适配（A/C 方案）：把 window.pywebview.api 映射到本地 HTTP RPC ============
+// 后端 browser_bridge 提供 /api/rpc 与界面文件服务；pywebview 窗口模式下这段不生效
+// （那时 window.pywebview 已由 pywebview 注入）。界面出问题不会拖死下载任务——
+// 页面只是"显示器"，后端（exe）独立常驻。
+(function () {
+  if (window.pywebview && window.pywebview.api) return;
+  if (!(location.protocol === "http:" || location.protocol === "https:")) return;
+  window.__browserMode = true;
+  window.pywebview = {
+    api: new Proxy({}, {
+      get: function (_t, name) {
+        if (typeof name !== "string") return undefined;
+        return async function () {
+          const args = Array.prototype.slice.call(arguments);
+          const res = await fetch("/api/rpc", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ method: name, args: args }),
+          });
+          const data = await res.json().catch(function () { return {}; });
+          if (data && data.error) throw new Error(data.error);
+          return data ? data.result : null;
+        };
+      },
+    }),
+  };
+  // 心跳：让后端知道页面还在（设置里的「关页面后自动退出」依赖它）
+  setInterval(function () { fetch("/api/heartbeat").catch(function () {}); }, 2000);
+})();
+
 const api = {
   call(method, ...args) {
     return window.pywebview.api[method](...args);
@@ -2344,6 +2374,9 @@ const SETTING_FIELDS = [
   ["🎨 界面", "default_view", "模型默认视图", "select", [["waterfall", "🖼️ 瀑布流"], ["list", "📋 列表"]]],
   ["🎨 界面", "zebra_rows", "模型列表斑马纹", "bool"],
   ["🎨 界面", "ambient_bg", "顶部氛围动态背景", "bool"],
+  ["🎨 界面", "ui_mode", "界面模式", "select", [["window", "原生窗口（默认）"], ["browser", "浏览器模式（可托盘 / 关页面退）"]]],
+  ["🎨 界面", "tray_icon", "浏览器模式：托盘图标", "bool"],
+  ["🎨 界面", "exit_when_page_closed", "浏览器模式：关页面后自动退出", "bool"],
 ];
 
 // 设置项 hover 说明（鼠标移到标签上显示功能作用）
@@ -2377,6 +2410,9 @@ const SETTING_TIPS = {
   "default_view": "模型管理默认展示方式：瀑布流（大图卡片）或列表（表格）",
   "zebra_rows": "模型列表行间斑马纹，便于横向对齐查看",
   "ambient_bg": "顶部氛围动态背景（渐变光晕）",
+  "ui_mode": "界面显示方式：窗口 = 原生窗口（默认）；浏览器 = 软件在后台跑、界面用系统浏览器打开 —— 界面卡死/崩溃不会拖死下载任务，刷新页面即可恢复（推荐受「启动卡死」困扰时使用）。改完重启软件生效",
+  "tray_icon": "浏览器模式：在托盘显示图标（左键打开界面，右键菜单里有「退出软件」）",
+  "exit_when_page_closed": "浏览器模式：关掉页面且没有任务在下载时，自动退出软件；有下载任务时会继续在后台跑",
   "target_env": "你的模型最终要放进哪个部署环境：WebUI/Forge 用 Lora、Stable-diffusion 目录；ComfyUI 用 loras、checkpoints 目录。整理前必须选择",
   "organize_mode": "整理方式：手动 = 每个模型弹窗让你选文件夹；C 站 tags = 按 C 站分类自动归档（需先反向解析生成 info）；自定义规则 = 按你填的关键词规则归档",
   "organize_rules": "每行一条：关键词1, 关键词2 -> 目标文件夹（如：NoobAI, noob -> NoobAI）",

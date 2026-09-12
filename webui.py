@@ -10,7 +10,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.1.20"
+APP_VERSION = "2.1.21"
 
 import civitai_api
 import config
@@ -31,6 +31,7 @@ class Api:
         self.dl = downloader.Downloader(self.cfg, on_update=self._on_dl_update)
         # 浏览器桥：Chrome 扩展一键下载当前页面（127.0.0.1 本地 HTTP，静默失败）
         browser_bridge.set_download_handler(self.dl_enqueue_url_sync)
+        browser_bridge.set_api(self)     # 浏览器模式：/api/rpc 的方法调用目标
         browser_bridge.start(version=APP_VERSION)
         self._dl_asked_move = set()   # 本次会话已询问过移动的任务 id
         self.lock = threading.Lock()
@@ -141,6 +142,17 @@ class Api:
         if t and os.path.isdir(t):
             return t
         return (self.cfg.get("download_dir") or "").strip()
+
+    def open_in_browser(self):
+        """用系统浏览器打开同一套界面（浏览器模式/窗口模式都可用；窗口模式可当备用显示器）"""
+        try:
+            import webbrowser
+            port = browser_bridge.port() or browser_bridge.DEFAULT_PORT
+            url = "http://127.0.0.1:%d/" % port
+            webbrowser.open(url)
+            return {"ok": True, "msg": "已在浏览器打开：%s" % url}
+        except Exception as e:
+            return {"ok": False, "msg": str(e)[:120]}
 
     def get_download_target(self):
         """当前下载目标文件夹（空 = 默认下载目录）"""
