@@ -11,7 +11,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.1.31"
+APP_VERSION = "2.1.32"
 
 import civitai_api
 import config
@@ -1924,9 +1924,73 @@ class Api:
         except Exception:
             pass
 
+    def _sidecar_brief(self, path):
+        """从侧车文件读出「模型名 / 版本名 / 底模 / 版本日期」（纯本地，不发网络）。
+
+        侧车（.info.json）结构实测：{"name": 模型名, "modelId": ..., "version": {"id","name","baseModel","publishedAt"}}
+        """
+        out = {}
+        try:
+            info_path = model_manager.find_info_file(path)
+        except Exception:
+            info_path = None
+        if not info_path:
+            return out
+        try:
+            with open(info_path, "r", encoding="utf-8") as f:
+                d = json.load(f)
+        except Exception:
+            return out
+        if not isinstance(d, dict):
+            return out
+        ver = d.get("version") if isinstance(d.get("version"), dict) else {}
+        out["model_name"] = str(d.get("name") or d.get("modelName") or "").strip()
+        out["version_name"] = str(ver.get("name") or d.get("versionName") or "").strip()
+        out["base"] = str(ver.get("baseModel") or d.get("baseModel") or "").strip()
+        dt = str(ver.get("publishedAt") or ver.get("createdAt") or "").strip()
+        out["date"] = dt[:10] if dt else ""
+        return out
+
+    def _enrich_upd_records(self):
+        """给旧缓存（缺版本名/模型名）就地补齐——只读侧车，不发网络请求。
+
+        旧版检查结果里只有版本 ID（界面显示「当前版本：2910935」看不懂），这里补成可读的版本名。
+        试过的条目标 _enr=1，避免每次打开都重复读盘。
+        """
+        items = self._updates.get("items") or {}
+        changed = 0
+        for p, it in items.items():
+            if not isinstance(it, dict) or it.get("_enr"):
+                continue
+            sc = self._sidecar_brief(p)
+            if not sc:
+                it["_enr"] = 1        # 没侧车：标记过，别反复读
+                changed += 1
+                continue
+            if not it.get("local_name") and sc.get("version_name"):
+                it["local_name"] = sc["version_name"]; changed += 1
+            if not it.get("model_name") and sc.get("model_name"):
+                it["model_name"] = sc["model_name"]; changed += 1
+            if not it.get("local_base") and sc.get("base"):
+                it["local_base"] = sc["base"]; changed += 1
+            if not it.get("local_date") and sc.get("date"):
+                it["local_date"] = sc["date"]; changed += 1
+            it["_enr"] = 1
+        if changed:
+            self._save_updates(self._updates)
+        return changed
+
     def get_model_updates(self):
-        """缓存的更新检查结果（模型列表挂 ❗ 用）+ 上次检查时间"""
+        """缓存的更新检查结果（模型列表挂 ❗ 用）+ 上次检查时间
+
+        旧缓存会被就地补上「版本名/模型名」（从侧车读，不联网），所以界面直接显示可读的版本名。
+        """
+        try:
+            self._enrich_upd_records()
+        except Exception:
+            pass
         return {"checked_at": int(self._updates.get("checked_at") or 0),
+                "v": int(self._updates.get("v") or 1),
                 "items": self._updates.get("items") or {}}
 
     def get_mm_update_state(self):
@@ -1993,8 +2057,17 @@ class Api:
                                "model_name": (m.get("name") or "").strip(),
                                "checked_at": now, "has_update": False, "other_base": False}
                         if idx < 0:
+                            sc0 = self._sidecar_brief(r["path"])
+                            if sc0.get("version_name"):
+                                rec["local_name"] = sc0["version_name"]
+                            if sc0.get("base"):
+                                rec["local_base"] = sc0["base"]
+                            if sc0.get("date"):
+                                rec["local_date"] = sc0["date"]
+                            if not rec.get("model_name") and sc0.get("model_name"):
+                                rec["model_name"] = sc0["model_name"]
                             rec["unknown"] = True
-                            rec["msg"] = "本地版本不在 C 站列表（无法判定）"
+                            rec["msg"] = "本地版本不在 C 站列表（无法判定；版本信息取自本地文件）"
                             rec["url"] = self._site_url(mid)
                             items[r["path"]] = rec
                             continue

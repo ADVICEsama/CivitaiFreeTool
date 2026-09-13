@@ -1329,5 +1329,8 @@ td.cell-dest:hover { color: var(--accent, #4da3ff); text-decoration: underline d
 .upd-chip > a:hover { background: rgba(127,127,127,.18); }
 .upd-chip .chip-dl { border-left: 1px solid var(--border); font-weight: 700; }
 .upd-chip i { color: var(--text-dim, #999); font-style: normal; font-size: 11px; }
-.upd-acts { flex: 0 0 auto; align-self: center; }
+.upd-acts { flex: 0 0 auto; align-self: center; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.upd-acts .upd-site { font-size: 12px; }
+.upd-id { font-size: 11px; color: var(--text-dim, #999); }
+.upd-note { font-size: 11px; color: var(--text-dim, #999); }
 .upd-empty { font-size: 12px; color: var(--text-dim, #999); padding: 18px; text-align: center; border: 1px dashed var(--border); border-radius: 10px; }

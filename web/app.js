@@ -1544,7 +1544,8 @@ function _updDir(p) { const a = String(p || "").replace(/\\/g, "/").split("/"); 
 function _updRowHtml(x) {
   const it = x.it || {};
   const isUpd = !!it.has_update;
-  const chips = (it.newer_list || []).map((v) =>
+  const newer = it.newer_list || [];
+  const chips = newer.map((v) =>
     '<span class="upd-chip">' +
     '<a href="#" class="chip-go" data-url="' + esc(v.url || "") + '" data-tip="去 C 站看这一版：' + esc(v.name || v.id) + '">' +
     esc(v.name || v.id) + (v.date ? ' <i>' + esc(v.date) + "</i>" : "") + "</a>" +
@@ -1553,6 +1554,24 @@ function _updRowHtml(x) {
   const tag = isUpd
     ? '<span class="upd-tag">❗ 有新版</span>'
     : (it.other_base ? '<span class="upd-tag other">🔀 仅换底模</span>' : '<span class="upd-tag other">✅ 已最新</span>');
+  // 当前版本：显示 C 站上的版本名（侧车补齐）；实在没有名字才退到 ID，且只作灰色小字
+  const curName = it.local_name || "";
+  const curLine = '当前版本：<b>' + esc(curName || "未知") + "</b>" +
+    (it.local_base ? "（" + esc(it.local_base) + "）" : "") +
+    (it.local_date ? " · " + esc(it.local_date) : "") +
+    (!curName && it.local_version
+      ? ' <span class="upd-id" data-tip="C 站版本 ID：' + esc(it.local_version) + "（本地侧车与在售列表里都没有这个名字）\">ID " + esc(it.local_version) + "</span>"
+      : "");
+  // 新版：有 newer_list 就列全部可选版本名；没有（老缓存）也把「同底模最新」的名字直接写在画面上，不用悬停
+  const newLine = isUpd
+    ? (newer.length
+      ? '<div class="upd-t3">更新后可用（同底模，比你的新）：' + chips + "</div>"
+      : '<div class="upd-t3">同底模最新：<b>' + esc(it.latest_name || ("版本 ID " + (it.latest_version || "?"))) + "</b>" +
+        (it.latest_date ? " · " + esc(String(it.latest_date).slice(0, 10)) : "") +
+        ' <span class="upd-note">（点右侧「⬇️ 更新到最新」下载；点一次「⏫ 检查更新」可列出全部可选版本名）</span></div>')
+    : (it.other_base
+      ? '<div class="upd-t3 dim">最新版换了底模：' + esc(it.latest_base || "") + (it.latest_name ? " · " + esc(it.latest_name) : "") + "（不算更新，不会下）</div>"
+      : "");
   return '<div class="upd-row' + (isUpd ? " has-upd" : "") + '" data-path="' + esc(x.path) + '" data-mid="' + esc(it.model_id || "") +
     '" data-mname="' + esc(it.model_name || "") + '">' +
     '<label class="upd-ck">' + (isUpd ? '<input type="checkbox" class="upd-cb" data-path="' + esc(x.path) + '"' +
@@ -1561,17 +1580,15 @@ function _updRowHtml(x) {
     '<div class="upd-main">' +
       '<div class="upd-t1">' + esc(it.model_name || _updBase(x.path)) + tag +
         (it.unknown ? '<span class="upd-tag other" data-tip="' + esc(it.msg || "") + '">⚠️ 无法判定</span>' : "") + "</div>" +
-      '<div class="upd-t2">当前版本：<b>' + esc(it.local_name || it.local_version || "未知") + "</b>" +
-        (it.local_base ? "（" + esc(it.local_base) + "）" : "") + (it.local_date ? " · " + esc(it.local_date) : "") + "</div>" +
-      (isUpd && chips
-        ? '<div class="upd-t3">更新后可用（同底模，比你的新）：' + chips + "</div>"
-        : (it.other_base
-          ? '<div class="upd-t3 dim">最新版换了底模：' + esc(it.latest_base || "") + (it.latest_name ? " · " + esc(it.latest_name) : "") + "（不算更新，不会下）</div>"
-          : "")) +
+      '<div class="upd-t2">' + curLine + "</div>" +
+      newLine +
       '<div class="upd-t4" data-tip="' + esc(x.path) + '">' + esc(_updBase(x.path)) + " ｜ " + esc(_updDir(x.path)) + "</div>" +
     "</div>" +
-    (isUpd ? '<div class="upd-acts"><button class="btn btn-tiny upd-one" data-path="' + esc(x.path) +
-      '" data-tip="下载最新一版：' + esc((it.newer_list && it.newer_list[0] && it.newer_list[0].name) || it.latest_name || "最新版") + '">⬇️ 更新到最新</button></div>' : "") +
+    '<div class="upd-acts">' +
+    (isUpd ? '<button class="btn btn-tiny upd-one" data-path="' + esc(x.path) +
+      '" data-tip="下载最新一版：' + esc(it.latest_name || (newer[0] && newer[0].name) || "最新版") + '">⬇️ 更新到最新</button>' : "") +
+    (it.url ? '<a href="#" class="dd-link upd-site" data-url="' + esc(it.url) + '" data-tip="在浏览器打开这个模型的 C 站页面">🌐 C 站页面</a>' : "") +
+    "</div>" +
     "</div>";
 }
 
@@ -1586,7 +1603,7 @@ function _bindUpdPage(box) {
     if (cb.checked) state.updSel.add(p); else state.updSel.delete(p);
     syncSel();
   }));
-  box.querySelectorAll(".chip-go").forEach((a) => a.addEventListener("click", (e) => {
+  box.querySelectorAll(".chip-go, .upd-site").forEach((a) => a.addEventListener("click", (e) => {
     e.preventDefault();
     if (a.dataset.url) api.call("open_url", a.dataset.url);
   }));
@@ -1703,7 +1720,6 @@ $("#updList").addEventListener("contextmenu", (e) => {
   menu.innerHTML =
     (it.has_update ? '<div class="ctx-item" data-act="upd_dl" data-tip="把这一版加入下载队列（下到旧版所在文件夹）">⬇️ 更新到最新版</div>' : "") +
     (it.has_update ? '<div class="ctx-item" data-act="upd_wl_this" data-tip="不再提醒「这个文件」的更新（按模型记入白名单）">🚫 不再提醒更新（加入白名单）</div>' : "") +
-    (it.url ? '<div class="ctx-item" data-act="upd_site" data-tip="在浏览器打开新版页面">🌐 去 C 站看新版</div>' : "") +
     '<div class="ctx-item" data-act="upd_folder" data-tip="打开资源管理器并选中该文件">📂 打开所在文件夹</div>' +
     '<div class="ctx-item" data-act="upd_copy" data-tip="复制文件完整路径">📋 复制文件路径</div>';
   menu.style.display = "block";
