@@ -34,11 +34,14 @@ from ctypes import wintypes
 
 IS_WINDOWS = sys.platform.startswith("win")
 
-GRACE_DEFAULT = 10  # 秒：启动后多久没有可见窗口就判定为卡死
-# 实测（2026-09-13 日志）：本机冷启动出窗口要 6.0 秒，5 秒判定会把正常启动误杀
-# （日志实锤：no window after 6s -> kill 掉的其实是正在启动的实例）；10 秒 + 有进展宽限更稳
-PROGRESS_GRACE = 3  # 秒：启动日志仍在更新（有进展）就再宽限这么久，最多 2 次，避免误杀慢性启动
-RETRY_GRACE = 12    # 秒：窗口模式重试时给的时间（慢性启动的第二次基本能起来）
+GRACE_DEFAULT = 20  # 秒：启动后多久没有可见窗口就判定为卡死
+# 实测（2026-09-13 多轮日志）：本机冷启动出窗口 6.0s / 8.0s / 10s+ 都有过
+# （一个 66MB onefile 解包 + 杀软扫描 + WebView2 初始化），判定太短会把正常启动误杀
+# （日志实锤：no window after 6s/10s -> kill 掉的其实是正在启动的实例）。
+# 策略：20 秒起步 + 只要启动日志还在更新就继续宽限（最多 4 次），真正的卡死不再写日志，很快会被杀。
+PROGRESS_GRACE = 5  # 秒：启动日志在这个时间内更新过 = 有进展 → 宽限 MAX_EXTENDS 次
+MAX_EXTENDS = 4     # 有进展最多宽限 4 次（+20s），配合启动宽限，最坏约 40s
+RETRY_GRACE = 15    # 秒：窗口模式重试给的时间（重试仍要重新解包 + 建 WebView2，不能太短）
 
 # --------------------------------------------------------------------------
 # 路径 / 日志
@@ -454,7 +457,7 @@ def run(grace=None, exe_name=None):
 
             # 宽限保护：启动日志刚刚还在更新（应用在正常推进）就再等等，最多 2 次，
             # 避免把「慢一点但没问题」的启动误杀（真正的卡死不会再有新日志行）
-            if progresses < 2 and _app_progressing():
+            if progresses < MAX_EXTENDS and _app_progressing():
                 progresses += 1
                 deadline = time.time() + PROGRESS_GRACE
                 _log("still starting (log updated recently), extend deadline #%d" % progresses)
