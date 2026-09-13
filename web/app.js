@@ -1548,17 +1548,20 @@ async function showUpdateResults(items) {
       (it.behind > 1 ? " · 落后 " + it.behind + " 个版本" : "") +
       (it.unknown ? esc(it.msg || "") : "") + "</div>" +
       (it.url ? '<a href="#" class="dd-link" data-url="' + esc(it.url) + '">🔗 去 C 站看新版</a>' : "") +
+      (it.has_update ? ' <button class="btn btn-tiny upd-one" data-path="' + esc(r[0]) + '">⬇️ 更新</button>' : "") +
       "</div></div>";
   };
   box.innerHTML =
     '<div class="rd-title">⏫ 检查更新：' + rows.length + " 个模型有同底模新版" + (others.length ? "（另有 " + others.length + " 个只换了底模）" : "") + "</div>" +
     '<div class="dd-hint">只列出「<b>和你所用底模相同</b>」的新版本；换了底模的（如 Anima→Krea）单列在下面，<b>不算更新</b>。' +
-    "点 🔗 去 C 站看新版；模型列表里这些条目已标 ❗，可用「❗ 有更新」筛选。</div>" +
+    "点 🔗 去 C 站看新版，或直接点「⬇️ 更新」把新版加入下载队列；模型列表里这些条目已标 ❗，可用「❗ 有更新」筛选。</div>" +
     '<div style="max-height:360px;overflow:auto">' +
     rows.map(rowHtml).join("") +
     (others.length ? '<div class="dedup-sec">🔀 最新版换了底模（仅供参考，未计入更新）</div>' + others.map(rowHtml).join("") : "") +
     "</div>" +
-    '<div class="rd-actions"><button class="btn" id="updClose">关闭</button>' +
+    '<div class="rd-actions">' +
+    (rows.length ? '<button class="btn btn-primary" id="updAll">⬇️ 全部更新（' + rows.length + "）</button>" : "") +
+    '<button class="btn" id="updClose">关闭</button>' +
     '<button class="btn" id="updFilter">❗ 只看这些模型</button></div>';
   document.body.appendChild(dlg);
   document.body.appendChild(box);
@@ -1578,9 +1581,54 @@ async function showUpdateResults(items) {
     e.stopPropagation();
     api.call("open_url", a.dataset.url);
   }));
+  const allBtn = $("#updAll", box);
+  if (allBtn) allBtn.addEventListener("click", async () => { close(); await mmUpdateFlow(null); });
+  box.querySelectorAll(".upd-one").forEach((b) => b.addEventListener("click", async () => {
+    b.disabled = true;
+    b.textContent = "…";
+    await mmUpdateFlow([b.dataset.path]);
+    b.textContent = "✅ 已加入";
+    b.disabled = false;
+  }));
   loadDdThumbs(box, rows.concat(others).map((r) => r[0]));
 }
 if ($("#mmCheckUpd")) $("#mmCheckUpd").addEventListener("click", () => mmCheckUpdatesFlow(false));
+
+// ===== 更新选中：把勾选（或结果窗里指定）的「有新版」模型加入下载队列 =====
+async function mmUpdateFlow(paths) {
+  const r = await api.call("mm_update_models", paths && paths.length ? paths : null);
+  if (!r || !r.ok) { setStatus((r && r.msg) || "没有可更新的模型"); return false; }
+  setStatus(r.msg || "开始更新…");
+  const timer = setInterval(async () => {
+    const p = await api.call("get_mm_progress");
+    if (!p) return;
+    if (p.running) { setStatus("更新中 " + (p.done || 0) + "/" + (p.total || 0) + (p.msg ? " · " + p.msg : "")); return; }
+    clearInterval(timer);
+    setStatus(p.msg || "更新完成");
+    if (Array.isArray(p.result) && p.result.length) {
+      confirmBoxRaw("<div style='font-size:12px;line-height:1.9'>" +
+        p.result.map((f) => "· <b>" + esc(f.file) + "</b>：" + esc(f.msg)).join("<br/>") +
+        "</div>", "⚠️ 这些没能加入下载队列");
+    }
+  }, 800);
+  return true;
+}
+async function mmUpdateSelectedFlow() {
+  const paths = state.models.filter((r) => state.mmChecked.has(r.path) && r.upd && r.upd.has_update).map((r) => r.path);
+  if (!paths.length) {
+    setStatus("没有勾选「有新版」的模型：先点「⏫ 检查更新」，再用「❗ 有更新」筛出来并全选");
+    return;
+  }
+  const ok = await confirmBoxRaw(
+    "<div style='font-size:13px;line-height:1.8'>将下载以下 <b>" + paths.length + "</b> 个模型的<b>新版</b>：" +
+    "<div style='max-height:200px;overflow:auto;margin-top:6px'>" +
+    paths.map((p) => "· " + esc(p.replace(/\\/g, "/").split("/").pop())).join("<br/>") + "</div>" +
+    "<div style='font-size:12px;color:var(--text-dim);margin-top:6px'>新版会下到旧版所在文件夹；<b>旧版文件不会被动</b>（要清理可用「🧬 查重」的删旧留新）。</div></div>",
+    "⬇️ 更新选中的 " + paths.length + " 个模型");
+  if (!ok) return;
+  await mmUpdateFlow(paths);
+}
+if ($("#mmUpdDl")) $("#mmUpdDl").addEventListener("click", mmUpdateSelectedFlow);
 // 点卡片/列表里的 ❗ → 打开 C 站新版页面（不会下载）
 document.addEventListener("click", (e) => {
   const a = e.target.closest && e.target.closest(".ms-upd, .mm-upd");

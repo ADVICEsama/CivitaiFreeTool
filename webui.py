@@ -11,7 +11,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.1.29"
+APP_VERSION = "2.1.30"
 
 import civitai_api
 import config
@@ -991,8 +991,11 @@ class Api:
         st = getattr(self, "_img_dl_state", None)
         return json.dumps(st or {"total": 0, "done": 0})
 
-    def _enqueue_one(self, url):
-        """同步解析单条 URL 并入队（忽略付费状态）。返回 item dict：{url, ok, msg, task_id?}"""
+    def _enqueue_one(self, url, dest_dir=None):
+        """同步解析单条 URL 并入队（忽略付费状态）。返回 item dict：{url, ok, msg, task_id?}
+
+        dest_dir 非空时表示「指定落点」（更新下载：新版直接下到旧版所在文件夹，且不被全局目标搬走）。
+        """
         api = self.api
         u = (url or "").strip()
         item = {"url": u, "ok": False, "msg": ""}
@@ -1044,7 +1047,13 @@ class Api:
             except Exception:
                 pass
             info["meta"] = meta
-            dest_dir = ""   # 下载开始时才解析落地目录（入队后再换文件夹也生效）
+            dest_dir = (dest_dir or "").strip()   # 空 = 下载开始时才解析落地目录（入队后再换文件夹也生效）
+            if dest_dir:
+                info["dest_explicit"] = True      # 指定落点的（更新下载）不被全局目标/自动归位搬走
+                try:
+                    os.makedirs(dest_dir, exist_ok=True)
+                except Exception:
+                    pass
             dl_url = api.build_download_url(version_id, f.get("id")) if version_id else (f.get("downloadUrl") or "")
             if not dl_url:
                 item["msg"] = "无下载链接"
@@ -1940,6 +1949,52 @@ class Api:
 
         threading.Thread(target=work, daemon=True).start()
         return {"started": True, "total": len(groups)}
+
+    def mm_update_models(self, paths=None):
+        """把「有新版」的模型加入下载队列（下载新版；默认落在旧版所在文件夹，不被全局目标搬走）。
+
+        paths=None 表示全部有更新的；传入 paths 则只处理勾选的。进 mm_progress 供 UI 显示进度。
+        """
+        items = self._updates.get("items") or {}
+        picked = []
+        for r in self.model_rows:
+            p = r.get("path") or ""
+            if paths and p not in paths:
+                continue
+            it = items.get(p) or {}
+            if it.get("has_update"):
+                picked.append((p, it))
+        if not picked:
+            return {"ok": False, "msg": "没有可更新的模型：先点「⏫ 检查更新」，再勾选带 ❗ 的条目（或在结果窗里点「全部更新」）"}
+        if self.mm_progress.get("running"):
+            return {"ok": False, "msg": "有其它任务正在执行，稍后再试"}
+        self.mm_progress = {"running": True, "total": len(picked), "done": 0, "msg": "开始更新…", "result": None}
+        st = self.mm_progress
+
+        def work():
+            okn, fail, fails = 0, 0, []
+            for i, (p, it) in enumerate(picked):
+                url = it.get("url") or self._site_url(it.get("model_id"), it.get("latest_version"))
+                try:
+                    item = self._enqueue_one(url, dest_dir=os.path.dirname(p))
+                    if item.get("ok"):
+                        okn += 1
+                    else:
+                        fail += 1
+                        fails.append({"file": os.path.basename(p), "msg": item.get("msg") or "入队失败"})
+                except Exception as e:
+                    fail += 1
+                    fails.append({"file": os.path.basename(p), "msg": str(e)[:120]})
+                st["done"] = i + 1
+                st["msg"] = "更新中 %d/%d（已入队 %d）" % (i + 1, len(picked), okn)
+            st["result"] = fails
+            st["running"] = False
+            st["msg"] = ("更新完成：%d 个新版已加入下载队列%s（默认下到旧版所在文件夹，进度看「下载管理」）"
+                         % (okn, ("，%d 个失败" % fail) if fail else ""))
+
+        threading.Thread(target=work, daemon=True).start()
+        return {"ok": True, "started": True, "total": len(picked),
+                "msg": "开始更新 %d 个模型（下载新版到旧版所在文件夹）" % len(picked)}
 
     def _site_url(self, model_id, version_id=None):
         d = (self.cfg.get("site_domain", "civitai.red") or "civitai.red").strip("/")
