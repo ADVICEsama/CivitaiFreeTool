@@ -11,7 +11,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.1.25"
+APP_VERSION = "2.1.26"
 
 import civitai_api
 import config
@@ -51,6 +51,10 @@ class Api:
         self.model_rows = []
         self.mm_checked_paths = []
         self.mm_progress = {"running": False, "total": 0, "done": 0, "msg": "", "result": None}
+        # 更新检测状态 + 缓存（model_updates.json：{path: {...}}）
+        self._mm_upd_state = {"running": False, "total": 0, "done": 0, "newer": 0, "other_base": 0,
+                              "msg": "", "checked_at": 0, "items": {}}
+        self._updates = self._load_updates()
         self.mm_scan_state = {"running": False, "rows": [], "msg": ""}
         self.rp_rows = []
         self._rp_state = {"running": False, "paused": False, "done": 0, "total": 0}
@@ -1810,6 +1814,132 @@ class Api:
 
         threading.Thread(target=work, daemon=True).start()
         return {"started": True}
+
+    # ---------------- 更新检测（只提示，绝不自动下载）----------------
+    def _updates_path(self):
+        return os.path.join(config.APP_DIR, "model_updates.json")
+
+    def _load_updates(self):
+        try:
+            with open(self._updates_path(), "r", encoding="utf-8") as f:
+                d = json.load(f)
+            if isinstance(d, dict) and isinstance(d.get("items"), dict):
+                return d
+        except Exception:
+            pass
+        return {"checked_at": 0, "items": {}}
+
+    def _save_updates(self, data):
+        try:
+            with open(self._updates_path(), "w", encoding="utf-8", newline="") as f:
+                json.dump(data, f, ensure_ascii=False, indent=1)
+        except Exception:
+            pass
+
+    def get_model_updates(self):
+        """缓存的更新检查结果（模型列表挂 ❗ 用）+ 上次检查时间"""
+        return {"checked_at": int(self._updates.get("checked_at") or 0),
+                "items": self._updates.get("items") or {}}
+
+    def get_mm_update_state(self):
+        return self._mm_upd_state
+
+    def mm_check_updates(self, force=False):
+        """检查更新（后台，不会自动下载）。
+
+        规则：以本地版本所在底模为准 —— **同底模有更新**才算「有新版」；
+        最新版换了底模（如 Anima→Krea）只记为「其它底模版本」，不算更新、不打扰。
+        结果写 model_updates.json 缓存，默认 24 小时内不重复查（force=True 强制）。
+        """
+        if self._mm_upd_state.get("running"):
+            return {"started": False, "msg": "正在检查中…"}
+        rows = [r for r in self.model_rows if r.get("modelId") and r.get("verId")]
+        if not rows:
+            return {"started": False, "msg": "没有可检查的模型（需要先扫描；缺侧车信息的可先跑反向解析）"}
+        now = int(time.time())
+        fresh = int(self._updates.get("checked_at") or 0)
+        if (not force) and self._updates.get("items") and (now - fresh) < 24 * 3600:
+            return {"started": False, "recent": True,
+                    "msg": "24 小时内已检查过（%s）；要重查请点「强制刷新」" % time.strftime("%m-%d %H:%M", time.localtime(fresh))}
+        groups = {}
+        for r in rows:
+            groups.setdefault(str(r.get("modelId")), []).append(r)
+        self._mm_upd_state = {"running": True, "total": len(groups), "done": 0, "msg": "检查更新…",
+                              "newer": 0, "other_base": 0, "checked_at": now, "items": {}}
+
+        def work():
+            api = getattr(self, "api", None)
+            items, newer, other = {}, 0, 0
+            fails = 0
+            for i, (mid, rs) in enumerate(groups.items()):
+                if self._mm_upd_state.get("_stop"):
+                    break
+                m = None
+                try:
+                    m = api.get_model(mid) if api else None
+                except Exception:
+                    fails += 1
+                    if fails >= 5:
+                        self._mm_upd_state["msg"] = "连续请求失败，已中止（网络或接口问题）"
+                        break
+                    time.sleep(0.5)
+                    continue
+                vs = (m or {}).get("modelVersions") or []
+                if vs:
+                    for r in rs:
+                        lv = str(r.get("verId") or "")
+                        lb = (r.get("base") or "").strip()
+                        idx = -1
+                        for k, v in enumerate(vs):
+                            if str(v.get("id")) == lv:
+                                idx = k
+                                break
+                        rec = {"model_id": mid, "local_version": lv, "local_base": lb,
+                               "checked_at": now, "has_update": False, "other_base": False}
+                        if idx < 0:
+                            rec["unknown"] = True
+                            rec["msg"] = "本地版本不在 C 站列表（无法判定）"
+                            rec["url"] = self._site_url(mid)
+                            items[r["path"]] = rec
+                            continue
+                        if not lb:
+                            lb = (vs[idx].get("baseModel") or "").strip()
+                            rec["local_base"] = lb
+                        same = [v for v in vs[:idx] if (v.get("baseModel") or "").strip() == lb]
+                        if same:
+                            nv = same[0]                     # 最新的同底模版本
+                            rec.update({"has_update": True, "latest_version": str(nv.get("id")),
+                                        "latest_name": nv.get("name") or "", "latest_base": (nv.get("baseModel") or lb),
+                                        "latest_date": nv.get("publishedAt") or nv.get("createdAt") or "",
+                                        "behind": len(same), "url": self._site_url(mid, nv.get("id"))})
+                            newer += 1
+                        else:
+                            top = vs[0]
+                            if str(top.get("id")) != lv:
+                                rec.update({"other_base": True, "latest_version": str(top.get("id")),
+                                            "latest_name": top.get("name") or "",
+                                            "latest_base": (top.get("baseModel") or ""),
+                                            "latest_date": top.get("publishedAt") or top.get("createdAt") or "",
+                                            "url": self._site_url(mid, top.get("id"))})
+                                other += 1
+                            else:
+                                rec["url"] = self._site_url(mid, lv)   # 已是最新
+                        items[r["path"]] = rec
+                self._mm_upd_state["done"] = i + 1
+                self._mm_upd_state["newer"] = newer
+                self._mm_upd_state["other_base"] = other
+                time.sleep(0.35)
+            self._updates = {"checked_at": now, "items": items}
+            self._save_updates(self._updates)
+            self._mm_upd_state.update({"running": False, "items": items, "newer": newer, "other_base": other})
+            if newer or other:
+                self._mm_upd_state["msg"] = ("检查完成：%d 个模型有同底模更新%s"
+                                             % (newer, ("；另有 %d 个只换了底模（不算更新）" % other) if other else ""))
+            else:
+                self._mm_upd_state["msg"] = "检查完成：没有发现有更新的模型 ✅"
+
+        threading.Thread(target=work, daemon=True).start()
+        return {"started": True, "total": len(groups)}
 
     def _site_url(self, model_id, version_id=None):
         d = (self.cfg.get("site_domain", "civitai.red") or "civitai.red").strip("/")

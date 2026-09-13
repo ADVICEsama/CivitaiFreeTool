@@ -1281,6 +1281,14 @@ fieldset.form-section[data-collapsed="1"] .fold-btn { transform: rotate(-90deg);
 .dd-link { color: var(--primary, #0a84ff); text-decoration: none; font-size: 12px; }
 .dd-link:hover { text-decoration: underline; }
 
+/* ===== 更新检测徽标（卡片右上角 ❗ / 列表名前的 ❗）===== */
+.ms-upd { position: absolute; top: 6px; right: 8px; z-index: 3; font-size: 15px; line-height: 1;
+  padding: 2px 5px; border-radius: 8px; text-decoration: none; background: rgba(255, 170, 0, .22);
+  border: 1px solid rgba(255, 170, 0, .55); }
+.ms-upd:hover { background: rgba(255, 170, 0, .38); }
+.mm-upd { text-decoration: none; font-size: 13px; margin-right: 4px; }
+#mmUpdOnly.active { background: rgba(255, 170, 0, .25); border-color: rgba(255, 170, 0, .6); }
+
 /* ===== 设置里「下载目标文件夹」选择器 ===== */
 .dir-pick { display: flex; gap: 6px; align-items: center; }
 .dir-pick .input { flex: 1; }

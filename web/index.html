@@ -87,7 +87,8 @@
         <button class="btn btn-primary" id="mmScan" data-tip="扫描所有模型管理目录，发现模型并读取元数据/封面">🔍 扫描模型</button>
         <button class="btn" id="mmRefresh" data-tip="重新扫描（不读元数据，只刷新列表）">🔄 刷新</button>
         <button class="btn" id="mmVerify" data-tip="计算文件哈希并与 C 站比对，校验文件是否完整">✅ 校验完整性</button>
-        <button class="btn" id="mmDedupe" data-tip="按 SHA256 查找重复模型（同一文件放了多份），可勾选把多余的移入回收站">🧬 查重</button>
+        <button class="btn" id="mmDedupe" data-tip="按 SHA256 查找重复模型（同一文件放了多份）+ 同一模型的新旧版本，可勾选把多余的移入回收站">🧬 查重</button>
+        <button class="btn" id="mmCheckUpd" data-tip="检查更新：对比 C 站，找出同底模有新版的模型（不会自动下载）。有更新的卡片右上角出现 ❗，点击可去 C 站看新版">⏫ 检查更新</button>
         <span class="btn-group" id="mmRenameGroup">
           <button class="btn" id="mmRenameMain" data-tip="改文件名：自定义 / 改成 C 站模型名 / 翻译成中文">✏️ 改名</button>
           <div class="submenu" id="mmRenameSub">
@@ -113,6 +114,7 @@
       <div class="tool-row">
         <input id="mmFilter" class="input" placeholder="筛选：文件名 / C站名 / 路径"/>
         <button class="btn" id="mmFilterClear">清除</button>
+        <button class="btn" id="mmUpdOnly" data-tip="只看有更新的模型（先点「⏫ 检查更新」生成结果）">❗ 有更新</button>
         <button class="btn" id="mmSelAll">全选</button>
         <button class="btn" id="mmSelNone">清除勾选</button>
         <button class="btn" id="mmSelInv">反选</button>

@@ -176,6 +176,7 @@ const state = {
   mmChecked: new Set(),
   mmSel: new Set(),
   mmSort: { col: null, rev: false },
+  mmUpdOnly: false,          // 只看有更新的模型（更新检测筛选）
   mmLastSel: -1,
   mmView: "list",
   rpRunning: false,
@@ -1038,6 +1039,10 @@ function pollMmScan() {
       state.display = state.models.slice();
       state.mmChecked.clear();
       state.mmSort = { col: null, rev: false };
+      try {
+        const u = await api.call("get_model_updates");   // 缓存的更新检测结果 → 卡片 ❗
+        if (u && u.items) applyUpdatesToRows(u.items);
+      } catch (e) { /* 忽略 */ }
       renderMm();
       setStatus(s.msg || "扫描完成：" + state.models.length + " 个模型");
       $("#mmCount").textContent = state.models.length + " 个";
@@ -1074,7 +1079,7 @@ function renderMm() {
     return '<tr data-idx="' + i + '" data-path="' + esc(r.path) + '" class="' + (state.mmSel.has(r.path) ? "sel-row" : "") + '">' +
       '<td class="cell-sel">' + (state.mmChecked.has(r.path) ? "✅" : "⬜") + "</td>" +
       '<td class="c-thumb"><img data-idx="' + i + '" data-path="' + esc(r.path) + '" class="thumb" alt=""/></td>' +
-      "<td class='c-name'>" + esc(r.name) + "</td>" +
+      "<td class='c-name'>" + (r.upd && r.upd.has_update ? '<a href="#" class="mm-upd" data-url="' + esc(r.upd.url || "") + '" title="' + esc(updTip(r.upd)) + '">❗</a> ' : "") + esc(r.name) + "</td>" +
       "<td class='c-name'>" + esc(r.civitai_name || "-") + "</td>" +
       "<td>" + esc(r.type || "-") + "</td><td>" + esc(r.base || "-") + "</td>" +
       "<td class='c-ver'>" + esc(r.ver || "-") + "</td>" +
@@ -1225,6 +1230,7 @@ function renderMasonry(rows) {
     const checked = state.mmChecked.has(r.path) ? "checked" : "";
     return '<div class="ms-card' + (checked ? " checked" : "") + '" data-idx="' + i + '" data-path="' + esc(r.path) + '">' +
       '<span class="ms-check">' + (checked ? "✅" : "⬜") + "</span>" +
+      (r.upd && r.upd.has_update ? '<a href="#" class="ms-upd" data-url="' + esc(r.upd.url || "") + '" title="' + esc(updTip(r.upd)) + '">❗</a>' : "") +
       '<div class="ms-img-wrap"><img class="ms-img" data-idx="' + i + '" data-path="' + esc(r.path) + '" alt=""/></div>' +
       '<div class="ms-name">' + esc(short(r.name, 26)) + "</div>" +
       '<div class="ms-meta">' + esc(r.type || "-") + (r.ver ? " · " + esc(short(r.ver, 18)) : "") + "</div>" +
@@ -1372,18 +1378,88 @@ $("#mmTable tbody").addEventListener("click", (e) => {
 
 // 筛选
 let mmFilterTimer = null;
-$("#mmFilter").addEventListener("input", () => {
-  clearTimeout(mmFilterTimer);
-  mmFilterTimer = setTimeout(() => {
-    const kw = $("#mmFilter").value.trim().toLowerCase();
-    state.display = kw ? state.models.filter((r) =>
+// 统一过滤：关键词 + 「❗只看有更新」
+function applyMmFilter() {
+  const kw = $("#mmFilter").value.trim().toLowerCase();
+  let rows = state.models;
+  if (state.mmUpdOnly) rows = rows.filter((r) => r.upd && r.upd.has_update);
+  if (kw) {
+    rows = rows.filter((r) =>
       (r.name || "").toLowerCase().includes(kw) ||
       (r.civitai_name || "").toLowerCase().includes(kw) ||
-      (r.path || "").toLowerCase().includes(kw)) : state.models.slice();
-    renderMm();
-  }, 200);
+      (r.path || "").toLowerCase().includes(kw));
+  }
+  state.display = rows.slice();
+  renderMm();
+  if (state.mmUpdOnly) setStatus("筛选：有更新的模型 " + state.display.length + " 个（点「❗有更新」可取消）");
+}
+$("#mmFilter").addEventListener("input", () => {
+  clearTimeout(mmFilterTimer);
+  mmFilterTimer = setTimeout(applyMmFilter, 200);
 });
-$("#mmFilterClear").addEventListener("click", () => { $("#mmFilter").value = ""; state.display = state.models.slice(); renderMm(); });
+$("#mmFilterClear").addEventListener("click", () => { $("#mmFilter").value = ""; applyMmFilter(); });
+if ($("#mmUpdOnly")) $("#mmUpdOnly").addEventListener("click", () => {
+  state.mmUpdOnly = !state.mmUpdOnly;
+  $("#mmUpdOnly").classList.toggle("active", !!state.mmUpdOnly);
+  applyMmFilter();
+});
+
+// ===== 更新检测：按钮 + 徽标 =====
+function updTip(u) {
+  if (!u) return "";
+  const parts = ["有新版"];
+  if (u.latest_name) parts.push(u.latest_name);
+  if (u.latest_base) parts.push("（" + u.latest_base + "）");
+  if (u.behind > 1) parts.push("· 落后 " + u.behind + " 个版本");
+  parts.push("· 点击去 C 站看新版（不会自动下载）");
+  return parts.join(" ");
+}
+function applyUpdatesToRows(items) {
+  if (!items) return;
+  for (const r of state.models) {
+    const it = items[r.path];
+    r.upd = it || null;
+  }
+}
+async function mmCheckUpdatesFlow(force) {
+  const r = await api.call("mm_check_updates", !!force);
+  if (!r || !r.started) {
+    if (r && r.recent) {
+      const ok = await confirmBox(r.msg + "<br/><br/>要现在强制重新检查一遍吗？<br/>（约 200 个模型，需要 1~2 分钟）");
+      if (ok) return mmCheckUpdatesFlow(true);
+    } else {
+      setStatus((r && r.msg) || "检查更新未开始");
+    }
+    return;
+  }
+  setStatus("检查更新中 0/" + (r.total || "?") + " …");
+  const timer = setInterval(async () => {
+    const p = await api.call("get_mm_update_state");
+    if (!p) return;
+    if (p.running) {
+      setStatus("检查更新中 " + (p.done || 0) + "/" + (p.total || 0) + " · 已发现 " + (p.newer || 0) + " 个有更新");
+      return;
+    }
+    clearInterval(timer);
+    setStatus(p.msg || "检查完成");
+    try {
+      const u = await api.call("get_model_updates");
+      if (u && u.items) { applyUpdatesToRows(u.items); if (state.models.length) applyMmFilter(); }
+    } catch (e) { /* 忽略 */ }
+  }, 800);
+}
+if ($("#mmCheckUpd")) $("#mmCheckUpd").addEventListener("click", () => mmCheckUpdatesFlow(false));
+// 点卡片/列表里的 ❗ → 打开 C 站新版页面（不会下载）
+document.addEventListener("click", (e) => {
+  const a = e.target.closest && e.target.closest(".ms-upd, .mm-upd");
+  if (!a) return;
+  e.preventDefault();
+  e.stopPropagation();
+  if (a.dataset.url) {
+    api.call("open_url", a.dataset.url);
+    setStatus("已打开 C 站新版页面（下载需自己决定）");
+  }
+}, true);
 
 // 排序（点击表头）
 $$("#mmTable th[data-sort]").forEach((th) => {
