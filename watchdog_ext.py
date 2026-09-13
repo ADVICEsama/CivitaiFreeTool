@@ -29,6 +29,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 import time
 from ctypes import wintypes
 
@@ -38,9 +39,11 @@ GRACE_DEFAULT = 20  # 秒：启动后多久没有可见窗口就判定为卡死
 # 实测（2026-09-13 多轮日志）：本机冷启动出窗口 6.0s / 8.0s / 10s+ 都有过
 # （一个 66MB onefile 解包 + 杀软扫描 + WebView2 初始化），判定太短会把正常启动误杀
 # （日志实锤：no window after 6s/10s -> kill 掉的其实是正在启动的实例）。
-# 策略：20 秒起步 + 只要启动日志还在更新就继续宽限（最多 4 次），真正的卡死不再写日志，很快会被杀。
+# 策略：20 秒起步 + 只要有进展信号（启动日志或 _MEI 解包目录在变）就继续宽限（最多 6 次），
+# 真正的卡死不会有任何进展信号，很快会被杀。
 PROGRESS_GRACE = 5  # 秒：启动日志在这个时间内更新过 = 有进展 → 宽限 MAX_EXTENDS 次
-MAX_EXTENDS = 4     # 有进展最多宽限 4 次（+20s），配合启动宽限，最坏约 40s
+MAX_EXTENDS = 6     # 有进展最多宽限 6 次（每次 PROGRESS_GRACE 秒）——本机冷启动实测 20~40s，
+                    # 解包+杀软扫描期间只有 _MEI 目录在变，给足时间；真卡死不会有进展信号，仍会按 GRACE 杀掉
 RETRY_GRACE = 15    # 秒：窗口模式重试给的时间（重试仍要重新解包 + 建 WebView2，不能太短）
 
 # --------------------------------------------------------------------------
@@ -380,12 +383,34 @@ def _relaunch(app_name, browser=False):
 
 
 def _app_progressing(within=PROGRESS_GRACE):
-    """启动日志最近 within 秒内还在更新 = 应用仍在正常启动（不是卡死）"""
+    """应用仍在正常启动（不是卡死）？看两个信号：
+
+    1) 启动日志最近 within 秒内更新过；
+    2) 单文件 exe 的临时解包目录（%TEMP%\\_MEI*）最近 within 秒内还在变化 —— 解包阶段
+       启动日志是静默的（Python 还没起来），如果只看日志会把「正在被杀软逐个扫描的慢解包」
+       误判成卡死。实测本机冷启动 20~40s，主要耗时就在这一步。
+    """
+    now = time.time()
     try:
-        p = startup_log_path()
-        return (time.time() - os.path.getmtime(p)) < within
+        if (now - os.path.getmtime(startup_log_path())) < within:
+            return True
     except Exception:
-        return False
+        pass
+    try:
+        tmp = tempfile.gettempdir()
+        best = 0.0
+        for name in os.listdir(tmp):
+            if not name.startswith("_MEI"):
+                continue
+            try:
+                best = max(best, os.path.getmtime(os.path.join(tmp, name)))
+            except Exception:
+                pass
+        if best and (now - best) < within:
+            return True
+    except Exception:
+        pass
+    return False
 
 
 def run(grace=None, exe_name=None):
