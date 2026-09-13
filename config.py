@@ -11,6 +11,10 @@ if getattr(sys, "frozen", False):
 else:
     APP_DIR = os.path.dirname(os.path.abspath(__file__))
 
+# 界面主题（必须与 web/style.css 的 [data-theme=...] 与 app.js 设置项保持一致）
+THEMES = ("dark", "dark_purple", "dark_blue", "dark_green", "dark_red",
+          "light", "light_blue", "light_pink", "light_green", "modern")
+
 DEFAULTS = {
     "api_key": "",
     "download_dir": os.path.join(APP_DIR, "downloads", "models"),
@@ -128,7 +132,9 @@ def load():
     if "theme" not in disk:
         if "dark_mode" in disk:
             cfg["theme"] = "dark" if disk.get("dark_mode", True) else "light"
-    if cfg.get("theme") not in ("dark", "light", "modern"):
+    # 主题合法性校验：必须与 web/ 里 data-theme 支持的列表一致
+    # （踩过的坑：这里曾只认 dark/light/modern，导致「暮紫/樱粉」等新主题每次启动被改回 dark）
+    if cfg.get("theme") not in THEMES:
         cfg["theme"] = "dark"
     return cfg
 
