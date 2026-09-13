@@ -19,6 +19,7 @@
       <button class="nav-tab active" data-page="download">📥 批量下载</button>
       <button class="nav-tab" data-page="dlmanager">📁 下载管理</button>
       <button class="nav-tab" data-page="models">🧩 模型管理</button>
+      <button class="nav-tab" data-page="updates">⏫ 更新</button>
       <button class="nav-tab" data-page="reverse">🔍 反向解析</button>
       <button class="nav-tab" data-page="workflow">🔬 工作流分析</button>
       <button class="nav-tab" data-page="settings">⚙️ 设置</button>
@@ -143,6 +144,26 @@
       </div>
       <div class="masonry" id="mmMasonry" style="display:none"></div>
       <div class="detail" id="mmDetail"></div>
+    </div>
+  </section>
+
+  <!-- 更新检测 -->
+  <section class="page" id="page-updates">
+    <div class="card">
+      <h2 class="page-title">更新检测</h2>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="updCheck" data-tip="对比 C 站：找出「和你所用底模相同、且比你的版本新」的版本（只列出，不会自动下载）">⏫ 检查更新</button>
+        <button class="btn" id="updDlSel" disabled data-tip="把勾选的模型更新到最新版：新版下到旧版所在文件夹，旧版文件不动">⬇️ 更新选中</button>
+        <button class="btn" id="updDlAll" data-tip="一次更新列表里所有「有新版（同底模）」的模型">⬇️ 全部更新</button>
+        <button class="btn" id="updOnly" data-tip="只看「比你的版本新」的条目">❗ 只看有更新</button>
+        <button class="btn" id="updWl" data-tip="更新白名单：名单里的模型不再提示更新（列表里右键可加入）">📋 白名单</button>
+      </div>
+      <div class="dd-hint" id="updSummary">还没检查过：点「⏫ 检查更新」开始（首次约 1~2 分钟；结果缓存 24 小时）。</div>
+      <div class="dd-hint">
+        每行：缩略图 ｜ 模型名 ｜ <b>当前版本名</b> ｜ <b>更新后可用的版本名</b>（点名字去 C 站看，点名字后的 ⬇️ 只下那一版，适合「不同方向」的版本）。
+        <b>右键</b>条目可「不再提醒更新（加入白名单）」。勾选后点「⬇️ 更新选中」批量更新到最新版。
+      </div>
+      <div id="updList" class="upd-list"></div>
     </div>
   </section>
 

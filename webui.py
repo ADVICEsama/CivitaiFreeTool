@@ -11,7 +11,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.1.30"
+APP_VERSION = "2.1.31"
 
 import civitai_api
 import config
@@ -1825,6 +1825,85 @@ class Api:
         return {"started": True}
 
     # ---------------- 更新检测（只提示，绝不自动下载）----------------
+    def _wl_path(self):
+        return os.path.join(config.APP_DIR, "update_whitelist.json")
+
+    def _load_wl(self):
+        """更新白名单：{model_id: 模型名}，名单里的模型不再提示更新"""
+        try:
+            with open(self._wl_path(), "r", encoding="utf-8") as f:
+                d = json.load(f)
+            if isinstance(d, dict):
+                return {str(k): str(v or "") for k, v in (d.get("model_ids") or {}).items()}
+        except Exception:
+            pass
+        return {}
+
+    def _save_wl(self, d):
+        try:
+            with open(self._wl_path(), "w", encoding="utf-8", newline="") as f:
+                json.dump({"model_ids": d}, f, ensure_ascii=False, indent=1)
+        except Exception:
+            pass
+
+    def _wl(self):
+        if getattr(self, "_wl_cache", None) is None:
+            self._wl_cache = self._load_wl()
+        return self._wl_cache
+
+    def get_update_whitelist(self):
+        wl = self._wl()
+        return {"count": len(wl), "items": [{"model_id": k, "name": v} for k, v in wl.items()]}
+
+    def add_update_whitelist(self, model_id, name=""):
+        mid = str(model_id or "").strip()
+        if not mid:
+            return {"ok": False, "msg": "缺少 modelId"}
+        wl = self._wl()
+        wl[mid] = str(name or "").strip()
+        self._save_wl(wl)
+        # 立刻从最近一次结果里剔除（不用重查）
+        items = self._updates.get("items") or {}
+        for p in list(items.keys()):
+            if str((items.get(p) or {}).get("model_id") or "") == mid:
+                items.pop(p, None)
+        self._save_updates(self._updates)
+        return {"ok": True, "msg": "已加入更新白名单，以后不再提醒这个模型"}
+
+    def remove_update_whitelist(self, model_id):
+        mid = str(model_id or "").strip()
+        wl = self._wl()
+        wl.pop(mid, None)
+        self._save_wl(wl)
+        return {"ok": True, "msg": "已移出白名单：下次检查会重新提示"}
+
+    def mm_download_version(self, path, version_id):
+        """下载指定模型文件的某一具体版本（更新页面里点某一版）"""
+        p = (path or "").strip()
+        vid = str(version_id or "").strip()
+        if not (p and vid):
+            return {"ok": False, "msg": "参数不完整"}
+        it = (self._updates.get("items") or {}).get(p) or {}
+        mid = str(it.get("model_id") or "")
+        if not mid:      # 兜底：从侧车文件里读 modelId
+            try:
+                info_path = model_manager.find_info_file(p)
+                if info_path:
+                    with open(info_path, "r", encoding="utf-8") as f:
+                        d = json.load(f)
+                    mid = str(d.get("modelId") or d.get("model_id") or "")
+            except Exception:
+                mid = ""
+        if not mid:
+            return {"ok": False, "msg": "找不到该文件对应的 C 站模型（可先跑一次反向解析）"}
+        try:
+            item = self._enqueue_one(self._site_url(mid, vid), dest_dir=os.path.dirname(p))
+        except Exception as e:
+            return {"ok": False, "msg": str(e)[:150]}
+        if not item.get("ok"):
+            return {"ok": False, "msg": item.get("msg") or "入队失败"}
+        return {"ok": True, "msg": "已加入下载队列：%s" % (item.get("msg") or "")}
+
     def _updates_path(self):
         return os.path.join(config.APP_DIR, "model_updates.json")
 
@@ -1870,11 +1949,18 @@ class Api:
         if (not force) and self._updates.get("items") and (now - fresh) < 24 * 3600:
             return {"started": False, "recent": True,
                     "msg": "24 小时内已检查过（%s）；要重查请点「强制刷新」" % time.strftime("%m-%d %H:%M", time.localtime(fresh))}
+        wl = self._wl()
         groups = {}
         for r in rows:
-            groups.setdefault(str(r.get("modelId")), []).append(r)
+            mid = str(r.get("modelId") or "")
+            if mid in wl:
+                continue                      # 更新白名单：这个模型不再提醒
+            groups.setdefault(mid, []).append(r)
+        if not groups:
+            return {"started": False, "msg": "所有模型都在更新白名单里（可在更新页面「📋 白名单」里移除）"}
         self._mm_upd_state = {"running": True, "total": len(groups), "done": 0, "msg": "检查更新…",
-                              "newer": 0, "other_base": 0, "checked_at": now, "items": {}}
+                              "newer": 0, "other_base": 0, "checked_at": now, "items": {},
+                              "wl_skipped": len(wl)}
 
         def work():
             api = getattr(self, "api", None)
@@ -1904,6 +1990,7 @@ class Api:
                                 idx = k
                                 break
                         rec = {"model_id": mid, "local_version": lv, "local_base": lb,
+                               "model_name": (m.get("name") or "").strip(),
                                "checked_at": now, "has_update": False, "other_base": False}
                         if idx < 0:
                             rec["unknown"] = True
@@ -1914,16 +2001,35 @@ class Api:
                         if not lb:
                             lb = (vs[idx].get("baseModel") or "").strip()
                             rec["local_base"] = lb
-                        same = [v for v in vs[:idx] if (v.get("baseModel") or "").strip() == lb]
-                        if same:
-                            nv = same[0]                     # 最新的同底模版本
+
+                        def _vd(v):
+                            return str(v.get("publishedAt") or v.get("createdAt") or "")
+
+                        local_v = vs[idx]
+                        local_date = _vd(local_v)
+                        rec["local_name"] = (local_v.get("name") or "").strip()
+                        rec["local_date"] = local_date[:10]
+                        same_all = [v for v in vs if (v.get("baseModel") or "").strip() == lb]
+                        if local_date:
+                            # 按发布时间判断"比你新"（C 站列表顺序未必等于时间顺序，实测有反例）
+                            newer_same = [v for v in same_all if _vd(v) > local_date]
+                        else:
+                            k = len([v for v in vs[:idx] if (v.get("baseModel") or "").strip() == lb])
+                            newer_same = same_all[:k]
+                        newer_same.sort(key=lambda v: _vd(v), reverse=True)
+                        if newer_same:
+                            nv = newer_same[0]
                             rec.update({"has_update": True, "latest_version": str(nv.get("id")),
                                         "latest_name": nv.get("name") or "", "latest_base": (nv.get("baseModel") or lb),
-                                        "latest_date": nv.get("publishedAt") or nv.get("createdAt") or "",
-                                        "behind": len(same), "url": self._site_url(mid, nv.get("id"))})
+                                        "latest_date": _vd(nv), "behind": len(newer_same),
+                                        "url": self._site_url(mid, nv.get("id")),
+                                        # 所有"比你新"的同底模版本（版本名 + 日期 + 单独下载入口）
+                                        "newer_list": [{"id": str(v.get("id")), "name": (v.get("name") or "").strip(),
+                                                        "date": _vd(v)[:10], "url": self._site_url(mid, v.get("id"))}
+                                                       for v in newer_same[:12]]})
                             newer += 1
                         else:
-                            top = vs[0]
+                            top = max(vs, key=_vd) if local_date else vs[0]   # 按时间取最新（C 站数组顺序未必是时间序）
                             if str(top.get("id")) != lv:
                                 rec.update({"other_base": True, "latest_version": str(top.get("id")),
                                             "latest_name": top.get("name") or "",
