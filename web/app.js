@@ -2081,7 +2081,12 @@ async function mmUpdateSelectedFlow() {
   if (!ok) return;
   await mmUpdateFlow(paths);
 }
-if ($("#mmUpdDl")) $("#mmUpdDl").addEventListener("click", mmUpdateSelectedFlow);
+if ($("#mmUpdDl")) $("#mmUpdDl").addEventListener("click", () => {
+  // 模型管理页的「⬇️ 更新选中」：把勾选里有新版的交给新的批量更新流程（版本按更新页每行的下拉选择）
+  const paths = state.models.filter((r) => state.mmChecked.has(r.path) && r.upd && r.upd.has_update).map((r) => r.path);
+  if (!paths.length) { setStatus("没有勾选「有新版」的模型：先点「⏫ 检查更新」，再勾选带 ❗ 的条目"); return; }
+  updBatchDownload(paths);
+});
 // 点卡片/列表里的 ❗ → 打开 C 站新版页面（不会下载）
 document.addEventListener("click", (e) => {
   const a = e.target.closest && e.target.closest(".ms-upd, .mm-upd");
@@ -3165,6 +3170,7 @@ const SETTING_FIELDS = [
   ["🎨 界面", "zebra_rows", "模型列表斑马纹", "bool"],
   ["🎨 界面", "ambient_bg", "顶部氛围动态背景", "bool"],
   ["🎨 界面", "ui_mode", "界面模式", "select", [["window", "原生窗口（默认）"], ["browser", "浏览器模式（可托盘 / 关页面退）"]]],
+  ["🎨 界面", "window_wait_seconds", "窗口模式等待秒数", "number"],
   ["🎨 界面", "close_action", "点窗口关闭按钮时", "select", [["exit", "退出软件（默认）"], ["minimize", "最小化到任务栏（不退出）"]]],
   ["📦 下载", "update_keep_old", "更新后如何处理旧版本", "select", [["keep", "保留旧版文件（默认）"], ["delete", "删除旧版（移入回收站，可还原）"]]],
   ["🎨 界面", "webview_disable_gpu", "禁用 GPU 加速（软件渲染）", "bool"],
@@ -3189,6 +3195,7 @@ const SETTING_TIPS = {
   "gen_metadata": "下载完成后自动生成 <模型名>.civitai.info / .json 元数据；没有它，模型管理里看不到名称/触发词",
   "download_cover": "下载完成后自动把 C 站预览图保存到模型目录（模型管理显示缩略图用）",
   "ask_move_after_download": "下载完成后询问是否把文件移动到指定文件夹（适合按类型归档；设了「下载目标文件夹」后本项自动不弹）",
+  "window_wait_seconds": "窗口模式下等几秒没出界面就自动改用浏览器模式（默认 12 秒）。机器慢或 WebView2 正在更新时可调大；想固定用浏览器模式就把「界面模式」改成浏览器模式",
   "update_keep_old": "「更新页面」下载新版完成后的旧版处理：默认【保留旧版文件】（新版和旧版并存，要清理可用「🧬 查重 → 删旧留新」）；选【删除旧版】则下载完成后把旧版文件移入回收站（含预览图/元数据，可还原）。只影响「更新下载」，不影响普通批量下载",
   "download_target_dir": "预设下载落地文件夹（在模型目录里选）：下载的模型连 json/封面直接放进它，不再弹窗询问。也可在「批量下载」页临时选择",
   "metadata_format": "sd = WebUI 能直接识别的扁平 json；civitai = C 站原始 info 结构；both = 两个都生成",

@@ -90,6 +90,20 @@ def _rm_lock(lock_dir):
         pass
 
 
+def _kill_by_name():
+    """结束其它 CivitaiFreeToolWeb 进程（不含自己）。用于「已有实例卡死 → 用户确认重启」场景。"""
+    try:
+        import subprocess
+        me = os.getpid()
+        ps = ("Get-Process CivitaiFreeToolWeb -ErrorAction SilentlyContinue | "
+              "Where-Object { $_.Id -ne %d } | Stop-Process -Force" % me)
+        subprocess.run(["powershell", "-NoProfile", "-Command", ps], capture_output=True, timeout=25,
+                       creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        time.sleep(1.0)
+    except Exception:
+        pass
+
+
 def _single_instance():
     """单实例保护：已有实例运行时，激活其主窗口并让新进程退出。
 
@@ -108,14 +122,46 @@ def _single_instance():
         for scope in ("Global\\", "Local\\"):
             h = k.OpenMutexW(wintypes.DWORD(0x001F0001), False, scope + MUTEX_NAME)  # MUTEX_ALL_ACCESS
             if h:
-                # 激活已有实例的主窗口
+                # 已有实例：优先让其界面出现——
+                # 1) 窗口模式：激活它的主窗口；
+                # 2) 浏览器模式（没有原生窗口）：探一次后端，能应答就把浏览器界面打开（用户双击就该看到界面）；
+                # 3) 后端无响应（卡死）：弹窗问要不要结束它再启动。
+                activated = False
                 try:
                     w = u.FindWindowW(None, "CivitaiFreeTool")
                     if w:
                         u.ShowWindow(w, 9)  # SW_RESTORE
                         u.SetForegroundWindow(w)
+                        activated = True
                 except Exception:
                     pass
+                if not activated:
+                    try:
+                        import urllib.request
+                        with urllib.request.urlopen("http://127.0.0.1:47531/api/health", timeout=2) as resp:
+                            if resp.status == 200:
+                                import webbrowser
+                                webbrowser.open("http://127.0.0.1:47531/")
+                                activated = True
+                    except Exception:
+                        pass
+                if not activated:
+                    try:
+                        import ctypes
+                        MB_YESNO, MB_ICONWARNING, IDYES = 0x4, 0x30, 6
+                        ans = ctypes.windll.user32.MessageBoxW(
+                            None,
+                            "CivitaiFreeTool 已有一个实例在运行，但它的界面没有响应（可能卡住了）。\n\n"
+                            "点「是」＝结束那个无响应的实例并重新启动；\n"
+                            "点「否」＝什么都不做（可以自己开任务管理器结束它）。",
+                            "CivitaiFreeTool", MB_YESNO | MB_ICONWARNING)
+                        if ans == IDYES:
+                            k.CloseHandle(h)
+                            _kill_by_name()
+                            time.sleep(1.5)
+                            return True          # 继续启动（自己成为唯一实例）
+                    except Exception:
+                        pass
                 k.CloseHandle(h)
                 return False
         # 句柄必须保持存活至进程结束，互斥体才会持续存在
@@ -172,13 +218,29 @@ def _webview_storage_path():
         base = os.environ.get("LOCALAPPDATA") or os.path.join(os.path.expanduser("~"), "AppData", "Local")
         root = os.path.join(base, "CivitaiFreeToolWeb", "wv2")
         os.makedirs(root, exist_ok=True)
-        # 清理过期残留（异常退出遗留的目录，正常退出由 pywebview 删除）
+        # 清理残留：目录名 wv2_<pid> —— 对应进程已退出（或超过 7 天）就删掉。
+        # 历史教训：只按「7 天前」清理会攒下几十个目录（每次启动一个，实例退出后目录还在），
+        # 实测攒到 50 个，既占空间又拖慢 WebView2 初始化。
         try:
-            now = time.time()
+            cur = "wv2_%d" % os.getpid()
             for name in os.listdir(root):
                 d = os.path.join(root, name)
                 try:
-                    if os.path.isdir(d) and now - os.path.getmtime(d) > 7 * 86400:
+                    if not os.path.isdir(d) or name == cur:
+                        continue
+                    pid = int(name.split("_", 1)[1]) if "_" in name else 0
+                    alive = False
+                    if pid:
+                        try:
+                            import ctypes
+                            h = ctypes.windll.kernel32.OpenProcess(0x1000, False, pid)   # QUERY_LIMITED_INFORMATION
+                            alive = bool(h)
+                            if h:
+                                ctypes.windll.kernel32.CloseHandle(h)
+                        except Exception:
+                            alive = True              # 判断不了就别删
+                    old = (time.time() - os.path.getmtime(d)) > 7 * 86400
+                    if (not alive) or old:
                         import shutil
                         shutil.rmtree(d, ignore_errors=True)
                 except Exception:
@@ -240,13 +302,18 @@ def _watchdog_log_only():
 
     重启职责已交给独立进程看门狗（watchdog_ext）：建窗死锁会把 GIL 占死，
     本线程连日志都可能写不出来，留在进程内做重启毫无意义。此处仅用于健康时的里程碑记录。"""
-    deadline = time.time() + 30
+    deadline = time.time() + 120      # WebView2 初始化实测 15~30s，给足时间只做记录（不再影响判定）
     while time.time() < deadline:
         time.sleep(2)
         if _self_visible_window():
             _startup_log("in-process observer: window visible, ok")
+            try:
+                import browser_bridge
+                browser_bridge.set_ui_state(mode="window", window=True)
+            except Exception:
+                pass
             return
-    _startup_log("in-process observer: window NOT visible after 30s (external watchdog owns recovery)")
+    _startup_log("in-process observer: window NOT visible after 120s (external watchdog owns recovery)")
 
 
 def _tray_icon(api, url):
@@ -338,6 +405,11 @@ def _browser_mode():
     import webui
     import browser_bridge
     _startup_log("browser mode: start")
+    try:
+        import browser_bridge
+        browser_bridge.set_ui_state(mode="browser", window=False)
+    except Exception:
+        pass
     if not _single_instance():
         try:
             webbrowser.open("http://127.0.0.1:%d/" % browser_bridge.DEFAULT_PORT)

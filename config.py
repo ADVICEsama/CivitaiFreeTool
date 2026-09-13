@@ -38,7 +38,8 @@ DEFAULTS = {
     "download_target_dir": "",          # 下载落地文件夹（下载页/设置里选；空 = 用 download_dir）
     "gen_metadata": True,               # 下载完成后自动生成 json/info
     "download_cover": True,             # 下载完成后自动下载封面
-    "update_keep_old": "keep",          # 更新下载完成后旧版处理：keep=保留（默认）/ delete=移入回收站（可还原）
+    "update_keep_old": "keep",           # 更新下载完成后旧版处理：keep=保留（默认）/ delete=移入回收站（可还原）
+    "window_wait_seconds": 12,           # 窗口模式等几秒没出来就自动换浏览器模式（用户可调）
     "hidden_model_folders": [],         # 模型管理目录中隐藏的子文件夹
     "show_root_models": True,           # 是否显示模型目录根目录下的模型
     "metadata_format": "sd",            # sd / civitai / both（下载生成的 json 格式）

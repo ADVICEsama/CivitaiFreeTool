@@ -35,7 +35,8 @@ from ctypes import wintypes
 
 IS_WINDOWS = sys.platform.startswith("win")
 
-GRACE_DEFAULT = 20  # 秒：启动后多久没有可见窗口就判定为卡死
+GRACE_DEFAULT = 12  # 秒：**默认等窗口 12 秒**，没出来就直接换浏览器模式（用户要求：宁可快点看到界面）
+                    # 可在设置里改「窗口模式等待秒数」（config.window_wait_seconds）
 # 实测（2026-09-13 多轮日志）：本机冷启动出窗口 6.0s / 8.0s / 10s+ 都有过
 # （一个 66MB onefile 解包 + 杀软扫描 + WebView2 初始化），判定太短会把正常启动误杀
 # （日志实锤：no window after 6s/10s -> kill 掉的其实是正在启动的实例）。
@@ -505,10 +506,20 @@ def _ui_ready():
     return bool(h.get("mode") == "browser" or h.get("window") or ("window" not in h))
 
 
-def run(grace=None, exe_name=None):
-    """看门狗主循环。grace 秒内没窗口就杀+重启（最多自动重启 2 次，之后只提示）。"""
+def _cfg_window_wait():
+    """从应用配置读「窗口模式等待秒数」（设置里的 window_wait_seconds；3~600 之外视为未设置）"""
     try:
-        grace = int(grace or os.environ.get("CFT_WD_GRACE") or GRACE_DEFAULT)
+        import config
+        v = int(config.load().get("window_wait_seconds") or 0)
+        return v if 3 <= v <= 600 else 0
+    except Exception:
+        return 0
+
+
+def run(grace=None, exe_name=None):
+    """看门狗主循环。grace 秒内没窗口就杀掉换浏览器模式（用户要求：宁可快点看到界面）。"""
+    try:
+        grace = int(grace or os.environ.get("CFT_WD_GRACE") or _cfg_window_wait() or GRACE_DEFAULT)
     except Exception:
         grace = GRACE_DEFAULT
     own = os.getpid()
@@ -572,27 +583,35 @@ def run(grace=None, exe_name=None):
             if time.time() < deadline:
                 continue
 
-            # 宽限保护：启动日志/_MEI 在动，或**整棵进程树还在用 CPU/IO**（解包、WebView2 起子进程都属于这种）
-            # 就继续等，最多 MAX_EXTENDS 次；真正卡死的进程树是彻底静止的（CPU/IO 都不再增长），很快会被杀。
+            # 宽限保护：**只对浏览器模式那一轮**生效（stage>0）。
+            # 窗口模式（stage 0）是硬时限：等满 grace 秒没窗口就直接换浏览器（用户明确要求，
+            # 不再因为"进程树还在动"而拖到一分多钟）。真卡死时浏览器那一轮也不会有活动，照常被杀。
             tree = [pid] + _descendants(pid)
-            if progresses < MAX_EXTENDS and (_app_progressing() or _tree_active(tree)):
+            if stage > 0 and progresses < MAX_EXTENDS and (_app_progressing() or _tree_active(tree)):
                 progresses += 1
                 deadline = time.time() + PROGRESS_GRACE
                 _log("still starting (activity detected), extend deadline #%d/%d" % (progresses, MAX_EXTENDS))
                 continue
 
-            # 超时无窗口 = 卡死
+            # 超时无窗口 = 卡死（或 WebView2 起不来）
             elapsed = int(time.time() - started)
             if stage == 0:
-                _log("stage0: no window after %ss (pid %s) -> kill tree + relaunch" % (elapsed, pid))
+                # 用户要求：窗口等不到就**直接**换浏览器模式（不再二次尝试窗口），尽快让界面可用
+                _log("stage0: no window after %ss (pid %s) -> kill tree + relaunch in BROWSER mode" % (elapsed, pid))
                 kill_app_tree(pid)
                 time.sleep(1.0)
-                _relaunch(app_name)
+                _relaunch(app_name, browser=True)
+                _message("CivitaiFreeTool：窗口没出来，已切到浏览器模式",
+                         "等了 %s 秒没等到窗口（常见原因：WebView2 运行时正在自动更新，或系统忙）。\n\n"
+                         "已改用「浏览器模式」：软件在后台照常运行（下载不受影响），界面在系统浏览器里打开。\n"
+                         "任务栏托盘图标可随时打开界面 / 退出软件。\n\n"
+                         "想调长等待：设置 → 界面 → 「窗口模式等待秒数」\n"
+                         "想固定用浏览器模式：设置 → 界面 → 「界面模式」。" % elapsed)
                 stage, healthy = 1, False
                 progresses = 0
-                relaunch_until = time.time() + 120
-                # 重试给更短的时间：卡死的实例重试通常还是卡，尽快进浏览器模式让界面能用
-                deadline = time.time() + min(RETRY_GRACE, grace)
+                relaunch_until = time.time() + 300
+                # 浏览器模式自己也有一段启动时间（单文件解包 + 起后端），给宽一点，避免刚起来就被杀
+                deadline = time.time() + max(40, grace * 2)
                 started = time.time()
             elif stage == 1:
                 _log("stage1: still no window (%ss) -> kill tree + relaunch in BROWSER mode" % elapsed)
