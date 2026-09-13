@@ -1576,6 +1576,7 @@ function _updState(it) {
   if (it && it.has_update) return { k: "upd", t: "❗ 有更新", cls: "green" };
   if (it && it.other_base) return { k: "other", t: "🔀 仅换底模", cls: "mut" };
   if (it && it.unknown) return { k: "unknown", t: "⚠️ 无法判定", cls: "gray" };
+  if (it && !it.checked_at) return { k: "todo", t: "◻ 未检查", cls: "gray" };   // 扫到但没检查过（新下载的模型常见）
   return { k: "latest", t: "✅ 已是最新", cls: "blue" };
 }
 
@@ -1615,6 +1616,19 @@ function _updRowHtml(x) {
   }
   opts.push('<option value="__site">🌐 在 C 站查看全部版本</option>');
 
+  // 降级判断：选中的版本比当前版本旧（按发布日期；没有日期就用语义化版本名兜底）
+  const curEntry = list.find((v) => v.current) || null;
+  const selIsCurrent = !!(selEntry && selEntry.current);
+  let isDown = false;
+  if (selEntry && !selIsCurrent) {
+    const sd = selEntry.date || "", cd = (curEntry && curEntry.date) || "";
+    if (sd && cd) isDown = sd < cd;
+    else if (selEntry.name && curName) isDown = _verCmp(selEntry.name, curName) < 0;
+  }
+  const actLabel = isDown ? "降级到 " + esc((selEntry && selEntry.name) || sel) : "更新到 " + esc((selEntry && selEntry.name) || "最新");
+  const actTip = isDown
+    ? "回退到这一版（比你当前用的旧）：新版会下到旧版所在文件夹；当前这份文件保留或删除由设置决定"
+    : "下载这一版到旧版所在文件夹；旧版保留或删除由设置决定";
   return '<tr class="' + (state.updSel.has(x.path) ? "is-sel" : "") + (isUpd ? "" : " is-flat") + '" data-path="' + esc(x.path) + '" data-mid="' + esc(it.model_id || "") +
     '" data-mname="' + esc(it.model_name || "") + '">' +
     '<td class="c-ck"><input type="checkbox" class="upd-cb" data-path="' + esc(x.path) + '"' + (state.updSel.has(x.path) ? " checked" : "") + "/></td>" +
@@ -1632,7 +1646,7 @@ function _updRowHtml(x) {
     '<td class="c-date">' + esc(date || "—") + "</td>" +
     '<td class="c-st"><span class="st-badge ' + st.cls + '">' + esc(st.t) + "</span></td>" +
     '<td class="c-act"><div class="upd-acts2">' +
-      (isUpd ? '<button class="btn btn-tiny btn-primary upd-go" data-path="' + esc(x.path) + '" data-vid="' + esc(sel) + '" data-tip="下载这一版到旧版所在文件夹；旧版保留或删除由设置决定">更新到 ' + esc((selEntry && selEntry.name) || "最新") + "</button>" : "") +
+      ((!selIsCurrent && sel) ? '<button class="btn btn-tiny upd-go' + (isDown ? " is-down" : " btn-primary") + '" data-path="' + esc(x.path) + '" data-vid="' + esc(sel) + '" data-tip="' + actTip + '">' + actLabel + "</button>" : "") +
       (it.url ? '<a href="#" class="dd-link upd-site" data-url="' + esc(it.url) + '" data-tip="在浏览器打开 C 站页面">C 站</a>' : "") +
       '<button class="icon-btn upd-more" data-path="' + esc(x.path) + '" data-tip="更多：打开文件夹 / 复制路径 / 不再提醒">···</button>' +
     "</div></td></tr>";
@@ -1640,7 +1654,14 @@ function _updRowHtml(x) {
 
 function _updFilterRows() {
   const items = state.mmUpdItems || {};
-  let rows = Object.entries(items).map(([path, it]) => ({ path, it: it || {} }));
+  const union = Object.assign({}, items);
+  for (const r of (state.models || [])) {         // 扫到、有 C 站信息、但还没检查过的 → 补一条「未检查」行
+    if (r && r.path && r.modelId && !union[r.path]) {
+      union[r.path] = { model_name: r.civitai_name || "", local_name: r.versionName || "",
+                        local_base: r.base || "", model_type: r.type || "", author: r.author || "" };
+    }
+  }
+  let rows = Object.entries(union).map(([path, it]) => ({ path, it: it || {} }));
   const q = String(state.updQ || "").trim().toLowerCase();
   if (state.updBase) rows = rows.filter((x) => String(x.it.local_base || "") === state.updBase);
   if (state.updState) rows = rows.filter((x) => _updState(x.it).k === state.updState);
@@ -1735,6 +1756,45 @@ function _updSyncSel() {
   }
 }
 
+// 下拉换版本时实时重算按钮：更新到 X / 降级到 X；选回当前版本则隐藏按钮
+function _updSyncRowButton(tr, path, vid) {
+  const it = (state.mmUpdItems || {})[path] || {};
+  const { list } = _updVers({ path, it });
+  const e = list.find((x) => String(x.id) === String(vid)) || null;
+  const cur = list.find((x) => x.current) || null;
+  const isCur = !!(e && e.current);
+  let isDown = false;
+  if (e && !isCur) {
+    const sd = e.date || "", cd = (cur && cur.date) || "";
+    if (sd && cd) isDown = sd < cd;
+    else if (e.name && it.local_name) isDown = _verCmp(e.name, it.local_name) < 0;
+  }
+  let btn = tr.querySelector(".upd-go");
+  if (isCur || !e) { if (btn) btn.remove(); return; }
+  if (!btn) {
+    const acts = tr.querySelector(".upd-acts2");
+    if (!acts) return;
+    btn = document.createElement("button");
+    btn.className = "btn btn-tiny upd-go";
+    btn.dataset.path = path;
+    acts.insertBefore(btn, acts.firstChild);
+    btn.addEventListener("click", async (ev) => {
+      ev.stopPropagation();
+      const oldTxt = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = "加入队列…";
+      const r = await api.call("mm_download_version", btn.dataset.path, btn.dataset.vid);
+      btn.textContent = (r && r.ok) ? "✅ 已加入" : ((r && r.msg) || "失败");
+      setStatus((r && r.msg) || "");
+      setTimeout(() => { btn.disabled = false; btn.textContent = oldTxt; }, 1800);
+    });
+  }
+  btn.dataset.vid = vid;
+  btn.textContent = isDown ? "降级到 " + ((e.name) || vid) : "更新到 " + ((e.name) || vid);
+  btn.classList.toggle("is-down", isDown);
+  btn.classList.toggle("btn-primary", !isDown);
+}
+
 function _updBind(tbody) {
   tbody.querySelectorAll(".upd-cb").forEach((cb) => cb.addEventListener("change", () => {
     const p = cb.dataset.path;
@@ -1753,14 +1813,8 @@ function _updBind(tbody) {
       return;
     }
     state.updPick[p] = v;
-    const tr = sel.closest("tr");
-    const btn = tr && tr.querySelector(".upd-go");
-    if (btn) {
-      const { list } = _updVers({ path: p, it });
-      const e = list.find((x) => String(x.id) === String(v));
-      btn.dataset.vid = v;
-      btn.textContent = "更新到 " + ((e && e.name) || "最新");
-    }
+    const tr2 = sel.closest("tr");
+    if (tr2) _updSyncRowButton(tr2, p, v);
   }));
   tbody.querySelectorAll(".upd-go").forEach((b) => b.addEventListener("click", async (e) => {
     e.stopPropagation();
@@ -2096,6 +2150,15 @@ async function mmUpdateSelectedFlow() {
   if (!ok) return;
   await mmUpdateFlow(paths);
 }
+if ($("#mmGoUpdates")) $("#mmGoUpdates").addEventListener("click", () => {
+  state.updState = "upd";                 // 默认只看「❗ 有更新」
+  state.updQ = "";
+  state.updPage = 1;
+  const ss = $("#updState");
+  if (ss) ss.value = "upd";
+  switchPage("updates");                  // switchPage 内部会调 renderUpdatesPage
+});
+
 if ($("#mmUpdDl")) $("#mmUpdDl").addEventListener("click", () => {
   // 模型管理页的「⬇️ 更新选中」：把勾选里有新版的交给新的批量更新流程（版本按更新页每行的下拉选择）
   const paths = state.models.filter((r) => state.mmChecked.has(r.path) && r.upd && r.upd.has_update).map((r) => r.path);

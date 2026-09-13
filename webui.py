@@ -11,7 +11,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.1.37"
+APP_VERSION = "2.1.38"
 
 import civitai_api
 import config
@@ -2257,6 +2257,18 @@ class Api:
                             rec["unknown"] = True
                             rec["msg"] = "本地版本不在 C 站列表（无法判定；版本信息取自本地文件）"
                             rec["url"] = self._site_url(mid)
+                            # 本地版本已下架时最需要「降级/换版」：把 C 站现存的全部版本都给出来（不限底模）
+                            try:
+                                def _vd0(v):
+                                    return str(v.get("publishedAt") or v.get("createdAt") or "")
+                                vl0 = [{"id": str(v.get("id")), "name": (v.get("name") or "").strip(),
+                                        "date": _vd0(v)[:10], "url": self._site_url(mid, v.get("id")),
+                                        "current": False, "base": (v.get("baseModel") or "").strip()}
+                                       for v in vs[:30]]
+                                vl0.sort(key=lambda x: x.get("date") or "", reverse=True)
+                                rec["ver_list"] = vl0
+                            except Exception:
+                                pass
                             items[r["path"]] = rec
                             continue
                         if not lb:
