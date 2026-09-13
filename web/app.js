@@ -145,6 +145,45 @@ function confirmBox(msg) {
   });
 }
 
+// 与 confirmBox 相同，但**不转义**（传已拼好的富文本；会 resolve {ok:true, root} 便于往里面塞缩略图）
+function confirmBoxRaw(html, title) {
+  return new Promise((resolve) => {
+    const mask = document.createElement("div");
+    mask.className = "rd-mask";
+    const dlg = document.createElement("div");
+    dlg.className = "rename-dialog";
+    dlg.style.width = "560px";
+    dlg.innerHTML =
+      '<div class="rd-title">' + (title || "⚠️ 确认操作") + "</div>" +
+      '<div style="font-size:13px;color:var(--text);line-height:1.7">' + html + "</div>" +
+      '<div class="rd-actions">' +
+      ((state.cfg && state.cfg.confirm_buttons_flip)
+        ? '<button class="btn" id="cfCancel">取消</button><button class="btn btn-danger" id="cfOk">确定</button>'
+        : '<button class="btn btn-danger" id="cfOk">确定</button><button class="btn" id="cfCancel">取消</button>') +
+      "</div>";
+    document.body.appendChild(mask);
+    document.body.appendChild(dlg);
+    const close = () => { mask.remove(); dlg.remove(); };
+    $("#cfCancel", dlg).addEventListener("click", () => { close(); resolve(false); });
+    mask.addEventListener("click", () => { close(); resolve(false); });
+    $("#cfOk", dlg).addEventListener("click", () => { mask.remove(); resolve({ ok: true, root: dlg }); });
+  });
+}
+
+// 批量把封面塞进某个容器里的 img.dd-thumb（查重/确认弹窗用；失败静默）
+async function loadDdThumbs(rootEl, paths, size) {
+  try {
+    const list = (paths || []).filter(Boolean);
+    if (!list.length) return;
+    const json = await api.call("get_covers", list, size || 96);
+    const covers = JSON.parse(json || "{}");
+    rootEl.querySelectorAll("img.dd-thumb").forEach((img) => {
+      const b64 = covers[img.dataset.path];
+      if (b64) img.src = "data:image/jpeg;base64," + b64;
+    });
+  } catch (e) { /* 缩略图失败不影响功能 */ }
+}
+
 // 复制到剪贴板（走后端 Win32；WebView2 file:// 下 navigator.clipboard 不可用）
 window.__copyText = async function (t) {
   try { await api.call("copy_text", String(t == null ? "" : t)); return true; }
@@ -656,57 +695,65 @@ function fmtDate(ts) {
   return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
 }
 
-function showDedupeDialog(groups, modelGroups) {
+async function showDedupeDialog(groups, modelGroups) {
   groups = groups || [];
   modelGroups = modelGroups || [];
   const totalDups = groups.reduce((s, g) => s + g.dups.length, 0);
   const sizeA = groups.reduce((s, g) => s + g.dups.reduce((x, d) => x + (d.size || 0), 0), 0);
   const totalOlds = modelGroups.reduce((s, g) => s + (g.olds || []).length, 0);
   const sizeB = modelGroups.reduce((s, g) => s + (g.olds || []).reduce((x, o) => x + (o.size || 0), 0), 0);
+  const thumb = (p) => '<img class="dd-thumb" data-path="' + esc(p) + '" alt=""/>';
 
   const secA = groups.length ? (
     '<div class="dedup-sec">🧬 完全相同（同哈希 · ' + groups.length + " 组 · " + totalDups + " 个副本）</div>" +
-    '<div style="font-size:12px;color:var(--text-dim);margin:2px 0 6px">同名同内容只留一份，默认勾选的是多余副本。</div>' +
+    '<div class="dd-hint">同名同内容只留一份：默认勾选的是「多余的副本」，会移入回收站（可还原）。</div>' +
     groups.map((g, gi) =>
       '<div class="dedup-group">' +
-      '<div class="dedup-keep">✅ 保留 <b>' + esc(g.keep_name) + "</b>" +
-      '<div class="dedup-dir">' + esc(g.keep_dir) + "</div></div>" +
+      '<div class="dedup-keep">' + thumb(g.keep) + '<div class="dd-text">✅ 保留 <b>' + esc(g.keep_name) + "</b>" +
+      '<div class="dedup-dir">' + esc(g.keep_dir) + "</div></div></div>" +
       g.dups.map((d, di) =>
-        '<label class="dedup-dup"><input type="checkbox" data-g="' + gi + '" data-d="' + di + '" checked/> ' +
-        "<span>" + esc(d.name) + '</span><div class="dedup-dir">' + esc(d.dir) + " · " + fmtBytes(d.size) + "</div></label>").join("") +
+        '<label class="dedup-dup">' + thumb(d.path) +
+        '<input type="checkbox" data-g="' + gi + '" data-d="' + di + '" checked/> ' +
+        '<div class="dd-text"><span>' + esc(d.name) + "</span>" +
+        '<div class="dedup-dir">' + esc(d.dir) + " · " + fmtBytes(d.size) + "</div></div></label>").join("") +
       "</div>").join("")) : "";
 
   const secB = modelGroups.length ? (
     '<div class="dedup-sec">🕰️ 同模型多版本（' + modelGroups.length + " 组 · 旧版 " + totalOlds + " 个 · 约 " + fmtBytes(sizeB) + "）</div>" +
-    '<div style="font-size:12px;color:var(--text-dim);margin:2px 0 6px">同一模型的新旧版本：默认勾选=删旧版（移入回收站可还原）；点 <b>🔗</b> 可跳到 C 站原页面核对。</div>' +
+    '<div class="dd-hint">同一个模型存了多个版本：<b>默认已帮你勾上「旧版」</b>（点下面「旧版共存」就能全部不删）；' +
+    "每条都能看缩略图 + 点 🔗 去 C 站核对到底是哪一版。</div>" +
     modelGroups.map((g, gi) =>
       '<div class="dedup-group">' +
-      '<div class="dedup-keep">🗂️ <b>' + esc(g.model_name || g.model_id) + "</b> " +
+      '<div class="dedup-keep">' + thumb(g.keep.path) + '<div class="dd-text">🗂️ <b>' + esc(g.model_name || g.model_id) + "</b> " +
       '<a href="#" class="dd-link" data-url="' + esc(g.url) + '">🔗 模型 C 站页面</a>' +
-      (g.count > 2 ? '<span style="color:var(--text-dim)"> · 共 ' + g.count + " 个版本</span>" : "") + "</div>" +
-      '<div class="dedup-keep" style="font-weight:400">✅ <b>保留（最新）</b> ' + esc(g.keep.ver || g.keep.name) +
-      " · " + esc(g.keep.base || "-") + " · " + fmtBytes(g.keep.size) + (g.keep.mtime ? " · " + fmtDate(g.keep.mtime) : "") +
-      ' <a href="#" class="dd-link" data-url="' + esc(g.keep.url) + '">🔗 这一版</a>' +
-      '<div class="dedup-dir">' + esc(g.keep.dir) + "</div></div>" +
+      (g.count > 2 ? '<span style="color:var(--text-dim)"> · 共 ' + g.count + " 个版本</span>" : "") +
+      '<div class="dedup-dir">✅ 保留（最新） ' + esc(g.keep.ver || g.keep.name) + " · " + esc(g.keep.base || "-") +
+      " · " + fmtBytes(g.keep.size) + (g.keep.mtime ? " · " + fmtDate(g.keep.mtime) : "") +
+      ' <a href="#" class="dd-link" data-url="' + esc(g.keep.url) + '">🔗 这一版</a></div></div></div>' +
       g.olds.map((o, oi) =>
-        '<label class="dedup-dup"><input type="checkbox" data-mg="' + gi + '" data-o="' + oi + '" checked/> ' +
-        "<span>旧版 " + esc(o.ver || o.name) + "</span>" +
+        '<label class="dedup-dup">' + thumb(o.path) +
+        '<input type="checkbox" data-mg="' + gi + '" data-o="' + oi + '" checked/> ' +
+        '<div class="dd-text"><span>旧版 ' + esc(o.ver || o.name) + "</span>" +
         '<div class="dedup-dir">' + esc(o.base || "-") + " · " + fmtBytes(o.size) + (o.mtime ? " · " + fmtDate(o.mtime) : "") +
         (o.copies > 1 ? " · 另有同名副本 " + o.copies + " 份（在上一节里）" : "") + "</div>" +
-        '<div class="dedup-dir">' + esc(o.dir) + ' · <a href="#" class="dd-link" data-url="' + esc(o.url) + '">🔗 这一版</a></div></label>').join("") +
+        '<div class="dedup-dir">' + esc(o.dir) + ' · <a href="#" class="dd-link" data-url="' + esc(o.url) + '">🔗 这一版</a></div></div></label>').join("") +
       "</div>").join("")) : "";
 
   const mask = document.createElement("div");
   mask.className = "rd-mask";
   const dlg = document.createElement("div");
   dlg.className = "rename-dialog";
-  dlg.style.width = "680px";
+  dlg.style.width = "720px";
   dlg.innerHTML =
     '<div class="rd-title">🧬 查重结果：' + groups.length + " 组完全相同 + " + modelGroups.length + " 组同模型多版本（可清理约 " + fmtBytes(sizeA + sizeB) + "）</div>" +
-    '<div style="max-height:420px;overflow:auto">' + secA + secB + "</div>" +
+    '<div class="dd-hint" style="border:1px solid var(--border);border-radius:8px;padding:6px 8px;margin-bottom:8px">' +
+    "💡 <b>勾选 = 移入回收站</b>（可在回收站还原，不会真删）。「<b>删旧留新</b>」= 把所有旧版都勾上；「<b>旧版共存</b>」= 全部取消勾选、什么都不删。</div>" +
+    '<div style="max-height:400px;overflow:auto">' + secA + secB + "</div>" +
     '<div class="rd-actions"><button class="btn" id="ddSelAll">全选</button><button class="btn" id="ddSelNone">全不选</button>' +
-    '<button class="btn" id="ddOldsAll">删旧留新</button><button class="btn" id="ddCoexist">旧版共存（不删）</button>' +
-    '<button class="btn" id="ddClose">关闭</button><button class="btn btn-danger" id="ddDel">🗑️ 移入回收站</button></div>';
+    '<button class="btn" id="ddOldsAll" title="把所有旧版都勾上（只保留最新版）">☑ 删旧留新（勾选旧版）</button>' +
+    '<button class="btn" id="ddCoexist" title="取消勾选全部旧版 = 新旧版本都留着，什么都不删">☐ 旧版共存（不删）</button>' +
+    '<button class="btn" id="ddClose">关闭</button>' +
+    '<button class="btn btn-danger" id="ddDel">🗑️ 移入回收站</button></div>';
   document.body.appendChild(mask);
   document.body.appendChild(dlg);
   const close = () => { mask.remove(); dlg.remove(); };
@@ -717,29 +764,52 @@ function showDedupeDialog(groups, modelGroups) {
     e.stopPropagation();
     api.call("open_url", a.dataset.url);
   }));
-  $("#ddSelAll", dlg).addEventListener("click", () => dlg.querySelectorAll("input[type=checkbox]").forEach((c) => (c.checked = true)));
-  $("#ddSelNone", dlg).addEventListener("click", () => dlg.querySelectorAll("input[type=checkbox]").forEach((c) => (c.checked = false)));
-  $("#ddOldsAll", dlg).addEventListener("click", () => dlg.querySelectorAll("input[data-mg]").forEach((c) => (c.checked = true)));
-  $("#ddCoexist", dlg).addEventListener("click", () => dlg.querySelectorAll("input[data-mg]").forEach((c) => (c.checked = false)));
+  function updCount() {
+    let n = 0;
+    dlg.querySelectorAll("input[type=checkbox]:checked").forEach((c) => {
+      if (c.dataset.mg !== undefined || c.dataset.g !== undefined) n++;
+    });
+    $("#ddDel", dlg).textContent = n ? "🗑️ 移入回收站（" + n + " 个）" : "🗑️ 移入回收站";
+  }
+  dlg.addEventListener("change", updCount);
+  $("#ddSelAll", dlg).addEventListener("click", () => { dlg.querySelectorAll("input[type=checkbox]").forEach((c) => (c.checked = true)); updCount(); });
+  $("#ddSelNone", dlg).addEventListener("click", () => { dlg.querySelectorAll("input[type=checkbox]").forEach((c) => (c.checked = false)); updCount(); });
+  $("#ddOldsAll", dlg).addEventListener("click", () => { dlg.querySelectorAll("input[data-mg]").forEach((c) => (c.checked = true)); updCount(); setStatus("已勾选全部旧版：确认后只保留每个模型的最新版"); });
+  $("#ddCoexist", dlg).addEventListener("click", () => { dlg.querySelectorAll("input[data-mg]").forEach((c) => (c.checked = false)); updCount(); setStatus("已取消全部旧版勾选：新旧版本都保留"); });
+  updCount();
+  // 缩略图（有封面的才显示，失败不影响）
+  const allPaths = [];
+  groups.forEach((g) => { allPaths.push(g.keep); (g.dups || []).forEach((d) => allPaths.push(d.path)); });
+  modelGroups.forEach((g) => { allPaths.push(g.keep.path); (g.olds || []).forEach((o) => allPaths.push(o.path)); });
+  loadDdThumbs(dlg, allPaths);
+
   $("#ddDel", dlg).addEventListener("click", async () => {
     const picked = [];
     dlg.querySelectorAll("input[type=checkbox]:checked").forEach((c) => {
       if (c.dataset.mg !== undefined && c.dataset.mg !== "") {
         const g = modelGroups[Number(c.dataset.mg)];
         const o = g && g.olds[Number(c.dataset.o)];
-        if (o) picked.push({ path: o.path, name: o.name, dir: o.dir, ver: o.ver });
-      } else {
+        if (o) picked.push({ path: o.path, name: o.name, dir: o.dir, ver: o.ver, size: o.size });
+      } else if (c.dataset.g !== undefined && c.dataset.g !== "") {
         const g = groups[Number(c.dataset.g)];
         const d = g && g.dups[Number(c.dataset.d)];
-        if (d) picked.push({ path: d.path, name: d.name, dir: d.dir });
+        if (d) picked.push({ path: d.path, name: d.name, dir: d.dir, size: d.size });
       }
     });
     if (!picked.length) { setStatus("没有勾选任何要清理的文件"); return; }
-    const lines = picked.map((d) => "· " + esc(d.name) + (d.ver ? "（旧版 " + esc(d.ver) + "）" : "") + "<div class='dedup-dir'>" + esc(d.dir) + "</div>").join("");
-    const ok = await confirmBox(
-      "<div style='font-size:12px;line-height:1.9;max-height:240px;overflow:auto'>将把以下 <b>" + picked.length +
-      "</b> 个文件移入回收站（可还原）：<br/>" + lines + "</div>", "🧬 清理重复 / 旧版模型");
+    // 带缩略图 + 排版的确认框（confirmBox 会转义 HTML，所以这里用不转义的版本）
+    const totalSize = picked.reduce((s, d) => s + (d.size || 0), 0);
+    const rows = picked.map((d) =>
+      '<div class="cf-row">' + thumb(d.path) + '<div class="dd-text">' +
+      "<b>" + esc(d.name) + "</b>" + (d.ver ? ' <span style="color:var(--warn,#d29922)">旧版 ' + esc(d.ver) + "</span>" : " <span style='color:var(--text-dim)'>重复副本</span>") +
+      '<div class="dedup-dir">' + esc(d.dir) + (d.size ? " · " + fmtBytes(d.size) : "") + "</div></div></div>").join("");
+    const ok = await confirmBoxRaw(
+      '<div style="font-size:12px;color:var(--text-dim);margin-bottom:6px">以下 <b>' + picked.length +
+      "</b> 个文件将移入回收站（可还原，不会真正删除）：</div>" +
+      '<div style="max-height:300px;overflow:auto">' + rows + "</div>",
+      "🗑️ 清理重复 / 旧版模型（" + picked.length + " 个" + (totalSize ? " · 约 " + fmtBytes(totalSize) : "") + "）");
     if (!ok) return;
+    if (ok.root) loadDdThumbs(ok.root, picked.map((d) => d.path));
     let done = 0;
     for (const d of picked) {
       try { await api.call("rm_file", d.path); done++; } catch (e) { /* 单个失败不影响其它 */ }
@@ -1444,9 +1514,71 @@ async function mmCheckUpdatesFlow(force) {
     setStatus(p.msg || "检查完成");
     try {
       const u = await api.call("get_model_updates");
-      if (u && u.items) { applyUpdatesToRows(u.items); if (state.models.length) applyMmFilter(); }
+      if (u && u.items) {
+        applyUpdatesToRows(u.items);
+        if (state.models.length) applyMmFilter();
+        showUpdateResults(u.items);
+      }
     } catch (e) { /* 忽略 */ }
   }, 800);
+}
+
+// 检查更新结果窗口：列出「有同底模新版」的模型，每条可去 C 站
+async function showUpdateResults(items) {
+  const rows = Object.entries(items || {}).filter(([, it]) => it && it.has_update);
+  const others = Object.entries(items || {}).filter(([, it]) => it && it.other_base);
+  if (!rows.length && !others.length) { setStatus("检查完成：没有发现有更新的模型 ✅"); return; }
+  const dlg = document.createElement("div");
+  dlg.className = "rd-mask";
+  const box = document.createElement("div");
+  box.className = "rename-dialog";
+  box.style.width = "700px";
+  const rowHtml = (r) => {
+    const it = r[1];
+    const nm = r[0].replace(/\\/g, "/").split("/").pop();
+    return '<div class="cf-row"><img class="dd-thumb" data-path="' + esc(r[0]) + '" alt=""/>' +
+      '<div class="dd-text"><b>' + esc(nm) + "</b>" +
+      (it.has_update
+        ? ' <span style="color:var(--warn,#d29922)">有新版</span>'
+        : ' <span style="color:var(--text-dim)">换底模（未计入）</span>') +
+      '<div class="dedup-dir">你本地：' + esc(it.local_base || "-") + " ｜ " +
+      (it.has_update ? "同底模最新：" : "最新版：") + esc(it.latest_base || "-") +
+      (it.latest_name ? " · " + esc(it.latest_name) : "") +
+      (it.latest_date ? " · " + esc(String(it.latest_date).slice(0, 10)) : "") +
+      (it.behind > 1 ? " · 落后 " + it.behind + " 个版本" : "") +
+      (it.unknown ? esc(it.msg || "") : "") + "</div>" +
+      (it.url ? '<a href="#" class="dd-link" data-url="' + esc(it.url) + '">🔗 去 C 站看新版</a>' : "") +
+      "</div></div>";
+  };
+  box.innerHTML =
+    '<div class="rd-title">⏫ 检查更新：' + rows.length + " 个模型有同底模新版" + (others.length ? "（另有 " + others.length + " 个只换了底模）" : "") + "</div>" +
+    '<div class="dd-hint">只列出「<b>和你所用底模相同</b>」的新版本；换了底模的（如 Anima→Krea）单列在下面，<b>不算更新</b>。' +
+    "点 🔗 去 C 站看新版；模型列表里这些条目已标 ❗，可用「❗ 有更新」筛选。</div>" +
+    '<div style="max-height:360px;overflow:auto">' +
+    rows.map(rowHtml).join("") +
+    (others.length ? '<div class="dedup-sec">🔀 最新版换了底模（仅供参考，未计入更新）</div>' + others.map(rowHtml).join("") : "") +
+    "</div>" +
+    '<div class="rd-actions"><button class="btn" id="updClose">关闭</button>' +
+    '<button class="btn" id="updFilter">❗ 只看这些模型</button></div>';
+  document.body.appendChild(dlg);
+  document.body.appendChild(box);
+  const close = () => { dlg.remove(); box.remove(); };
+  dlg.addEventListener("click", close);
+  $("#updClose", box).addEventListener("click", close);
+  $("#updFilter", box).addEventListener("click", () => {
+    close();
+    state.mmUpdOnly = true;
+    const b = $("#mmUpdOnly");
+    if (b) b.classList.add("active");
+    applyMmFilter();
+    setStatus("已筛选出有更新的模型");
+  });
+  box.querySelectorAll(".dd-link").forEach((a) => a.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    api.call("open_url", a.dataset.url);
+  }));
+  loadDdThumbs(box, rows.concat(others).map((r) => r[0]));
 }
 if ($("#mmCheckUpd")) $("#mmCheckUpd").addEventListener("click", () => mmCheckUpdatesFlow(false));
 // 点卡片/列表里的 ❗ → 打开 C 站新版页面（不会下载）

@@ -1280,6 +1280,15 @@ fieldset.form-section[data-collapsed="1"] .fold-btn { transform: rotate(-90deg);
 .dedup-sec { font-size: 13px; font-weight: 600; margin: 12px 0 4px; padding-left: 2px; border-left: 3px solid var(--primary, #0a84ff); }
 .dd-link { color: var(--primary, #0a84ff); text-decoration: none; font-size: 12px; }
 .dd-link:hover { text-decoration: underline; }
+.dd-hint { font-size: 12px; color: var(--text-dim); margin: 2px 0 6px; line-height: 1.6; }
+.dd-text { flex: 1; min-width: 0; }
+.dd-thumb { width: 40px; height: 40px; flex: 0 0 40px; border-radius: 8px; object-fit: cover;
+  background: var(--surface2, rgba(127,127,127,.15)); border: 1px solid var(--border); }
+.dedup-dup .dd-thumb, .dedup-keep .dd-thumb { margin-right: 8px; }
+.dedup-keep { display: flex; align-items: flex-start; }
+.dedup-dup { display: flex; align-items: flex-start; gap: 4px; }
+.cf-row { display: flex; align-items: flex-start; padding: 5px 2px; border-bottom: 1px dashed var(--border); }
+.cf-row .dd-thumb { width: 44px; height: 44px; flex: 0 0 44px; margin-right: 8px; }
 
 /* ===== 更新检测徽标（卡片右上角 ❗ / 列表名前的 ❗）===== */
 .ms-upd { position: absolute; top: 6px; right: 8px; z-index: 3; font-size: 15px; line-height: 1;
