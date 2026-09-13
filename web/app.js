@@ -274,10 +274,17 @@ function openTodoDialog() {
     const box = $("#tdList");
     if (!r || !r.todos || !r.todos.length) { box.innerHTML = "（空）"; return; }
     box.innerHTML = r.todos.map((t) =>
-      '<div style="display:flex;gap:8px;align-items:center">' +
-      '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(t.url) + "</span>" +
-      (t.due ? '<span style="color:var(--danger)">⏰ 已到期</span>' : '<span>' + t.remain_days + " 天后</span>") +
-      '<button class="btn btn-tiny" data-del="' + esc(t.url) + '">🗑️</button></div>').join("");
+      '<div style="display:flex;gap:6px;align-items:center">' +
+      '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(t.url) + '">' + esc(t.label || t.url) + "</span>" +
+      (t.due ? '<span style="color:var(--danger)">⏰ 已到期</span>' : "<span>" + t.remain_days + " 天后</span>") +
+      '<button class="btn btn-tiny" data-dl="' + esc(t.url) + '" title="立即解析并下载这个模型">⬇️ 下载</button>' +
+      '<button class="btn btn-tiny" data-del="' + esc(t.url) + '" title="从清单移除">🗑️</button></div>').join("");
+    box.querySelectorAll("button[data-dl]").forEach((b) => b.addEventListener("click", async () => {
+      setStatus("正在解析并加入下载队列 …");
+      const res = await api.call("todo_download", b.dataset.dl);
+      setStatus(res && res.msg ? res.msg : "已开始下载");
+      renderTodoList();
+    }));
     box.querySelectorAll("button[data-del]").forEach((b) => b.addEventListener("click", async () => {
       await api.call("todo_remove", b.dataset.del);
       renderTodoList();
@@ -285,21 +292,46 @@ function openTodoDialog() {
   }
   renderTodoList();
 }
-// 启动时检查到期待办
+// 启动时检查到期待办：直接给「一键下载 / 全部下载」，不用再自己去翻链接
 (async function checkTodoDue() {
   try {
     const r = await api.call("todo_due");
-    if (r && r.due && r.due.length) {
-      const items = r.due.map((t) => '· <a href="#" class="td-go" data-url="' + esc(t.url) + '">' + esc(t.url) + "</a>").join("<br/>");
-      confirmBox("⏰ 以下待办模型已到免费/可下载时间：<br/><div style=\"margin:6px 0;font-size:13px\">" + items + "</div>", "⏰ 待办提醒").then((ok) => {
-        if (ok) switchPage("download");
-      });
-      document.querySelectorAll(".td-go").forEach((a) => a.addEventListener("click", (e) => {
-        e.preventDefault();
-        $("#urlRows").appendChild(addUrlRow(a.dataset.url));
-        switchPage("download");
-      }));
-    }
+    if (!r || !r.due || !r.due.length) return;
+    const mask = document.createElement("div");
+    mask.className = "rd-mask";
+    const dlg = document.createElement("div");
+    dlg.className = "rename-dialog";
+    dlg.style.width = "470px";
+    const rows = r.due.map((t) =>
+      '<div style="display:flex;gap:8px;align-items:center;margin:5px 0">' +
+      '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px" title="' + esc(t.url) + '">' + esc(t.label || t.url) + "</span>" +
+      '<button class="btn btn-tiny td-dl" data-url="' + esc(t.url) + '">⬇️ 一键下载</button></div>').join("");
+    dlg.innerHTML =
+      '<div style="font-size:15px;font-weight:600;margin-bottom:6px">⏰ 到期待办：可以下载了</div>' +
+      '<div style="font-size:12px;color:var(--text-dim);margin-bottom:8px">这些模型已到免费/可下载时间（下载成功后会自动从清单里移除）：</div>' +
+      '<div style="max-height:240px;overflow:auto">' + rows + "</div>" +
+      '<div class="rd-actions"><button class="btn btn-primary" id="tdAll">⬇️ 全部下载</button><button class="btn" id="tdGoDl">去下载页</button><button class="btn" id="tdLater">稍后再说</button></div>';
+    document.body.appendChild(mask);
+    document.body.appendChild(dlg);
+    const close = () => { mask.remove(); dlg.remove(); };
+    mask.addEventListener("click", close);
+    $("#tdLater").addEventListener("click", close);
+    $("#tdGoDl").addEventListener("click", () => { switchPage("download"); close(); });
+    $("#tdAll").addEventListener("click", async () => {
+      setStatus("正在把到期待办加入下载队列 …");
+      const res = await api.call("todo_download_all");
+      setStatus(res && res.msg ? res.msg : "已开始下载");
+      close();
+    });
+    dlg.querySelectorAll(".td-dl").forEach((b) => b.addEventListener("click", async () => {
+      setStatus("正在解析并加入下载队列 …");
+      const res = await api.call("todo_download", b.dataset.url);
+      setStatus(res && res.msg ? res.msg : "已开始下载");
+      b.disabled = true;
+      b.textContent = "✅ 已加入";
+      const row = b.parentElement;
+      if (row) row.style.opacity = ".5";
+    }));
   } catch (e) { /* 忽略 */ }
 })();
 $("#btnClearUrls").addEventListener("click", () => {

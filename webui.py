@@ -4,13 +4,14 @@
 业务逻辑复用 civitai_api / downloader / model_manager / reverse_parse / translator / config。"""
 import json
 import os
+import re
 import shutil
 import threading
 import time
 
 import webview
 
-APP_VERSION = "2.1.22"
+APP_VERSION = "2.1.23"
 
 import civitai_api
 import config
@@ -22,6 +23,17 @@ import translator
 import browser_bridge
 from gui import (_download_image, _recycle_to_trash, _text_to_rules, _rules_to_text,
                  _folder_visible, _friendly_api_error)
+
+
+def _todo_label(url):
+    """从模型链接里取个可读名字（没存 label 的老条目用）：优先 slug，退化为「模型 ID」"""
+    m = re.search(r"/models/(\d+)(?:/([^/?#]+))?", url or "")
+    if not m:
+        return (url or "")[:60]
+    slug = (m.group(2) or "").strip()
+    if slug:
+        return slug.replace("-", " ").replace("_", " ").strip()
+    return "模型 %s" % m.group(1)
 
 
 class Api:
@@ -2083,11 +2095,12 @@ class Api:
 
     def todo_add(self, url, days=None, deadline=None):
         """添加待办。时间自动选择：Early Access deadline 优先；无则默认 7 天。
-        days/deadline 可显式传入（前端不再让用户选时间）。"""
+        days/deadline 可显式传入（前端不再让用户选时间）。同时记下模型名，清单里好认。"""
         url = (url or "").strip()
         if not url:
             return {"ok": False, "msg": "链接不能为空"}
-        # 自动检测：解析模型版本拿 earlyAccessDeadline
+        label = ""
+        # 自动检测：解析模型版本拿 earlyAccessDeadline + 顺手取模型名
         if days is None and not deadline:
             try:
                 model_id, version_id = self.api.resolve_url(url)
@@ -2099,6 +2112,7 @@ class Api:
                     vs = m.get("modelVersions") or []
                     mv = vs[0] if vs else None
                 if mv:
+                    label = (mv.get("name") or "").strip()
                     dl = mv.get("earlyAccessDeadline") or 0
                     if dl:
                         deadline = int(dl)
@@ -2118,10 +2132,54 @@ class Api:
             except Exception:
                 todos = []
         todos = [t for t in todos if t.get("url") != url]
-        todos.append({"url": url, "unlock_at": unlock_at, "added_at": int(time.time())})
+        todos.append({"url": url, "unlock_at": unlock_at, "added_at": int(time.time()),
+                      "label": label or _todo_label(url)})
         with open(path, "w", encoding="utf-8", newline="") as f:
             json.dump(todos, f, ensure_ascii=False, indent=1)
-        return {"ok": True, "msg": "已加入待办（%d 天后到期）" % days if days else "已加入待办（立即到期）"}
+        left = max(0, int((unlock_at - time.time()) / 86400))
+        if unlock_at <= time.time():
+            msg = "已加入待办（现在就可以下载）"
+        else:
+            msg = "已加入待办（约 %d 天后到期）" % left
+        return {"ok": True, "msg": msg, "label": label or _todo_label(url)}
+
+    def todo_download(self, url):
+        """清单里一键下载：走「解析并入队」链路（与浏览器扩展一键下载一致），成功后从清单移除"""
+        url = (url or "").strip()
+        if not url:
+            return {"ok": False, "msg": "链接为空"}
+        try:
+            r = self.dl_enqueue_url(url) or {}
+        except Exception as e:
+            return {"ok": False, "msg": "%s: %s" % (type(e).__name__, str(e)[:120])}
+        if not r.get("started"):
+            return {"ok": False, "msg": r.get("msg") or "未能开始下载"}
+        try:
+            self.todo_remove(url)
+        except Exception:
+            pass
+        return {"ok": True, "msg": "已开始解析并加入下载队列（已从清单移除）"}
+
+    def todo_download_all(self):
+        """把「已到期」的待办全部一键下载（清单里「全部下载」按钮）"""
+        try:
+            r = self.todo_list() or {}
+        except Exception:
+            r = {}
+        due = [t for t in (r.get("todos") or []) if t.get("due")]
+        if not due:
+            return {"ok": False, "msg": "没有已到期的待办"}
+        started, failed = 0, 0
+        for t in due:
+            res = self.todo_download(t.get("url") or "")
+            if res.get("ok"):
+                started += 1
+            else:
+                failed += 1
+        msg = "已开始下载 %d 个" % started
+        if failed:
+            msg += "，%d 个失败" % failed
+        return {"ok": started > 0, "msg": msg, "started": started, "failed": failed}
 
     def todo_remove(self, url):
         path = self._todo_path()
@@ -2150,6 +2208,8 @@ class Api:
         for t in todos:
             t["due"] = bool(t.get("unlock_at", 0) <= now)
             t["remain_days"] = max(0, int((t.get("unlock_at", 0) - now) / 86400))
+            if not t.get("label"):          # 老条目没有名字：从链接里补一个
+                t["label"] = _todo_label(t.get("url") or "")
         return {"todos": todos}
 
     def todo_due(self):

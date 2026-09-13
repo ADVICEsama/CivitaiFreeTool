@@ -34,7 +34,9 @@ from ctypes import wintypes
 
 IS_WINDOWS = sys.platform.startswith("win")
 
-GRACE_DEFAULT = 45  # 秒：启动后多久没有可见窗口就判定为卡死
+GRACE_DEFAULT = 5   # 秒：启动后多久没有可见窗口就判定为卡死（健康启动实测 2-6 秒）
+PROGRESS_GRACE = 3  # 秒：启动日志仍在更新（有进展）就再宽限这么久，最多 2 次，避免误杀慢性启动
+RETRY_GRACE = 10    # 秒：窗口模式重试时给的时间（慢性启动的第二次基本能起来）
 
 # --------------------------------------------------------------------------
 # 路径 / 日志
@@ -68,6 +70,11 @@ def _log(msg):
 
 def _pid_file():
     return os.path.join(_app_dir(), "app_pid.txt")
+
+
+def startup_log_path():
+    """主程序的启动日志（用来判断「还在正常启动」还是「卡死」）"""
+    return os.path.join(_app_dir(), "startup.log")
 
 
 # PyInstaller（onefile）用这些环境变量把「解包目录」传给子进程。
@@ -367,6 +374,15 @@ def _relaunch(app_name, browser=False):
         return False
 
 
+def _app_progressing(within=PROGRESS_GRACE):
+    """启动日志最近 within 秒内还在更新 = 应用仍在正常启动（不是卡死）"""
+    try:
+        p = startup_log_path()
+        return (time.time() - os.path.getmtime(p)) < within
+    except Exception:
+        return False
+
+
 def run(grace=None, exe_name=None):
     """看门狗主循环。grace 秒内没窗口就杀+重启（最多自动重启 2 次，之后只提示）。"""
     try:
@@ -383,6 +399,7 @@ def run(grace=None, exe_name=None):
     stage = 0
     msg_shown = False
     browser_fallback = False     # 切了浏览器模式后不再要求窗口
+    progresses = 0               # 启动日志「还在推进」的宽限次数
     deadline = time.time() + grace
     relaunch_until = 0.0
 
@@ -420,7 +437,7 @@ def run(grace=None, exe_name=None):
             if has_visible_window([pid]) or has_visible_window(_descendants(pid)):
                 if not healthy:
                     _log("window visible, healthy (took %.1fs)" % (time.time() - started))
-                healthy, stage, msg_shown = True, 0, False
+                healthy, stage, msg_shown, progresses = True, 0, False, 0
                 deadline = time.time() + grace
                 continue
 
@@ -433,6 +450,14 @@ def run(grace=None, exe_name=None):
             if time.time() < deadline:
                 continue
 
+            # 宽限保护：启动日志刚刚还在更新（应用在正常推进）就再等等，最多 2 次，
+            # 避免把「慢一点但没问题」的启动误杀（真正的卡死不会再有新日志行）
+            if progresses < 2 and _app_progressing():
+                progresses += 1
+                deadline = time.time() + PROGRESS_GRACE
+                _log("still starting (log updated recently), extend deadline #%d" % progresses)
+                continue
+
             # 超时无窗口 = 卡死
             elapsed = int(time.time() - started)
             if stage == 0:
@@ -441,8 +466,10 @@ def run(grace=None, exe_name=None):
                 time.sleep(1.0)
                 _relaunch(app_name)
                 stage, healthy = 1, False
+                progresses = 0
                 relaunch_until = time.time() + 120
-                deadline = time.time() + grace
+                # 重试给更短的时间：卡死的实例重试通常还是卡，尽快进浏览器模式让界面能用
+                deadline = time.time() + min(RETRY_GRACE, grace)
                 started = time.time()
             elif stage == 1:
                 _log("stage1: still no window (%ss) -> kill tree + relaunch in BROWSER mode" % elapsed)
@@ -458,6 +485,7 @@ def run(grace=None, exe_name=None):
                          "日志：%LOCALAPPDATA%\\CivitaiFreeToolWeb\\（startup.log / watchdog.log）")
                 stage, healthy, msg_shown = 2, False, True
                 browser_fallback = True
+                progresses = 0
                 relaunch_until = time.time() + 120
                 deadline = time.time() + 120
                 started = time.time()
