@@ -489,19 +489,56 @@ def main():
         start_kwargs["gui"] = "qt"
         _check_qt_backend()
     else:
-        # 降低 WebView2 (Chromium) 在本机偶发初始化卡死概率：
-        # 禁用 GPU 进程（虚拟显示适配器/显卡驱动异常时 Chrome_WidgetWin 初始化会挂）；
-        # 本应用 UI 为本地页面，软件渲染无感。
+        # WebView2 GPU 策略：**默认开启 GPU 加速**。
+        # 曾（v2.1.12）无条件传 --disable-gpu 规避偶发建窗卡死，但软件渲染会让
+        # WebGL 氛围背景（web/shader.js，全屏动画）跑满 CPU —— 用户实测 9950X3D 全核拉高、迅速升温，
+        # 最小化就恢复。所以改为默认不禁用；真遇到卡死可在设置里开「禁用 GPU 加速」或设环境变量
+        # CFT_WV_DISABLE_GPU=1（也会顺手清掉历史遗留的 --disable-gpu）。
+        try:
+            import config as _cfgmod
+            _c = _cfgmod.load()
+            disable_gpu = bool(_c.get("webview_disable_gpu")) or os.environ.get("CFT_WV_DISABLE_GPU") == "1"
+        except Exception:
+            disable_gpu = os.environ.get("CFT_WV_DISABLE_GPU") == "1"
         try:
             extra = os.environ.get("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", "").strip()
-            if "--disable-gpu" not in extra:
-                os.environ["WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS"] = (extra + " --disable-gpu").strip()
+            parts = [a for a in extra.split() if a != "--disable-gpu"]
+            if disable_gpu:
+                parts.append("--disable-gpu")
+                _startup_log("webview: --disable-gpu (software rendering, per settings/env)")
+            elif "--disable-gpu" in extra:
+                _startup_log("webview: removed stale --disable-gpu (GPU acceleration ON)")
+            new_extra = " ".join(dict.fromkeys(parts)).strip()
+            if new_extra:
+                os.environ["WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS"] = new_extra
+            elif "WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS" in os.environ:
+                os.environ.pop("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", None)
         except Exception:
             pass
         sp = _webview_storage_path()
         if sp:
             start_kwargs["storage_path"] = sp
     _startup_log("create_window ok, storage=%s" % (start_kwargs.get("storage_path") or "default"))
+    # 关窗行为：设置 close_action = exit（默认退出）/ minimize（最小化到任务栏，不退出）
+    try:
+        def _on_closing():
+            try:
+                import config as _cfgmod
+                act = (_cfgmod.load().get("close_action") or "exit").strip()
+            except Exception:
+                act = "exit"
+            if act == "minimize":
+                try:
+                    window.minimize()
+                except Exception:
+                    pass
+                _startup_log("close: minimize to taskbar (close_action=minimize)")
+                return False          # 阻止真正关闭
+            _startup_log("close: exit (close_action=exit)")
+            return True
+        window.events.closing += _on_closing
+    except Exception as e:
+        _startup_log("close handler failed: %r" % (e,))
     # 进程内观察者：只记录窗口里程碑（重启已由独立进程看门狗负责——建窗死锁会饿死本线程）
     import threading
     threading.Thread(target=_watchdog_log_only, daemon=True).start()

@@ -62,6 +62,8 @@ DEFAULTS = {
     "ui_mode": "window",                # window（原生窗口，默认）/ browser（浏览器）
     "tray_icon": True,                  # 浏览器模式：显示托盘图标（打开界面/退出软件）
     "exit_when_page_closed": False,     # 浏览器模式：关闭页面后自动退出（有任务在下载时不退）
+    "close_action": "exit",             # 点窗口关闭按钮：exit 退出（默认）/ minimize 最小化到任务栏
+    "webview_disable_gpu": False,       # 禁用 WebView2 GPU 加速（软件渲染；默认关。软渲染会让氛围动画吃满 CPU）
     "default_page": "models",           # 启动默认页（download/dlmanager/models/reverse/settings）
 }
 

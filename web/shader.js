@@ -153,11 +153,19 @@
   window.addEventListener("resize", resize);
   resize();
 
+  let rafId = 0;
   function draw(ts) {
-    gl.uniform1f(uTime, ts * 0.001);
-    gl.uniform2f(uRes, canvas.width, canvas.height);
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-    requestAnimationFrame(draw);
+    // 窗口最小化/切后台、或氛围背景被关掉时，跳过绘制（软渲染下全屏动画很吃 CPU，跳过立刻凉）
+    const hidden = document.hidden || canvas.style.display === "none" || canvas.offsetParent === null;
+    if (!hidden) {
+      gl.uniform1f(uTime, ts * 0.001);
+      gl.uniform2f(uRes, canvas.width, canvas.height);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    }
+    rafId = requestAnimationFrame(draw);
   }
-  requestAnimationFrame(draw);
+  function startLoop() { if (!rafId) rafId = requestAnimationFrame(draw); }
+  function stopLoop() { if (rafId) { cancelAnimationFrame(rafId); rafId = 0; } }
+  document.addEventListener("visibilitychange", () => { (document.hidden ? stopLoop : startLoop)(); });
+  if (!document.hidden) startLoop();
 })();

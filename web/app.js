@@ -2664,6 +2664,8 @@ const SETTING_FIELDS = [
   ["🎨 界面", "zebra_rows", "模型列表斑马纹", "bool"],
   ["🎨 界面", "ambient_bg", "顶部氛围动态背景", "bool"],
   ["🎨 界面", "ui_mode", "界面模式", "select", [["window", "原生窗口（默认）"], ["browser", "浏览器模式（可托盘 / 关页面退）"]]],
+  ["🎨 界面", "close_action", "点窗口关闭按钮时", "select", [["exit", "退出软件（默认）"], ["minimize", "最小化到任务栏（不退出）"]]],
+  ["🎨 界面", "webview_disable_gpu", "禁用 GPU 加速（软件渲染）", "bool"],
   ["🎨 界面", "tray_icon", "浏览器模式：托盘图标", "bool"],
   ["🎨 界面", "exit_when_page_closed", "浏览器模式：关页面后自动退出", "bool"],
 ];
@@ -2700,6 +2702,8 @@ const SETTING_TIPS = {
   "zebra_rows": "模型列表行间斑马纹，便于横向对齐查看",
   "ambient_bg": "顶部氛围动态背景（渐变光晕）",
   "ui_mode": "界面显示方式：窗口 = 原生窗口（默认）；浏览器 = 软件在后台跑、界面用系统浏览器打开 —— 界面卡死/崩溃不会拖死下载任务，刷新页面即可恢复（推荐受「启动卡死」困扰时使用）。改完重启软件生效",
+  "close_action": "点窗口右上角 X 的行为：退出软件（默认）/ 最小化到任务栏（软件继续在后台跑，点任务栏图标可还原）。想彻底退出可改用托盘菜单或任务管理器",
+  "webview_disable_gpu": "禁用 WebView2 的 GPU 加速（强制软件渲染）。默认关闭——软件渲染会让「顶部氛围动态背景」等动画吃满 CPU、笔记本/台式机都会明显升温。只有在遇到「WebView2 建窗卡死」且关掉氛围背景仍无法解决时才建议勾选",
   "tray_icon": "浏览器模式：在托盘显示图标（左键打开界面，右键菜单里有「退出软件」）",
   "exit_when_page_closed": "浏览器模式：关掉页面且没有任务在下载时，自动退出软件；有下载任务时会继续在后台跑",
   "target_env": "你的模型最终要放进哪个部署环境：WebUI/Forge 用 Lora、Stable-diffusion 目录；ComfyUI 用 loras、checkpoints 目录。整理前必须选择",
