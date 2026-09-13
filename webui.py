@@ -11,7 +11,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.1.24"
+APP_VERSION = "2.1.25"
 
 import civitai_api
 import config
@@ -1731,7 +1731,6 @@ class Api:
                                "keep_dir": os.path.dirname(keep["path"]), "size": total_size,
                                "dups": dups})
             groups.sort(key=lambda g: -sum(d["size"] for d in g["dups"]))
-            total = sum(len(g["dups"]) for g in groups)
             waste = sum(d["size"] for g in groups for d in g["dups"])
 
             def fmt(n):
@@ -1739,10 +1738,75 @@ class Api:
                     if n < 1024 or u == "TB":
                         return ("%d %s" % (n, u)) if u == "B" else ("%.1f %s" % (n, u))
                     n /= 1024.0
+
+            # ---- 第二类：同模型多版本（同一 modelId 下的不同版本；不是字节重复，但旧版通常是冗余的）----
+            self.mm_progress["msg"] = "整理同模型新旧版本…"
+            model_groups = []
+            api = getattr(self, "api", None)
+            api_calls = 0
+            try:
+                by_model = collections.defaultdict(dict)      # modelId -> {versionId: [rows]}
+                for r in rows:
+                    mid = str(r.get("modelId") or "").strip()
+                    if not mid:
+                        continue                                  # 没有 C 站身份的（如 HF 下载）跳过
+                    vid = str(r.get("verId") or "").strip() or ("file:" + r["path"])
+                    by_model[mid].setdefault(vid, []).append(r)
+                for mid, vers in by_model.items():
+                    if len(vers) < 2:                             # 只有「同模型、多个版本」才处理
+                        continue
+                    items = []
+                    for vid, rs in vers.items():
+                        rs = sorted(rs, key=rank)                 # 每版取一份代表（层级最浅）
+                        rep = rs[0]
+                        try:
+                            size = os.path.getsize(rep["path"])
+                        except Exception:
+                            size = 0
+                        real_vid = "" if vid.startswith("file:") else vid
+                        items.append({"version_id": vid, "path": rep["path"],
+                                      "name": rep.get("name") or os.path.basename(rep["path"]),
+                                      "dir": os.path.dirname(rep["path"]), "size": size,
+                                      "ver": rep.get("ver") or "", "base": rep.get("base") or "",
+                                      "mtime": rep.get("mtime") or 0, "copies": len(rs),
+                                      "url": self._site_url(mid, real_vid)})
+                    # 版本新旧排序：优先 C 站版本列表顺序（最新在前），拿不到就用文件时间
+                    order = {}
+                    m = None
+                    if api is not None and api_calls < 60:
+                        api_calls += 1
+                        try:
+                            m = api.get_model(mid)
+                            for i, v in enumerate((m or {}).get("modelVersions") or []):
+                                order[str(v.get("id"))] = i
+                        except Exception:
+                            m = None
+                    if order:
+                        items.sort(key=lambda it: order.get(it["version_id"], 10 ** 6))
+                    else:
+                        items.sort(key=lambda it: -(it["mtime"] or 0))
+                    keep, olds = items[0], items[1:]
+                    mname = keep.get("name") or ""
+                    if m:
+                        mname = m.get("name") or mname
+                    model_groups.append({"model_id": mid, "model_name": mname,
+                                         "url": self._site_url(mid),
+                                         "keep": keep, "olds": olds, "count": len(items)})
+                model_groups.sort(key=lambda g: -sum(o["size"] for o in g["olds"]))
+            except Exception:
+                model_groups = []
+
             self.mm_progress["result"] = groups
+            self.mm_progress["model_groups"] = model_groups
             self.mm_progress["running"] = False
-            self.mm_progress["msg"] = ("查重完成：%d 组重复，可清理 %d 个文件（约 %s）"
-                                       % (len(groups), total, fmt(waste))) if groups else "查重完成：没有发现重复模型 ✅"
+            waste_all = waste + sum(o["size"] for g in model_groups for o in g["olds"])
+            parts = []
+            if groups:
+                parts.append("%d 组完全相同" % len(groups))
+            if model_groups:
+                parts.append("%d 组同模型多版本" % len(model_groups))
+            self.mm_progress["msg"] = (("查重完成：%s（可清理约 %s）" % ("、".join(parts), fmt(waste_all)))
+                                       if parts else "查重完成：没有发现重复或冗余的模型 ✅")
 
         threading.Thread(target=work, daemon=True).start()
         return {"started": True}

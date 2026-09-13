@@ -1277,6 +1277,9 @@ fieldset.form-section[data-collapsed="1"] .fold-btn { transform: rotate(-90deg);
 .dedup-dup { display: block; font-size: 13px; padding: 4px 6px; border-radius: 8px; cursor: pointer; }
 .dedup-dup:hover { background: var(--surface2, rgba(127,127,127,.12)); }
 .dedup-dir { font-size: 11px; color: var(--text-dim); word-break: break-all; }
+.dedup-sec { font-size: 13px; font-weight: 600; margin: 12px 0 4px; padding-left: 2px; border-left: 3px solid var(--primary, #0a84ff); }
+.dd-link { color: var(--primary, #0a84ff); text-decoration: none; font-size: 12px; }
+.dd-link:hover { text-decoration: underline; }
 
 /* ===== 设置里「下载目标文件夹」选择器 ===== */
 .dir-pick { display: flex; gap: 6px; align-items: center; }

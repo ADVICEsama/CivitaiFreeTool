@@ -636,59 +636,108 @@ function fmtBytes(n) {
 async function mmDedupeFlow() {
   const r = await api.call("mm_dedupe", null);
   if (!r || !r.started) { setStatus((r && r.msg) || "查重未开始"); return; }
-  setStatus("查重中：正在计算文件哈希（大库需要一会儿）…");
+  setStatus("查重中：正在计算文件哈希并整理新旧版本（大库需要一会儿）…");
   const timer = setInterval(async () => {
     const p = await api.call("get_mm_progress");
     if (!p) return;
-    if (p.running) { setStatus("查重中 " + (p.done || 0) + "/" + (p.total || 0)); return; }
+    if (p.running) { setStatus("查重中 " + (p.done || 0) + "/" + (p.total || 0) + (p.msg ? " · " + p.msg : "")); return; }
     clearInterval(timer);
     setStatus(p.msg || "查重完成");
-    if (Array.isArray(p.result) && p.result.length) showDedupeDialog(p.result);
+    const dupGroups = Array.isArray(p.result) ? p.result : [];
+    const modelGroups = Array.isArray(p.model_groups) ? p.model_groups : [];
+    if (dupGroups.length || modelGroups.length) showDedupeDialog(dupGroups, modelGroups);
   }, 800);
 }
 
-function showDedupeDialog(groups) {
+function fmtDate(ts) {
+  if (!ts) return "";
+  const d = new Date(ts * 1000);
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+
+function showDedupeDialog(groups, modelGroups) {
+  groups = groups || [];
+  modelGroups = modelGroups || [];
   const totalDups = groups.reduce((s, g) => s + g.dups.length, 0);
-  const totalSize = groups.reduce((s, g) => s + g.dups.reduce((x, d) => x + (d.size || 0), 0), 0);
-  const body = groups.map((g, gi) =>
-    '<div class="dedup-group">' +
-    '<div class="dedup-keep">✅ 保留 <b>' + esc(g.keep_name) + "</b>" +
-    '<div class="dedup-dir">' + esc(g.keep_dir) + "</div></div>" +
-    g.dups.map((d, di) =>
-      '<label class="dedup-dup"><input type="checkbox" data-g="' + gi + '" data-d="' + di + '" checked/> ' +
-      "<span>" + esc(d.name) + '</span><div class="dedup-dir">' + esc(d.dir) + " · " + fmtBytes(d.size) + "</div></label>").join("") +
-    "</div>").join("");
+  const sizeA = groups.reduce((s, g) => s + g.dups.reduce((x, d) => x + (d.size || 0), 0), 0);
+  const totalOlds = modelGroups.reduce((s, g) => s + (g.olds || []).length, 0);
+  const sizeB = modelGroups.reduce((s, g) => s + (g.olds || []).reduce((x, o) => x + (o.size || 0), 0), 0);
+
+  const secA = groups.length ? (
+    '<div class="dedup-sec">🧬 完全相同（同哈希 · ' + groups.length + " 组 · " + totalDups + " 个副本）</div>" +
+    '<div style="font-size:12px;color:var(--text-dim);margin:2px 0 6px">同名同内容只留一份，默认勾选的是多余副本。</div>' +
+    groups.map((g, gi) =>
+      '<div class="dedup-group">' +
+      '<div class="dedup-keep">✅ 保留 <b>' + esc(g.keep_name) + "</b>" +
+      '<div class="dedup-dir">' + esc(g.keep_dir) + "</div></div>" +
+      g.dups.map((d, di) =>
+        '<label class="dedup-dup"><input type="checkbox" data-g="' + gi + '" data-d="' + di + '" checked/> ' +
+        "<span>" + esc(d.name) + '</span><div class="dedup-dir">' + esc(d.dir) + " · " + fmtBytes(d.size) + "</div></label>").join("") +
+      "</div>").join("")) : "";
+
+  const secB = modelGroups.length ? (
+    '<div class="dedup-sec">🕰️ 同模型多版本（' + modelGroups.length + " 组 · 旧版 " + totalOlds + " 个 · 约 " + fmtBytes(sizeB) + "）</div>" +
+    '<div style="font-size:12px;color:var(--text-dim);margin:2px 0 6px">同一模型的新旧版本：默认勾选=删旧版（移入回收站可还原）；点 <b>🔗</b> 可跳到 C 站原页面核对。</div>' +
+    modelGroups.map((g, gi) =>
+      '<div class="dedup-group">' +
+      '<div class="dedup-keep">🗂️ <b>' + esc(g.model_name || g.model_id) + "</b> " +
+      '<a href="#" class="dd-link" data-url="' + esc(g.url) + '">🔗 模型 C 站页面</a>' +
+      (g.count > 2 ? '<span style="color:var(--text-dim)"> · 共 ' + g.count + " 个版本</span>" : "") + "</div>" +
+      '<div class="dedup-keep" style="font-weight:400">✅ <b>保留（最新）</b> ' + esc(g.keep.ver || g.keep.name) +
+      " · " + esc(g.keep.base || "-") + " · " + fmtBytes(g.keep.size) + (g.keep.mtime ? " · " + fmtDate(g.keep.mtime) : "") +
+      ' <a href="#" class="dd-link" data-url="' + esc(g.keep.url) + '">🔗 这一版</a>' +
+      '<div class="dedup-dir">' + esc(g.keep.dir) + "</div></div>" +
+      g.olds.map((o, oi) =>
+        '<label class="dedup-dup"><input type="checkbox" data-mg="' + gi + '" data-o="' + oi + '" checked/> ' +
+        "<span>旧版 " + esc(o.ver || o.name) + "</span>" +
+        '<div class="dedup-dir">' + esc(o.base || "-") + " · " + fmtBytes(o.size) + (o.mtime ? " · " + fmtDate(o.mtime) : "") +
+        (o.copies > 1 ? " · 另有同名副本 " + o.copies + " 份（在上一节里）" : "") + "</div>" +
+        '<div class="dedup-dir">' + esc(o.dir) + ' · <a href="#" class="dd-link" data-url="' + esc(o.url) + '">🔗 这一版</a></div></label>').join("") +
+      "</div>").join("")) : "";
 
   const mask = document.createElement("div");
   mask.className = "rd-mask";
   const dlg = document.createElement("div");
   dlg.className = "rename-dialog";
-  dlg.style.width = "640px";
+  dlg.style.width = "680px";
   dlg.innerHTML =
-    '<div class="rd-title">🧬 查重结果：' + groups.length + " 组重复，可清理 " + totalDups + " 个文件（约 " + fmtBytes(totalSize) + "）</div>" +
-    '<div style="font-size:12px;color:var(--text-dim);margin-bottom:8px">同名同内容的模型只留一份：默认勾选的是「多余的副本」（会移入回收站，可还原）。每组第一行是要保留的那份。</div>' +
-    '<div style="max-height:360px;overflow:auto">' + body + "</div>" +
+    '<div class="rd-title">🧬 查重结果：' + groups.length + " 组完全相同 + " + modelGroups.length + " 组同模型多版本（可清理约 " + fmtBytes(sizeA + sizeB) + "）</div>" +
+    '<div style="max-height:420px;overflow:auto">' + secA + secB + "</div>" +
     '<div class="rd-actions"><button class="btn" id="ddSelAll">全选</button><button class="btn" id="ddSelNone">全不选</button>' +
+    '<button class="btn" id="ddOldsAll">删旧留新</button><button class="btn" id="ddCoexist">旧版共存（不删）</button>' +
     '<button class="btn" id="ddClose">关闭</button><button class="btn btn-danger" id="ddDel">🗑️ 移入回收站</button></div>';
   document.body.appendChild(mask);
   document.body.appendChild(dlg);
   const close = () => { mask.remove(); dlg.remove(); };
   mask.addEventListener("click", close);
   $("#ddClose", dlg).addEventListener("click", close);
+  dlg.querySelectorAll(".dd-link").forEach((a) => a.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    api.call("open_url", a.dataset.url);
+  }));
   $("#ddSelAll", dlg).addEventListener("click", () => dlg.querySelectorAll("input[type=checkbox]").forEach((c) => (c.checked = true)));
   $("#ddSelNone", dlg).addEventListener("click", () => dlg.querySelectorAll("input[type=checkbox]").forEach((c) => (c.checked = false)));
+  $("#ddOldsAll", dlg).addEventListener("click", () => dlg.querySelectorAll("input[data-mg]").forEach((c) => (c.checked = true)));
+  $("#ddCoexist", dlg).addEventListener("click", () => dlg.querySelectorAll("input[data-mg]").forEach((c) => (c.checked = false)));
   $("#ddDel", dlg).addEventListener("click", async () => {
     const picked = [];
     dlg.querySelectorAll("input[type=checkbox]:checked").forEach((c) => {
-      const g = groups[Number(c.dataset.g)];
-      const d = g && g.dups[Number(c.dataset.d)];
-      if (d) picked.push(d);
+      if (c.dataset.mg !== undefined && c.dataset.mg !== "") {
+        const g = modelGroups[Number(c.dataset.mg)];
+        const o = g && g.olds[Number(c.dataset.o)];
+        if (o) picked.push({ path: o.path, name: o.name, dir: o.dir, ver: o.ver });
+      } else {
+        const g = groups[Number(c.dataset.g)];
+        const d = g && g.dups[Number(c.dataset.d)];
+        if (d) picked.push({ path: d.path, name: d.name, dir: d.dir });
+      }
     });
     if (!picked.length) { setStatus("没有勾选任何要清理的文件"); return; }
-    const lines = picked.map((d) => "· " + esc(d.name) + "<div class='dedup-dir'>" + esc(d.dir) + "</div>").join("");
+    const lines = picked.map((d) => "· " + esc(d.name) + (d.ver ? "（旧版 " + esc(d.ver) + "）" : "") + "<div class='dedup-dir'>" + esc(d.dir) + "</div>").join("");
     const ok = await confirmBox(
       "<div style='font-size:12px;line-height:1.9;max-height:240px;overflow:auto'>将把以下 <b>" + picked.length +
-      "</b> 个文件移入回收站（可还原）：<br/>" + lines + "</div>", "🧬 清理重复模型");
+      "</b> 个文件移入回收站（可还原）：<br/>" + lines + "</div>", "🧬 清理重复 / 旧版模型");
     if (!ok) return;
     let done = 0;
     for (const d of picked) {
