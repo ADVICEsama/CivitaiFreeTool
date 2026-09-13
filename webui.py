@@ -11,7 +11,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.1.36"
+APP_VERSION = "2.1.37"
 
 import civitai_api
 import config
@@ -1035,10 +1035,11 @@ class Api:
         st = getattr(self, "_img_dl_state", None)
         return json.dumps(st or {"total": 0, "done": 0})
 
-    def _enqueue_one(self, url, dest_dir=None):
+    def _enqueue_one(self, url, dest_dir=None, skip_if_exists=False):
         """同步解析单条 URL 并入队（忽略付费状态）。返回 item dict：{url, ok, msg, task_id?}
 
         dest_dir 非空时表示「指定落点」（更新下载：新版直接下到旧版所在文件夹，且不被全局目标搬走）。
+        skip_if_exists=True 时做防重复：目标文件已存在、或该版本已在队列里 → 直接跳过不重复下载。
         """
         api = self.api
         u = (url or "").strip()
@@ -1102,6 +1103,17 @@ class Api:
             if not dl_url:
                 item["msg"] = "无下载链接"
                 return item
+            # ★ 防重复（更新下载专用）：同一版反复点「更新」不再重复入队/重复下载
+            if skip_if_exists:
+                tdir = (dest_dir or "").strip()
+                fname = base_name + src_ext
+                if tdir and os.path.exists(os.path.join(tdir, fname)):
+                    item.update({"msg": "已经在目标文件夹里了：%s（要重新下载请先删掉它）" % fname, "skipped": True})
+                    return item
+                dup = self._dup_in_queue(version_id, hashes.get("SHA256"), fname, tdir)
+                if dup:
+                    item.update({"msg": "这个版本已经在下载队列里了（状态 %s），没有重复添加" % dup.status, "skipped": True})
+                    return item
             task = downloader.DownloadTask(
                 url=dl_url, dest_dir=dest_dir, filename=base_name + src_ext,
                 expected_sha256=hashes.get("SHA256") or "", info=info)
@@ -1921,6 +1933,30 @@ class Api:
         self._save_wl(wl)
         return {"ok": True, "msg": "已移出白名单：下次检查会重新提示"}
 
+    def _dup_in_queue(self, version_id, sha256, filename, dest_dir):
+        """该版本是否已经在下载队列里（等待中/下载中/已暂停）——防重复点击下好几遍。
+
+        注意不能用 URL 判：task.url 是带签名的 CDN 链接，每次解析都不一样。
+        用三个稳定标识任一命中即算重复：C 站版本 id、文件 SHA256、目标文件名+目录。
+        """
+        try:
+            dest = os.path.abspath(dest_dir) if dest_dir else ""
+            for t in self.dl.tasks:
+                if t.status not in ("pending", "downloading", "paused"):
+                    continue
+                info = t.info or {}
+                meta = (info.get("meta") or {}).get("info") or {}
+                if version_id and str(meta.get("id") or "") == str(version_id):
+                    return t
+                if sha256 and getattr(t, "expected_sha256", "") and t.expected_sha256 == sha256:
+                    return t
+                if filename and t.filename == filename:
+                    if (not dest) or os.path.abspath(t.dest_dir or "") == dest:
+                        return t
+        except Exception:
+            pass
+        return None
+
     def _mark_replace_old(self, task_id, old_path):
         """记下「这次下载是某文件的更新」：下载完成时按设置决定旧版保留还是移入回收站"""
         if not task_id or not old_path:
@@ -1958,11 +1994,11 @@ class Api:
         if not mid:
             return {"ok": False, "msg": "找不到该文件对应的 C 站模型（可先跑一次反向解析）"}
         try:
-            item = self._enqueue_one(self._site_url(mid, vid), dest_dir=os.path.dirname(p))
+            item = self._enqueue_one(self._site_url(mid, vid), dest_dir=os.path.dirname(p), skip_if_exists=True)
         except Exception as e:
             return {"ok": False, "msg": str(e)[:150]}
         if not item.get("ok"):
-            return {"ok": False, "msg": item.get("msg") or "入队失败"}
+            return {"ok": False, "msg": item.get("msg") or "入队失败", "skipped": bool(item.get("skipped"))}
         self._mark_replace_old(item.get("task_id"), p)
         return {"ok": True, "msg": "已加入下载队列：%s" % (item.get("msg") or "")}
 
@@ -2320,10 +2356,12 @@ class Api:
             for i, (p, it) in enumerate(picked):
                 url = it.get("url") or self._site_url(it.get("model_id"), it.get("latest_version"))
                 try:
-                    item = self._enqueue_one(url, dest_dir=os.path.dirname(p))
+                    item = self._enqueue_one(url, dest_dir=os.path.dirname(p), skip_if_exists=True)
                     if item.get("ok"):
                         okn += 1
                         self._mark_replace_old(item.get("task_id"), p)
+                    elif item.get("skipped"):
+                        skipped += 1
                     else:
                         fail += 1
                         fails.append({"file": os.path.basename(p), "msg": item.get("msg") or "入队失败"})

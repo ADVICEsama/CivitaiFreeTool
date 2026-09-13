@@ -223,6 +223,7 @@ const state = {
   updQ: "", updBase: "", updState: "", updSortKey: "date",
   updPer: 50, updPage: 1,
   updCtxPath: "",            //「更新」页面右键/··· 的目标
+  updBatchBusy: false,       // 批量更新进行中（防重复点击）
   mmLastSel: -1,
   mmView: "list",
   rpRunning: false,
@@ -818,6 +819,7 @@ async function showDedupeDialog(groups, modelGroups) {
       "🗑️ 清理重复 / 旧版模型（" + picked.length + " 个" + (totalSize ? " · 约 " + fmtBytes(totalSize) : "") + "）");
     if (!ok) return;
     if (ok.root) loadDdThumbs(ok.root, picked.map((d) => d.path));
+    if (ok.root) ok.root.remove();          // ★ 关掉确认框（否则清理完它还挂在屏幕上）
     await close();
     const r0 = await api.call("mm_dedupe_delete", picked.map((d) => d.path));
     if (!r0 || !r0.ok) { setStatus((r0 && r0.msg) || "清理失败"); return; }
@@ -1859,16 +1861,28 @@ async function updBatchDownload(paths) {
     '<div class="dedup-dir">' + keepTxt + "（设置里可改）。</div>",
     "⬇️ 确认批量更新");
   if (!ok) return;
-  let done = 0, fail = 0;
+  if (ok.root) ok.root.remove();          // ★ 关掉确认框（confirmBoxRaw 只收遮罩，内容框要调用方自己收）
+  const btn = $("#updDlSel");
+  if (state.updBatchBusy) return;
+  state.updBatchBusy = true;
+  if (btn) btn.disabled = true;
+  let done = 0, skip = 0, fail = 0;
   for (const x of picks) {
-    setStatus("批量更新 " + (done + fail + 1) + "/" + picks.length + "：" + x.name);
+    setStatus("批量更新 " + (done + skip + fail + 1) + "/" + picks.length + "：" + x.name);
     try {
       const r = await api.call("mm_download_version", x.path, x.vid);
-      if (r && r.ok) done++; else fail++;
+      if (r && r.ok) done++;
+      else if (r && r.skipped) skip++;
+      else fail++;
     } catch (e) { fail++; }
   }
-  setStatus("批量更新完成：成功入队 " + done + " 个" + (fail ? "，失败 " + fail + " 个" : "") + "（进度见「📁 下载管理」）");
+  state.updBatchBusy = false;
+  if (btn) btn.disabled = false;
+  setStatus("批量更新完成：入队 " + done + " 个" + (skip ? "，跳过 " + skip + " 个（已在队列或已存在）" : "") +
+            (fail ? "，失败 " + fail + " 个" : "") + " —— 已跳到「📁 下载管理」");
   renderUpdatesPage();
+  switchPage("dlmanager");                // ★ 自动跳到下载管理页看进度
+  if (typeof dlRefresh === "function") dlRefresh();
 }
 
 // 批量忽略（加入更新白名单）
@@ -1878,6 +1892,7 @@ async function updBatchIgnore(paths) {
   if (!list.length) { setStatus("没有可忽略的条目"); return; }
   const ok = await confirmBoxRaw("把选中的 <b>" + list.length + "</b> 个模型加入<b>更新白名单</b>？<br/>以后检查更新会直接跳过它们（可在「📋 白名单」里移出）。", "🚫 不再提醒更新");
   if (!ok) return;
+  if (ok.root) ok.root.remove();          // 关掉确认框
   let n = 0;
   for (const p of list) {
     const it = items[p] || {};
