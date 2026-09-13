@@ -2350,8 +2350,15 @@ def _text_to_rules(text):
 
 
 def _recycle_to_trash(paths):
-    """通过 Win32 SHFileOperation 把文件移入回收站（可恢复）。返回是否成功。
-    非 Windows 走 gio trash（freedesktop 回收站）。"""
+    """把文件移入回收站（可恢复）。返回是否成功。
+
+    实现要点（实测教训）：
+    - SHFileOperation 内部走 COM/外壳，**在没初始化 COM 的工作线程里调用会死锁**
+      （HTTP 服务线程里删文件曾卡住整个删除流程：15 个文件删到第 15 个彻底卡死，CPU 却是空闲的）。
+      所以先 CoInitializeEx(APARTMENTTHREADED)，用完 CoUninitialize。
+    - 仍失败/异常时兜底走 .NET（Microsoft.VisualBasic.FileIO.FileSystem.DeleteFile，走回收站），
+      它自己会初始化 COM，实测对 SHFileOperation 卡住的那个文件秒过。
+    """
     if not posix_compat.IS_WINDOWS:
         return posix_compat.trash(paths)
     import ctypes
@@ -2368,11 +2375,41 @@ def _recycle_to_trash(paths):
                     ("fFlags", ctypes.c_ushort), ("fAnyOperationsAborted", wintypes.BOOL),
                     ("hNameMappings", ctypes.c_void_p), ("lpszProgressTitle", wintypes.LPCWSTR)]
 
-    op = SHFILEOPSTRUCTW()
-    op.wFunc = FO_DELETE
-    op.pFrom = "\0".join(paths) + "\0\0"
-    op.fFlags = FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_SILENT | FOF_NOERRORUI
-    return ctypes.windll.shell32.SHFileOperationW(ctypes.byref(op)) == 0
+    ok = False
+    co = False
+    try:
+        if ctypes.windll.ole32.CoInitializeEx(None, 0x2) in (0, 1):   # S_OK / S_FALSE = 本线程已可用
+            co = True
+        op = SHFILEOPSTRUCTW()
+        op.wFunc = FO_DELETE
+        op.pFrom = "\0".join(paths) + "\0\0"
+        op.fFlags = FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_SILENT | FOF_NOERRORUI
+        ok = ctypes.windll.shell32.SHFileOperationW(ctypes.byref(op)) == 0
+    except Exception:
+        ok = False
+    finally:
+        if co:
+            try:
+                ctypes.windll.ole32.CoUninitialize()
+            except Exception:
+                pass
+    if ok:
+        return True
+
+    # 兜底：.NET 回收站 API（pythonnet 随 pywebview 一起打包；不在时跳过）
+    try:
+        import clr                                    # noqa: F401
+        clr.AddReference("Microsoft.VisualBasic")
+        from Microsoft.VisualBasic.FileIO import FileSystem, UIOption, RecycleOption
+        all_ok = True
+        for p in paths:
+            try:
+                FileSystem.DeleteFile(p, UIOption.OnlyErrorDialogs, RecycleOption.SendToRecycleBin)
+            except Exception:
+                all_ok = False
+        return all_ok
+    except Exception:
+        return False
 
 
 # info 写回全局锁（共享 civitai.info 的并发写保护）

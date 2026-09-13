@@ -816,14 +816,24 @@ async function showDedupeDialog(groups, modelGroups) {
       "🗑️ 清理重复 / 旧版模型（" + picked.length + " 个" + (totalSize ? " · 约 " + fmtBytes(totalSize) : "") + "）");
     if (!ok) return;
     if (ok.root) loadDdThumbs(ok.root, picked.map((d) => d.path));
-    let done = 0;
-    for (const d of picked) {
-      try { await api.call("rm_file", d.path); done++; } catch (e) { /* 单个失败不影响其它 */ }
-    }
-    close();
-    setStatus("已移入回收站 " + done + " / " + picked.length + " 个文件");
-    await api.call("scan_models");
-    pollMmScan();
+    await close();
+    const r0 = await api.call("mm_dedupe_delete", picked.map((d) => d.path));
+    if (!r0 || !r0.ok) { setStatus((r0 && r0.msg) || "清理失败"); return; }
+    setStatus(r0.msg || "开始清理…");
+    const timer = setInterval(async () => {
+      const p = await api.call("get_mm_progress");
+      if (!p) return;
+      if (p.running) { setStatus(p.msg || "正在清理…"); return; }
+      clearInterval(timer);
+      setStatus(p.msg || "清理完成");
+      if (Array.isArray(p.result) && p.result.length) {
+        confirmBoxRaw('<div style="font-size:12px;line-height:1.8">' +
+          p.result.map((f) => "· <b>" + esc(f.file) + "</b>：" + esc(f.msg)).join("<br/>") +
+          "</div>", "⚠️ 这些没能清理（可在资源管理器里手动删除）");
+      }
+      await api.call("scan_models");
+      pollMmScan();
+    }, 700);
   });
 }
 
@@ -2968,6 +2978,7 @@ const SETTING_FIELDS = [
   ["🎨 界面", "ambient_bg", "顶部氛围动态背景", "bool"],
   ["🎨 界面", "ui_mode", "界面模式", "select", [["window", "原生窗口（默认）"], ["browser", "浏览器模式（可托盘 / 关页面退）"]]],
   ["🎨 界面", "close_action", "点窗口关闭按钮时", "select", [["exit", "退出软件（默认）"], ["minimize", "最小化到任务栏（不退出）"]]],
+  ["📦 下载", "update_keep_old", "更新后如何处理旧版本", "select", [["keep", "保留旧版文件（默认）"], ["delete", "删除旧版（移入回收站，可还原）"]]],
   ["🎨 界面", "webview_disable_gpu", "禁用 GPU 加速（软件渲染）", "bool"],
   ["🎨 界面", "tray_icon", "浏览器模式：托盘图标", "bool"],
   ["🎨 界面", "exit_when_page_closed", "浏览器模式：关页面后自动退出", "bool"],
@@ -2990,6 +3001,7 @@ const SETTING_TIPS = {
   "gen_metadata": "下载完成后自动生成 <模型名>.civitai.info / .json 元数据；没有它，模型管理里看不到名称/触发词",
   "download_cover": "下载完成后自动把 C 站预览图保存到模型目录（模型管理显示缩略图用）",
   "ask_move_after_download": "下载完成后询问是否把文件移动到指定文件夹（适合按类型归档；设了「下载目标文件夹」后本项自动不弹）",
+  "update_keep_old": "「更新页面」下载新版完成后的旧版处理：默认【保留旧版文件】（新版和旧版并存，要清理可用「🧬 查重 → 删旧留新」）；选【删除旧版】则下载完成后把旧版文件移入回收站（含预览图/元数据，可还原）。只影响「更新下载」，不影响普通批量下载",
   "download_target_dir": "预设下载落地文件夹（在模型目录里选）：下载的模型连 json/封面直接放进它，不再弹窗询问。也可在「批量下载」页临时选择",
   "metadata_format": "sd = WebUI 能直接识别的扁平 json；civitai = C 站原始 info 结构；both = 两个都生成",
   "baidu_appid": "百度翻译开放平台 APP ID（免费申请），用于反向解析自动翻译模型名/简介",

@@ -11,7 +11,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.1.33"
+APP_VERSION = "2.1.34"
 
 import civitai_api
 import config
@@ -34,6 +34,18 @@ def _todo_label(url):
     if slug:
         return slug.replace("-", " ").replace("_", " ").strip()
     return "模型 %s" % m.group(1)
+
+
+def _vkey(name):
+    """语义化版本排序键：v1 < v1.1 < v1.2 < v1.10 < v2（数字段按数值比，字母段按字典序）
+
+    用于「同底模可用版本」下拉的排序 —— 绝不能用字符串排序（v1.10 会排到 v1.2 前面）。
+    """
+    parts = re.findall(r"\d+|[A-Za-z]+", str(name or ""))
+    out = []
+    for p in parts[:10]:
+        out.append((0, int(p), "") if p.isdigit() else (1, 0, p.lower()))
+    return out
 
 
 class Api:
@@ -115,6 +127,38 @@ class Api:
                     self.move_file_to(dest, want)
             except Exception:
                 pass
+            # 4) 「更新下载」完成：按设置处理旧版本（默认保留；删除走回收站，可还原）
+            try:
+                old = str((task.info or {}).get("replace_old") or "")
+                keep = str(self.cfg.get("update_keep_old", "keep") or "keep").strip().lower() != "delete"
+                if old and (not keep) and os.path.exists(old) and os.path.abspath(old) != os.path.abspath(dest):
+                    if posix_compat.IS_WINDOWS:
+                        from gui import _recycle_to_trash
+                        _recycle_to_trash([old])
+                    else:
+                        posix_compat.trash([old])
+                    # 旧版的附属文件一并回收（预览图/元数据）
+                    try:
+                        od = os.path.dirname(old)
+                        ob = os.path.splitext(os.path.basename(old))[0]
+                        side = [os.path.join(od, ob + s) for s in
+                                (".preview.png", ".preview.jpg", ".preview.webp", ".txt", ".json", ".civitai.info")
+                                if os.path.exists(os.path.join(od, ob + s))]
+                        if side:
+                            if posix_compat.IS_WINDOWS:
+                                _recycle_to_trash(side)
+                            else:
+                                posix_compat.trash(side)
+                    except Exception:
+                        pass
+                    task.info["replace_old"] = ""
+                    try:
+                        self.dl.save_tasks()
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+
         except Exception:
             pass
 
@@ -1877,6 +1921,23 @@ class Api:
         self._save_wl(wl)
         return {"ok": True, "msg": "已移出白名单：下次检查会重新提示"}
 
+    def _mark_replace_old(self, task_id, old_path):
+        """记下「这次下载是某文件的更新」：下载完成时按设置决定旧版保留还是移入回收站"""
+        if not task_id or not old_path:
+            return
+        try:
+            for t in self.dl.tasks:
+                if t.id == task_id:
+                    t.info = t.info or {}
+                    t.info["replace_old"] = old_path
+                    try:
+                        self.dl.save_tasks()
+                    except Exception:
+                        pass
+                    return
+        except Exception:
+            pass
+
     def mm_download_version(self, path, version_id):
         """下载指定模型文件的某一具体版本（更新页面里点某一版）"""
         p = (path or "").strip()
@@ -1902,7 +1963,91 @@ class Api:
             return {"ok": False, "msg": str(e)[:150]}
         if not item.get("ok"):
             return {"ok": False, "msg": item.get("msg") or "入队失败"}
+        self._mark_replace_old(item.get("task_id"), p)
         return {"ok": True, "msg": "已加入下载队列：%s" % (item.get("msg") or "")}
+
+    def mm_dedupe_delete(self, paths):
+        """把勾选的文件移入回收站（后台执行 + 逐个进度 + 单文件超时保护）。
+
+        为什么不在前端逐个 await rm_file：SHFileOperation 在个别文件上会死锁（实测 15 个文件
+        删到最后一个卡死，CPU 却空闲），前端的 await 永远不回 → 整个弹窗"卡住"。
+        这里改成后台线程 + 每文件 join(25s)：卡住的那个只算失败，流程照常走完并报告。
+        """
+        ps = [p for p in (paths or []) if p]
+        if not ps:
+            return {"ok": False, "msg": "没有要清理的文件"}
+        if self.mm_progress.get("running"):
+            return {"ok": False, "msg": "有其它任务在执行中（扫描/查重/更新），稍后再试"}
+        self.mm_progress = {"running": True, "total": len(ps), "done": 0,
+                            "msg": "准备移入回收站…", "result": []}
+        st = self.mm_progress
+
+        def _trash_paths(paths_list, timeout):
+            """在受控线程里做回收操作：返回 (是否成功, 是否超时)。超时的线程留它去，流程继续。"""
+            res = {"v": False}
+
+            def _do():
+                try:
+                    if posix_compat.IS_WINDOWS:
+                        from gui import _recycle_to_trash
+                        res["v"] = bool(_recycle_to_trash(paths_list))
+                    else:
+                        res["v"] = bool(posix_compat.trash(paths_list))
+                except Exception:
+                    res["v"] = False
+
+            th = threading.Thread(target=_do, daemon=True)
+            th.start()
+            th.join(timeout=timeout)
+            return res["v"], th.is_alive()
+
+        def work():
+            okn, fails = 0, []
+            for i, p in enumerate(ps):
+                st["msg"] = "移入回收站 %d/%d：%s" % (i + 1, len(ps), os.path.basename(p)[:44])
+                if not os.path.exists(p):          # 已被删掉（重复点击/手动删过）→ 主文件视为成功，顺手清孤儿附属文件
+                    okn += 1
+                    try:
+                        d = os.path.dirname(p)
+                        b = os.path.splitext(os.path.basename(p))[0]
+                        orphan = [os.path.join(d, b + s) for s in
+                                  (".preview.png", ".preview.jpg", ".preview.webp", ".txt", ".json", ".civitai.info")
+                                  if os.path.exists(os.path.join(d, b + s))]
+                        if orphan:
+                            _trash_paths(orphan, 15)
+                    except Exception:
+                        pass
+                    st["done"] = i + 1
+                    continue
+                try:
+                    good, timed_out = _trash_paths([p], 25)
+                except Exception:
+                    good, timed_out = False, False
+                if timed_out:
+                    fails.append({"file": os.path.basename(p),
+                                  "msg": "系统回收操作超时被跳过（文件可能被占用，或被网盘等外壳扩展挂住；可在资源管理器里手动删除）"})
+                elif good:
+                    okn += 1
+                    # 附属文件（预览图/元数据）一并回收
+                    try:
+                        d = os.path.dirname(p)
+                        b = os.path.splitext(os.path.basename(p))[0]
+                        side = [os.path.join(d, b + s) for s in
+                                (".preview.png", ".preview.jpg", ".preview.webp", ".txt", ".json", ".civitai.info")
+                                if os.path.exists(os.path.join(d, b + s))]
+                        if side:
+                            _trash_paths(side, 15)
+                    except Exception:
+                        pass
+                else:
+                    fails.append({"file": os.path.basename(p), "msg": "移入回收站失败"})
+                st["done"] = i + 1
+            st["running"] = False
+            st["result"] = fails
+            st["msg"] = ("已移入回收站 %d/%d 个%s" % (okn, len(ps), ("，%d 个失败" % len(fails)) if fails else ""))
+
+        threading.Thread(target=work, daemon=True).start()
+        return {"ok": True, "started": True, "total": len(ps), "msg": "开始清理 %d 个文件" % len(ps)}
 
     def _updates_path(self):
         return os.path.join(config.APP_DIR, "model_updates.json")
@@ -2090,6 +2235,19 @@ class Api:
                             k = len([v for v in vs[:idx] if (v.get("baseModel") or "").strip() == lb])
                             newer_same = same_all[:k]
                         newer_same.sort(key=lambda v: _vd(v), reverse=True)
+                        # 同底模可用版本清单（给「更新页面」的下拉：全部同底模版本，标出当前与推荐）
+                        def _vl_entry(v, is_cur):
+                            return {"id": str(v.get("id")), "name": (v.get("name") or "").strip(),
+                                    "date": _vd(v)[:10], "url": self._site_url(mid, v.get("id")),
+                                    "current": bool(is_cur)}
+                        try:
+                            vl = []
+                            for v in same_all:
+                                vl.append(_vl_entry(v, str(v.get("id")) == lv))
+                            vl.sort(key=lambda x: _vkey(x.get("name")), reverse=True)   # 语义化版本倒序
+                            rec["ver_list"] = vl[:30]
+                        except Exception:
+                            rec["ver_list"] = []
                         if newer_same:
                             nv = newer_same[0]
                             rec.update({"has_update": True, "latest_version": str(nv.get("id")),
@@ -2158,6 +2316,7 @@ class Api:
                     item = self._enqueue_one(url, dest_dir=os.path.dirname(p))
                     if item.get("ok"):
                         okn += 1
+                        self._mark_replace_old(item.get("task_id"), p)
                     else:
                         fail += 1
                         fails.append({"file": os.path.basename(p), "msg": item.get("msg") or "入队失败"})
