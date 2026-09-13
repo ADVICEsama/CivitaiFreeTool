@@ -2,16 +2,18 @@
 """一键发布到 GitHub Releases（token 从 git 凭据管理器读取，不落盘）
 
 用法:
-    py -3.13 scripts/release_github.py 2.1.30 "path/to/notes.md"
+    py -3.13 scripts/release_github.py 2.1.31 "path/to/notes.md"
 
 做三件事:
   1) 读取本地 git 凭据（git credential fill）拿 token；取不到则提示先 git push 一次
   2) 创建 release（tag = v<版本>，指向 main），说明取自 notes 文件
-  3) 上传两个附件：dist/CivitaiFreeToolWeb.exe 与打包好的 Chrome 扩展 zip，最后验证
+  3) 上传两个附件：带版本号的 exe 与打包好的 Chrome 扩展 zip，最后验证
 
 约定（与历史 release 保持一致）:
-  - tag/名称: v2.1.30 / CivitaiFreeTool v2.1.30
-  - 附件: CivitaiFreeToolWeb.exe、CivitaiFreeTool-ChromeExtension-v2.1.30.zip
+  - tag/名称: v2.1.31 / CivitaiFreeTool v2.1.31
+  - 附件: CivitaiFreeToolWeb-2.1.31.exe、CivitaiFreeTool-ChromeExtension-v2.1.31.zip
+  - dist/CivitaiFreeToolWeb.exe 是 PyInstaller 的固定产物名（本地部署副本仍用这个名字，
+    看门狗/快捷方式来认）；发布前会另存一份带版本号的 dist/CivitaiFreeToolWeb-<版本>.exe 用于上传。
 """
 import json
 import os
@@ -78,9 +80,15 @@ def main():
     ext_zip_base = os.path.join(os.environ.get("TEMP", "."), "CivitaiFreeTool-ChromeExtension-" + tag)
     if os.path.isdir(ext_dir):
         shutil.make_archive(ext_zip_base, "zip", root_dir=ext_dir)
+    # 主程序：另存一份带版本号的文件名（发布/网盘用），dist 里的原名保持不动（本地部署用）
+    exe_src = os.path.join(REPO_DIR, "dist", "CivitaiFreeToolWeb.exe")
+    exe_ver = os.path.join(REPO_DIR, "dist", "CivitaiFreeToolWeb-%s.exe" % ver)
+    if os.path.exists(exe_src):
+        shutil.copy2(exe_src, exe_ver)
+        print("已另存带版本号的产物:", os.path.basename(exe_ver))
     assets = [
         (ext_zip_base + ".zip", "CivitaiFreeTool-ChromeExtension-%s.zip" % tag),
-        (os.path.join(REPO_DIR, "dist", "CivitaiFreeToolWeb.exe"), "CivitaiFreeToolWeb.exe"),
+        (exe_ver, "CivitaiFreeToolWeb-%s.exe" % ver),
     ]
     for path, aname in assets:
         if not os.path.exists(path):
