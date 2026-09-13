@@ -1528,10 +1528,18 @@ async function mmCheckUpdatesFlow(force) {
     const p = await api.call("get_mm_update_state");
     if (!p) return;
     if (p.running) {
-      setStatus("检查更新中 " + (p.done || 0) + "/" + (p.total || 0) + " · 已发现 " + (p.newer || 0) + " 个有更新");
+      setStatus("检查更新中 " + (p.done || 0) + "/" + (p.total || 0) + " · 已发现 " + (p.newer || 0) + " 个有更新（再点一次按钮可停止）");
+      ["#updCheck", "#mmCheckUpd"].forEach((sel) => {
+        const b = $(sel);
+        if (b) { b.textContent = "⏹ 停止检查（" + (p.done || 0) + "/" + (p.total || 0) + "）"; b.classList.add("is-busy"); }
+      });
       return;
     }
     clearInterval(timer);
+    ["#updCheck", "#mmCheckUpd"].forEach((sel) => {
+      const b = $(sel);
+      if (b) { b.textContent = "⏫ 检查更新"; b.classList.remove("is-busy"); }
+    });
     const wlSkip = p.wl_skipped ? "（已按白名单跳过 " + p.wl_skipped + " 个）" : "";
     setStatus((p.msg || "检查完成") + wlSkip);
     try {
@@ -1996,7 +2004,15 @@ async function updWhitelistDialog() {
 }
 
 // 工具栏 / 底栏交互（一次性绑定）
-if ($("#updCheck")) $("#updCheck").addEventListener("click", () => mmCheckUpdatesFlow(false));
+if ($("#updCheck")) $("#updCheck").addEventListener("click", async () => {
+  const st = await api.call("get_mm_update_state").catch(() => null);
+  if (st && st.running) {                       // 正在检查 → 再点一次 = 停止
+    const r = await api.call("cancel_mm_op");
+    setStatus((r && r.msg) || "已请求停止检查");
+    return;
+  }
+  mmCheckUpdatesFlow(false);
+});
 if ($("#updWl")) $("#updWl").addEventListener("click", updWhitelistDialog);
 if ($("#updDlSel")) $("#updDlSel").addEventListener("click", () => updBatchDownload([...state.updSel]));
 if ($("#updAll")) $("#updAll").addEventListener("change", (e) => {
@@ -2114,7 +2130,15 @@ async function showUpdateResults(items) {
   }));
   loadDdThumbs(box, rows.concat(others).map((r) => r[0]));
 }
-if ($("#mmCheckUpd")) $("#mmCheckUpd").addEventListener("click", () => mmCheckUpdatesFlow(false));
+if ($("#mmCheckUpd")) $("#mmCheckUpd").addEventListener("click", async () => {
+  const st = await api.call("get_mm_update_state").catch(() => null);
+  if (st && st.running) {
+    const r = await api.call("cancel_mm_op");
+    setStatus((r && r.msg) || "已请求停止检查");
+    return;
+  }
+  mmCheckUpdatesFlow(false);
+});
 
 // ===== 更新选中：把勾选（或结果窗里指定）的「有新版」模型加入下载队列 =====
 async function mmUpdateFlow(paths) {

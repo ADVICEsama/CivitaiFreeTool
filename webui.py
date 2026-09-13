@@ -11,7 +11,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.1.38"
+APP_VERSION = "2.1.39"
 
 import civitai_api
 import config
@@ -63,6 +63,7 @@ class Api:
         self.model_rows = []
         self.mm_checked_paths = []
         self.mm_progress = {"running": False, "total": 0, "done": 0, "msg": "", "result": None}
+        self._mm_cancel = False          # 长任务的中断标志（检查更新/查重/扫描共用）
         # 更新检测状态 + 缓存（model_updates.json：{path: {...}}）
         self._mm_upd_state = {"running": False, "total": 0, "done": 0, "newer": 0, "other_base": 0,
                               "msg": "", "checked_at": 0, "items": {}}
@@ -1735,6 +1736,7 @@ class Api:
         rows = [r for r in self.model_rows if (not paths or r["path"] in paths)]
         if not rows:
             return {"started": False, "msg": "请先在模型管理页扫描模型"}
+        self._mm_cancel = False
         self.mm_progress = {"running": True, "total": len(rows), "done": 0, "msg": "计算哈希…", "result": None}
 
         def work():
@@ -1757,6 +1759,10 @@ class Api:
 
             with cf.ThreadPoolExecutor(max_workers=threads) as ex:
                 for r, sha in ex.map(one, rows):
+                    if self._mm_cancel:                 # ★ 用户点了「停止」：取消排队中的任务并退出
+                        self.mm_progress["cancelled"] = True
+                        ex.shutdown(wait=False, cancel_futures=True)
+                        break
                     with lock:
                         done += 1
                         self.mm_progress["done"] = done
@@ -2085,6 +2091,11 @@ class Api:
         threading.Thread(target=work, daemon=True).start()
         return {"ok": True, "started": True, "total": len(ps), "msg": "开始清理 %d 个文件" % len(ps)}
 
+    def cancel_mm_op(self):
+        """中断当前的长任务（检查更新 / 查重 / 扫描）：置位后各循环在下一次迭代退出，已算出的结果会保存"""
+        self._mm_cancel = True
+        return {"ok": True, "msg": "已请求停止（正在收尾，已完成的进度会保留）"}
+
     def _updates_path(self):
         return os.path.join(config.APP_DIR, "model_updates.json")
 
@@ -2209,6 +2220,7 @@ class Api:
             groups.setdefault(mid, []).append(r)
         if not groups:
             return {"started": False, "msg": "所有模型都在更新白名单里（可在更新页面「📋 白名单」里移除）"}
+        self._mm_cancel = False
         self._mm_upd_state = {"running": True, "total": len(groups), "done": 0, "msg": "检查更新…",
                               "newer": 0, "other_base": 0, "checked_at": now, "items": {},
                               "wl_skipped": len(wl)}
@@ -2218,6 +2230,18 @@ class Api:
             items, newer, other = {}, 0, 0
             fails = 0
             for i, (mid, rs) in enumerate(groups.items()):
+                if self._mm_cancel:                      # ★ 用户点了「停止」：保存已完成的，立刻收尾
+                    try:
+                        cur = self._updates.get("items") or {}
+                        cur.update(items)
+                        self._updates["items"] = cur
+                        self._save_updates(self._updates)
+                    except Exception:
+                        pass
+                    self._mm_upd_state["cancelled"] = True
+                    self._mm_upd_state["running"] = False
+                    self._mm_upd_state["msg"] = "已停止（已检查 %d/%d，结果已保存）" % (i, len(groups))
+                    return
                 if self._mm_upd_state.get("_stop"):
                     break
                 m = None
