@@ -219,8 +219,10 @@ const state = {
   mmUpdItems: null,          // 更新检测结果（path → 记录），「更新」页面用
   mmUpdCheckedAt: 0,
   updSel: new Set(),         //「更新」页面勾选的文件
-  updOnly: false,            //「更新」页面只看有更新
-  updCtxPath: "",            //「更新」页面右键的目标
+  updPick: {},               //「更新」页面每行下拉选中的目标版本 {path: versionId}
+  updQ: "", updBase: "", updState: "", updSortKey: "date",
+  updPer: 50, updPage: 1,
+  updCtxPath: "",            //「更新」页面右键/··· 的目标
   mmLastSel: -1,
   mmView: "list",
   rpRunning: false,
@@ -1547,92 +1549,126 @@ async function mmCheckUpdatesFlow(force) {
 }
 
 // 检查更新结果窗口：列出「有同底模新版」的模型，每条可去 C 站
-// ================= 更新页面（缩略图 / 模型名 / 当前版本名 / 更新后版本名 / 勾选批量更新 / 白名单） =================
+// ================= 更新页面（紧凑数据表 + 版本下拉 / 批量更新 / 白名单） =================
 function _updBase(p) { return String(p || "").replace(/\\/g, "/").split("/").pop() || ""; }
 function _updDir(p) { const a = String(p || "").replace(/\\/g, "/").split("/"); a.pop(); return a.join("/"); }
 
-function _updRowHtml(x) {
-  const it = x.it || {};
-  const isUpd = !!it.has_update;
-  const newer = it.newer_list || [];
-  const chips = newer.map((v) =>
-    '<span class="upd-chip">' +
-    '<a href="#" class="chip-go" data-url="' + esc(v.url || "") + '" data-tip="去 C 站看这一版：' + esc(v.name || v.id) + '">' +
-    esc(v.name || v.id) + (v.date ? ' <i>' + esc(v.date) + "</i>" : "") + "</a>" +
-    '<a href="#" class="chip-dl" data-path="' + esc(x.path) + '" data-vid="' + esc(v.id) + '" data-tip="只下载这一版（下到旧版所在文件夹）">⬇️</a>' +
-    "</span>").join("");
-  const tag = isUpd
-    ? '<span class="upd-tag">❗ 有新版</span>'
-    : (it.other_base ? '<span class="upd-tag other">🔀 仅换底模</span>' : '<span class="upd-tag other">✅ 已最新</span>');
-  // 当前版本：显示 C 站上的版本名（侧车补齐）；实在没有名字才退到 ID，且只作灰色小字
-  const curName = it.local_name || "";
-  const curLine = '当前版本：<b>' + esc(curName || "未知") + "</b>" +
-    (it.local_base ? "（" + esc(it.local_base) + "）" : "") +
-    (it.local_date ? " · " + esc(it.local_date) : "") +
-    (!curName && it.local_version
-      ? ' <span class="upd-id" data-tip="C 站版本 ID：' + esc(it.local_version) + "（本地侧车与在售列表里都没有这个名字）\">ID " + esc(it.local_version) + "</span>"
-      : "");
-  // 新版：有 newer_list 就列全部可选版本名；没有（老缓存）也把「同底模最新」的名字直接写在画面上，不用悬停
-  const newLine = isUpd
-    ? (newer.length
-      ? '<div class="upd-t3">更新后可用（同底模，比你的新）：' + chips + "</div>"
-      : '<div class="upd-t3">同底模最新：<b>' + esc(it.latest_name || ("版本 ID " + (it.latest_version || "?"))) + "</b>" +
-        (it.latest_date ? " · " + esc(String(it.latest_date).slice(0, 10)) : "") +
-        ' <span class="upd-note">（点右侧「⬇️ 更新到最新」下载；点一次「⏫ 检查更新」可列出全部可选版本名）</span></div>')
-    : (it.other_base
-      ? '<div class="upd-t3 dim">最新版换了底模：' + esc(it.latest_base || "") + (it.latest_name ? " · " + esc(it.latest_name) : "") + "（不算更新，不会下）</div>"
-      : "");
-  return '<div class="upd-row' + (isUpd ? " has-upd" : "") + '" data-path="' + esc(x.path) + '" data-mid="' + esc(it.model_id || "") +
-    '" data-mname="' + esc(it.model_name || "") + '">' +
-    '<label class="upd-ck">' + (isUpd ? '<input type="checkbox" class="upd-cb" data-path="' + esc(x.path) + '"' +
-      (state.updSel.has(x.path) ? " checked" : "") + "/>" : "") + "</label>" +
-    '<img class="dd-thumb upd-thumb" data-path="' + esc(x.path) + '" alt=""/>' +
-    '<div class="upd-main">' +
-      '<div class="upd-t1">' + esc(it.model_name || _updBase(x.path)) + tag +
-        (it.unknown ? '<span class="upd-tag other" data-tip="' + esc(it.msg || "") + '">⚠️ 无法判定</span>' : "") + "</div>" +
-      '<div class="upd-t2">' + curLine + "</div>" +
-      newLine +
-      '<div class="upd-t4" data-tip="' + esc(x.path) + '">' + esc(_updBase(x.path)) + " ｜ " + esc(_updDir(x.path)) + "</div>" +
-    "</div>" +
-    '<div class="upd-acts">' +
-    (isUpd ? '<button class="btn btn-tiny upd-one" data-path="' + esc(x.path) +
-      '" data-tip="下载最新一版：' + esc(it.latest_name || (newer[0] && newer[0].name) || "最新版") + '">⬇️ 更新到最新</button>' : "") +
-    (it.url ? '<a href="#" class="dd-link upd-site" data-url="' + esc(it.url) + '" data-tip="在浏览器打开这个模型的 C 站页面">🌐 C 站页面</a>' : "") +
-    "</div>" +
-    "</div>";
+// 语义化版本比较：v1 < v1.1 < v1.2 < v1.10 < v2（绝不按字符串序排）
+function _verKey(name) {
+  const parts = String(name || "").match(/\d+|[A-Za-z]+/g) || [];
+  return parts.slice(0, 10).map((p) => (/^\d+$/.test(p) ? [0, Number(p), ""] : [1, 0, p.toLowerCase()]));
+}
+function _verCmp(a, b) {
+  const ka = _verKey(a), kb = _verKey(b);
+  const n = Math.max(ka.length, kb.length);
+  for (let i = 0; i < n; i++) {
+    const x = ka[i] || [-1, 0, ""], y = kb[i] || [-1, 0, ""];   // 段数少的（v1）排在前（v1 < v1.1）
+    if (x[0] !== y[0]) return x[0] - y[0];
+    if (x[1] !== y[1]) return x[1] - y[1];
+    if (x[2] !== y[2]) return x[2] < y[2] ? -1 : 1;
+  }
+  return 0;
 }
 
-function _bindUpdPage(box) {
-  const selBtn = $("#updDlSel");
-  const syncSel = () => {
-    const n = state.updSel.size;
-    if (selBtn) { selBtn.textContent = n ? "⬇️ 更新选中（" + n + "）" : "⬇️ 更新选中"; selBtn.disabled = !n; }
-  };
-  box.querySelectorAll(".upd-cb").forEach((cb) => cb.addEventListener("change", () => {
-    const p = cb.dataset.path;
-    if (cb.checked) state.updSel.add(p); else state.updSel.delete(p);
-    syncSel();
-  }));
-  box.querySelectorAll(".chip-go, .upd-site").forEach((a) => a.addEventListener("click", (e) => {
-    e.preventDefault();
-    if (a.dataset.url) api.call("open_url", a.dataset.url);
-  }));
-  box.querySelectorAll(".chip-dl").forEach((a) => a.addEventListener("click", async (e) => {
-    e.preventDefault();
-    setStatus("正在解析这一版并加入下载队列…");
-    const r = await api.call("mm_download_version", a.dataset.path, a.dataset.vid);
-    setStatus((r && r.msg) || "完成");
-  }));
-  box.querySelectorAll(".upd-one").forEach((b) => b.addEventListener("click", (e) => {
-    e.stopPropagation();
-    updConfirmAndUpdate([b.dataset.path], false);
-  }));
-  syncSel();
+function _updState(it) {
+  if (it && it.has_update) return { k: "upd", t: "❗ 有更新", cls: "green" };
+  if (it && it.other_base) return { k: "other", t: "🔀 仅换底模", cls: "mut" };
+  if (it && it.unknown) return { k: "unknown", t: "⚠️ 无法判定", cls: "gray" };
+  return { k: "latest", t: "✅ 已是最新", cls: "blue" };
+}
+
+// 该行的「可选版本」清单：优先用后端 ver_list（含当前/推荐），老缓存退化到只知最新版
+function _updVers(x) {
+  const it = x.it || {};
+  let vl = (it.ver_list || []).slice();
+  if (!vl.length && it.has_update) {
+    vl = [{ id: String(it.latest_version || ""), name: it.latest_name || ("ID " + (it.latest_version || "?")),
+            date: String(it.latest_date || "").slice(0, 10), current: false }];
+  }
+  vl.sort((a, b) => _verCmp(b.name, a.name));          // 语义化倒序：v3, v1.1, v1, v0.9
+  const rec = it.has_update ? String(it.latest_version || "") : "";
+  return { list: vl, rec };
+}
+
+function _updRowHtml(x) {
+  const it = x.it || {};
+  const st = _updState(it);
+  const isUpd = !!it.has_update;
+  const { list, rec } = _updVers(x);
+  const sel = state.updPick[x.path] || rec || (list.length ? String(list[0].id) : "");
+  const selEntry = list.find((v) => String(v.id) === String(sel)) || null;
+  const curName = it.local_name || "";
+  const date = String(it.latest_date || it.local_date || "").slice(0, 10);
+
+  const opts = [];
+  const recEntry = list.find((v) => String(v.id) === rec);
+  if (recEntry) opts.push('<option value="' + esc(rec) + '"' + (String(sel) === rec ? " selected" : "") + ">★ 推荐  " + esc(recEntry.name || rec) + (recEntry.date ? "  " + esc(recEntry.date) : "") + "</option>");
+  list.forEach((v) => {
+    if (String(v.id) === rec) return;
+    const label = esc(v.name || ("ID " + v.id)) + (v.current ? " · 当前版本" : "") + (v.date ? "  " + esc(v.date) : "");
+    opts.push('<option value="' + esc(v.id) + '"' + (String(v.id) === String(sel) ? " selected" : "") + ">" + label + "</option>");
+  });
+  if (curName && !list.some((v) => v.current)) {
+    opts.push('<option value="__cur">' + esc(curName) + " · 当前版本</option>");
+  }
+  opts.push('<option value="__site">🌐 在 C 站查看全部版本</option>');
+
+  return '<tr class="' + (state.updSel.has(x.path) ? "is-sel" : "") + (isUpd ? "" : " is-flat") + '" data-path="' + esc(x.path) + '" data-mid="' + esc(it.model_id || "") +
+    '" data-mname="' + esc(it.model_name || "") + '">' +
+    '<td class="c-ck"><input type="checkbox" class="upd-cb" data-path="' + esc(x.path) + '"' + (state.updSel.has(x.path) ? " checked" : "") + "/></td>" +
+    '<td class="c-info"><div class="upd-info">' +
+      '<img class="dd-thumb upd-thumb" data-path="' + esc(x.path) + '" alt=""/>' +
+      '<div class="upd-meta">' +
+        '<div class="upd-nm" data-tip="' + esc(it.model_name || _updBase(x.path)) + '">' + esc(it.model_name || _updBase(x.path)) + "</div>" +
+        '<div class="upd-sub2">' + (it.author ? "作者：" + esc(it.author) + " ｜ " : "") + (it.local_base ? "底模：" + esc(it.local_base) : "") + (it.model_type ? " ｜ " + esc(it.model_type) : "") + "</div>" +
+        '<div class="upd-sub2 upd-dim" data-tip="' + esc(x.path) + '">' + esc(_updBase(x.path)) + " ｜ " + esc(_updDir(x.path)) + "</div>" +
+      "</div></div></td>" +
+    '<td class="c-cur"><span class="ver-badge" data-tip="' + esc(it.local_name || "") + '">' + esc(curName || "未知") + "</span>" +
+      (!curName && it.local_version ? '<div class="upd-dim upd-id">ID ' + esc(it.local_version) + "</div>" : "") + "</td>" +
+    '<td class="c-ver">' + (opts.length > 1 ? '<select class="input upd-vsel" data-path="' + esc(x.path) + '">' + opts.join("") + "</select>"
+                                             : '<span class="upd-dim">—</span>') + "</td>" +
+    '<td class="c-date">' + esc(date || "—") + "</td>" +
+    '<td class="c-st"><span class="st-badge ' + st.cls + '">' + esc(st.t) + "</span></td>" +
+    '<td class="c-act"><div class="upd-acts2">' +
+      (isUpd ? '<button class="btn btn-tiny btn-primary upd-go" data-path="' + esc(x.path) + '" data-vid="' + esc(sel) + '" data-tip="下载这一版到旧版所在文件夹；旧版保留或删除由设置决定">更新到 ' + esc((selEntry && selEntry.name) || "最新") + "</button>" : "") +
+      (it.url ? '<a href="#" class="dd-link upd-site" data-url="' + esc(it.url) + '" data-tip="在浏览器打开 C 站页面">C 站</a>' : "") +
+      '<button class="icon-btn upd-more" data-path="' + esc(x.path) + '" data-tip="更多：打开文件夹 / 复制路径 / 不再提醒">···</button>' +
+    "</div></td></tr>";
+}
+
+function _updFilterRows() {
+  const items = state.mmUpdItems || {};
+  let rows = Object.entries(items).map(([path, it]) => ({ path, it: it || {} }));
+  const q = String(state.updQ || "").trim().toLowerCase();
+  if (state.updBase) rows = rows.filter((x) => String(x.it.local_base || "") === state.updBase);
+  if (state.updState) rows = rows.filter((x) => _updState(x.it).k === state.updState);
+  if (q) rows = rows.filter((x) => ((x.it.model_name || "") + " " + x.path + " " + (x.it.local_name || "") + " " + (x.it.author || "")).toLowerCase().includes(q));
+  const sk = state.updSortKey || "date";
+  rows.sort((a, b) => {
+    if (sk === "name") return String(a.it.model_name || _updBase(a.path)).localeCompare(String(b.it.model_name || _updBase(b.path)));
+    if (sk === "state") return _updState(a.it).k.localeCompare(_updState(b.it).k) || String(a.path).localeCompare(String(b.path));
+    return String(b.it.latest_date || b.it.local_date || "").localeCompare(String(a.it.latest_date || a.it.local_date || ""));
+  });
+  return rows;
+}
+
+function _updPagerHtml(pages, page) {
+  if (pages <= 1) return "";
+  const btn = (p, label, dis) => '<button class="pg' + (p === page ? " on" : "") + '" data-p="' + p + '"' + (dis ? " disabled" : "") + ">" + label + "</button>";
+  const out = [btn(page - 1, "‹", page <= 1)];
+  const win = [];
+  for (let p = 1; p <= pages; p++) {
+    if (p === 1 || p === pages || Math.abs(p - page) <= 1) win.push(p);
+    else if (win[win.length - 1] !== "…") win.push("…");
+  }
+  win.forEach((p) => { out.push(p === "…" ? '<span class="pg-dot">…</span>' : btn(p, p, false)); });
+  out.push(btn(page + 1, "›", page >= pages));
+  return out.join("");
 }
 
 async function renderUpdatesPage() {
-  const box = $("#updList");
-  if (!box) return;
+  const tbody = $("#updTbody");
+  if (!tbody) return;
   if (!state.mmUpdItems) {
     try {
       const u = await api.call("get_model_updates");
@@ -1640,47 +1676,218 @@ async function renderUpdatesPage() {
     } catch (e) { /* 忽略 */ }
   }
   const items = state.mmUpdItems || {};
-  const rows = Object.entries(items).map(([path, it]) => ({ path, it: it || {} }));
-  rows.sort((a, b) => (Number(!!b.it.has_update) - Number(!!a.it.has_update)) || a.path.localeCompare(b.path));
-  const updRows = rows.filter((x) => x.it.has_update);
-  const otherRows = rows.filter((x) => !x.it.has_update && x.it.other_base);
-  let wlCount = 0;
-  try { const w = await api.call("get_update_whitelist"); wlCount = (w && w.count) || 0; } catch (e) { /* 忽略 */ }
+  const all = _updFilterRows();
+  const per = Number(state.updPer || 50);
+  const pages = Math.max(1, Math.ceil(all.length / per));
+  state.updPage = Math.min(Math.max(1, state.updPage || 1), pages);
+  const pageRows = all.slice((state.updPage - 1) * per, state.updPage * per);
+
+  // 底模下拉
+  const bases = Array.from(new Set(Object.values(items).map((it) => String((it || {}).local_base || "")).filter(Boolean))).sort();
+  const bsel = $("#updBase");
+  if (bsel) bsel.innerHTML = '<option value="">全部底模</option>' + bases.map((b) => '<option value="' + esc(b) + '"' + (b === state.updBase ? " selected" : "") + ">" + esc(b) + "</option>").join("");
+
+  // 顶部统计
+  const nUpd = Object.values(items).filter((it) => it && it.has_update).length;
   const ca = state.mmUpdCheckedAt ? new Date(state.mmUpdCheckedAt * 1000).toLocaleString() : "还没检查过";
-  $("#updSummary").innerHTML =
-    "上次检查：<b>" + esc(ca) + "</b> ｜ 可更新：<b style='color:var(--warn,#d29922)'>" + updRows.length + "</b> 个" +
-    " ｜ 仅换底模：" + otherRows.length + " 个 ｜ 白名单已忽略：" + wlCount + " 个" +
-    " ｜ 已勾选：<b>" + updRows.filter((x) => state.updSel.has(x.path)).length + "</b> 个" +
-    (state.updOnly ? " ｜ <b>只看有更新</b>" : "");
-  const list = state.updOnly ? updRows : rows;
-  if (!list.length) {
-    box.innerHTML = '<div class="upd-empty">' + (Object.keys(items).length
-      ? "当前筛选下没有条目（可再点一次「❗ 只看有更新」切回全部）。"
-      : "还没有检查结果：点上面的「⏫ 检查更新」开始（首次约 1~2 分钟，结果缓存 24 小时）。") + "</div>";
-    _bindUpdPage(box);
-    return;
+  const cnt = $("#updCount");
+  if (cnt) cnt.innerHTML = "可更新 <b class=\"warn\">" + nUpd + "</b> ｜ 共 " + Object.keys(items).length + " 个 ｜ 上次检查 " + esc(ca);
+
+  // 表体 + 空态
+  const empty = $("#updEmpty");
+  if (!all.length) {
+    tbody.innerHTML = "";
+    if (empty) {
+      empty.style.display = "block";
+      empty.innerHTML = Object.keys(items).length
+        ? "当前筛选/搜索下没有条目（清空搜索框或把筛选改回「全部」）。"
+        : "还没有检查结果：点右上角「⏫ 检查更新」开始（首次约 1~2 分钟，结果缓存 24 小时）。";
+    }
+  } else {
+    if (empty) empty.style.display = "none";
+    tbody.innerHTML = pageRows.map(_updRowHtml).join("");
+    loadDdThumbs(tbody, pageRows.map((x) => x.path), 64);
   }
-  box.innerHTML = list.map(_updRowHtml).join("");
-  loadDdThumbs(box, list.map((x) => x.path), 96);
-  _bindUpdPage(box);
+
+  // 底栏
+  const st1 = $("#updStat");
+  if (st1) st1.textContent = "共 " + all.length + " 个模型" + (all.length !== Object.keys(items).length ? "（筛选中，总 " + Object.keys(items).length + "）" : "");
+  _updSyncSel();
+  const pg = $("#updPager");
+  if (pg) pg.innerHTML = _updPagerHtml(pages, state.updPage);
+  _updBind(tbody);
 }
 
-async function updConfirmAndUpdate(paths, all) {
+function _updSyncSel() {
+  const n = state.updSel.size;
+  const el = $("#updSelInfo");
+  if (el) el.innerHTML = "已选 <b>" + n + "</b> 个";
+  const b = $("#updDlSel");
+  if (b) { b.textContent = n ? "⬇️ 批量更新（" + n + "）" : "⬇️ 批量更新"; b.disabled = !n; }
+  const allCk = $("#updAll");
+  if (allCk) {
+    const boxes = Array.from(document.querySelectorAll("#updTbody .upd-cb"));
+    const on = boxes.filter((c) => c.checked).length;
+    allCk.checked = boxes.length > 0 && on === boxes.length;
+    allCk.indeterminate = on > 0 && on < boxes.length;
+  }
+}
+
+function _updBind(tbody) {
+  tbody.querySelectorAll(".upd-cb").forEach((cb) => cb.addEventListener("change", () => {
+    const p = cb.dataset.path;
+    if (cb.checked) state.updSel.add(p); else state.updSel.delete(p);
+    const tr = cb.closest("tr");
+    if (tr) tr.classList.toggle("is-sel", cb.checked);
+    _updSyncSel();
+  }));
+  tbody.querySelectorAll(".upd-vsel").forEach((sel) => sel.addEventListener("change", () => {
+    const p = sel.dataset.path;
+    const it = (state.mmUpdItems || {})[p] || {};
+    const v = sel.value;
+    if (v === "__site") {
+      api.call("open_url", it.url || "");
+      sel.value = state.updPick[p] || String(it.latest_version || "");
+      return;
+    }
+    state.updPick[p] = v;
+    const tr = sel.closest("tr");
+    const btn = tr && tr.querySelector(".upd-go");
+    if (btn) {
+      const { list } = _updVers({ path: p, it });
+      const e = list.find((x) => String(x.id) === String(v));
+      btn.dataset.vid = v;
+      btn.textContent = "更新到 " + ((e && e.name) || "最新");
+    }
+  }));
+  tbody.querySelectorAll(".upd-go").forEach((b) => b.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    const old = b.textContent;
+    b.disabled = true;
+    b.textContent = "加入队列…";
+    const r = await api.call("mm_download_version", b.dataset.path, b.dataset.vid);
+    b.textContent = (r && r.ok) ? "✅ 已加入" : ((r && r.msg) || "失败");
+    setStatus((r && r.msg) || "");
+    setTimeout(() => { b.disabled = false; b.textContent = old; }, 1800);
+  }));
+  tbody.querySelectorAll(".chip-go, .upd-site").forEach((a) => a.addEventListener("click", (e) => {
+    e.preventDefault();
+    if (a.dataset.url) api.call("open_url", a.dataset.url);
+  }));
+  tbody.querySelectorAll(".upd-more").forEach((b) => b.addEventListener("click", (e) => {
+    e.stopPropagation();
+    _updCtxMenu(b.dataset.path, b);
+  }));
+  tbody.querySelectorAll("tr").forEach((tr) => tr.addEventListener("contextmenu", (e) => {
+    e.preventDefault();
+    _updCtxMenu(tr.dataset.path, null, e.clientX, e.clientY);
+  }));
+}
+
+function _updCtxMenu(path, anchor, cx, cy) {
+  const it = (state.mmUpdItems || {})[path] || {};
+  state.updCtxPath = path;
+  const menu = $("#ctxMenu");
+  menu.innerHTML =
+    (it.has_update ? '<div class="ctx-item" data-act="upd_dl" data-tip="把下拉里选中的版本加入下载队列">⬇️ 更新到选中版本</div>' : "") +
+    (it.has_update ? '<div class="ctx-item" data-act="upd_wl" data-tip="以后不再提示这个模型的更新（按模型记入白名单）">🚫 不再提醒更新（加入白名单）</div>' : "") +
+    (it.url ? '<div class="ctx-item" data-act="upd_site2" data-tip="在浏览器打开 C 站页面">🌐 打开 C 站页面</div>' : "") +
+    '<div class="ctx-item" data-act="upd_folder" data-tip="打开资源管理器并选中该文件">📂 打开所在文件夹</div>' +
+    '<div class="ctx-item" data-act="upd_copy" data-tip="复制文件完整路径">📋 复制文件路径</div>';
+  menu.style.display = "block";
+  const zf = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
+  if (anchor) {
+    const r = anchor.getBoundingClientRect();
+    menu.style.left = (r.left / zf) + "px";
+    menu.style.top = ((r.bottom + 4) / zf) + "px";
+  } else {
+    menu.style.left = ((cx || 0) / zf) + "px";
+    menu.style.top = ((cy || 0) / zf) + "px";
+  }
+  const mr = menu.getBoundingClientRect();
+  if (mr.right > window.innerWidth) menu.style.left = Math.max(0, window.innerWidth - mr.width) + "px";
+  if (mr.bottom > window.innerHeight) menu.style.top = Math.max(0, window.innerHeight - mr.height) + "px";
+}
+
+$("#ctxMenu").addEventListener("click", async (e) => {
+  const item = e.target.closest("[data-act^=upd_]");
+  if (!item) return;
+  $("#ctxMenu").style.display = "none";
+  const p = state.updCtxPath || "";
+  const it = (state.mmUpdItems || {})[p] || {};
+  const act = item.dataset.act;
+  if (act === "upd_dl") {
+    const { rec } = _updVers({ path: p, it });
+    const vid = state.updPick[p] || rec;
+    const r = await api.call("mm_download_version", p, vid);
+    setStatus((r && r.msg) || "");
+  } else if (act === "upd_wl") {
+    const r = await api.call("add_update_whitelist", it.model_id || "", it.model_name || "");
+    setStatus((r && r.msg) || "已加入白名单");
+    if (state.mmUpdItems) delete state.mmUpdItems[p];
+    state.updSel.delete(p);
+    for (const rw of state.models) if (rw.path === p) rw.upd = null;
+    renderUpdatesPage();
+    renderMm();
+  } else if (act === "upd_site2") { if (it.url) api.call("open_url", it.url); }
+  else if (act === "upd_folder") {
+    const r = JSON.parse(await api.call("open_in_folder", p) || "{}");
+    setStatus((r && r.ok) ? "已打开所在文件夹" : ((r && r.msg) || "文件不存在或已被移动"));
+  } else if (act === "upd_copy") {
+    await window.__copyText(p);
+    setStatus("路径已复制: " + p);
+  }
+});
+
+// 批量更新：逐条按各自下拉选中的版本入队（每条几百毫秒，带进度）
+async function updBatchDownload(paths) {
   const items = state.mmUpdItems || {};
-  const names = all
-    ? Object.values(items).filter((it) => it && it.has_update).map((it) => it.model_name || "")
-    : (paths || []).map((p) => ((items[p] || {}).model_name || _updBase(p)));
-  if (!names.length) { setStatus("没有可更新的条目：先点「⏫ 检查更新」（只更新同底模的新版）"); return; }
+  const picks = [];
+  (paths || []).forEach((p) => {
+    const it = items[p] || {};
+    if (!it.has_update) return;
+    const { rec } = _updVers({ path: p, it });
+    picks.push({ path: p, vid: state.updPick[p] || rec, name: it.model_name || _updBase(p) });
+  });
+  if (!picks.length) { setStatus("勾选的条目里没有「有更新」的（先点「⏫ 检查更新」）"); return; }
+  const keepTxt = (state.cfg && state.cfg.update_keep_old === "delete") ? "旧版将移入回收站" : "旧版保留";
   const ok = await confirmBoxRaw(
-    "将把以下 <b>" + names.length + "</b> 个模型的<b>最新一版</b>加入下载队列（只下同底模的新版）：<br/>" +
-    '<div class="dedup-dir" style="max-height:180px;overflow:auto">' +
-    names.slice(0, 30).map((n) => "· " + esc(n)).join("<br/>") + (names.length > 30 ? "<br/>… 等 " + names.length + " 个" : "") + "</div>" +
-    '<div class="dedup-dir">新版会下到<b>旧版所在文件夹</b>；旧版文件不会被动（要清理旧版可用「🧬 查重 → 删旧留新」）。' +
-    "只想下某一版：直接点那一版名字后面的 ⬇️。</div>",
-    "⬇️ 确认更新");
+    "将把以下 <b>" + picks.length + "</b> 个模型更新到各自选择的版本（新版下到旧版所在文件夹）：<br/>" +
+    '<div class="dedup-dir" style="max-height:200px;overflow:auto">' +
+    picks.slice(0, 40).map((x) => "· " + esc(x.name) + " → " + esc(((_updVers({ path: x.path, it: items[x.path] }).list.find((v) => String(v.id) === String(x.vid)) || {}).name) || x.vid)).join("<br/>") +
+    (picks.length > 40 ? "<br/>… 等 " + picks.length + " 个" : "") + "</div>" +
+    '<div class="dedup-dir">' + keepTxt + "（设置里可改）。</div>",
+    "⬇️ 确认批量更新");
   if (!ok) return;
-  await mmUpdateFlow(all ? null : paths);
+  let done = 0, fail = 0;
+  for (const x of picks) {
+    setStatus("批量更新 " + (done + fail + 1) + "/" + picks.length + "：" + x.name);
+    try {
+      const r = await api.call("mm_download_version", x.path, x.vid);
+      if (r && r.ok) done++; else fail++;
+    } catch (e) { fail++; }
+  }
+  setStatus("批量更新完成：成功入队 " + done + " 个" + (fail ? "，失败 " + fail + " 个" : "") + "（进度见「📁 下载管理」）");
   renderUpdatesPage();
+}
+
+// 批量忽略（加入更新白名单）
+async function updBatchIgnore(paths) {
+  const items = state.mmUpdItems || {};
+  const list = (paths || []).filter((p) => (items[p] || {}).model_id);
+  if (!list.length) { setStatus("没有可忽略的条目"); return; }
+  const ok = await confirmBoxRaw("把选中的 <b>" + list.length + "</b> 个模型加入<b>更新白名单</b>？<br/>以后检查更新会直接跳过它们（可在「📋 白名单」里移出）。", "🚫 不再提醒更新");
+  if (!ok) return;
+  let n = 0;
+  for (const p of list) {
+    const it = items[p] || {};
+    try { await api.call("add_update_whitelist", it.model_id || "", it.model_name || ""); n++; } catch (e) { /* 单个失败继续 */ }
+    if (state.mmUpdItems) delete state.mmUpdItems[p];
+    state.updSel.delete(p);
+  }
+  setStatus("已忽略 " + n + " 个模型的更新提醒");
+  renderUpdatesPage();
+  renderMm();
 }
 
 async function updWhitelistDialog() {
@@ -1695,7 +1902,7 @@ async function updWhitelistDialog() {
   const render = () => {
     box.innerHTML =
       '<div class="rd-title">📋 更新白名单（' + items.length + "）</div>" +
-      '<div class="dd-hint">名单里的模型<b>不再提示更新</b>（检查时直接跳过）。加入方式：在更新列表里对某个模型<b>右键 →「🚫 不再提醒更新」</b>。</div>' +
+      '<div class="dd-hint">名单里的模型<b>不再提示更新</b>（检查时直接跳过）。加入方式：行内「···」→「🚫 不再提醒更新」。</div>' +
       '<div style="max-height:320px;overflow:auto">' +
       (items.length ? items.map((x) =>
         '<div class="cf-row"><div class="dd-text"><b>' + esc(x.name || x.model_id) + "</b>" +
@@ -1719,58 +1926,39 @@ async function updWhitelistDialog() {
   dlg.addEventListener("click", closeAll);
 }
 
-// 更新页右键菜单（复用全局 #ctxMenu，act 前缀 upd_）
-$("#updList").addEventListener("contextmenu", (e) => {
-  const row = e.target.closest(".upd-row");
-  if (!row || !row.dataset.path) return;
-  e.preventDefault();
-  state.updCtxPath = row.dataset.path;
-  const it = (state.mmUpdItems || {})[row.dataset.path] || {};
-  const menu = $("#ctxMenu");
-  menu.innerHTML =
-    (it.has_update ? '<div class="ctx-item" data-act="upd_dl" data-tip="把这一版加入下载队列（下到旧版所在文件夹）">⬇️ 更新到最新版</div>' : "") +
-    (it.has_update ? '<div class="ctx-item" data-act="upd_wl_this" data-tip="不再提醒「这个文件」的更新（按模型记入白名单）">🚫 不再提醒更新（加入白名单）</div>' : "") +
-    '<div class="ctx-item" data-act="upd_folder" data-tip="打开资源管理器并选中该文件">📂 打开所在文件夹</div>' +
-    '<div class="ctx-item" data-act="upd_copy" data-tip="复制文件完整路径">📋 复制文件路径</div>';
-  menu.style.display = "block";
-  const zf = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
-  menu.style.left = (e.clientX / zf) + "px";
-  menu.style.top = (e.clientY / zf) + "px";
-  const mr = menu.getBoundingClientRect();
-  if (mr.right > window.innerWidth) menu.style.left = Math.max(0, window.innerWidth - mr.width) + "px";
-  if (mr.bottom > window.innerHeight) menu.style.top = Math.max(0, window.innerHeight - mr.height) + "px";
-});
-$("#ctxMenu").addEventListener("click", async (e) => {
-  const item = e.target.closest("[data-act^=upd_]");
-  if (!item) return;
-  $("#ctxMenu").style.display = "none";
-  const p = state.updCtxPath || "";
-  const it = (state.mmUpdItems || {})[p] || {};
-  const act = item.dataset.act;
-  if (act === "upd_dl") await updConfirmAndUpdate([p], false);
-  else if (act === "upd_wl_this") {
-    const r = await api.call("add_update_whitelist", it.model_id || "", it.model_name || "");
-    setStatus((r && r.msg) || "已加入白名单");
-    if (state.mmUpdItems) delete state.mmUpdItems[p];
-    for (const rw of state.models) if (rw.path === p) rw.upd = null;
-    renderUpdatesPage();
-    renderMm();
-  } else if (act === "upd_site") { if (it.url) api.call("open_url", it.url); }
-  else if (act === "upd_folder") {
-    const r = JSON.parse(await api.call("open_in_folder", p) || "{}");
-    setStatus((r && r.ok) ? "已打开所在文件夹" : ((r && r.msg) || "文件不存在或已被移动"));
-  } else if (act === "upd_copy") {
-    await window.__copyText(p);
-    setStatus("路径已复制: " + p);
-  }
-});
-
-// 更新页按钮
+// 工具栏 / 底栏交互（一次性绑定）
 if ($("#updCheck")) $("#updCheck").addEventListener("click", () => mmCheckUpdatesFlow(false));
-if ($("#updDlSel")) $("#updDlSel").addEventListener("click", () => updConfirmAndUpdate([...state.updSel], false));
-if ($("#updDlAll")) $("#updDlAll").addEventListener("click", () => updConfirmAndUpdate(null, true));
 if ($("#updWl")) $("#updWl").addEventListener("click", updWhitelistDialog);
-if ($("#updOnly")) $("#updOnly").addEventListener("click", () => { state.updOnly = !state.updOnly; renderUpdatesPage(); });
+if ($("#updDlSel")) $("#updDlSel").addEventListener("click", () => updBatchDownload([...state.updSel]));
+if ($("#updAll")) $("#updAll").addEventListener("change", (e) => {
+  const on = e.target.checked;
+  document.querySelectorAll("#updTbody .upd-cb").forEach((cb) => {
+    cb.checked = on;
+    const p = cb.dataset.path;
+    if (on) state.updSel.add(p); else state.updSel.delete(p);
+    const tr = cb.closest("tr");
+    if (tr) tr.classList.toggle("is-sel", on);
+  });
+  _updSyncSel();
+});
+if ($("#updSearch")) {
+  let tmr = null;
+  $("#updSearch").addEventListener("input", (e) => {
+    clearTimeout(tmr);
+    const v = e.target.value;
+    tmr = setTimeout(() => { state.updQ = v; state.updPage = 1; renderUpdatesPage(); }, 200);
+  });
+}
+if ($("#updBase")) $("#updBase").addEventListener("change", (e) => { state.updBase = e.target.value; state.updPage = 1; renderUpdatesPage(); });
+if ($("#updState")) $("#updState").addEventListener("change", (e) => { state.updState = e.target.value; state.updPage = 1; renderUpdatesPage(); });
+if ($("#updSort")) $("#updSort").addEventListener("change", (e) => { state.updSortKey = e.target.value; renderUpdatesPage(); });
+if ($("#updPer")) $("#updPer").addEventListener("change", (e) => { state.updPer = Number(e.target.value) || 50; state.updPage = 1; renderUpdatesPage(); });
+if ($("#updPager")) $("#updPager").addEventListener("click", (e) => {
+  const b = e.target.closest("button.pg");
+  if (!b || b.disabled) return;
+  state.updPage = Number(b.dataset.p) || 1;
+  renderUpdatesPage();
+});
 
 async function showUpdateResults(items) {
   const rows = Object.entries(items || {}).filter(([, it]) => it && it.has_update);

@@ -147,23 +147,63 @@
     </div>
   </section>
 
-  <!-- 更新检测 -->
+  <!-- 更新检测（紧凑表格：模型信息 / 当前版本 / 同底模可用版本 / 发布时间 / 状态 / 操作） -->
   <section class="page" id="page-updates">
-    <div class="card">
-      <h2 class="page-title">更新检测</h2>
-      <div class="btn-row">
+    <div class="upd-toolbar">
+      <div class="upd-title-row">
+        <h2 class="page-title">模型更新管理</h2>
+        <span class="upd-sub">管理和更新你的 AI 模型（只列出有 C 站信息的模型）</span>
+        <span class="upd-spacer"></span>
+        <span class="upd-count" id="updCount">未检查</span>
+      </div>
+      <div class="upd-filters">
+        <input class="input upd-search" id="updSearch" placeholder="搜索模型名称、作者、文件名…" />
+        <select class="input upd-sel" id="updBase"><option value="">全部底模</option></select>
+        <select class="input upd-sel" id="updState">
+          <option value="">全部状态</option>
+          <option value="upd">❗ 有更新</option>
+          <option value="latest">✅ 已是最新</option>
+          <option value="other">🔀 仅换底模</option>
+          <option value="unknown">⚠️ 无法判定</option>
+        </select>
+        <select class="input upd-sel" id="updSort">
+          <option value="date">排序：更新时间</option>
+          <option value="name">排序：名称</option>
+          <option value="state">排序：状态</option>
+        </select>
+        <span class="upd-spacer"></span>
         <button class="btn btn-primary" id="updCheck" data-tip="对比 C 站：找出「和你所用底模相同、且比你的版本新」的版本（只列出，不会自动下载）">⏫ 检查更新</button>
-        <button class="btn" id="updDlSel" disabled data-tip="把勾选的模型更新到最新版：新版下到旧版所在文件夹，旧版文件不动">⬇️ 更新选中</button>
-        <button class="btn" id="updDlAll" data-tip="一次更新列表里所有「有新版（同底模）」的模型">⬇️ 全部更新</button>
-        <button class="btn" id="updOnly" data-tip="只看「比你的版本新」的条目">❗ 只看有更新</button>
-        <button class="btn" id="updWl" data-tip="更新白名单：名单里的模型不再提示更新（列表里右键可加入）">📋 白名单</button>
+        <button class="btn" id="updDlSel" disabled data-tip="把勾选的模型更新到各自下拉里选中的版本（默认推荐版）">⬇️ 批量更新</button>
+        <button class="btn" id="updWl" data-tip="更新白名单：名单里的模型不再提示更新（行右键 / ··· 菜单里可加入）">📋 白名单</button>
       </div>
-      <div class="dd-hint" id="updSummary">还没检查过：点「⏫ 检查更新」开始（首次约 1~2 分钟；结果缓存 24 小时）。</div>
-      <div class="dd-hint">
-        每行：缩略图 ｜ 模型名 ｜ <b>当前版本名</b> ｜ <b>更新后可用的版本名</b>（点名字去 C 站看，点名字后的 ⬇️ 只下那一版，适合「不同方向」的版本）。
-        <b>右键</b>条目可「不再提醒更新（加入白名单）」。勾选后点「⬇️ 更新选中」批量更新到最新版。
-      </div>
-      <div id="updList" class="upd-list"></div>
+    </div>
+    <div class="upd-table-wrap">
+      <table class="upd-table" id="updTable">
+        <thead>
+          <tr>
+            <th class="c-ck"><input type="checkbox" id="updAll" data-tip="全选当前页"/></th>
+            <th class="c-info">模型信息</th>
+            <th class="c-cur">当前版本</th>
+            <th class="c-ver">同底模可用版本</th>
+            <th class="c-date">发布时间</th>
+            <th class="c-st">状态</th>
+            <th class="c-act">操作</th>
+          </tr>
+        </thead>
+        <tbody id="updTbody"></tbody>
+      </table>
+      <div class="upd-empty" id="updEmpty" style="display:none"></div>
+    </div>
+    <div class="upd-footer">
+      <span id="updStat">共 0 个模型</span>
+      <span class="upd-spacer"></span>
+      <span id="updSelInfo">已选 <b>0</b> 个</span>
+      <span class="upd-pager" id="updPager"></span>
+      <select class="input upd-sel" id="updPer">
+        <option value="20">20 条/页</option>
+        <option value="50" selected>50 条/页</option>
+        <option value="100">100 条/页</option>
+      </select>
     </div>
   </section>
 

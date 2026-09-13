@@ -42,8 +42,9 @@ GRACE_DEFAULT = 20  # 秒：启动后多久没有可见窗口就判定为卡死
 # 策略：20 秒起步 + 只要有进展信号（启动日志或 _MEI 解包目录在变）就继续宽限（最多 6 次），
 # 真正的卡死不会有任何进展信号，很快会被杀。
 PROGRESS_GRACE = 5  # 秒：启动日志在这个时间内更新过 = 有进展 → 宽限 MAX_EXTENDS 次
-MAX_EXTENDS = 6     # 有进展最多宽限 6 次（每次 PROGRESS_GRACE 秒）——本机冷启动实测 20~40s，
-                    # 解包+杀软扫描期间只有 _MEI 目录在变，给足时间；真卡死不会有进展信号，仍会按 GRACE 杀掉
+MAX_EXTENDS = 8     # 有活动最多宽限 8 次（每次 PROGRESS_GRACE 秒，共 +40s）——本机实测：
+                    # 解包 ~15s + WebView2 初始化 15~30s，全程没有日志但进程树一直有 CPU/IO 活动；
+                    # 真卡死时进程树彻底静止，宽限不会触发，仍按 GRACE 秒杀掉。
 RETRY_GRACE = 15    # 秒：窗口模式重试给的时间（重试仍要重新解包 + 建 WebView2，不能太短）
 
 # --------------------------------------------------------------------------
@@ -383,12 +384,9 @@ def _relaunch(app_name, browser=False):
 
 
 def _app_progressing(within=PROGRESS_GRACE):
-    """应用仍在正常启动（不是卡死）？看两个信号：
+    """应用仍在正常启动（不是卡死）？看两个"轻"信号：启动日志、_MEI 解包目录。
 
-    1) 启动日志最近 within 秒内更新过；
-    2) 单文件 exe 的临时解包目录（%TEMP%\\_MEI*）最近 within 秒内还在变化 —— 解包阶段
-       启动日志是静默的（Python 还没起来），如果只看日志会把「正在被杀软逐个扫描的慢解包」
-       误判成卡死。实测本机冷启动 20~40s，主要耗时就在这一步。
+    注意：WebView2 初始化阶段（实测 15~30s）这两者都是静的，主要靠 _tree_active 的重信号。
     """
     now = time.time()
     try:
@@ -411,6 +409,100 @@ def _app_progressing(within=PROGRESS_GRACE):
     except Exception:
         pass
     return False
+
+
+class _IO_COUNTERS(ctypes.Structure):
+    _fields_ = [("ReadOperationCount", ctypes.c_ulonglong), ("WriteOperationCount", ctypes.c_ulonglong),
+                ("OtherOperationCount", ctypes.c_ulonglong), ("ReadTransferCount", ctypes.c_ulonglong),
+                ("WriteTransferCount", ctypes.c_ulonglong), ("OtherTransferCount", ctypes.c_ulonglong)]
+
+
+def _proc_activity(pid):
+    """单个进程的 (CPU 秒, I/O 字节) 或 None（无权限/已退出）"""
+    try:
+        h = ctypes.windll.kernel32.OpenProcess(0x1000, False, int(pid))   # QUERY_LIMITED_INFORMATION
+        if not h:
+            return None
+        try:
+            c, e, k, u = (wintypes.FILETIME(), wintypes.FILETIME(), wintypes.FILETIME(), wintypes.FILETIME())
+            if not ctypes.windll.kernel32.GetProcessTimes(h, ctypes.byref(c), ctypes.byref(e),
+                                                          ctypes.byref(k), ctypes.byref(u)):
+                return None
+            ft = lambda f: (f.dwHighDateTime << 32) | f.dwLowDateTime     # noqa: E731
+            cpu = (ft(k) + ft(u)) / 1e7
+            io = 0.0
+            ctr = _IO_COUNTERS()
+            if ctypes.windll.kernel32.GetProcessIoCounters(h, ctypes.byref(ctr)):
+                io = float(ctr.ReadTransferCount + ctr.WriteTransferCount + ctr.OtherTransferCount)
+            return (cpu, io)
+        finally:
+            ctypes.windll.kernel32.CloseHandle(h)
+    except Exception:
+        return None
+
+
+_LAST_TREE = {"v": None}
+
+
+def _tree_active(pids, min_cpu=0.05, min_io=65536):
+    """整棵进程树还在动吗？
+
+    这是"真卡死 vs 慢启动"的关键判据：真正的死锁（GIL 被 WebView2 初始化攥死）时，
+    进程树 CPU 与 I/O 完全不再增长；而慢启动（解包、杀软扫描、WebView2 起子进程）总有活动。
+    阈值取得很小 —— 只用来区分"完全静止"。
+    注意：进程集合一变（重启/新子进程出现）就重采基线，否则新旧树的累计值不可比
+    （曾导致 stage-1 重试阶段永远判为"无活动"，16 秒就被杀）。
+    """
+    keys = tuple(sorted(int(p) for p in set(pids)))
+    cpu = io = 0.0
+    seen = 0
+    for p in keys:
+        a = _proc_activity(p)
+        if a:
+            cpu += a[0]
+            io += a[1]
+            seen += 1
+    if not seen:
+        return False
+    if _LAST_TREE.get("pids") != keys:
+        _LAST_TREE["pids"] = keys
+        _LAST_TREE["v"] = (cpu, io)
+        return True                      # 树变了：重采基线，这一轮乐观处理
+    prev = _LAST_TREE.get("v")
+    _LAST_TREE["v"] = (cpu, io)
+    if not prev:
+        return True
+    return (cpu - prev[0]) >= min_cpu or (io - prev[1]) >= min_io
+
+
+def _app_health(timeout=2.0):
+    """探 /api/health —— 应用启动完成后才会响应（GIL 被卡死时连它都不出）。
+
+    返回 dict 或 None。界面判定优先用它（比 Win32 探窗口准：窗口刚建好但还没"可见"时会漏判）。
+    """
+    try:
+        import urllib.request
+        port = 47531
+        try:
+            import browser_bridge
+            port = getattr(browser_bridge, "DEFAULT_PORT", port) or port
+        except Exception:
+            pass
+        with urllib.request.urlopen("http://127.0.0.1:%d/api/health" % port, timeout=timeout) as r:
+            return json.loads(r.read().decode("utf-8"))
+    except Exception:
+        return None
+
+
+def _ui_ready():
+    """应用自己报告「界面已就绪」？（窗口已可见，或浏览器模式下后端常驻）
+
+    旧版本（health 里没有 window 字段）只要能应答就认为是活的。
+    """
+    h = _app_health()
+    if not (h and h.get("ok")):
+        return False
+    return bool(h.get("mode") == "browser" or h.get("window") or ("window" not in h))
 
 
 def run(grace=None, exe_name=None):
@@ -464,7 +556,7 @@ def run(grace=None, exe_name=None):
                     healthy = True
                 continue
 
-            if has_visible_window([pid]) or has_visible_window(_descendants(pid)):
+            if has_visible_window([pid]) or has_visible_window(_descendants(pid)) or _ui_ready():
                 if not healthy:
                     _log("window visible, healthy (took %.1fs)" % (time.time() - started))
                 healthy, stage, msg_shown, progresses = True, 0, False, 0
@@ -480,12 +572,13 @@ def run(grace=None, exe_name=None):
             if time.time() < deadline:
                 continue
 
-            # 宽限保护：启动日志刚刚还在更新（应用在正常推进）就再等等，最多 2 次，
-            # 避免把「慢一点但没问题」的启动误杀（真正的卡死不会再有新日志行）
-            if progresses < MAX_EXTENDS and _app_progressing():
+            # 宽限保护：启动日志/_MEI 在动，或**整棵进程树还在用 CPU/IO**（解包、WebView2 起子进程都属于这种）
+            # 就继续等，最多 MAX_EXTENDS 次；真正卡死的进程树是彻底静止的（CPU/IO 都不再增长），很快会被杀。
+            tree = [pid] + _descendants(pid)
+            if progresses < MAX_EXTENDS and (_app_progressing() or _tree_active(tree)):
                 progresses += 1
                 deadline = time.time() + PROGRESS_GRACE
-                _log("still starting (log updated recently), extend deadline #%d" % progresses)
+                _log("still starting (activity detected), extend deadline #%d/%d" % (progresses, MAX_EXTENDS))
                 continue
 
             # 超时无窗口 = 卡死

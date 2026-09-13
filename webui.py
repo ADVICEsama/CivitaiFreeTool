@@ -11,7 +11,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.1.34"
+APP_VERSION = "2.1.35"
 
 import civitai_api
 import config
@@ -2090,6 +2090,10 @@ class Api:
             return out
         ver = d.get("version") if isinstance(d.get("version"), dict) else {}
         out["model_name"] = str(d.get("name") or d.get("modelName") or "").strip()
+        cre = d.get("creator")
+        if isinstance(cre, dict):
+            cre = cre.get("username") or cre.get("name") or ""
+        out["author"] = str(cre or "").strip()
         out["version_name"] = str(ver.get("name") or d.get("versionName") or "").strip()
         out["base"] = str(ver.get("baseModel") or d.get("baseModel") or "").strip()
         dt = str(ver.get("publishedAt") or ver.get("createdAt") or "").strip()
@@ -2120,6 +2124,8 @@ class Api:
                 it["local_base"] = sc["base"]; changed += 1
             if not it.get("local_date") and sc.get("date"):
                 it["local_date"] = sc["date"]; changed += 1
+            if not it.get("author") and sc.get("author"):
+                it["author"] = sc["author"]; changed += 1
             it["_enr"] = 1
         if changed:
             self._save_updates(self._updates)
@@ -2200,6 +2206,7 @@ class Api:
                                 break
                         rec = {"model_id": mid, "local_version": lv, "local_base": lb,
                                "model_name": (m.get("name") or "").strip(),
+                               "model_type": (m.get("type") or "").strip(),
                                "checked_at": now, "has_update": False, "other_base": False}
                         if idx < 0:
                             sc0 = self._sidecar_brief(r["path"])

@@ -1334,3 +1334,57 @@ td.cell-dest:hover { color: var(--accent, #4da3ff); text-decoration: underline d
 .upd-id { font-size: 11px; color: var(--text-dim, #999); }
 .upd-note { font-size: 11px; color: var(--text-dim, #999); }
 .upd-empty { font-size: 12px; color: var(--text-dim, #999); padding: 18px; text-align: center; border: 1px dashed var(--border); border-radius: 10px; }
+
+/* ===== 更新页面：紧凑数据表（高信息密度，适配 1366~2560） ===== */
+#page-updates { display: none; }
+#page-updates.active { display: flex; flex-direction: column; height: 100%; }
+.upd-toolbar { flex: 0 0 auto; padding: 12px 14px 10px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.upd-title-row { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.upd-sub { font-size: 12px; color: var(--text-dim); }
+.upd-spacer { flex: 1; }
+.upd-count { font-size: 12px; color: var(--text-dim); }
+.upd-count b.warn { color: #d29922; }
+.upd-filters { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 9px; }
+.upd-search { flex: 1 1 240px; min-width: 160px; }
+.upd-sel { width: auto; min-width: 104px; }
+.upd-table-wrap { flex: 1 1 auto; overflow: auto; margin: 10px 14px 0; border: 1px solid var(--border); border-radius: var(--radius-sm); min-height: 120px; }
+.upd-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; table-layout: fixed; }
+.upd-table thead th { position: sticky; top: 0; z-index: 2; background: var(--surface2); text-align: left; font-weight: 600; font-size: 12px; color: var(--text-dim); padding: 7px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.upd-table td { padding: 6px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.upd-table tbody tr:hover { background: var(--surface2); }
+.upd-table tbody tr.is-sel { background: rgba(56, 139, 253, .12); }
+.upd-table .c-ck { width: 34px; }
+.upd-table .c-info { width: auto; }
+.upd-table .c-cur { width: 138px; }
+.upd-table .c-ver { width: 226px; }
+.upd-table .c-date { width: 96px; }
+.upd-table .c-st { width: 106px; }
+.upd-table .c-act { width: 196px; }
+.upd-info { display: flex; gap: 10px; align-items: center; min-width: 0; }
+.upd-thumb { width: 64px; height: 64px; border-radius: 6px; object-fit: cover; flex: 0 0 64px; background: rgba(127,127,127,.12); }
+.upd-meta { min-width: 0; flex: 1; }
+.upd-nm { font-weight: 600; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.upd-sub2 { font-size: 11.5px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+.upd-dim { color: var(--text-dim); }
+.ver-badge { display: inline-block; padding: 1px 8px; border-radius: 999px; background: rgba(127,127,127,.16); font-size: 12px; max-width: 128px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
+.st-badge { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+.st-badge.green { background: rgba(46,160,67,.16); color: #2ea043; }
+.st-badge.blue { background: rgba(56,139,253,.16); color: #388bfd; }
+.st-badge.gray, .st-badge.mut { background: rgba(127,127,127,.16); color: var(--text-dim); }
+.upd-vsel { width: 100%; max-width: 212px; padding: 3px 6px; font-size: 12px; }
+.upd-acts2 { display: flex; align-items: center; gap: 6px; justify-content: flex-end; }
+.upd-acts2 .btn { padding: 2px 8px; font-size: 12px; white-space: nowrap; }
+.upd-acts2 .upd-site { font-size: 12px; white-space: nowrap; }
+.upd-footer { flex: 0 0 auto; display: flex; align-items: center; gap: 10px; padding: 8px 14px 12px; font-size: 12px; color: var(--text-dim); }
+.upd-pager { display: flex; gap: 4px; align-items: center; }
+.upd-pager .pg { min-width: 26px; height: 24px; padding: 0 6px; border: 1px solid var(--border); border-radius: 6px; background: transparent; color: inherit; font-size: 12px; cursor: pointer; }
+.upd-pager .pg.on { background: rgba(56,139,253,.18); border-color: transparent; font-weight: 700; }
+.upd-pager .pg:disabled { opacity: .4; cursor: default; }
+.upd-pager .pg-dot { color: var(--text-dim); }
+.upd-empty { padding: 40px 20px; text-align: center; color: var(--text-dim); font-size: 13px; }
+.upd-id { font-size: 11px; margin-top: 2px; }
+@media (max-width: 1500px) {
+  .upd-table .c-cur { width: 112px; } .upd-table .c-ver { width: 176px; }
+  .upd-table .c-act { width: 172px; } .upd-table .c-date { width: 84px; } .upd-table .c-st { width: 92px; }
+  .upd-acts2 { flex-wrap: wrap; }
+}
