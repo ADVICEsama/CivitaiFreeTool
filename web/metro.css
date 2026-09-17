@@ -1121,3 +1121,10 @@ svg.ic { width: 16px; height: 16px; flex: 0 0 auto; vertical-align: -3px; }
 .upd-acts2 .upd-site { font-size: 12px; line-height: 1.5; color: var(--text-dim); text-decoration: none;
   padding: 2px 8px; border: 1px solid var(--border); border-radius: 2px; white-space: nowrap; }
 .upd-acts2 .upd-site:hover { color: var(--text); border-color: var(--text-dim); }
+
+
+/* 经典主题显示 emoji、Metro 主题隐藏：按钮里的 emoji 一律包在 .emj 中 */
+[data-theme="metro"] .emj { display: none !important; }
+
+/* 经典主题：按钮带 emoji 时隐藏 SVG 图标（emoji 替代图标；Metro 相反） */
+html:not([data-theme="metro"]) .emj ~ .ic { display: none !important; }

@@ -3768,17 +3768,21 @@ function applyUiAppearance() {
   } else {
     root.dataset.scheme = scheme === "dark" ? "dark" : "light";
   }
+  const _setAcc = (c) => {
+    root.style.setProperty("--metro-accent", c);
+    // --primary 只在 Metro 主题下跟随主题色；经典主题必须保持自己的主题主色（否则主按钮变黑底黑字）
+    if (root.dataset.theme === "metro") root.style.setProperty("--primary", c);
+    else root.style.removeProperty("--primary");
+  };
   if (/^#([0-9a-f]{6})$/i.test(acc)) {
-    root.style.setProperty("--metro-accent", acc);
-    root.style.setProperty("--primary", acc);
+    _setAcc(acc);
   } else if (acc === "system") {
     api.call("get_system_accent").then((c) => {
-      if (c && /^#([0-9a-fA-F]{6})$/.test(c)) {
-        root.style.setProperty("--metro-accent", c);
-        root.style.setProperty("--primary", c);
-      }
+      if (c && /^#([0-9a-fA-F]{6})$/.test(c)) _setAcc(c);
     }).catch(() => { });
   }
+  // 主题切换后：代理按钮标签需要按主题重刷（经典带 emoji / Metro 不带）
+  try { (window._mmLabelSync || []).forEach((f) => f()); } catch (e) { }
 }
 
 // 设置项 hover 说明（鼠标移到标签上显示功能作用）
@@ -3976,6 +3980,7 @@ $("#btnSaveSettings").addEventListener("click", async () => {
   // 不刷新页面：直接应用主题/缩放/表单（避免白屏闪烁）
   applyZoom(Number(state.cfg.ui_zoom) || 100);
   document.documentElement.dataset.theme = state.cfg.theme || "modern";
+  applyUiAppearance();
   buildSettingsForm();
 });
 
@@ -4008,6 +4013,7 @@ $("#settingsForm").addEventListener("change", (e) => {
   if (key === "theme") {
     state.cfg.theme = val;
     document.documentElement.dataset.theme = val || "modern";
+    applyUiAppearance();   // 主题切换：重算 --primary/主题色 + 重刷代理按钮标签（经典 emoji / Metro 无）
   } else if (key === "ui_scheme" || key === "metro_accent") {
     if (state.cfg) state.cfg[key] = val;
     applyUiAppearance();
@@ -4178,6 +4184,7 @@ function renderOnboarding() {
         if (state.cfg) state.cfg.theme = obTheme;
         document.querySelectorAll('select[data-key="theme"]').forEach((sel) => { sel.value = obTheme; });
         document.documentElement.dataset.theme = obTheme;
+        applyUiAppearance();
         document.querySelectorAll("#obThemes .ob-theme").forEach((x) => x.classList.remove("sel"));
         el.classList.add("sel");
       });
@@ -4274,6 +4281,7 @@ async function finishOnboarding() {
   state.cfg.models_dirs = dirs;
   if (dirs.length) state.cfg.models_dir = dirs[0];
   document.documentElement.dataset.theme = obTheme;
+        applyUiAppearance();
   await api.call("save_config", state.cfg);
   state.cfg = await api.call("get_config");
   buildSettingsForm();
@@ -4514,16 +4522,16 @@ function bindMmMetro() {
     const src = document.getElementById(el.dataset.proxy);
     if (!src) return;
     const _clean = (t) => String(t || "").replace(/^[\u{1F300}-\u{1FAFF}\u{2300}-\u{27BF}\u{2B00}-\u{2BFF}\uFE0F\u200D\s]+/u, "");
+    const _isMetro = () => document.documentElement.dataset.theme === "metro";
     const sync = () => {
-      const lbl = _clean(src.textContent);
-      const want = (_clean(el.textContent) !== lbl);
-      if (want) {
-        const ic = el.dataset.icon ? _icon(el.dataset.icon) : "";
-        el.innerHTML = ic + lbl;
-      }
+      const raw = String(src.textContent || "");
+      const lbl = _isMetro() ? _clean(raw) : raw.trim();       // 经典主题：保留 emoji（原样）
+      const ic = (_isMetro() && el.dataset.icon) ? _icon(el.dataset.icon) : "";
+      if (el.innerHTML !== (ic + lbl)) el.innerHTML = ic + lbl;
       el.disabled = !!src.disabled;
       el.style.display = (src.style.display === "none") ? "none" : "";
     };
+    (window._mmLabelSync = window._mmLabelSync || []).push(sync);
     try {
       new MutationObserver(sync).observe(src, { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ["style", "disabled"] });
     } catch (e) { /* 忽略 */ }
