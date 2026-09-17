@@ -4513,7 +4513,7 @@ function bindMmMetro() {
   document.querySelectorAll(".mm-metro [data-proxy]").forEach((el) => {
     const src = document.getElementById(el.dataset.proxy);
     if (!src) return;
-    const _clean = (t) => String(t || "").replace(/^[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\uFE0F\u200D\s]+/u, "");
+    const _clean = (t) => String(t || "").replace(/^[\u{1F300}-\u{1FAFF}\u{2300}-\u{27BF}\u{2B00}-\u{2BFF}\uFE0F\u200D\s]+/u, "");
     const sync = () => {
       const lbl = _clean(src.textContent);
       const want = (_clean(el.textContent) !== lbl);

@@ -254,7 +254,7 @@ body {
 }
 .btn:hover { background: var(--surface2); box-shadow: var(--shadow-hover); }
 .btn:active { transform: translateY(1px); }
-.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn:disabled { opacity: 1; background: var(--surface2); border-color: var(--border); color: var(--text-dim); cursor: not-allowed; box-shadow: none; }
 .btn-primary {
   background: var(--primary); border-color: var(--primary); color: var(--primary-fg);
 }
