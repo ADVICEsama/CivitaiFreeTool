@@ -1469,3 +1469,11 @@ td.cell-dest:hover { color: var(--accent, #4da3ff); text-decoration: underline d
 
 /* 暗色主题：使用深色滚动条（WebView2 默认浅色滚动条在暗色主题下是一条白线） */
 html[data-theme^="dark"] { color-scheme: dark; }
+
+
+/* 浅色（纯白清爽系）：与默认/现代浅色区分开 */
+[data-theme="light"] {
+  --bg: #fbfcfe; --surface: #ffffff; --surface2: #eef2f7; --border: #dfe5ec;
+  --text: #1b2027; --text-dim: #6a7482;
+  --primary: #2563eb; --primary-hover: #1d4ed8; --primary-fg: #ffffff;
+}

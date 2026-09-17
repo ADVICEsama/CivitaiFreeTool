@@ -3991,6 +3991,10 @@ function _applyMetroOpts() {
     });
     const zb = document.querySelector('#settingsForm [data-key="zebra_rows"]');
     if (zb) {
+      const zw = zb.closest("div");
+      const zl = zw && zw.previousElementSibling;
+      if (zw) zw.classList.toggle("classic-opt", isMetro);
+      if (zl) zl.classList.toggle("classic-opt", isMetro);
       const mode = isMetro ? "metro" : "normal";
       if (zb._lastMode !== mode) {
         zb._lastMode = mode;

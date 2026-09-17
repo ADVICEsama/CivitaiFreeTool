@@ -1135,3 +1135,50 @@ html:not([data-theme="metro"]) .emj ~ .ic { display: none !important; }
 [data-scheme="light"] { color-scheme: light; }
 /* 显示列面板：关闭"缩略图"时隐藏单元格缩略图（伪列，无真实 <col>） */
 #mmTable.no-thumb .ml-thumb { display: none; }
+
+
+/* ============ 经典主题补全（非 Metro 专用；Metro 有自己的规则） ============ */
+
+/* 分裂按钮（改名/整理/检查/信息处理 ▾）：经典主题下合并为一体控件（此前是分开的两个按钮） */
+html:not([data-theme="metro"]) .sp-btn { display: inline-flex; align-items: stretch; }
+html:not([data-theme="metro"]) .sp-btn > .btn:first-child { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+html:not([data-theme="metro"]) .sp-btn > .sp-caret {
+  border-top-left-radius: 0; border-bottom-left-radius: 0;
+  margin-left: -1px; padding: 0 8px; min-width: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--text-dim);
+}
+html:not([data-theme="metro"]) .sp-btn:hover > .sp-caret { color: var(--text); }
+html:not([data-theme="metro"]) .sp-btn.open > .btn:first-child { background: var(--surface2); }
+
+/* 分段视图控件（列表|瀑布流）：经典主题下只保留外框一条，内部按钮去边框去圆角（此前是"框里套胶囊"的双重框） */
+html:not([data-theme="metro"]) .mm-seg { border-radius: var(--radius, 8px); }
+html:not([data-theme="metro"]) .mm-seg .btn.seg { border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+html:not([data-theme="metro"]) .mm-seg .btn.seg + .btn.seg { border-left: 1px solid var(--border); }
+html:not([data-theme="metro"]) .mm-seg .btn.seg:hover { background: var(--surface2); }
+html:not([data-theme="metro"]) .mm-seg .btn.seg.on { background: var(--primary); color: var(--primary-fg); font-weight: 600; }
+
+/* 模型详情：经典主题下的整体布局（此前 .dt-body 只有 Metro 的 grid 规则，经典主题下整页错乱） */
+html:not([data-theme="metro"]) .detail-panel { flex-direction: column; }
+.dt-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 18px; border-bottom: 1px solid var(--border); flex: 0 0 auto;
+}
+.dt-head-t { font-size: 17px; font-weight: 700; color: var(--text); }
+.dt-head-r { display: flex; align-items: center; gap: 10px; }
+.dt-body { flex: 1 1 auto; min-height: 0; display: flex; }
+html:not([data-theme="metro"]) .dt-body .detail-left { overflow: auto; }
+
+/* 设置页：Metro 下隐藏经典专属项（斑马纹等） */
+[data-theme="metro"] .classic-opt { display: none !important; }
+
+
+/* 经典详情页排版细节（信息行/标签/分区；Metro 有自己的规则不受影响） */
+html:not([data-theme="metro"]) .dt-mr { display: flex; gap: 10px; padding: 2px 0; }
+html:not([data-theme="metro"]) .dt-mr .k { color: var(--text-dim); min-width: 38px; }
+html:not([data-theme="metro"]) .dt-mrs { margin: 8px 0; }
+html:not([data-theme="metro"]) .detail-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+html:not([data-theme="metro"]) .detail-tag { display: inline-block; padding: 2px 10px; border-radius: var(--radius, 8px);
+  background: var(--surface2); font-size: 12px; color: var(--text-dim); }
+html:not([data-theme="metro"]) .dt-sec { margin-top: 12px; }
+html:not([data-theme="metro"]) .dt-sec-h { font-size: 13px; font-weight: 600; color: var(--text-dim); margin-bottom: 6px; }
