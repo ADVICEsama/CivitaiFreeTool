@@ -138,7 +138,7 @@ function confirmBox(msg) {
     dlg.className = "rename-dialog";
     dlg.style.width = "420px";
     dlg.innerHTML =
-      '<div class="rd-title">⚠️ 确认操作</div>' +
+      '<div class="rd-title">确认操作</div>' +
       '<div style="font-size:13px;color:var(--text);line-height:1.7;word-break:break-all">' + esc(msg) + "</div>" +
       '<div class="rd-actions">' +
       ((state.cfg && state.cfg.confirm_buttons_flip)
@@ -163,7 +163,7 @@ function confirmBoxRaw(html, title) {
     dlg.className = "rename-dialog";
     dlg.style.width = "560px";
     dlg.innerHTML =
-      '<div class="rd-title">' + (title || "⚠️ 确认操作") + "</div>" +
+      '<div class="rd-title">' + (title || "确认操作") + "</div>" +
       '<div style="font-size:13px;color:var(--text);line-height:1.7">' + html + "</div>" +
       '<div class="rd-actions">' +
       ((state.cfg && state.cfg.confirm_buttons_flip)
@@ -212,7 +212,7 @@ document.addEventListener("click", function (e) {
   }
   if (!txt) return;
   window.__copyText(txt).then(function (ok) {
-    setStatus(ok ? "✅ 已复制报错到剪贴板，可直接搜索" : "复制失败（可手动选中复制）");
+    setStatus(ok ? "已复制报错到剪贴板，可直接搜索" : "复制失败（可手动选中复制）");
   });
 });
 
@@ -306,12 +306,12 @@ function openTodoDialog() {
   dlg.className = "rename-dialog";
   dlg.style.width = "520px";
   dlg.innerHTML =
-    '<div class="rd-title">⏰ 到期提醒清单（到期打开软件时提醒）</div>' +
+    '<div class="rd-title">到期提醒清单（到期打开软件时提醒）</div>' +
     '<div class="form-grid" style="grid-template-columns:90px 1fr">' +
     '<label>链接</label><input class="input" id="tdUrl" placeholder="https://civitai.red/models/..." />' +
     "</div>" +
     '<div style="font-size:12px;color:var(--text-dim);margin:4px 0 6px 90px">时间自动选择：Early Access 模型按其免费到期时间提醒；其他模型默认 7 天后提醒</div>' +
-    '<div class="rd-actions"><button class="btn btn-primary" id="tdAdd">➕ 添加</button></div>' +
+    '<div class="rd-actions"><button class="btn btn-primary" id="tdAdd">添加</button></div>' +
     '<div style="font-size:13px;font-weight:600;margin:10px 0 6px">清单：</div>' +
     '<div id="tdList" style="max-height:200px;overflow:auto;font-size:12px;line-height:1.9"></div>' +
     '<div class="rd-actions"><button class="btn" id="tdClose">关闭</button></div>';
@@ -336,9 +336,9 @@ function openTodoDialog() {
     box.innerHTML = r.todos.map((t) =>
       '<div style="display:flex;gap:6px;align-items:center">' +
       '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(t.url) + '">' + esc(t.label || t.url) + "</span>" +
-      (t.due ? '<span style="color:var(--danger)">⏰ 已到期</span>' : "<span>" + t.remain_days + " 天后</span>") +
-      '<button class="btn btn-tiny" data-dl="' + esc(t.url) + '" title="立即解析并下载这个模型">⬇️ 下载</button>' +
-      '<button class="btn btn-tiny" data-del="' + esc(t.url) + '" title="从清单移除">🗑️</button></div>').join("");
+      (t.due ? '<span style="color:var(--danger)">已到期</span>' : "<span>" + t.remain_days + " 天后</span>") +
+      '<button class="btn btn-tiny" data-dl="' + esc(t.url) + '" title="立即解析并下载这个模型">下载</button>' +
+      '<button class="btn btn-tiny" data-del="' + esc(t.url) + '" title="从清单移除"></button></div>').join("");
     box.querySelectorAll("button[data-dl]").forEach((b) => b.addEventListener("click", async () => {
       setStatus("正在解析并加入下载队列 …");
       const res = await api.call("todo_download", b.dataset.dl);
@@ -365,12 +365,12 @@ function openTodoDialog() {
     const rows = r.due.map((t) =>
       '<div style="display:flex;gap:8px;align-items:center;margin:5px 0">' +
       '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px" title="' + esc(t.url) + '">' + esc(t.label || t.url) + "</span>" +
-      '<button class="btn btn-tiny td-dl" data-url="' + esc(t.url) + '">⬇️ 一键下载</button></div>').join("");
+      '<button class="btn btn-tiny td-dl" data-url="' + esc(t.url) + '">一键下载</button></div>').join("");
     dlg.innerHTML =
-      '<div style="font-size:15px;font-weight:600;margin-bottom:6px">⏰ 到期待办：可以下载了</div>' +
+      '<div style="font-size:15px;font-weight:600;margin-bottom:6px">到期待办：可以下载了</div>' +
       '<div style="font-size:12px;color:var(--text-dim);margin-bottom:8px">这些模型已到免费/可下载时间（下载成功后会自动从清单里移除）：</div>' +
       '<div style="max-height:240px;overflow:auto">' + rows + "</div>" +
-      '<div class="rd-actions"><button class="btn btn-primary" id="tdAll">⬇️ 全部下载</button><button class="btn" id="tdGoDl">去下载页</button><button class="btn" id="tdLater">稍后再说</button></div>';
+      '<div class="rd-actions"><button class="btn btn-primary" id="tdAll">全部下载</button><button class="btn" id="tdGoDl">去下载页</button><button class="btn" id="tdLater">稍后再说</button></div>';
     document.body.appendChild(mask);
     document.body.appendChild(dlg);
     const close = () => { mask.remove(); dlg.remove(); };
@@ -388,7 +388,7 @@ function openTodoDialog() {
       const res = await api.call("todo_download", b.dataset.url);
       setStatus(res && res.msg ? res.msg : "已开始下载");
       b.disabled = true;
-      b.textContent = "✅ 已加入";
+      b.textContent = "已加入";
       const row = b.parentElement;
       if (row) row.style.opacity = ".5";
     }));
@@ -406,7 +406,7 @@ function showDlNotice() {
   dlg.className = "rename-dialog";
   dlg.style.width = "380px";
   dlg.innerHTML =
-    '<div class="rd-title">✅ 已在下载队列中</div>' +
+    '<div class="rd-title">已在下载队列中</div>' +
     '<div style="font-size:13px;color:var(--text-dim);line-height:1.8">任务已开始解析并入队，请在本页等待，无需重复点击「解析」。</div>' +
     '<div class="rd-actions"><button class="btn btn-primary" id="dnOk">知道了</button></div>';
   document.body.appendChild(mask);
@@ -481,11 +481,11 @@ function showImgDlResult(r) {
   const detail = (r.detail || []).map((d) =>
     '<div class="wf-model"><span class="wf-model-ref">' + esc(d.name) + '（' + esc(d.type || "-") + "）</span>" +
     (d.status === "add"
-      ? '<span class="wf-model-path">✅ 已加入下载队列</span>'
-      : '<span class="wf-model-miss">⏭️ 本地已存在，跳过</span>') +
+      ? '<span class="wf-model-path">已加入下载队列</span>'
+      : '<span class="wf-model-miss">本地已存在，跳过</span>') +
     "</div>").join("");
   dlg.innerHTML =
-    '<div class="rd-title">🖼️ 图片页模型批量下载</div>' +
+    '<div class="rd-title">图片页模型批量下载</div>' +
     '<div class="wf-info">图片共使用 ' + r.total + ' 个模型 · 新增 ' + r.added + ' · 已存在跳过 ' + r.skipped + "</div>" +
     '<div class="wf-nodes" style="margin-top:8px">' + (detail || '<div class="wf-empty">无可用模型</div>') + "</div>" +
     '<div class="rd-actions"><button class="btn btn-primary" id="imgDlOk">知道了</button></div>';
@@ -508,7 +508,7 @@ function showHfDialog(info) {
   dlg.style.overflow = "auto";
   const files = info.files || [];
   dlg.innerHTML =
-    '<div class="rd-title">🤗 ' + esc(info.repo) + "（" + files.length + " 个文件）</div>" +
+    '<div class="rd-title">' + esc(info.repo) + "（" + files.length + " 个文件）</div>" +
     '<div class="hf-list">' + files.slice(0, 300).map((f, i) =>
       '<label class="hf-item"><input type="checkbox" class="hf-cb" data-i="' + i + '" ' +
       (/\.(safetensors|ckpt|pt|pth|bin|onnx|gguf|sft)$/i.test(f.path) ? "checked" : "") + "/> " +
@@ -567,12 +567,12 @@ function showPaidDialog(items) {
   const rows = items.map((it) => {
     const remain = it.deadline ? Math.max(1, Math.ceil((it.deadline - Date.now() / 1000) / 86400)) : 7;
     return '<div class="paid-row" data-url="' + esc(it.url) + '" data-deadline="' + (it.deadline || 0) + '">' +
-      '<div style="font-weight:600">⚠️ 需付费（Early Access）</div>' +
+      '<div style="font-weight:600">需付费（Early Access）</div>' +
       '<div style="font-size:12px;color:var(--text-dim);word-break:break-all">' + esc(it.url) + "</div>" +
-      '<div style="font-size:12px;margin:4px 0 8px">约 ' + remain + ' 天后免费 —— <button class="btn btn-tiny paid-todo">⏰ 加入待办（自动到期提醒）</button> <button class="btn btn-tiny paid-dl">💳 仍要下载</button></div></div>';
+      '<div style="font-size:12px;margin:4px 0 8px">约 ' + remain + ' 天后免费 —— <button class="btn btn-tiny paid-todo">加入待办（自动到期提醒）</button> <button class="btn btn-tiny paid-dl">仍要下载</button></div></div>';
   }).join("");
   dlg.innerHTML =
-    '<div class="rd-title">⏰ 以下模型需要付费或尚未公开</div>' +
+    '<div class="rd-title">以下模型需要付费或尚未公开</div>' +
     '<div style="max-height:260px;overflow:auto;font-size:13px;line-height:1.8">' + rows + "</div>" +
     '<div class="rd-actions"><button class="btn" id="paidClose">知道了</button></div>';
   document.body.appendChild(mask);
@@ -584,14 +584,14 @@ function showPaidDialog(items) {
     const row = b.closest(".paid-row");
     const res = await api.call("todo_add", row.dataset.url, null, Number(row.dataset.deadline) || null);
     setStatus(res && res.msg ? res.msg : "已加入待办");
-    b.textContent = "✅ 已加入待办";
+    b.textContent = "已加入待办";
     b.disabled = true;
   }));
   dlg.querySelectorAll(".paid-dl").forEach((b) => b.addEventListener("click", async () => {
     const row = b.closest(".paid-row");
     setStatus("正在加入下载队列 …");
     const r = await api.call("dl_enqueue_url", row.dataset.url);
-    b.textContent = "⏳ 已提交";
+    b.textContent = "已提交";
     b.disabled = true;
     if (r && r.started) pollParse();
   }));
@@ -632,7 +632,7 @@ async function pickFolderModal() {
   dlg.className = "rename-dialog";
   dlg.style.width = "560px";
   dlg.innerHTML =
-    '<div class="rd-title">📂 选择下载落地的文件夹</div>' +
+    '<div class="rd-title">选择下载落地的文件夹</div>' +
     '<div style="font-size:12px;color:var(--text-dim);margin-bottom:8px">下载的模型（连 json/封面一起）直接放进这个文件夹；选中后不再弹「移动分类」询问</div>' +
     '<div id="fpList" style="max-height:330px;overflow:auto;border:1px solid var(--border);border-radius:10px;padding:6px"></div>' +
     '<div class="rd-actions"><button class="btn" id="fpCancel">取消</button><button class="btn btn-primary" id="fpOk">确定</button></div>';
@@ -642,7 +642,7 @@ async function pickFolderModal() {
   const list = $("#fpList", dlg);
   list.innerHTML = rows.map((r) =>
     '<div class="fp-item" data-path="' + esc(r.path) + '" style="padding:6px 8px;border-radius:8px;cursor:pointer;margin-left:' + (r.depth * 16) + 'px">' +
-    (r.depth ? "📁 " : "🏠 ") + esc(r.label) +
+    (r.depth ? _icon("folder") : _icon("folder")) + esc(r.label) +
     '<div style="font-size:11px;color:var(--text-dim);word-break:break-all">' + esc(r.path) + "</div></div>").join("");
   const mark = () => {
     list.querySelectorAll(".fp-item").forEach((d) => {
@@ -725,11 +725,11 @@ async function showDedupeDialog(groups, modelGroups) {
   const thumb = (p) => '<img class="dd-thumb" data-path="' + esc(p) + '" alt=""/>';
 
   const secA = groups.length ? (
-    '<div class="dedup-sec">🧬 完全相同（同哈希 · ' + groups.length + " 组 · " + totalDups + " 个副本）</div>" +
+    '<div class="dedup-sec">完全相同（同哈希 · ' + groups.length + " 组 · " + totalDups + " 个副本）</div>" +
     '<div class="dd-hint">同名同内容只留一份：默认勾选的是「多余的副本」，会移入回收站（可还原）。</div>' +
     groups.map((g, gi) =>
       '<div class="dedup-group">' +
-      '<div class="dedup-keep">' + thumb(g.keep) + '<div class="dd-text">✅ 保留 <b>' + esc(g.keep_name) + "</b>" +
+      '<div class="dedup-keep">' + thumb(g.keep) + '<div class="dd-text">保留 <b>' + esc(g.keep_name) + "</b>" +
       '<div class="dedup-dir">' + esc(g.keep_dir) + "</div></div></div>" +
       g.dups.map((d, di) =>
         '<label class="dedup-dup">' + thumb(d.path) +
@@ -739,24 +739,24 @@ async function showDedupeDialog(groups, modelGroups) {
       "</div>").join("")) : "";
 
   const secB = modelGroups.length ? (
-    '<div class="dedup-sec">🕰️ 同模型多版本（' + modelGroups.length + " 组 · 旧版 " + totalOlds + " 个 · 约 " + fmtBytes(sizeB) + "）</div>" +
+    '<div class="dedup-sec">同模型多版本（' + modelGroups.length + " 组 · 旧版 " + totalOlds + " 个 · 约 " + fmtBytes(sizeB) + "）</div>" +
     '<div class="dd-hint">同一个模型存了多个版本：<b>默认已帮你勾上「旧版」</b>（点下面「旧版共存」就能全部不删）；' +
-    "每条都能看缩略图 + 点 🔗 去 C 站核对到底是哪一版。</div>" +
+    "每条都能看缩略图 + 点 去 C 站核对到底是哪一版。</div>" +
     modelGroups.map((g, gi) =>
       '<div class="dedup-group">' +
-      '<div class="dedup-keep">' + thumb(g.keep.path) + '<div class="dd-text">🗂️ <b>' + esc(g.model_name || g.model_id) + "</b> " +
-      '<a href="#" class="dd-link" data-url="' + esc(g.url) + '">🔗 模型 C 站页面</a>' +
+      '<div class="dedup-keep">' + thumb(g.keep.path) + '<div class="dd-text"><b>' + esc(g.model_name || g.model_id) + "</b> " +
+      '<a href="#" class="dd-link" data-url="' + esc(g.url) + '">模型 C 站页面</a>' +
       (g.count > 2 ? '<span style="color:var(--text-dim)"> · 共 ' + g.count + " 个版本</span>" : "") +
-      '<div class="dedup-dir">✅ 保留（最新） ' + esc(g.keep.ver || g.keep.name) + " · " + esc(g.keep.base || "-") +
+      '<div class="dedup-dir">保留（最新） ' + esc(g.keep.ver || g.keep.name) + " · " + esc(g.keep.base || "-") +
       " · " + fmtBytes(g.keep.size) + (g.keep.mtime ? " · " + fmtDate(g.keep.mtime) : "") +
-      ' <a href="#" class="dd-link" data-url="' + esc(g.keep.url) + '">🔗 这一版</a></div></div></div>' +
+      ' <a href="#" class="dd-link" data-url="' + esc(g.keep.url) + '">这一版</a></div></div></div>' +
       g.olds.map((o, oi) =>
         '<label class="dedup-dup">' + thumb(o.path) +
         '<input type="checkbox" data-mg="' + gi + '" data-o="' + oi + '" checked/> ' +
         '<div class="dd-text"><span>旧版 ' + esc(o.ver || o.name) + "</span>" +
         '<div class="dedup-dir">' + esc(o.base || "-") + " · " + fmtBytes(o.size) + (o.mtime ? " · " + fmtDate(o.mtime) : "") +
         (o.copies > 1 ? " · 另有同名副本 " + o.copies + " 份（在上一节里）" : "") + "</div>" +
-        '<div class="dedup-dir">' + esc(o.dir) + ' · <a href="#" class="dd-link" data-url="' + esc(o.url) + '">🔗 这一版</a></div></div></label>').join("") +
+        '<div class="dedup-dir">' + esc(o.dir) + ' · <a href="#" class="dd-link" data-url="' + esc(o.url) + '">这一版</a></div></div></label>').join("") +
       "</div>").join("")) : "";
 
   const mask = document.createElement("div");
@@ -765,15 +765,15 @@ async function showDedupeDialog(groups, modelGroups) {
   dlg.className = "rename-dialog";
   dlg.style.width = "720px";
   dlg.innerHTML =
-    '<div class="rd-title">🧬 查重结果：' + groups.length + " 组完全相同 + " + modelGroups.length + " 组同模型多版本（可清理约 " + fmtBytes(sizeA + sizeB) + "）</div>" +
+    '<div class="rd-title">查重结果：' + groups.length + " 组完全相同 + " + modelGroups.length + " 组同模型多版本（可清理约 " + fmtBytes(sizeA + sizeB) + "）</div>" +
     '<div class="dd-hint" style="border:1px solid var(--border);border-radius:8px;padding:6px 8px;margin-bottom:8px">' +
-    "💡 <b>勾选 = 移入回收站</b>（可在回收站还原，不会真删）。「<b>删旧留新</b>」= 把所有旧版都勾上；「<b>旧版共存</b>」= 全部取消勾选、什么都不删。</div>" +
+    "<b>勾选 = 移入回收站</b>（可在回收站还原，不会真删）。「<b>删旧留新</b>」= 把所有旧版都勾上；「<b>旧版共存</b>」= 全部取消勾选、什么都不删。</div>" +
     '<div style="max-height:400px;overflow:auto">' + secA + secB + "</div>" +
     '<div class="rd-actions"><button class="btn" id="ddSelAll">全选</button><button class="btn" id="ddSelNone">全不选</button>' +
-    '<button class="btn" id="ddOldsAll" title="把所有旧版都勾上（只保留最新版）">☑ 删旧留新（勾选旧版）</button>' +
-    '<button class="btn" id="ddCoexist" title="取消勾选全部旧版 = 新旧版本都留着，什么都不删">☐ 旧版共存（不删）</button>' +
+    '<button class="btn" id="ddOldsAll" title="把所有旧版都勾上（只保留最新版）">删旧留新（勾选旧版）</button>' +
+    '<button class="btn" id="ddCoexist" title="取消勾选全部旧版 = 新旧版本都留着，什么都不删">旧版共存（不删）</button>' +
     '<button class="btn" id="ddClose">关闭</button>' +
-    '<button class="btn btn-danger" id="ddDel">🗑️ 移入回收站</button></div>';
+    '<button class="btn btn-danger" id="ddDel">移入回收站</button></div>';
   document.body.appendChild(mask);
   document.body.appendChild(dlg);
   const close = () => { mask.remove(); dlg.remove(); };
@@ -789,7 +789,7 @@ async function showDedupeDialog(groups, modelGroups) {
     dlg.querySelectorAll("input[type=checkbox]:checked").forEach((c) => {
       if (c.dataset.mg !== undefined || c.dataset.g !== undefined) n++;
     });
-    $("#ddDel", dlg).textContent = n ? "🗑️ 移入回收站（" + n + " 个）" : "🗑️ 移入回收站";
+    $("#ddDel", dlg).textContent = n ? "移入回收站（" + n + " 个）" : "移入回收站";
   }
   dlg.addEventListener("change", updCount);
   $("#ddSelAll", dlg).addEventListener("click", () => { dlg.querySelectorAll("input[type=checkbox]").forEach((c) => (c.checked = true)); updCount(); });
@@ -827,10 +827,10 @@ async function showDedupeDialog(groups, modelGroups) {
       '<div style="font-size:12px;color:var(--text-dim);margin-bottom:6px">以下 <b>' + picked.length +
       "</b> 个文件将移入回收站（可还原，不会真正删除）：</div>" +
       '<div style="max-height:300px;overflow:auto">' + rows + "</div>",
-      "🗑️ 清理重复 / 旧版模型（" + picked.length + " 个" + (totalSize ? " · 约 " + fmtBytes(totalSize) : "") + "）");
+      "清理重复 / 旧版模型（" + picked.length + " 个" + (totalSize ? " · 约 " + fmtBytes(totalSize) : "") + "）");
     if (!ok) return;
     if (ok.root) loadDdThumbs(ok.root, picked.map((d) => d.path));
-    if (ok.root) ok.root.remove();          // ★ 关掉确认框（否则清理完它还挂在屏幕上）
+    if (ok.root) ok.root.remove();          // 关掉确认框（否则清理完它还挂在屏幕上）
     await close();
     const r0 = await api.call("mm_dedupe_delete", picked.map((d) => d.path));
     if (!r0 || !r0.ok) { setStatus((r0 && r0.msg) || "清理失败"); return; }
@@ -844,7 +844,7 @@ async function showDedupeDialog(groups, modelGroups) {
       if (Array.isArray(p.result) && p.result.length) {
         infoBox('<div style="font-size:12px;line-height:1.8">' +
           p.result.map((f) => "· <b>" + esc(f.file) + "</b>：" + esc(f.msg)).join("<br/>") +
-          "</div>", "⚠️ 这些没能清理（可在资源管理器里手动删除）");
+          "</div>", "这些没能清理（可在资源管理器里手动删除）");
       }
       await api.call("scan_models");
       pollMmScan();
@@ -879,7 +879,7 @@ async function dlRefresh() {
         destShow = effFull.slice(md.length).replace(/^[\\/]+/, "");
       }
       const destTip = (destFull ? destFull : (effFull + "\n（全局目标）")) + "\n点击选择该文件的保存文件夹";
-      const destCell = "<td class='c-dest cell-dest' data-task='" + esc(t.id) + "' title='" + esc(destTip) + "'>📁 " + esc(destShow || effFull || "未设置") + (destFull ? "" : " <span class='dest-def'>默认</span>") + "</td>";
+      const destCell = "<td class='c-dest cell-dest' data-task='" + esc(t.id) + "' title='" + esc(destTip) + "'>" + esc(destShow || effFull || "未设置") + (destFull ? "" : " <span class='dest-def'>默认</span>") + "</td>";
       return '<tr data-fn="' + esc(t.filename) + '" class="' + (selPaths.has(t.filename) ? "sel-row" : "") + '">' +
         "<td class='c-thumb'>" + thumb + "</td><td class='c-file'>" + esc(t.filename) + "</td>" + destCell + "<td>" + esc(st) + "</td><td>" + esc(prog) + "</td>" +
         "<td>" + esc(speed) + "</td><td>" + esc(size) + "</td>" + errCell + "</tr>";
@@ -930,13 +930,13 @@ function maybeAskRestricted(tasks) {
   dlg.className = "rename-dialog";
   dlg.style.width = "480px";
   dlg.innerHTML =
-    '<div class="rd-title">⚠️ 模型下载受限（Early Access / 付费）</div>' +
+    '<div class="rd-title">模型下载受限（Early Access / 付费）</div>' +
     '<div style="font-size:12px;color:var(--text-dim);word-break:break-all">' + esc(t.filename || "") + "</div>" +
     '<div style="font-size:12px;color:var(--text-dim);margin:4px 0 10px">该模型在 C 站暂不可直接下载。若有积分可先在浏览器购买解锁，或加入待办等免费开放。</div>' +
     '<div class="rd-actions">' +
-    '<button class="btn btn-primary" id="rkRetry">💳 花费积分/重试下载</button>' +
-    '<button class="btn" id="rkTodo">⏰ 加入待办并移除</button>' +
-    '<button class="btn" id="rkSite">🌐 浏览器打开</button></div>';
+    '<button class="btn btn-primary" id="rkRetry">花费积分/重试下载</button>' +
+    '<button class="btn" id="rkTodo">加入待办并移除</button>' +
+    '<button class="btn" id="rkSite">浏览器打开</button></div>';
   document.body.appendChild(mask);
   document.body.appendChild(dlg);
   const close = () => { mask.remove(); dlg.remove(); _restrictAsking = false; };
@@ -976,9 +976,9 @@ function maybeAskMove(tasks) {
   const dlg = document.createElement("div");
   dlg.className = "rename-dialog";
   dlg.innerHTML =
-    '<div class="rd-title">📂 下载完成：' + esc(done.filename) + "</div>" +
+    '<div class="rd-title">下载完成：' + esc(done.filename) + "</div>" +
     '<div style="display:flex;gap:14px;align-items:flex-start">' +
-    '<div id="mvThumb" style="width:112px;height:112px;border-radius:12px;background:var(--surface2);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;border:1px solid var(--border)"><span style="font-size:30px">🖼️</span></div>' +
+    '<div id="mvThumb" style="width:112px;height:112px;border-radius:12px;background:var(--surface2);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;border:1px solid var(--border)"><span style="font-size:30px"></span></div>' +
     '<div style="flex:1;min-width:0">' +
     '<div style="font-size:13px;color:var(--text-dim);line-height:1.8">是否移动到分类文件夹？（主文件与 json/封面等附属一起移动）</div>' +
     '<div class="rd-actions" style="margin-top:10px">' +
@@ -1081,9 +1081,9 @@ $("#dlTable tbody").addEventListener("contextmenu", (e) => {
   e.preventDefault();
   const menu = $("#ctxMenu");
   menu.innerHTML =
-    '<div class="ctx-item" data-act="dl_folder" data-tip="打开资源管理器并选中该文件">📂 打开所在文件夹</div>' +
-    '<div class="ctx-item" data-act="dl_copy" data-tip="复制当前文件名">📋 复制文件名</div>' +
-    '<div class="ctx-item" data-act="dl_site" data-tip="在浏览器打开该模型在 C 站的主页">🌐 打开C站</div>';
+    '<div class="ctx-item" data-act="dl_folder" data-tip="打开资源管理器并选中该文件">打开所在文件夹</div>' +
+    '<div class="ctx-item" data-act="dl_copy" data-tip="复制当前文件名">复制文件名</div>' +
+    '<div class="ctx-item" data-act="dl_site" data-tip="在浏览器打开该模型在 C 站的主页">打开C站</div>';
   menu.style.display = "block";
   const zf = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
   menu.style.left = (e.clientX / zf) + "px";
@@ -1141,8 +1141,7 @@ function pollMmScan() {
       state.mmChecked.clear();
       state.mmSort = { col: "name", rev: false };
       try {
-        const u = await api.call("get_model_updates");   // 缓存的更新检测结果 → 卡片 ❗
-        if (u && u.items) applyUpdatesToRows(u.items);
+        const u = await api.call("get_model_updates");   // 缓存的更新检测结果 → 卡片         if (u && u.items) applyUpdatesToRows(u.items);
       } catch (e) { /* 忽略 */ }
       renderMm();
       setStatus(s.msg || "扫描完成：" + state.models.length + " 个模型");
@@ -1178,7 +1177,7 @@ function renderMm() {
   tbody.innerHTML = rows.map((r, i) => {
     const rel = root ? r.path.replace(root.replace(/\\/g, "/"), "").replace(/^\//, "") : r.path;
     return '<tr data-idx="' + i + '" data-path="' + esc(r.path) + '" class="' + (state.mmSel.has(r.path) ? "sel-row" : "") + '">' +
-      '<td class="cell-sel" data-col="sel">' + (state.mmChecked.has(r.path) ? "✅" : "⬜") + "</td>" +
+      '<td class="cell-sel" data-col="sel">' + (state.mmChecked.has(r.path) ? '<span class="cbox on"></span>' : '<span class="cbox"></span>') + "</td>" +
       "<td class='c-name' data-col='name'><div class='ml-wrap'>" +
         '<img data-idx="' + i + '" data-path="' + esc(r.path) + '" class="thumb ml-thumb" alt=""/>' +
         (r.upd && r.upd.has_update ? '<a href="#" class="mm-upd" data-url="' + esc(r.upd.url || "") + '" title="' + esc(updTip(r.upd)) + '">' + _icon("alert") + '</a>' : "") +
@@ -1264,24 +1263,24 @@ async function loadThumbs(start) {
   };
 })();
 
-// 表头 ☑️ 点击 = 全选/取消全选
+// 表头 点击 = 全选/取消全选
 $("#mmTable thead").addEventListener("click", (e) => {
   const th = e.target.closest("th[data-col=sel]");
   if (!th) return;
   const allSel = state.display.length > 0 && state.display.every((r) => state.mmChecked.has(r.path));
   if (allSel) state.mmChecked.clear();
   else state.display.forEach((r) => state.mmChecked.add(r.path));
-  th.textContent = allSel ? "☑️" : "✅";
+  th.innerHTML = '<span class="cbox' + (allSel ? " on" : "") + '"></span> 全选';
   $("#mmCheckLabel").textContent = "已勾选 " + state.mmChecked.size + " 个";
   state.display.forEach((r) => {
     const tr2 = document.querySelector('#mmTable tbody tr[data-path="' + CSS.escape(r.path) + '"]');
     const c2 = tr2 && tr2.querySelector(".cell-sel");
-    if (c2) c2.textContent = state.mmChecked.has(r.path) ? "✅" : "⬜";
+    if (c2) c2.innerHTML = state.mmChecked.has(r.path) ? '<span class="cbox on"></span>' : '<span class="cbox"></span>';
   });
 });
 
 // ===== 模型列表列显隐（右键表头） =====
-const MM_COLS = [["sel", "☑ 勾选"], ["thumb", "缩略图"], ["name", "文件名"], ["cname", "C站模型名"],
+const MM_COLS = [["sel", "勾选"], ["thumb", "缩略图"], ["name", "文件名"], ["cname", "C站模型名"],
                  ["type", "类型"], ["base", "基础模型"], ["ver", "版本"], ["update", "更新"],
                  ["hash", "哈希"], ["size", "大小"], ["mtime", "下载时间"], ["path", "路径"]];
 function mmApplyCols() {
@@ -1296,7 +1295,7 @@ function mmApplyCols() {
     }
   } catch (e) { hidden = []; }
   const hs = new Set(hidden);
-  // ★ 表头与数据行必须用同一份清单、同步隐藏（否则表头 A 位置/数据 B 位置）
+  // 表头与数据行必须用同一份清单、同步隐藏（否则表头 A 位置/数据 B 位置）
   document.querySelectorAll("#mmTable thead [data-col], #mmTable tbody [data-col]").forEach((el) => {
     el.style.display = hs.has(el.dataset.col) ? "none" : "";
   });
@@ -1307,9 +1306,9 @@ $("#mmTable thead").addEventListener("contextmenu", (e) => {
   try { hidden = JSON.parse(localStorage.getItem("mm_hidden_cols") || "[]"); } catch (e) {}
   const hs = new Set(hidden);
   const menu = $("#ctxMenu");
-  menu.innerHTML = '<div class="ctx-item" style="font-weight:600;cursor:default">📊 显示列</div>' +
+  menu.innerHTML = '<div class="ctx-item" style="font-weight:600;cursor:default">显示列</div>' +
     MM_COLS.map(([c, label]) =>
-      '<div class="ctx-item" data-col="' + c + '">' + (hs.has(c) ? "⬜ " : "✅ ") + esc(label) + "</div>").join("");
+      '<div class="ctx-item" data-col="' + c + '">' + (hs.has(c) ? '<span class="cbox"></span> ' : '<span class="cbox on"></span> ') + esc(label) + "</div>").join("");
   menu.style.display = "block";
   const zf2 = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
   menu.style.left = (e.clientX / zf2) + "px";
@@ -1351,9 +1350,9 @@ function renderMasonry(rows) {
     const _meta = [r.base, r.type].filter(Boolean).map((x) => short(String(x), 16)).join(" · ");
     const _meta2 = [r.ver ? short(String(r.ver), 16) : "", fmtSize(r.size)].filter(Boolean).join(" · ");
     return '<div class="ms-card' + (checked ? " checked" : "") + '" data-idx="' + i + '" data-path="' + esc(r.path) + '" title="' + esc(String(r.name || "") + " · " + String(r.path || "")) + '">' +
-      '<span class="ms-check">' + (checked ? "✅" : "⬜") + "</span>" +
+      '<span class="ms-check">' + (checked ? '<span class="cbox on"></span>' : '<span class="cbox"></span>') + "</span>" +
       _msTag(r) +
-      (r.upd && r.upd.has_update ? '<a href="#" class="ms-upd" data-url="' + esc(r.upd.url || "") + '" title="' + esc(updTip(r.upd)) + '">❗</a>' : "") +
+      (r.upd && r.upd.has_update ? '<a href="#" class="ms-upd" data-url="' + esc(r.upd.url || "") + '" title="' + esc(updTip(r.upd)) + '">' + _icon("alert") + '</a>' : "") +
       '<div class="ms-img-wrap" data-ph="loading"><img class="ms-img" data-idx="' + i + '" data-path="' + esc(r.path) + '" alt=""/></div>' +
       '<div class="ms-name">' + esc(short(_disp, 30)) + "</div>" +
       (_sub ? '<div class="ms-sub">' + esc(short(_sub, 30)) + "</div>" : "") +
@@ -1401,7 +1400,7 @@ async function loadMasonryThumbs(start) {
 }
 $("#mmViewToggle").addEventListener("click", () => {
   state.mmView = state.mmView === "masonry" ? "list" : "masonry";
-  $("#mmViewToggle").textContent = state.mmView === "masonry" ? "📋 列表视图" : "🖼️ 瀑布流";
+  $("#mmViewToggle").textContent = state.mmView === "masonry" ? "列表视图" : "瀑布流";
   try { syncViewSeg(); } catch (e) { /* 忽略 */ }
   renderMm();
 });
@@ -1414,7 +1413,7 @@ $("#mmMasonry").addEventListener("click", (e) => {
     if (!r) return;
     if (state.mmChecked.has(r.path)) state.mmChecked.delete(r.path);
     else state.mmChecked.add(r.path);
-    chk.textContent = state.mmChecked.has(r.path) ? "✅" : "⬜";
+    chk.innerHTML = state.mmChecked.has(r.path) ? '<span class="cbox on"></span>' : '<span class="cbox"></span>';
     card.classList.toggle("checked", state.mmChecked.has(r.path));
     $("#mmCheckLabel").textContent = "已勾选 " + state.mmChecked.size + " 个";
     return;
@@ -1426,7 +1425,7 @@ $("#mmMasonry").addEventListener("click", (e) => {
   if (state.mmChecked.has(p)) state.mmChecked.delete(p);
   else state.mmChecked.add(p);
   card.classList.toggle("checked", state.mmChecked.has(p));
-  if (cardChk) cardChk.textContent = state.mmChecked.has(p) ? "✅" : "⬜";
+  if (cardChk) cardChk.innerHTML = state.mmChecked.has(p) ? '<span class="cbox on"></span>' : '<span class="cbox"></span>';
   $("#mmCheckLabel").textContent = "已勾选 " + state.mmChecked.size + " 个";
 });
 $("#mmMasonry").addEventListener("contextmenu", (e) => {
@@ -1438,18 +1437,18 @@ $("#mmMasonry").addEventListener("contextmenu", (e) => {
   const menu = $("#ctxMenu");
   const r = ctxRow;
   menu.innerHTML =
-    '<div class="ctx-item" data-act="copy_name" data-tip="复制当前本地文件名">📋 复制文件名</div>' +
+    '<div class="ctx-item" data-act="copy_name" data-tip="复制当前本地文件名">复制文件名</div>' +
     '<div class="ctx-item" data-act="copy_cname" data-tip="复制 C 站上的模型名（不改本地文件）">🀄 复制C站模型名</div>' +
-    '<div class="ctx-item" data-act="folder" data-tip="打开资源管理器并选中该文件">📂 打开所在文件夹</div>' +
-    '<div class="ctx-item" data-act="site" data-tip="在浏览器打开该模型在 C 站的主页">🌐 打开C站</div>' +
-    '<div class="ctx-item" data-act="rename" data-tip="自定义改名（保留扩展名）">✏️ 改名</div>' +
-    '<div class="ctx-item" data-act="rename_c" data-tip="把本地文件名改成 C 站上的模型名（只改本地文件）">🏷️ 文件名改成C站名</div>' +
-    '<div class="ctx-item" data-act="sdjson" data-tip="生成 WebUI 能识别的「模型名.json」元数据文件">📄 生成SD可读json</div>' +
+    '<div class="ctx-item" data-act="folder" data-tip="打开资源管理器并选中该文件">打开所在文件夹</div>' +
+    '<div class="ctx-item" data-act="site" data-tip="在浏览器打开该模型在 C 站的主页">打开C站</div>' +
+    '<div class="ctx-item" data-act="rename" data-tip="自定义改名（保留扩展名）">改名</div>' +
+    '<div class="ctx-item" data-act="rename_c" data-tip="把本地文件名改成 C 站上的模型名（只改本地文件）">文件名改成C站名</div>' +
+    '<div class="ctx-item" data-act="sdjson" data-tip="生成 WebUI 能识别的「模型名.json」元数据文件">生成SD可读json</div>' +
     '<div class="ctx-item" data-act="localize" data-tip="把本地文件名翻译成中文">🀄 文件名翻中文</div>' +
-    '<div class="ctx-item" data-act="rp" data-tip="从 C 站匹配该模型的名字/触发词/封面">📤 识别模型信息</div>' +
-    '<div class="ctx-item" data-act="organize" data-tip="把该模型移动到分类文件夹（需先在设置选 🎯 目标环境）">📂 整理模型</div>' +
+    '<div class="ctx-item" data-act="rp" data-tip="从 C 站匹配该模型的名字/触发词/封面">识别模型信息</div>' +
+    '<div class="ctx-item" data-act="organize" data-tip="把该模型移动到分类文件夹（需先在设置选 目标环境）">整理模型</div>' +
     '<hr class="ctx-sep"/>' +
-    '<div class="ctx-item danger" data-act="del" data-tip="把该模型文件移入回收站（可还原）">🗑️ 移入回收站</div>';
+    '<div class="ctx-item danger" data-act="del" data-tip="把该模型文件移入回收站（可还原）">移入回收站</div>';
   menu.style.display = "block";
   const zf = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
   const mw = 200, mh = 280;
@@ -1516,7 +1515,7 @@ $("#mmTable tbody").addEventListener("click", (e) => {
     if (tr2) {
       tr2.classList.toggle("sel-row", state.mmChecked.has(p));
       const cell2 = tr2.querySelector(".cell-sel");
-      if (cell2) cell2.textContent = state.mmChecked.has(p) ? "✅" : "⬜";
+      if (cell2) cell2.innerHTML = state.mmChecked.has(p) ? '<span class="cbox on"></span>' : '<span class="cbox"></span>';
     }
   });
   state.mmSel = new Set(state.mmChecked);
@@ -1525,7 +1524,7 @@ $("#mmTable tbody").addEventListener("click", (e) => {
 
 // 筛选
 let mmFilterTimer = null;
-// 统一过滤：关键词 + 「❗只看有更新」
+// 统一过滤：关键词 + 「只看有更新」
 function applyMmFilter() {
   const kw = $("#mmFilter").value.trim().toLowerCase();
   let rows = state.models;
@@ -1552,7 +1551,7 @@ function applyMmFilter() {
   renderMm();
   fillMmBaseOptions();
   fillMmFolderOptions();
-  if (state.mmUpdOnly) setStatus("筛选：有更新的模型 " + state.display.length + " 个（点「❗有更新」可取消）");
+  if (state.mmUpdOnly) setStatus("筛选：有更新的模型 " + state.display.length + " 个（点「有更新」可取消）");
 }
 $("#mmFilter").addEventListener("input", () => {
   clearTimeout(mmFilterTimer);
@@ -1602,14 +1601,14 @@ async function mmCheckUpdatesFlow(force, paths) {
       setStatus("检查更新中 " + (p.done || 0) + "/" + (p.total || 0) + " · 已发现 " + (p.newer || 0) + " 个有更新（再点一次按钮可停止）");
       ["#updCheck", "#mmCheckUpd"].forEach((sel) => {
         const b = $(sel);
-        if (b) { b.textContent = "⏹ 停止检查（" + (p.done || 0) + "/" + (p.total || 0) + "）"; b.classList.add("is-busy"); }
+        if (b) { b.textContent = "停止检查（" + (p.done || 0) + "/" + (p.total || 0) + "）"; b.classList.add("is-busy"); }
       });
       return;
     }
     clearInterval(timer);
     ["#updCheck", "#mmCheckUpd"].forEach((sel) => {
       const b = $(sel);
-      if (b) { b.textContent = "⏫ 检查更新"; b.classList.remove("is-busy"); }
+      if (b) { b.textContent = "检查更新"; b.classList.remove("is-busy"); }
     });
     const wlSkip = p.wl_skipped ? "（已按白名单跳过 " + p.wl_skipped + " 个）" : "";
     setStatus((p.msg || "检查完成") + wlSkip);
@@ -1832,7 +1831,7 @@ async function renderUpdatesPage() {
       empty.style.display = "block";
       empty.innerHTML = Object.keys(items).length
         ? "当前筛选/搜索下没有条目（清空搜索框或把筛选改回「全部」）。"
-        : "还没有检查结果：点右上角「⏫ 检查更新」开始（首次约 1~2 分钟，结果缓存 24 小时）。";
+        : "还没有检查结果：点右上角「检查更新」开始（首次约 1~2 分钟，结果缓存 24 小时）。";
     }
   } else {
     if (empty) empty.style.display = "none";
@@ -1870,7 +1869,7 @@ function _updSyncSel() {
   const el = $("#updSelInfo");
   if (el) el.innerHTML = "已选 <b>" + n + "</b> 个";
   const b = $("#updDlSel");
-  if (b) { b.textContent = n ? "⬇️ 批量更新（" + n + "）" : "⬇️ 批量更新"; b.disabled = !n; }
+  if (b) { b.textContent = n ? "批量更新（" + n + "）" : "批量更新"; b.disabled = !n; }
   const allCk = $("#updAll");
   if (allCk) {
     const boxes = Array.from(document.querySelectorAll("#updTbody .upd-cb"));
@@ -1908,7 +1907,7 @@ function _updSyncRowButton(tr, path, vid) {
       btn.disabled = true;
       btn.textContent = "加入队列…";
       const r = await api.call("mm_download_version", btn.dataset.path, btn.dataset.vid);
-      btn.textContent = (r && r.ok) ? "✅ 已加入" : ((r && r.msg) || "失败");
+      btn.textContent = (r && r.ok) ? "已加入" : ((r && r.msg) || "失败");
       setStatus((r && r.msg) || "");
       setTimeout(() => { btn.disabled = false; btn.textContent = oldTxt; }, 1800);
     });
@@ -1946,7 +1945,7 @@ function _updBind(tbody) {
     b.disabled = true;
     b.textContent = "加入队列…";
     const r = await api.call("mm_download_version", b.dataset.path, b.dataset.vid);
-    b.textContent = (r && r.ok) ? "✅ 已加入" : ((r && r.msg) || "失败");
+    b.textContent = (r && r.ok) ? "已加入" : ((r && r.msg) || "失败");
     setStatus((r && r.msg) || "");
     setTimeout(() => { b.disabled = false; b.textContent = old; }, 1800);
   }));
@@ -1969,11 +1968,11 @@ function _updCtxMenu(path, anchor, cx, cy) {
   state.updCtxPath = path;
   const menu = $("#ctxMenu");
   menu.innerHTML =
-    (it.has_update ? '<div class="ctx-item" data-act="upd_dl" data-tip="把下拉里选中的版本加入下载队列">⬇️ 更新到选中版本</div>' : "") +
-    (it.has_update ? '<div class="ctx-item" data-act="upd_wl" data-tip="以后不再提示这个模型的更新（按模型记入白名单）">🚫 不再提醒更新（加入白名单）</div>' : "") +
-    (it.url ? '<div class="ctx-item" data-act="upd_site2" data-tip="在浏览器打开 C 站页面">🌐 打开 C 站页面</div>' : "") +
-    '<div class="ctx-item" data-act="upd_folder" data-tip="打开资源管理器并选中该文件">📂 打开所在文件夹</div>' +
-    '<div class="ctx-item" data-act="upd_copy" data-tip="复制文件完整路径">📋 复制文件路径</div>';
+    (it.has_update ? '<div class="ctx-item" data-act="upd_dl" data-tip="把下拉里选中的版本加入下载队列">更新到选中版本</div>' : "") +
+    (it.has_update ? '<div class="ctx-item" data-act="upd_wl" data-tip="以后不再提示这个模型的更新（按模型记入白名单）">不再提醒更新（加入白名单）</div>' : "") +
+    (it.url ? '<div class="ctx-item" data-act="upd_site2" data-tip="在浏览器打开 C 站页面">打开 C 站页面</div>' : "") +
+    '<div class="ctx-item" data-act="upd_folder" data-tip="打开资源管理器并选中该文件">打开所在文件夹</div>' +
+    '<div class="ctx-item" data-act="upd_copy" data-tip="复制文件完整路径">复制文件路径</div>';
   menu.style.display = "block";
   const zf = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
   if (anchor) {
@@ -2029,7 +2028,7 @@ async function updBatchDownload(paths) {
     const { rec } = _updVers({ path: p, it });
     picks.push({ path: p, vid: state.updPick[p] || rec, name: it.model_name || _updBase(p) });
   });
-  if (!picks.length) { setStatus("勾选的条目里没有「有更新」的（先点「⏫ 检查更新」）"); return; }
+  if (!picks.length) { setStatus("勾选的条目里没有「有更新」的（先点「检查更新」）"); return; }
   const keepTxt = (state.cfg && state.cfg.update_keep_old === "delete") ? "旧版将移入回收站" : "旧版保留";
   const ok = await confirmBoxRaw(
     "将把以下 <b>" + picks.length + "</b> 个模型更新到各自选择的版本（新版下到旧版所在文件夹）：<br/>" +
@@ -2037,9 +2036,9 @@ async function updBatchDownload(paths) {
     picks.slice(0, 40).map((x) => "· " + esc(x.name) + " → " + esc(((_updVers({ path: x.path, it: items[x.path] }).list.find((v) => String(v.id) === String(x.vid)) || {}).name) || x.vid)).join("<br/>") +
     (picks.length > 40 ? "<br/>… 等 " + picks.length + " 个" : "") + "</div>" +
     '<div class="dedup-dir">' + keepTxt + "（设置里可改）。</div>",
-    "⬇️ 确认批量更新");
+    "确认批量更新");
   if (!ok) return;
-  if (ok.root) ok.root.remove();          // ★ 关掉确认框（confirmBoxRaw 只收遮罩，内容框要调用方自己收）
+  if (ok.root) ok.root.remove();          // 关掉确认框（confirmBoxRaw 只收遮罩，内容框要调用方自己收）
   const btn = $("#updDlSel");
   if (state.updBatchBusy) return;
   state.updBatchBusy = true;
@@ -2057,9 +2056,9 @@ async function updBatchDownload(paths) {
   state.updBatchBusy = false;
   if (btn) btn.disabled = false;
   setStatus("批量更新完成：入队 " + done + " 个" + (skip ? "，跳过 " + skip + " 个（已在队列或已存在）" : "") +
-            (fail ? "，失败 " + fail + " 个" : "") + " —— 已跳到「📁 下载管理」");
+            (fail ? "，失败 " + fail + " 个" : "") + " —— 已跳到「下载管理」");
   renderUpdatesPage();
-  switchPage("dlmanager");                // ★ 自动跳到下载管理页看进度
+  switchPage("dlmanager");                // 自动跳到下载管理页看进度
   if (typeof dlRefresh === "function") dlRefresh();
 }
 
@@ -2068,7 +2067,7 @@ async function updBatchIgnore(paths) {
   const items = state.mmUpdItems || {};
   const list = (paths || []).filter((p) => (items[p] || {}).model_id);
   if (!list.length) { setStatus("没有可忽略的条目"); return; }
-  const ok = await confirmBoxRaw("把选中的 <b>" + list.length + "</b> 个模型加入<b>更新白名单</b>？<br/>以后检查更新会直接跳过它们（可在「📋 白名单」里移出）。", "🚫 不再提醒更新");
+  const ok = await confirmBoxRaw("把选中的 <b>" + list.length + "</b> 个模型加入<b>更新白名单</b>？<br/>以后检查更新会直接跳过它们（可在「白名单」里移出）。", "不再提醒更新");
   if (!ok) return;
   if (ok.root) ok.root.remove();          // 关掉确认框
   let n = 0;
@@ -2094,13 +2093,13 @@ async function updWhitelistDialog() {
   const closeAll = () => { dlg.remove(); box.remove(); };
   const render = () => {
     box.innerHTML =
-      '<div class="rd-title">📋 更新白名单（' + items.length + "）</div>" +
-      '<div class="dd-hint">名单里的模型<b>不再提示更新</b>（检查时直接跳过）。加入方式：行内「···」→「🚫 不再提醒更新」。</div>' +
+      '<div class="rd-title">更新白名单（' + items.length + "）</div>" +
+      '<div class="dd-hint">名单里的模型<b>不再提示更新</b>（检查时直接跳过）。加入方式：行内「···」→「不再提醒更新」。</div>' +
       '<div style="max-height:320px;overflow:auto">' +
       (items.length ? items.map((x) =>
         '<div class="cf-row"><div class="dd-text"><b>' + esc(x.name || x.model_id) + "</b>" +
         '<div class="dedup-dir">modelId ' + esc(x.model_id) + '</div></div>' +
-        '<button class="btn btn-tiny wl-del" data-mid="' + esc(x.model_id) + '">🗑️ 移出</button></div>').join("")
+        '<button class="btn btn-tiny wl-del" data-mid="' + esc(x.model_id) + '">移出</button></div>').join("")
         : '<div class="upd-empty">白名单是空的。</div>') +
       "</div>" +
       '<div class="rd-actions"><button class="btn" id="wlClose">关闭</button></div>';
@@ -2127,7 +2126,7 @@ if ($("#updCheck")) $("#updCheck").addEventListener("click", async () => {
     setStatus((r && r.msg) || "已请求停止检查");
     return;
   }
-  const sel = [...state.updSel];                // ★ 有勾选 → 只检查勾选的这几个
+  const sel = [...state.updSel];                // 有勾选 → 只检查勾选的这几个
   if (sel.length) { setStatus("只检查勾选的 " + sel.length + " 个模型…"); mmCheckUpdatesFlow(true, sel); return; }
   mmCheckUpdatesFlow(false);
 });
@@ -2206,7 +2205,7 @@ function infoBox(html, title) {
 async function showUpdateResults(items) {
   const rows = Object.entries(items || {}).filter(([, it]) => it && it.has_update);
   const others = Object.entries(items || {}).filter(([, it]) => it && it.other_base);
-  if (!rows.length && !others.length) { setStatus("检查完成：没有发现有更新的模型 ✅"); return; }
+  if (!rows.length && !others.length) { setStatus("检查完成：没有发现有更新的模型 "); return; }
   const dlg = document.createElement("div");
   dlg.className = "rd-mask";
   const box = document.createElement("div");
@@ -2230,24 +2229,24 @@ async function showUpdateResults(items) {
         ? '<div class="upd-t3">更新后可用：' + it.newer_list.map((v) =>
             '<span class="upd-chip"><a href="#" class="chip-go" data-url="' + esc(v.url || "") + '">' + esc(v.name || v.id) +
             (v.date ? ' <i>' + esc(v.date) + "</i>" : "") + '</a><a href="#" class="chip-dl" data-path="' + esc(r[0]) +
-            '" data-vid="' + esc(v.id) + '" data-tip="只下载这一版">⬇️</a></span>').join(" ") + "</div>"
+            '" data-vid="' + esc(v.id) + '" data-tip="只下载这一版"></a></span>').join(" ") + "</div>"
         : "") +
-      (it.url ? '<a href="#" class="dd-link" data-url="' + esc(it.url) + '">🔗 去 C 站看新版</a>' : "") +
-      (it.has_update ? ' <button class="btn btn-tiny upd-one" data-path="' + esc(r[0]) + '">⬇️ 更新</button>' : "") +
+      (it.url ? '<a href="#" class="dd-link" data-url="' + esc(it.url) + '">去 C 站看新版</a>' : "") +
+      (it.has_update ? ' <button class="btn btn-tiny upd-one" data-path="' + esc(r[0]) + '">更新</button>' : "") +
       "</div></div>";
   };
   box.innerHTML =
-    '<div class="rd-title">⏫ 检查更新：' + rows.length + " 个模型有同底模新版" + (others.length ? "（另有 " + others.length + " 个只换了底模）" : "") + "</div>" +
+    '<div class="rd-title">检查更新：' + rows.length + " 个模型有同底模新版" + (others.length ? "（另有 " + others.length + " 个只换了底模）" : "") + "</div>" +
     '<div class="dd-hint">只列出「<b>和你所用底模相同</b>」的新版本；换了底模的（如 Anima→Krea）单列在下面，<b>不算更新</b>。' +
-    "点 🔗 去 C 站看新版，或直接点「⬇️ 更新」把新版加入下载队列；模型列表里这些条目已标 ❗，可用「❗ 有更新」筛选。</div>" +
+    "点 去 C 站看新版，或直接点「更新」把新版加入下载队列；模型列表里这些条目已标 ，可用「有更新」筛选。</div>" +
     '<div style="max-height:360px;overflow:auto">' +
     rows.map(rowHtml).join("") +
-    (others.length ? '<div class="dedup-sec">🔀 最新版换了底模（仅供参考，未计入更新）</div>' + others.map(rowHtml).join("") : "") +
+    (others.length ? '<div class="dedup-sec">最新版换了底模（仅供参考，未计入更新）</div>' + others.map(rowHtml).join("") : "") +
     "</div>" +
     '<div class="rd-actions">' +
-    (rows.length ? '<button class="btn btn-primary" id="updAll">⬇️ 全部更新（' + rows.length + "）</button>" : "") +
+    (rows.length ? '<button class="btn btn-primary" id="updAll">全部更新（' + rows.length + "）</button>" : "") +
     '<button class="btn" id="updClose">关闭</button>' +
-    '<button class="btn" id="updFilter">❗ 只看这些模型</button></div>';
+    '<button class="btn" id="updFilter">只看这些模型</button></div>';
   document.body.appendChild(dlg);
   document.body.appendChild(box);
   const close = () => { dlg.remove(); box.remove(); };
@@ -2283,7 +2282,7 @@ async function showUpdateResults(items) {
     b.disabled = true;
     b.textContent = "…";
     await mmUpdateFlow([b.dataset.path]);
-    b.textContent = "✅ 已加入";
+    b.textContent = "已加入";
     b.disabled = false;
   }));
   loadDdThumbs(box, rows.concat(others).map((r) => r[0]));
@@ -2295,7 +2294,7 @@ if ($("#mmCheckUpd")) $("#mmCheckUpd").addEventListener("click", async () => {
     setStatus((r && r.msg) || "已请求停止检查");
     return;
   }
-  const sel = [...state.mmChecked];             // ★ 勾了模型就只查勾选的
+  const sel = [...state.mmChecked];             // 勾了模型就只查勾选的
   if (sel.length) { setStatus("只检查勾选的 " + sel.length + " 个模型…"); mmCheckUpdatesFlow(true, sel); return; }
   mmCheckUpdatesFlow(false);
 });
@@ -2314,7 +2313,7 @@ async function mmUpdateFlow(paths) {
     if (Array.isArray(p.result) && p.result.length) {
       infoBox("<div style='font-size:12px;line-height:1.9'>" +
         p.result.map((f) => "· <b>" + esc(f.file) + "</b>：" + esc(f.msg)).join("<br/>") +
-        "</div>", "⚠️ 这些没能加入下载队列");
+        "</div>", "这些没能加入下载队列");
     }
   }, 800);
   return true;
@@ -2322,15 +2321,15 @@ async function mmUpdateFlow(paths) {
 async function mmUpdateSelectedFlow() {
   const paths = state.models.filter((r) => state.mmChecked.has(r.path) && r.upd && r.upd.has_update).map((r) => r.path);
   if (!paths.length) {
-    setStatus("没有勾选「有新版」的模型：先点「⏫ 检查更新」，再用「❗ 有更新」筛出来并全选");
+    setStatus("没有勾选「有新版」的模型：先点「检查更新」，再用「有更新」筛出来并全选");
     return;
   }
   const ok = await confirmBoxRaw(
     "<div style='font-size:13px;line-height:1.8'>将下载以下 <b>" + paths.length + "</b> 个模型的<b>新版</b>：" +
     "<div style='max-height:200px;overflow:auto;margin-top:6px'>" +
     paths.map((p) => "· " + esc(p.replace(/\\/g, "/").split("/").pop())).join("<br/>") + "</div>" +
-    "<div style='font-size:12px;color:var(--text-dim);margin-top:6px'>新版会下到旧版所在文件夹；<b>旧版文件不会被动</b>（要清理可用「🧬 查重」的删旧留新）。</div></div>",
-    "⬇️ 更新选中的 " + paths.length + " 个模型");
+    "<div style='font-size:12px;color:var(--text-dim);margin-top:6px'>新版会下到旧版所在文件夹；<b>旧版文件不会被动</b>（要清理可用「查重」的删旧留新）。</div></div>",
+    "更新选中的 " + paths.length + " 个模型");
   if (!ok) return;
   if (ok.root) ok.root.remove();
   await mmUpdateFlow(paths);
@@ -2341,7 +2340,7 @@ if ($("#openLogs")) $("#openLogs").addEventListener("click", async () => {
 });
 
 if ($("#mmGoUpdates")) $("#mmGoUpdates").addEventListener("click", () => {
-  state.updState = "upd";                 // 默认只看「❗ 有更新」
+  state.updState = "upd";                 // 默认只看「有更新」
   state.updQ = "";
   state.updPage = 1;
   const ss = $("#updState");
@@ -2350,12 +2349,12 @@ if ($("#mmGoUpdates")) $("#mmGoUpdates").addEventListener("click", () => {
 });
 
 if ($("#mmUpdDl")) $("#mmUpdDl").addEventListener("click", () => {
-  // 模型管理页的「⬇️ 更新选中」：把勾选里有新版的交给新的批量更新流程（版本按更新页每行的下拉选择）
+  // 模型管理页的「更新选中」：把勾选里有新版的交给新的批量更新流程（版本按更新页每行的下拉选择）
   const paths = state.models.filter((r) => state.mmChecked.has(r.path) && r.upd && r.upd.has_update).map((r) => r.path);
-  if (!paths.length) { setStatus("没有勾选「有新版」的模型：先点「⏫ 检查更新」，再勾选带 ❗ 的条目"); return; }
+  if (!paths.length) { setStatus("没有勾选「有新版」的模型：先点「检查更新」，再勾选带 的条目"); return; }
   updBatchDownload(paths);
 });
-// 点卡片/列表里的 ❗ → 打开 C 站新版页面（不会下载）
+// 点卡片/列表里的 → 打开 C 站新版页面（不会下载）
 document.addEventListener("click", (e) => {
   const a = e.target.closest && e.target.closest(".ms-upd, .mm-upd");
   if (!a) return;
@@ -2408,7 +2407,7 @@ function fmTreeHtml(tree, hidden, depth) {
     const isHidden = hidden.has(n.path);
     const kids = n.children.length ? fmTreeHtml(n.children, hidden, depth + 1) : "";
     return '<div class="fm-item" data-path="' + esc(n.path) + '" style="padding-left:' + (12 + depth * 18) + 'px">' +
-      '<span class="fm-icon">' + (isHidden ? "🙈" : "📁") + "</span>" +
+      '<span class="fm-icon">' + "" + "</span>" +
       '<span class="fm-name">' + esc(n.name) + "</span>" +
       '<span class="fm-state ' + (isHidden ? "off" : "on") + '">' + (isHidden ? "隐藏" : "显示") + "</span></div>" + kids;
   }).join("");
@@ -2419,12 +2418,12 @@ function fmRender() {
   const hidden = new Set(foldersState.hidden || []);
   const showRoot = foldersState.show_root;
   panel.innerHTML =
-    '<div class="fm-title">📁 文件夹显示（点击条目切换）</div>' +
+    '<div class="fm-title">文件夹显示（点击条目切换）</div>' +
     '<div class="fm-toolbar">' +
-    '<button class="btn btn-tiny" id="fmAll">✅ 全选</button>' +
-    '<button class="btn btn-tiny" id="fmNone">⬜ 全不选</button></div>' +
+    '<button class="btn btn-tiny" id="fmAll">全选</button>' +
+    '<button class="btn btn-tiny" id="fmNone">全不选</button></div>' +
     '<div class="fm-item fm-top" data-path="__root__">' +
-      '<span class="fm-icon">🗂️</span><span class="fm-name">根目录下的模型</span>' +
+      '<span class="fm-icon"></span><span class="fm-name">根目录下的模型</span>' +
       '<span class="fm-state ' + (showRoot ? "on" : "off") + '">' + (showRoot ? "显示" : "隐藏") + "</span></div>" +
     '<hr class="fp-sep"/>' +
     fmTreeHtml(foldersState.tree || [], hidden, 0);
@@ -2664,7 +2663,7 @@ async function showModelDetail(path) {
     dlg.style.width = "520px";
     const v = info.version || {};
     dlg.innerHTML =
-      '<div class="rd-title">✏️ 编辑模型信息</div>' +
+      '<div class="rd-title">编辑模型信息</div>' +
       '<div class="form-grid" style="grid-template-columns:120px 1fr">' +
       '<label>模型名</label><input class="input" id="eiName" value="' + esc(info.modelName || "") + '"/>' +
       '<label>触发词</label><textarea class="rules" id="eiTags" rows="5" placeholder="每行一套触发词（一套内用英文逗号分隔），与 C 站展示一致">' + esc(trained.join("\n")) + "</textarea>" +
@@ -2673,7 +2672,7 @@ async function showModelDetail(path) {
       '<label>版本</label><input class="input" id="eiVer" value="' + esc(v.name || "") + '"/>' +
       '<label>简介</label><textarea class="rules" id="eiDesc" rows="4">' + esc(desc || "") + "</textarea>" +
       "</div>" +
-      '<div class="rd-actions"><button class="btn btn-primary" id="eiOk">💾 保存</button><button class="btn" id="eiNo">取消</button></div>';
+      '<div class="rd-actions"><button class="btn btn-primary" id="eiOk">保存</button><button class="btn" id="eiNo">取消</button></div>';
     document.body.appendChild(mask);
     document.body.appendChild(dlg);
     const close = () => { mask.remove(); dlg.remove(); };
@@ -2747,12 +2746,12 @@ document.addEventListener("contextmenu", (e) => {
   detailImgCtx = { c, idx };
   const menu = $("#ctxMenu");
   menu.innerHTML =
-    '<div class="ctx-item" data-act="img_copy" data-tip="把图片本身复制到剪贴板（可直接粘贴）">📋 复制图片到剪贴板</div>' +
-    '<div class="ctx-item" data-act="img_prompt" data-tip="复制该图片的正面提示词（本地 PNG 元数据 / C 站 info）">💬 复制正面提示词</div>' +
-    '<div class="ctx-item" data-act="img_neg" data-tip="复制该图片的负面提示词">💬 复制负面提示词</div>' +
-    '<div class="ctx-item" data-act="img_tags" data-tip="复制模型级触发词（与图片提示词分开）">🏷️ 复制触发词（模型 tags）</div>' +
-    '<div class="ctx-item" data-act="img_folder" data-tip="打开资源管理器并选中该图片">📂 打开图片所在文件夹</div>' +
-    '<div class="ctx-item" data-act="img_orig" data-tip="在浏览器打开该图片在 C 站的原页">🌐 打开原图片网站</div>';
+    '<div class="ctx-item" data-act="img_copy" data-tip="把图片本身复制到剪贴板（可直接粘贴）">复制图片到剪贴板</div>' +
+    '<div class="ctx-item" data-act="img_prompt" data-tip="复制该图片的正面提示词（本地 PNG 元数据 / C 站 info）">复制正面提示词</div>' +
+    '<div class="ctx-item" data-act="img_neg" data-tip="复制该图片的负面提示词">复制负面提示词</div>' +
+    '<div class="ctx-item" data-act="img_tags" data-tip="复制模型级触发词（与图片提示词分开）">复制触发词（模型 tags）</div>' +
+    '<div class="ctx-item" data-act="img_folder" data-tip="打开资源管理器并选中该图片">打开图片所在文件夹</div>' +
+    '<div class="ctx-item" data-act="img_orig" data-tip="在浏览器打开该图片在 C 站的原页">打开原图片网站</div>';
   menu.style.display = "block";
   const zf = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
   menu.style.left = (e.clientX / zf) + "px";
@@ -2808,7 +2807,7 @@ $("#ctxMenu").addEventListener("click", async (e) => {
         if (r && r.ok) showToast("已打开文件夹：" + localImgPath);
         else showToast(r && r.msg ? r.msg + "：" + localImgPath : "打开失败");
       } else {
-        showToast("该图没有本地文件（可点「🖼️ 下载封面图」或详情页下载所有示例图）");
+        showToast("该图没有本地文件（可点「下载封面图」或详情页下载所有示例图）");
       }
     } else if (act === "img_tags") {
       const tw = (detailRow && detailRow.trainedWords) ? detailRow.trainedWords : [];
@@ -2879,7 +2878,7 @@ async function wfAnalyze(path) {
 }
 async function wfRenderResult(r) {
   $("#wfResult").style.display = "block";
-  $("#wfResultTitle").innerHTML = "📄 " + esc(r.file) + ' <span class="wf-info">' + (r.has_workflow ? "✅ 含内嵌工作流" : "⚠️ 仅提示词信息") + " · 节点 " + r.node_count + " 个</span>";
+  $("#wfResultTitle").innerHTML = "" + esc(r.file) + ' <span class="wf-info">' + (r.has_workflow ? "含内嵌工作流" : "仅提示词信息") + " · 节点 " + r.node_count + " 个</span>";
   const nodes = r.nodes || [];
   $("#wfNodes").innerHTML = nodes.length
     ? nodes.map((n) => '<div class="wf-node"><span class="wf-node-type">' + esc(n.type || "?") + "</span>" +
@@ -2897,10 +2896,10 @@ async function wfRenderResult(r) {
         '<div class="wf-model' + (m.local ? " hit" : "") + '">' +
         '<span class="wf-model-ref">' + esc(m.ref) + "</span>" +
         (m.local
-          ? '<span class="wf-model-path">✅ 本地: ' + esc(m.path) + "</span>" +
+          ? '<span class="wf-model-path">本地: ' + esc(m.path) + "</span>" +
             (m.sha256 ? '<span class="wf-model-sha">SHA256: ' + esc(m.sha256) + "…</span>" : "")
-          : '<span class="wf-model-miss">❌ 本地未找到</span>' +
-            '<span class="wf-search" data-search="' + esc(m.ref) + '">🔍 搜索下载</span>') +
+          : '<span class="wf-model-miss">本地未找到</span>' +
+            '<span class="wf-search" data-search="' + esc(m.ref) + '">搜索下载</span>') +
         "</div>").join("");
     } catch (e) {
       $("#wfModels").innerHTML = '<div class="wf-empty">模型匹配失败</div>';
@@ -2970,19 +2969,19 @@ async function showAbout() {
     '<div class="about-updates">' +
     '<div class="about-up-title">🆕 最近更新（' + esc(ver) + '）</div>' +
     '<div class="about-up-body">' +
-    '<div class="about-up-item">🐛 <b>修复「翻译成中文」不生效</b>：简介+触发词一起翻，写回 info 与 json，英文原文保留，复制触发词仍为英文原文（WebUI 用）</div>' +
-    '<div class="about-up-item">📥 <b>下载体验</b>：批量下载跳转弹窗提示；移动分类弹窗显示模型缩略图；下载列表新增缩略图列+行右键菜单（打开文件夹/复制文件名/打开C站）</div>' +
-    '<div class="about-up-item">🧭 <b>新手引导大修</b>：点击功能卡片/主题切换即刻生效；引导缩小为右下角小窗不中断；保存设置不再白屏刷新</div>' +
-    '<div class="about-up-item">🎨 10 套主题 + 氛围背景跟随主题；设置页「保存设置」红色显眼</div>' +
+    '<div class="about-up-item"><b>修复「翻译成中文」不生效</b>：简介+触发词一起翻，写回 info 与 json，英文原文保留，复制触发词仍为英文原文（WebUI 用）</div>' +
+    '<div class="about-up-item"><b>下载体验</b>：批量下载跳转弹窗提示；移动分类弹窗显示模型缩略图；下载列表新增缩略图列+行右键菜单（打开文件夹/复制文件名/打开C站）</div>' +
+    '<div class="about-up-item"><b>新手引导大修</b>：点击功能卡片/主题切换即刻生效；引导缩小为右下角小窗不中断；保存设置不再白屏刷新</div>' +
+    '<div class="about-up-item">10 套主题 + 氛围背景跟随主题；设置页「保存设置」红色显眼</div>' +
     '</div></div>' +
     '<div class="about-thanks">' +
-    '<div class="about-up-title">🤝 感谢 Contributors</div>' +
+    '<div class="about-up-title">感谢 Contributors</div>' +
     '<div class="about-contribs" id="aboutContribs">加载中…</div></div>' +
     '<div class="about-author">' +
-    '<div class="rd-home" id="rdHome">👤 作者：爱德怀斯official —— 点击打开 B 站主页</div>' +
-    '<div class="rd-group" id="rdGroup">🐧 粉丝群：909810278 —— 点击加入</div></div>' +
+    '<div class="rd-home" id="rdHome">作者：爱德怀斯official —— 点击打开 B 站主页</div>' +
+    '<div class="rd-group" id="rdGroup">粉丝群：909810278 —— 点击加入</div></div>' +
     '<div class="rd-actions">' +
-    '<button class="btn" id="aboutGithub">🌐 GitHub 仓库</button>' +
+    '<button class="btn" id="aboutGithub">GitHub 仓库</button>' +
     '<button class="btn btn-primary" id="aboutOk">知道了</button></div>';
   document.body.appendChild(mask);
   document.body.appendChild(dlg);
@@ -2994,7 +2993,7 @@ async function showAbout() {
   $("#rdGroup").addEventListener("click", () => api.call("open_url", "https://qm.qq.com/q/EbnuVZB4wE"));
   // 贡献者：动态拉取 GitHub contributors（排除作者本人），失败回退静态致谢
   const box = $("#aboutContribs", dlg);
-  const fallback = '<div class="about-contrib">感谢 <a href="#" data-gh="guanhaisen">@guanhaisen</a>、<a href="#" data-gh="LckHot">@LckHot</a> 的社区贡献 ❤️</div>';
+  const fallback = '<div class="about-contrib">感谢 <a href="#" data-gh="guanhaisen">@guanhaisen</a>、<a href="#" data-gh="LckHot">@LckHot</a> 的社区贡献 </div>';
   fetch("https://api.github.com/repos/ADVICEsama/CivitaiFreeTool/contributors?per_page=10")
     .then((r) => (r.ok ? r.json() : Promise.reject()))
     .then((list) => {
@@ -3058,18 +3057,18 @@ $("#mmTable tbody").addEventListener("contextmenu", (e) => {
   const menu = $("#ctxMenu");
   const r = ctxRow;
   menu.innerHTML =
-    '<div class="ctx-item" data-act="copy_name" data-tip="复制当前本地文件名">📋 复制文件名</div>' +
+    '<div class="ctx-item" data-act="copy_name" data-tip="复制当前本地文件名">复制文件名</div>' +
     '<div class="ctx-item" data-act="copy_cname" data-tip="复制 C 站上的模型名（不改本地文件）">🀄 复制C站模型名</div>' +
-    '<div class="ctx-item" data-act="folder" data-tip="打开资源管理器并选中该文件">📂 打开所在文件夹</div>' +
-    '<div class="ctx-item" data-act="site" data-tip="在浏览器打开该模型在 C 站的主页">🌐 打开C站</div>' +
-    '<div class="ctx-item" data-act="rename" data-tip="自定义改名（保留扩展名）">✏️ 改名</div>' +
-    '<div class="ctx-item" data-act="rename_c" data-tip="把本地文件名改成 C 站上的模型名（只改本地文件）">🏷️ 文件名改成C站名</div>' +
-    '<div class="ctx-item" data-act="sdjson" data-tip="生成 WebUI 能识别的「模型名.json」元数据文件">📄 生成SD可读json</div>' +
+    '<div class="ctx-item" data-act="folder" data-tip="打开资源管理器并选中该文件">打开所在文件夹</div>' +
+    '<div class="ctx-item" data-act="site" data-tip="在浏览器打开该模型在 C 站的主页">打开C站</div>' +
+    '<div class="ctx-item" data-act="rename" data-tip="自定义改名（保留扩展名）">改名</div>' +
+    '<div class="ctx-item" data-act="rename_c" data-tip="把本地文件名改成 C 站上的模型名（只改本地文件）">文件名改成C站名</div>' +
+    '<div class="ctx-item" data-act="sdjson" data-tip="生成 WebUI 能识别的「模型名.json」元数据文件">生成SD可读json</div>' +
     '<div class="ctx-item" data-act="localize" data-tip="把本地文件名翻译成中文">🀄 文件名翻中文</div>' +
-    '<div class="ctx-item" data-act="rp" data-tip="从 C 站匹配该模型的名字/触发词/封面">📤 识别模型信息</div>' +
-    '<div class="ctx-item" data-act="organize" data-tip="把该模型移动到分类文件夹（需先在设置选 🎯 目标环境）">📂 整理模型</div>' +
+    '<div class="ctx-item" data-act="rp" data-tip="从 C 站匹配该模型的名字/触发词/封面">识别模型信息</div>' +
+    '<div class="ctx-item" data-act="organize" data-tip="把该模型移动到分类文件夹（需先在设置选 目标环境）">整理模型</div>' +
     '<hr class="ctx-sep"/>' +
-    '<div class="ctx-item danger" data-act="del" data-tip="把该模型文件移入回收站（可还原）">🗑️ 移入回收站</div>';
+    '<div class="ctx-item danger" data-act="del" data-tip="把该模型文件移入回收站（可还原）">移入回收站</div>';
   menu.style.display = "block";
   const zf = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
   menu.style.left = (e.clientX / zf) + "px";
@@ -3155,7 +3154,7 @@ function showRenameDialog(path, oldName) {
   dlg.className = "rename-dialog";
   const oldBase = String(oldName || "").replace(/\.(safetensors|ckpt|pt|pth|bin|onnx|gguf|sft)$/i, "");
   dlg.innerHTML =
-    '<div class="rd-title">✏️ 改名（保留扩展名）</div>' +
+    '<div class="rd-title">改名（保留扩展名）</div>' +
     '<input class="input rd-input" id="rdInput" value="' + esc(oldBase) + '" placeholder="输入新文件名"/>' +
     '<div class="rd-actions">' +
     '<button class="btn" id="rdCancel">取消</button>' +
@@ -3204,7 +3203,7 @@ mmOp("mmCovers", (p) => api.call("mm_download_covers", p));
 mmOp("mmTranslate", (p) => api.call("mm_translate_descs", p));
 $("#mmOrganize").addEventListener("click", async () => {
   if (!(state.cfg && state.cfg.target_env)) {
-    confirmBox("⚠️ 请先在 设置 → 📂 分类规则 选择 🎯 目标环境（WebUI / ComfyUI），才能整理模型");
+    confirmBox("请先在 设置 → 分类规则 选择 目标环境（WebUI / ComfyUI），才能整理模型");
     return;
   }
   if ((state.cfg.organize_mode || "manual") === "manual") {
@@ -3226,20 +3225,20 @@ $("#mmOrganize").addEventListener("click", async () => {
 mmOp("mmCleanup", (p) => api.call("mm_cleanup", p));
 $("#mmRestore").addEventListener("click", async () => {
   if (!(state.cfg && state.cfg.target_env)) {
-    confirmBox("⚠️ 请先在 设置 → 📂 分类规则 选择 🎯 目标环境（WebUI / ComfyUI）");
+    confirmBox("请先在 设置 → 分类规则 选择 目标环境（WebUI / ComfyUI）");
     return;
   }
   setStatus("正在扫描可恢复的模型 …");
   const prev = await api.call("mm_restore_organize", true);
   if (!prev || !prev.ok) { setStatus(prev ? prev.msg : "扫描失败"); return; }
-  if (!prev.count) { setStatus("没有发现需要恢复的模型 ✅"); return; }
+  if (!prev.count) { setStatus("没有发现需要恢复的模型 "); return; }
   const root = (state.cfg.models_dir || "").replace(/\\/g, "/");
   const lines = prev.items.slice(0, 30).map((it) =>
     "· " + esc(it.src.split(/[\\/]/).pop()) + " → " + esc(it.dest.replace(/\\/g, "/").replace(root, "")) + "（" + esc(it.why) + "）").join("<br/>");
   const more = prev.count > 30 ? "<br/>… 共 " + prev.count + " 个" : "";
   const ok = await confirmBox(
     "<div style='font-size:12px;color:var(--text-dim);line-height:1.8'>以下模型将被移回标准目录（只移动不删除，json/封面随行）：</div><div style='font-size:12px;line-height:1.9;max-height:240px;overflow:auto;margin-top:6px'>" + lines + more + "</div>",
-    "🔧 恢复误整理");
+    "恢复误整理");
   if (!ok) return;
   setStatus("正在恢复 …");
   const res = await api.call("mm_restore_organize", false);
@@ -3411,54 +3410,54 @@ function pollRp() {
 // ================= 设置 =================
 // [分组, key, 标签, 类型, 选项]
 const SETTING_FIELDS = [
-  ["🔑 基本", "api_key", "Civitai API Key", "password"],
-  ["🔑 基本", "download_dir", "下载目录", "text"],
-  ["🔑 基本", "models_dirs", "模型管理目录（每行一个）", "dirs"],
-  ["🔑 基本", "site_domain", "站点域名", "select", ["civitai.red", "civitai.com"]],
-  ["🌐 网络", "proxy_enabled", "启用代理", "bool"],
-  ["🌐 网络", "ssl_verify", "启用证书验证", "bool"],
-  ["🌐 网络", "proxy_address", "代理地址", "text"],
-  ["🌐 网络", "max_concurrent_downloads", "并发下载数", "number"],
-  ["🌐 网络", "download_timeout", "下载超时(秒)", "number"],
-  ["🌐 网络", "download_retry", "断流自动重试次数", "number"],
-  ["🌐 网络", "hash_threads", "哈希线程数", "number"],
-  ["⬇️ 下载", "gen_metadata", "完成后自动生成 json/info", "bool"],
-  ["⬇️ 下载", "download_cover", "完成后自动下载封面", "bool"],
-  ["⬇️ 下载", "ask_move_after_download", "完成后询问移动分类", "bool"],
-  ["⬇️ 下载", "download_target_dir", "下载目标文件夹（预设）", "dir"],
-  ["⬇️ 下载", "rename_clean_rules", "文件名清理符号", "select", [["", "不清理"], ["comma", "去逗号（推荐）"], ["comma,paren", "去逗号 + 括号"], ["comma,paren,dash", "去逗号+括号，横线/下划线→空格"]]],
-  ["⬇️ 下载", "metadata_format", "metadata 格式", "select", ["sd", "civitai", "both"]],
-  ["🌏 翻译", "baidu_appid", "百度翻译 APP ID", "text"],
-  ["🌏 翻译", "baidu_key", "百度翻译密钥", "password"],
-  ["🌏 翻译", "auto_translate", "反向解析自动翻译", "bool"],
-  ["🌏 翻译", "translate_filename", "下载文件名为中文", "bool"],
-  ["🎨 界面", "theme", "界面主题", "select", [
-    ["dark", "🌙 深色"],
-    ["dark_purple", "🟣 暮紫（暗）"],
-    ["dark_blue", "🔵 深海（暗）"],
-    ["dark_green", "🟢 森林（暗）"],
-    ["dark_red", "🟠 熔岩（暗）"],
-    ["light", "☀️ 浅色"],
-    ["light_blue", "🔷 晴空（亮）"],
-    ["light_pink", "🌸 樱粉（亮）"],
-    ["light_green", "🌿 薄荷（亮）"],
-    ["metro", "🟦 Metro 磁贴（Win10 风 · 直角扁平）"],
-    ["modern", "🎨 现代浅色"],
+  ["基本", "api_key", "Civitai API Key", "password"],
+  ["基本", "download_dir", "下载目录", "text"],
+  ["基本", "models_dirs", "模型管理目录（每行一个）", "dirs"],
+  ["基本", "site_domain", "站点域名", "select", ["civitai.red", "civitai.com"]],
+  ["网络", "proxy_enabled", "启用代理", "bool"],
+  ["网络", "ssl_verify", "启用证书验证", "bool"],
+  ["网络", "proxy_address", "代理地址", "text"],
+  ["网络", "max_concurrent_downloads", "并发下载数", "number"],
+  ["网络", "download_timeout", "下载超时(秒)", "number"],
+  ["网络", "download_retry", "断流自动重试次数", "number"],
+  ["网络", "hash_threads", "哈希线程数", "number"],
+  ["下载", "gen_metadata", "完成后自动生成 json/info", "bool"],
+  ["下载", "download_cover", "完成后自动下载封面", "bool"],
+  ["下载", "ask_move_after_download", "完成后询问移动分类", "bool"],
+  ["下载", "download_target_dir", "下载目标文件夹（预设）", "dir"],
+  ["下载", "rename_clean_rules", "文件名清理符号", "select", [["", "不清理"], ["comma", "去逗号（推荐）"], ["comma,paren", "去逗号 + 括号"], ["comma,paren,dash", "去逗号+括号，横线/下划线→空格"]]],
+  ["下载", "metadata_format", "metadata 格式", "select", ["sd", "civitai", "both"]],
+  ["翻译", "baidu_appid", "百度翻译 APP ID", "text"],
+  ["翻译", "baidu_key", "百度翻译密钥", "password"],
+  ["翻译", "auto_translate", "反向解析自动翻译", "bool"],
+  ["翻译", "translate_filename", "下载文件名为中文", "bool"],
+  ["界面", "theme", "界面主题", "select", [
+    ["dark", "深色"],
+    ["dark_purple", "暮紫（暗）"],
+    ["dark_blue", "深海（暗）"],
+    ["dark_green", "森林（暗）"],
+    ["dark_red", "熔岩（暗）"],
+    ["light", "浅色"],
+    ["light_blue", "晴空（亮）"],
+    ["light_pink", "樱粉（亮）"],
+    ["light_green", "薄荷（亮）"],
+    ["metro", "Metro 磁贴（Win10 风 · 直角扁平）"],
+    ["modern", "现代浅色"],
   ]],
-  ["🎨 界面", "ui_zoom", "界面缩放", "select", ["80", "90", "100", "110", "125", "150"]],
-  ["🎨 界面", "rename_menu_default", "改名默认动作", "select", [["custom", "自定义改名"], ["rename_c", "文件名改成C站名"], ["localize", "文件名翻中文"]]],
-  ["🎨 界面", "confirm_buttons_flip", "确认弹窗按钮翻转", "bool"],
-  ["🎨 界面", "default_page", "启动默认页", "select", [["models", "🧩 模型管理"], ["download", "📥 批量下载"], ["dlmanager", "⬇️ 下载管理"], ["reverse", "🔍 反向解析"], ["workflow", "🔬 工作流分析"], ["settings", "⚙️ 设置"]]],
-  ["🎨 界面", "default_view", "模型默认视图", "select", [["waterfall", "🖼️ 瀑布流"], ["list", "📋 列表"]]],
-  ["🎨 界面", "zebra_rows", "模型列表斑马纹", "bool"],
-  ["🎨 界面", "ambient_bg", "顶部氛围动态背景", "bool"],
-  ["🎨 界面", "ui_mode", "界面模式", "select", [["window", "原生窗口（默认）"], ["browser", "浏览器模式（可托盘 / 关页面退）"]]],
-  ["🎨 界面", "window_wait_seconds", "窗口模式等待秒数", "number"],
-  ["🎨 界面", "close_action", "点窗口关闭按钮时", "select", [["exit", "退出软件（默认）"], ["minimize", "最小化到任务栏（不退出）"]]],
-  ["📦 下载", "update_keep_old", "更新后如何处理旧版本", "select", [["keep", "保留旧版文件（默认）"], ["delete", "删除旧版（移入回收站，可还原）"]]],
-  ["🎨 界面", "webview_disable_gpu", "禁用 GPU 加速（软件渲染）", "bool"],
-  ["🎨 界面", "tray_icon", "浏览器模式：托盘图标", "bool"],
-  ["🎨 界面", "exit_when_page_closed", "浏览器模式：关页面后自动退出", "bool"],
+  ["界面", "ui_zoom", "界面缩放", "select", ["80", "90", "100", "110", "125", "150"]],
+  ["界面", "rename_menu_default", "改名默认动作", "select", [["custom", "自定义改名"], ["rename_c", "文件名改成C站名"], ["localize", "文件名翻中文"]]],
+  ["界面", "confirm_buttons_flip", "确认弹窗按钮翻转", "bool"],
+  ["界面", "default_page", "启动默认页", "select", [["models", "模型管理"], ["download", "批量下载"], ["dlmanager", "下载管理"], ["reverse", "反向解析"], ["workflow", "工作流分析"], ["settings", "设置"]]],
+  ["界面", "default_view", "模型默认视图", "select", [["waterfall", "瀑布流"], ["list", "列表"]]],
+  ["界面", "zebra_rows", "模型列表斑马纹", "bool"],
+  ["界面", "ambient_bg", "顶部氛围动态背景", "bool"],
+  ["界面", "ui_mode", "界面模式", "select", [["window", "原生窗口（默认）"], ["browser", "浏览器模式（可托盘 / 关页面退）"]]],
+  ["界面", "window_wait_seconds", "窗口模式等待秒数", "number"],
+  ["界面", "close_action", "点窗口关闭按钮时", "select", [["exit", "退出软件（默认）"], ["minimize", "最小化到任务栏（不退出）"]]],
+  ["下载", "update_keep_old", "更新后如何处理旧版本", "select", [["keep", "保留旧版文件（默认）"], ["delete", "删除旧版（移入回收站，可还原）"]]],
+  ["界面", "webview_disable_gpu", "禁用 GPU 加速（软件渲染）", "bool"],
+  ["界面", "tray_icon", "浏览器模式：托盘图标", "bool"],
+  ["界面", "exit_when_page_closed", "浏览器模式：关页面后自动退出", "bool"],
 ];
 
 // 设置项 hover 说明（鼠标移到标签上显示功能作用）
@@ -3479,14 +3478,14 @@ const SETTING_TIPS = {
   "download_cover": "下载完成后自动把 C 站预览图保存到模型目录（模型管理显示缩略图用）",
   "ask_move_after_download": "下载完成后询问是否把文件移动到指定文件夹（适合按类型归档；设了「下载目标文件夹」后本项自动不弹）",
   "window_wait_seconds": "窗口模式下等几秒没出界面就自动改用浏览器模式（默认 12 秒）。机器慢或 WebView2 正在更新时可调大；想固定用浏览器模式就把「界面模式」改成浏览器模式",
-  "update_keep_old": "「更新页面」下载新版完成后的旧版处理：默认【保留旧版文件】（新版和旧版并存，要清理可用「🧬 查重 → 删旧留新」）；选【删除旧版】则下载完成后把旧版文件移入回收站（含预览图/元数据，可还原）。只影响「更新下载」，不影响普通批量下载",
+  "update_keep_old": "「更新页面」下载新版完成后的旧版处理：默认【保留旧版文件】（新版和旧版并存，要清理可用「查重 → 删旧留新」）；选【删除旧版】则下载完成后把旧版文件移入回收站（含预览图/元数据，可还原）。只影响「更新下载」，不影响普通批量下载",
   "download_target_dir": "预设下载落地文件夹（在模型目录里选）：下载的模型连 json/封面直接放进它，不再弹窗询问。也可在「批量下载」页临时选择",
   "metadata_format": "sd = WebUI 能直接识别的扁平 json；civitai = C 站原始 info 结构；both = 两个都生成",
   "baidu_appid": "百度翻译开放平台 APP ID（免费申请），用于反向解析自动翻译模型名/简介",
   "baidu_key": "百度翻译开放平台密钥，与 APP ID 配套",
   "auto_translate": "反向解析时自动把模型名/简介翻译成中文",
   "translate_filename": "下载时把模型名翻译成中文作为文件名（需要配置百度翻译）",
-  "theme": "界面主题：深色 / 浅色 / 现代浅色；选 🟦 Metro 磁贴 = Win10 直角扁平风（顶部按钮分组 + 默认瀑布流）",
+  "theme": "界面主题：深色 / 浅色 / 现代浅色；选 Metro 磁贴 = Win10 直角扁平风（顶部按钮分组 + 默认瀑布流）",
   "ui_zoom": "界面整体缩放比例（百分比）",
   "rename_menu_default": "点「改名」默认执行的动作：自定义 / 改成 C 站模型名 / 文件名翻中文",
   "confirm_buttons_flip": "交换确认弹窗中「确定/取消」按钮位置（防误点）",
@@ -3555,7 +3554,7 @@ function buildSettingsForm() {
         input = '<input class="input" type="number" data-key="' + key + '" value="' + esc(v) + '"/>';
       } else if (type === "password") {
         input = '<div class="pwd-wrap"><input class="input" type="password" data-key="' + key + '" value="' + esc(v || "") + '"/>' +
-          '<span class="pwd-eye" data-eye="' + key + '">👁️</span></div>';
+          '<span class="pwd-eye" data-eye="' + key + '"></span></div>';
       } else if (type === "dirs") {
         const list = (Array.isArray(v) && v.length) ? v : (state.cfg.models_dir ? [state.cfg.models_dir] : []);
         input = '<textarea class="input" rows="3" data-key="' + key + '" placeholder="D:\\sd-webui-forge-neo\\webui\\models">' + esc(list.join("\n")) + '</textarea>' +
@@ -3573,7 +3572,7 @@ function buildSettingsForm() {
     // 翻译组追加百度申请链接
     let extra = "";
     if (g.indexOf("翻译") >= 0) {
-      extra = '<div class="bd-links"><div class="bd-links-title">📚 百度翻译 API 申请指南：</div>' +
+      extra = '<div class="bd-links"><div class="bd-links-title">百度翻译 API 申请指南：</div>' +
         BAIDU_LINKS.map((l) =>
           '<div class="bd-link" data-url="' + esc(l.url) + '"><span class="bd-link-label">' + esc(l.label) + "</span><span class=\"bd-link-desc\">" + esc(l.desc) + "</span></div>"
         ).join("") + "</div>";
@@ -3581,21 +3580,21 @@ function buildSettingsForm() {
     return '<fieldset class="form-section"><legend><span class="fold-btn">▾</span> ' + esc(g) + "</legend><div class=\"form-grid\">" + body + "</div>" + extra + "</fieldset>";
   }).join("");
   // 分类规则组（目标环境 + 整理模式 + 自定义规则）
-  form.innerHTML += '<fieldset class="form-section"><legend>📂 分类规则</legend><div class="form-grid">' +
-    '<label>🎯 目标环境</label><div><select data-key="target_env">' +
+  form.innerHTML += '<fieldset class="form-section"><legend>分类规则</legend><div class="form-grid">' +
+    '<label>目标环境</label><div><select data-key="target_env">' +
     [["", "未选择（必须选择才能整理）"], ["webui", "WebUI / Forge（Lora、Stable-diffusion）"], ["comfyui", "ComfyUI（loras、checkpoints）"]]
       .map((o) => '<option value="' + o[0] + '"' + (String(state.cfg.target_env) === o[0] ? " selected" : "") + ">" + o[1] + "</option>").join("") +
     "</select></div>" +
-    '<label>📁 整理模式</label><div><select data-key="organize_mode">' +
+    '<label>整理模式</label><div><select data-key="organize_mode">' +
     [["manual", "手动分类（逐个选择文件夹）"], ["civitai", "C 站 tags 自动分类（需 info）"], ["rules", "自定义规则分类"]]
       .map((o) => '<option value="' + o[0] + '"' + (String(state.cfg.organize_mode) === o[0] ? " selected" : "") + ">" + o[1] + "</option>").join("") +
     "</select></div>" +
     '<label>整理分类规则</label><div><textarea class="rules" id="organizeRules">' + esc((state.cfg.organize_rules || []).map((r) => (r.keywords || []).join(", ") + " -> " + r.folder).join("\n")) + "</textarea></div>" +
     "</div></fieldset>";
   // 维护区块：清理伪 C 站图片缓存
-  form.innerHTML += '<fieldset class="form-section"><legend>🧹 维护</legend><div class="form-grid">' +
+  form.innerHTML += '<fieldset class="form-section"><legend>维护</legend><div class="form-grid">' +
     '<label data-tip="删除模型目录下所有「模型名.images」图片缓存文件夹（详情面板里下载的示例图），释放磁盘空间；封面缩略图不受影响">图片缓存清理</label>' +
-    '<div><button class="btn" id="btnCleanImgCache">🧹 删除下载的图片文件夹</button></div>' +
+    '<div><button class="btn" id="btnCleanImgCache">删除下载的图片文件夹</button></div>' +
     "</div></fieldset>";
 }
 
@@ -3607,7 +3606,7 @@ $("#settingsForm").addEventListener("click", (e) => {
   const inp = document.querySelector('.pwd-wrap input[data-key="' + key + '"]');
   if (!inp) return;
   inp.type = inp.type === "password" ? "text" : "password";
-  eye.textContent = inp.type === "password" ? "🙈" : "👁️";
+  eye.textContent = inp.type === "password" ? "显示" : "隐藏";
 });
 // 工作流缺失模型搜索下载（Civitai + HuggingFace）
 $("#wfModels").addEventListener("click", (e) => {
@@ -3737,7 +3736,7 @@ async function init() {
   state.mmView = state.cfg.default_view === "waterfall" ? "masonry" : "list";
   try { syncViewSeg(); } catch (e) { /* 忽略 */ }
   const vtb = $("#mmViewToggle");
-  if (vtb) vtb.textContent = state.mmView === "masonry" ? "📋 列表视图" : "🖼️ 瀑布流";
+  if (vtb) vtb.textContent = state.mmView === "masonry" ? "列表视图" : "瀑布流";
   buildSettingsForm();
   addUrlRow();
   dlRefresh();
@@ -3751,7 +3750,7 @@ async function init() {
 }
 
 // ===== 首次使用引导（主题 / 下载目录 / API key / 模型目录 / 反向解析） =====
-const OB_STEPS = ["✨ 功能", "🌗 主题", "📂 下载目录", "🔑 API Key", "📂 模型目录", "🔄 反向解析"];
+const OB_STEPS = ["功能", "主题", "下载目录", "API Key", "模型目录", "反向解析"];
 let obStep = 0;
 let obTheme = "dark";
 let obDirVal = "";   // 跨步骤保存（输入框只在对应步骤渲染）
@@ -3789,27 +3788,27 @@ function renderOnboarding() {
   $("#obSteps").innerHTML = OB_STEPS.map((s, i) =>
     '<div class="ob-step ' + (i === obStep ? "active" : i < obStep ? "done" : "") + '">' + s + "</div>").join("");
   $("#obPrev").style.display = obStep === 0 ? "none" : "inline-block";
-  $("#obNext").textContent = obStep === OB_STEPS.length - 1 ? "完成 🎉" : "下一步";
+  $("#obNext").textContent = obStep === OB_STEPS.length - 1 ? "完成 " : "下一步";
   const body = $("#obBody");
   if (obStep === 0) {
     // 第一页：功能介绍 —— 六个按钮对应六个页面，hover 显示功能简介
     const feats = [
-      ["📥", "批量下载", "download", "粘贴 C 站 / HuggingFace 链接，批量解析并下载；支持付费模型到期提醒"],
-      ["📁", "下载管理", "dlmanager", "查看下载进度、断点续传、暂停/重试/移除任务，完成后自动写元数据"],
-      ["🧩", "模型管理", "models", "扫描本地模型、缩略图瀑布流、改名/整理/校验完整性/一键清理"],
-      ["🔍", "反向解析", "reverse", "把已下载的模型文件识别出 C 站信息：名字、触发词、类型、封面"],
-      ["🔬", "工作流分析", "workflow", "拖入 ComfyUI 的 json/png 工作流，解析节点、模型引用与参数"],
-      ["⚙️", "设置", "settings", "下载目录、API Key、主题缩放、分类规则、清理缓存、新手引导"],
+      ["", "批量下载", "download", "粘贴 C 站 / HuggingFace 链接，批量解析并下载；支持付费模型到期提醒"],
+      ["", "下载管理", "dlmanager", "查看下载进度、断点续传、暂停/重试/移除任务，完成后自动写元数据"],
+      ["", "模型管理", "models", "扫描本地模型、缩略图瀑布流、改名/整理/校验完整性/一键清理"],
+      ["", "反向解析", "reverse", "把已下载的模型文件识别出 C 站信息：名字、触发词、类型、封面"],
+      ["", "工作流分析", "workflow", "拖入 ComfyUI 的 json/png 工作流，解析节点、模型引用与参数"],
+      ["", "设置", "settings", "下载目录、API Key、主题缩放、分类规则、清理缓存、新手引导"],
     ];
     body.innerHTML =
-      '<div class="ob-label">🚀 六个页面，各司其职（鼠标移上去查看功能介绍，点击直接进入）：</div>' +
+      '<div class="ob-label">六个页面，各司其职（鼠标移上去查看功能介绍，点击直接进入）：</div>' +
       '<div class="ob-feat-grid">' +
       feats.map((f) =>
         '<div class="ob-feat-btn" data-page="' + f[2] + '" data-tip="' + esc(f[3]) + '"><span>' + f[0] + "</span><span>" + f[1] + "</span></div>"
       ).join("") +
       "</div>" +
       '<div style="margin-top:10px;text-align:center">' +
-      '<a class="ob-github" id="obGithub">🌐 GitHub 仓库（源码 / 更新 / 反馈）</a></div>' +
+      '<a class="ob-github" id="obGithub">GitHub 仓库（源码 / 更新 / 反馈）</a></div>' +
       '<div style="color:var(--text-dim);font-size:12px;margin-top:8px;text-align:center">免费 · 全功能 · 无付费墙</div>';
     document.querySelectorAll(".ob-feat-btn").forEach((el) => {
       el.addEventListener("click", async () => {
@@ -3825,16 +3824,16 @@ function renderOnboarding() {
     body.innerHTML =
       '<div class="ob-label">选择界面主题（可随时在设置页更换）</div>' +
       '<div class="ob-themes" id="obThemes">' +
-      '<div class="ob-theme" data-t="dark"><div class="sw" style="background:#171221;border:2px solid #0a84ff"></div>🌙 深色</div>' +
-      '<div class="ob-theme" data-t="dark_purple"><div class="sw" style="background:#16112b;border:2px solid #a06bff"></div>🟣 暮紫</div>' +
-      '<div class="ob-theme" data-t="dark_blue"><div class="sw" style="background:#0d1524;border:2px solid #38bdf8"></div>🔵 深海</div>' +
-      '<div class="ob-theme" data-t="dark_green"><div class="sw" style="background:#0e1a14;border:2px solid #34d399"></div>🟢 森林</div>' +
-      '<div class="ob-theme" data-t="dark_red"><div class="sw" style="background:#1d1010;border:2px solid #ff7a59"></div>🟠 熔岩</div>' +
-      '<div class="ob-theme" data-t="light"><div class="sw" style="background:#f2f2f2;border:1px solid #ddd"></div>☀️ 浅色</div>' +
-      '<div class="ob-theme" data-t="light_blue"><div class="sw" style="background:#eef4fb;border:1px solid #2f7cf6"></div>🔷 晴空</div>' +
-      '<div class="ob-theme" data-t="light_pink"><div class="sw" style="background:#fdf2f4;border:1px solid #ec5d7a"></div>🌸 樱粉</div>' +
-      '<div class="ob-theme" data-t="light_green"><div class="sw" style="background:#f0f8f3;border:1px solid #2e9e63"></div>🌿 薄荷</div>' +
-      '<div class="ob-theme" data-t="modern"><div class="sw" style="background:#efefef;border:1px solid #ddd"></div>🎨 现代浅色</div></div>';
+      '<div class="ob-theme" data-t="dark"><div class="sw" style="background:#171221;border:2px solid #0a84ff"></div>深色</div>' +
+      '<div class="ob-theme" data-t="dark_purple"><div class="sw" style="background:#16112b;border:2px solid #a06bff"></div>暮紫</div>' +
+      '<div class="ob-theme" data-t="dark_blue"><div class="sw" style="background:#0d1524;border:2px solid #38bdf8"></div>深海</div>' +
+      '<div class="ob-theme" data-t="dark_green"><div class="sw" style="background:#0e1a14;border:2px solid #34d399"></div>森林</div>' +
+      '<div class="ob-theme" data-t="dark_red"><div class="sw" style="background:#1d1010;border:2px solid #ff7a59"></div>熔岩</div>' +
+      '<div class="ob-theme" data-t="light"><div class="sw" style="background:#f2f2f2;border:1px solid #ddd"></div>浅色</div>' +
+      '<div class="ob-theme" data-t="light_blue"><div class="sw" style="background:#eef4fb;border:1px solid #2f7cf6"></div>晴空</div>' +
+      '<div class="ob-theme" data-t="light_pink"><div class="sw" style="background:#fdf2f4;border:1px solid #ec5d7a"></div>樱粉</div>' +
+      '<div class="ob-theme" data-t="light_green"><div class="sw" style="background:#f0f8f3;border:1px solid #2e9e63"></div>薄荷</div>' +
+      '<div class="ob-theme" data-t="modern"><div class="sw" style="background:#efefef;border:1px solid #ddd"></div>现代浅色</div></div>';
     document.querySelectorAll("#obThemes .ob-theme").forEach((el) => {
       if (el.dataset.t === obTheme) el.classList.add("sel");
       el.addEventListener("click", () => {
@@ -3851,7 +3850,7 @@ function renderOnboarding() {
     body.innerHTML =
       '<div class="ob-label">下载目录（模型下载后存放位置，可修改）</div>' +
       '<div style="display:flex;gap:8px"><input class="input" id="obDir" style="flex:1" value="' + esc(obDirVal) + '"/>' +
-      '<button class="btn" id="obBrowse">📁 浏览</button></div>' +
+      '<button class="btn" id="obBrowse">浏览</button></div>' +
       '<div style="color:var(--text-dim);font-size:12px;margin-top:6px">默认：软件根目录下的 downloads/models 文件夹</div>';
     $("#obDir").addEventListener("input", () => { obDirVal = $("#obDir").value; });
     $("#obBrowse").addEventListener("click", async () => {
@@ -3864,12 +3863,12 @@ function renderOnboarding() {
       '<div class="ob-label">Civitai API Key（免费申请，用于查询模型信息与下载）</div>' +
       '<input class="input" id="obKey" type="password" value="' + esc(obKeyVal) + '" placeholder="粘贴你的 API Key"/>' +
       '<div class="ob-guide" id="obGuide" style="display:none">' +
-      '<div style="font-weight:600;margin-bottom:6px">📚 如何注册 API Key：</div>' +
+      '<div style="font-weight:600;margin-bottom:6px">如何注册 API Key：</div>' +
       '<div>1. 打开 <a class="ob-link" id="obApiPage">civitai.com/user/account</a>（登录后点 Account Settings 生成 API Keys）</div>' +
       '<div>2. 登录账号后点击「New API Key」生成</div>' +
       '<div>3. 复制生成的 Key 粘贴到上方输入框即可</div></div>' +
-      '<div class="ob-actions2"><button class="btn" id="obToggleGuide">📚 如何注册 API？</button>' +
-      '<button class="btn" id="obOpenApi">🌐 打开注册页</button></div>' +
+      '<div class="ob-actions2"><button class="btn" id="obToggleGuide">如何注册 API？</button>' +
+      '<button class="btn" id="obOpenApi">打开注册页</button></div>' +
       '<div style="color:var(--text-dim);font-size:12px;margin-top:6px">不填也能用，但模型查询与部分下载功能受限。</div>';
     $("#obKey").addEventListener("input", () => { obKeyVal = $("#obKey").value; });
     $("#obToggleGuide").addEventListener("click", () => {
@@ -3881,11 +3880,11 @@ function renderOnboarding() {
   } else if (obStep === 4) {
     // 模型管理目录：手把手选择（可多目录）
     body.innerHTML =
-      '<div class="ob-label">📂 模型管理目录 —— 你本地存放模型的地方</div>' +
+      '<div class="ob-label">模型管理目录 —— 你本地存放模型的地方</div>' +
       '<div class="ob-hint">软件从这里扫描模型、显示封面和触发词。WebUI 与 ComfyUI 分开存放的，把两个目录都填上（每行一个）：</div>' +
       '<textarea class="input" id="obModelDirs" rows="3" style="width:100%;box-sizing:border-box">' + esc(obModelDirs.join("\n")) + '</textarea>' +
-      '<div class="ob-actions2"><button class="btn" id="obBrowseModels">📁 选择文件夹</button>' +
-      '<button class="btn" id="obBrowseModels2">📁 再添加一个</button></div>' +
+      '<div class="ob-actions2"><button class="btn" id="obBrowseModels">选择文件夹</button>' +
+      '<button class="btn" id="obBrowseModels2">再添加一个</button></div>' +
       '<div style="color:var(--text-dim);font-size:12px;margin-top:6px">常见路径：D:\\sd-webui-forge-neo\\webui\\models（WebUI）、D:\\ComfyUI\\models（ComfyUI）</div>';
     const sync = () => { obModelDirs = $("#obModelDirs").value.split("\n").map((s) => s.trim()).filter(Boolean); };
     $("#obModelDirs").addEventListener("input", sync);
@@ -3906,11 +3905,11 @@ function renderOnboarding() {
   } else {
     // 反向解析：推荐但可跳过
     body.innerHTML =
-      '<div class="ob-label">🔄 反向解析（强烈推荐，也可跳过）</div>' +
+      '<div class="ob-label">反向解析（强烈推荐，也可跳过）</div>' +
       '<div class="ob-hint">把你已下载的模型文件识别出 C 站信息：自动匹配模型名、触发词（tags）、类型和基础模型，并生成封面。</div>' +
-      '<div class="ob-hint" style="margin-top:4px">✅ 做完后，模型管理里每个模型才有名字和触发词可复制；<b>跳过也不影响其他功能</b>。</div>' +
-      '<div class="ob-actions2"><button class="btn btn-primary" id="obGoRp">🚀 立即体验（推荐）</button>' +
-      '<button class="btn" id="obSkipRp">⏭️ 跳过（以后在 🔍 反向解析 页随时可用）</button></div>';
+      '<div class="ob-hint" style="margin-top:4px">做完后，模型管理里每个模型才有名字和触发词可复制；<b>跳过也不影响其他功能</b>。</div>' +
+      '<div class="ob-actions2"><button class="btn btn-primary" id="obGoRp">立即体验（推荐）</button>' +
+      '<button class="btn" id="obSkipRp">跳过（以后在 反向解析 页随时可用）</button></div>';
     $("#obGoRp").addEventListener("click", async () => {
       await finishOnboarding();
       document.querySelector(".nav-tab[data-page=\"reverse\"]").click();
@@ -3924,7 +3923,7 @@ function renderOnboarding() {
   // 注意：必须用 insertAdjacentHTML 追加——innerHTML += 会重建整个 body、清空上面绑定的
   // 功能卡/主题点击监听器（曾导致「点击无法进入」「主题切换无效」）
   body.insertAdjacentHTML("beforeend",
-    '<div class="ob-skip-row"><button class="btn" id="obSkipAll">⏭️ 跳过引导（剩余步骤不填，以后可随时在设置页重开）</button></div>');
+    '<div class="ob-skip-row"><button class="btn" id="obSkipAll">跳过引导（剩余步骤不填，以后可随时在设置页重开）</button></div>');
   $("#obSkipAll").addEventListener("click", async () => {
     await finishOnboarding();
   });
@@ -3983,7 +3982,7 @@ document.addEventListener("click", (e) => {
 /* ============================================================================
    Metro 工具区（仅 Metro 主题可见）——
    按钮全部是"代理"：点击转交给下面老按钮的 click()，业务逻辑零改动；
-   标签/禁用/显隐用 MutationObserver 跟随原按钮（如「⏹ 停止检查（N/M）」、恢复误整理的显隐）。
+   标签/禁用/显隐用 MutationObserver 跟随原按钮（如「停止检查（N/M）」、恢复误整理的显隐）。
    ========================================================================== */
 
 // SVG 图标（内联 sprite，见 index.html 的 #i-* symbols）
@@ -3995,7 +3994,7 @@ function _icon(name, cls) {
 
 function _msTag(r) {
   const u = (r && r.upd) || {};
-  if (u.has_update || u.other_base) return "";          // 有更新 → 用 ❗ 角标（可点去 C 站）
+  if (u.has_update || u.other_base) return "";          // 有更新 → 用 角标（可点去 C 站）
   if (r && r.upd) return '<span class="ms-tag ok">已最新</span>';
   return "";
 }

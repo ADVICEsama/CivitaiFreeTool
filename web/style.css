@@ -1408,3 +1408,11 @@ td.cell-dest:hover { color: var(--accent, #4da3ff); text-decoration: underline d
 .btn .ic { width: 15px; height: 15px; }
 .icon-btn .ic, .mm-item .ic, .submenu-item .ic { width: 15px; height: 15px; }
 .ic-lg { width: 20px; height: 20px; }
+
+
+/* 自绘勾选框（替代 ✅/⬜ 文本符号；跟随主题主色，Metro/Classic 都适用） */
+.cbox { display: inline-block; width: 16px; height: 16px; position: relative; vertical-align: -3px;
+        background: var(--surface, #fff); border: 1px solid var(--border, #ccc); border-radius: 2px; }
+.cbox.on { background: var(--primary); border-color: var(--primary); }
+.cbox.on::after { content: ""; position: absolute; left: 5px; top: 1px; width: 4px; height: 8px;
+        border: solid var(--primary-fg, #fff); border-width: 0 2px 2px 0; transform: rotate(45deg); }

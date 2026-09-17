@@ -34,6 +34,7 @@
     <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17"/><path d="M12 3.5c2.5 2.3 3.8 5.1 3.8 8.5S14.5 18.2 12 20.5c-2.5-2.3-3.8-5.1-3.8-8.5S9.5 5.8 12 3.5Z"/></symbol>
     <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11"/><path d="M15 9V5.5A1.5 1.5 0 0 0 13.5 4H5.5A1.5 1.5 0 0 0 4 5.5v8A1.5 1.5 0 0 0 5.5 15H9"/></symbol>
     <symbol id="i-sort" viewBox="0 0 24 24"><path d="M8 5v14M8 5 4.5 8.5M8 5l3.5 3.5"/><path d="M16 19V5M16 19l-3.5-3.5M16 19l3.5-3.5"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5.5v13M5.5 12h13"/></symbol>
     <symbol id="i-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v5.5"/><path d="M12 16.2h.01"/></symbol>
     <symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m6 9.5 6 6 6-6"/></symbol>
     <symbol id="i-ruler" viewBox="0 0 24 24"><path d="M3.5 14.5 14.5 3.5l6 6-11 11-6-6Z"/><path d="m7 11 2 2M10 8l2 2M13 5l2 2"/></symbol>
@@ -47,9 +48,9 @@
     <div class="nav-logo"><img src="logo.png" alt=""/></div>
     <div class="nav-tabs" id="navTabs">
       <button class="nav-tab active" data-page="download">批量下载</button>
-      <button class="nav-tab" data-page="dlmanager">📁 下载管理</button>
+      <button class="nav-tab" data-page="dlmanager">下载管理</button>
       <button class="nav-tab" data-page="models">模型管理</button>
-      <button class="nav-tab" data-page="updates">⏫ 更新</button>
+      <button class="nav-tab" data-page="updates">更新</button>
       <button class="nav-tab" data-page="reverse">反向解析</button>
       <button class="nav-tab" data-page="workflow">工作流分析</button>
       <button class="nav-tab" data-page="settings">设置</button>
@@ -67,18 +68,18 @@
       <h2 class="page-title">批量下载</h2>
       <p class="hint">Civitai / HuggingFace 链接（回车新建一条；支持 <a class="ob-link" href="#" data-url="https://civitai.red/">civitai.red</a> / <a class="ob-link" href="#" data-url="https://civitai.com/">civitai.com</a> / <a class="ob-link" href="#" data-url="https://huggingface.co/login">huggingface.co</a> 仓库或文件直链）</p>
       <div class="dl-target-row" id="dlTargetRow" data-tip="下载落地文件夹：对还没开始的任务生效（已开始的在完成后自动归位）；选了以后不再弹窗询问">
-        <span class="dl-target-label">📥 保存到：</span>
+        <span class="dl-target-label">保存到：</span>
         <span class="dl-target-path" id="dlTargetPath">默认下载目录</span>
         <button class="btn btn-tiny" id="btnDlTarget" data-tip="从模型目录里选一个文件夹，之后下载的模型直接放进它">选择文件夹</button>
         <button class="btn btn-tiny" id="btnDlTargetReset" data-tip="改回默认下载目录">用默认</button>
       </div>
       <div id="urlRows" class="url-rows"></div>
       <div class="btn-row">
-        <button class="btn btn-primary" id="btnParse">🔍 解析并加入下载队列</button>
-        <button class="btn" id="btnPaste" data-tip="读取剪贴板中的链接并加入下载列表">📋 粘贴剪贴板链接</button>
-        <button class="btn" id="btnClearUrls" data-tip="清空所有待解析的链接">🗑️ 清空全部</button>
-        <button class="btn" id="btnAddUrl" data-tip="添加一行空链接输入框">➕ 添加一条</button>
-        <button class="btn" id="btnTodo" data-tip="到期提醒：记录需要等免费/到期的模型，到期自动提醒（时间从 C 站自动判断）">⏰ 到期提醒</button>
+        <button class="btn btn-primary" id="btnParse"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-search"/></svg>解析并加入下载队列</button>
+        <button class="btn" id="btnPaste" data-tip="读取剪贴板中的链接并加入下载列表"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-copy"/></svg>粘贴剪贴板链接</button>
+        <button class="btn" id="btnClearUrls" data-tip="清空所有待解析的链接"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-trash"/></svg>清空全部</button>
+        <button class="btn" id="btnAddUrl" data-tip="添加一行空链接输入框"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-plus"/></svg>添加一条</button>
+        <button class="btn" id="btnTodo" data-tip="到期提醒：记录需要等免费/到期的模型，到期自动提醒（时间从 C 站自动判断）">到期提醒</button>
       </div>
       <div class="log" id="parseLog"></div>
     </div>
@@ -89,13 +90,13 @@
     <div class="card">
       <h2 class="page-title">下载管理</h2>
       <div class="btn-row">
-        <button class="btn btn-primary" id="dlStartAll" data-tip="开始下载所有未完成的任务">▶️ 全部开始</button>
-        <button class="btn" id="dlPauseSel" data-tip="暂停选中的下载任务">⏸️ 暂停选中</button>
-        <button class="btn" id="dlRetrySel" data-tip="重试选中的失败任务">🔄 重试选中</button>
-        <button class="btn" id="dlRemoveSel">🗑️ 移除选中</button>
-        <button class="btn" id="dlSetTarget" data-tip="给选中（未勾选=全部）的任务指定保存文件夹；也可以直接点每行「保存到」列单独设置">📂 设置保存到</button>
-        <button class="btn" id="dlClearDone">🧹 清空已完成</button>
-        <button class="btn" id="dlSave">💾 保存任务列表</button>
+        <button class="btn btn-primary" id="dlStartAll" data-tip="开始下载所有未完成的任务">▶全部开始</button>
+        <button class="btn" id="dlPauseSel" data-tip="暂停选中的下载任务">暂停选中</button>
+        <button class="btn" id="dlRetrySel" data-tip="重试选中的失败任务"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-refresh"/></svg>重试选中</button>
+        <button class="btn" id="dlRemoveSel"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-trash"/></svg>移除选中</button>
+        <button class="btn" id="dlSetTarget" data-tip="给选中（未勾选=全部）的任务指定保存文件夹；也可以直接点每行「保存到」列单独设置"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-folder"/></svg>设置保存到</button>
+        <button class="btn" id="dlClearDone"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-trash"/></svg>清空已完成</button>
+        <button class="btn" id="dlSave"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-file"/></svg>保存任务列表</button>
       </div>
       <div class="table-wrap">
         <table class="grid" id="dlTable">
@@ -211,9 +212,9 @@
         <button class="btn" id="mmRefresh" data-tip="重新扫描（不读元数据，只刷新列表）">刷新</button>
         <button class="btn" id="mmVerify" data-tip="计算文件哈希并与 C 站比对，校验文件是否完整">校验完整性</button>
         <button class="btn" id="mmDedupe" data-tip="按 SHA256 查找重复模型（同一文件放了多份）+ 同一模型的新旧版本，可勾选把多余的移入回收站">查重</button>
-        <button class="btn" id="mmCheckUpd" data-tip="检查更新：对比 C 站，找出同底模有新版的模型（不会自动下载）。有更新的卡片右上角出现 ❗，点击可去 C 站看新版">检查更新</button>
-        <button class="btn" id="mmUpdDl" data-tip="更新选中：把勾选的、带 ❗ 的模型加入下载队列（新版默认下到旧版所在文件夹；不会动旧版文件）">更新选中</button>
-        <button class="btn" id="mmGoUpdates" data-tip="打开「⏫ 更新」页，并默认只看有更新的（❗）模型：可以按版本下拉更新或降级，支持勾选批量">去更新</button>
+        <button class="btn" id="mmCheckUpd" data-tip="检查更新：对比 C 站，找出同底模有新版的模型（不会自动下载）。有更新的卡片右上角出现 ，点击可去 C 站看新版">检查更新</button>
+        <button class="btn" id="mmUpdDl" data-tip="更新选中：把勾选的、带 的模型加入下载队列（新版默认下到旧版所在文件夹；不会动旧版文件）">更新选中</button>
+        <button class="btn" id="mmGoUpdates" data-tip="打开「更新」页，并默认只看有更新的（）模型：可以按版本下拉更新或降级，支持勾选批量">去更新</button>
         <span class="btn-group" id="mmRenameGroup">
           <button class="btn" id="mmRenameMain" data-tip="改文件名：自定义 / 改成 C 站模型名 / 翻译成中文">改名</button>
           <div class="submenu" id="mmRenameSub">
@@ -228,14 +229,14 @@
         <button class="btn" id="mmSendRp" data-tip="把选中模型送去反向解析：从 C 站匹配名字/触发词/封面">识别模型信息</button>
       </div>
       <div class="btn-row mm-legacy">
-        <button class="btn" id="mmOrganize" data-tip="把选中的模型按规则移动到分类文件夹（需先在设置选 🎯 目标环境）">整理模型</button>
+        <button class="btn" id="mmOrganize" data-tip="把选中的模型按规则移动到分类文件夹（需先在设置选 目标环境）">整理模型</button>
         <button class="btn" id="mmRestore" style="display:none" data-tip="恢复误整理的模型到原位置（按移动日志回退）">恢复误整理</button>
         <button class="btn btn-danger" id="mmCleanup" data-tip="清理冗余文件：删除失效 info、孤儿封面等多余文件">清理冗余文件</button>
       </div>
       <div class="tool-row mm-filter">
         <input id="mmFilter" class="input" placeholder="筛选：文件名 / C站名 / 路径"/>
         <button class="btn" id="mmFilterClear">清除</button>
-        <button class="btn" id="mmUpdOnly" data-tip="只看有更新的模型（先点「⏫ 检查更新」生成结果）">有更新</button>
+        <button class="btn" id="mmUpdOnly" data-tip="只看有更新的模型（先点「检查更新」生成结果）">有更新</button>
         <button class="btn" id="mmSelAll">全选</button>
         <button class="btn" id="mmSelNone">清除勾选</button>
         <button class="btn" id="mmSelInv">反选</button>
@@ -337,13 +338,13 @@
     <div class="card">
       <h2 class="page-title">反向解析</h2>
       <div class="btn-row">
-        <button class="btn" id="rpAddFiles">📂 添加文件</button>
-        <button class="btn" id="rpAddDir">📁 添加文件夹</button>
-        <button class="btn" id="rpRemoveSel">🗑️ 移除选中</button>
-        <button class="btn" id="rpClearAll">🧹 清空全部</button>
-        <button class="btn btn-primary" id="rpStart">▶️ 开始反查</button>
-        <button class="btn" id="rpPause" disabled>⏸️ 暂停</button>
-        <button class="btn" id="rpStop" disabled>⏹️ 停止</button>
+        <button class="btn" id="rpAddFiles"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-file"/></svg>添加文件</button>
+        <button class="btn" id="rpAddDir"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-folder"/></svg>添加文件夹</button>
+        <button class="btn" id="rpRemoveSel"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-trash"/></svg>移除选中</button>
+        <button class="btn" id="rpClearAll"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-trash"/></svg>清空全部</button>
+        <button class="btn btn-primary" id="rpStart">▶开始反查</button>
+        <button class="btn" id="rpPause" disabled>暂停</button>
+        <button class="btn" id="rpStop" disabled>停止</button>
       </div>
       <div class="tool-row">
         <input id="rpFilter" class="input" placeholder="筛选：文件名 / 状态 / 模型"/>
@@ -363,24 +364,24 @@
     <div class="card">
       <div class="title-row"><span class="page-title">工作流分析</span><span class="hint">拖入 ComfyUI 工作流（.json）或带内嵌工作流的图片（.png），解析节点与引用的模型</span></div>
       <div class="wf-drop" id="wfDrop">
-        <div class="wf-drop-icon">📥</div>
+        <div class="wf-drop-icon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-upload"/></svg></div>
         <div class="wf-drop-text">拖入文件到此处，或 <span class="wf-link" id="wfPick">点击选择</span></div>
-        <div class="wf-drop-sub">⚠️ 暂时只支持 ComfyUI 工作流格式 · 支持 .json（UI/API prompt）与 .png（内嵌 workflow/prompt）</div>
+        <div class="wf-drop-sub">暂时只支持 ComfyUI 工作流格式 · 支持 .json（UI/API prompt）与 .png（内嵌 workflow/prompt）</div>
       </div>
       <div class="wf-result" id="wfResult" style="display:none">
         <div class="wf-result-title" id="wfResultTitle"></div>
         <div class="wf-grid">
           <div class="wf-col">
-            <div class="wf-col-title">🧩 节点列表</div>
+            <div class="wf-col-title"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-layers"/></svg>节点列表</div>
             <div class="wf-nodes" id="wfNodes"></div>
           </div>
           <div class="wf-col">
-            <div class="wf-col-title">🤖 引用的模型（本地匹配 + SHA256）</div>
+            <div class="wf-col-title"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-file"/></svg>引用的模型（本地匹配 + SHA256）</div>
             <div class="wf-models" id="wfModels"></div>
           </div>
         </div>
         <div class="wf-col" style="margin-top:10px">
-          <div class="wf-col-title">💬 提示词</div>
+          <div class="wf-col-title"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-tag"/></svg>提示词</div>
           <div class="wf-prompts" id="wfPrompts"></div>
         </div>
       </div>
@@ -399,7 +400,7 @@
         <button class="btn btn-danger" id="btnSaveSettings">保存设置</button>
         <button class="btn" id="btnTestApi">测试 API 连接</button>
         <button class="btn" id="btnTestBaidu">测试百度翻译</button>
-        <button class="btn" id="btnOnboarding">📖 新手引导</button>
+        <button class="btn" id="btnOnboarding"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-info"/></svg>新手引导</button>
       </div>
     </div>
   </section>
@@ -416,11 +417,11 @@
     <div class="ob-card">
       <div class="ob-mini-bar" id="obMiniBar">
         <span class="ob-mini-title" id="obMiniTitle"></span>
-        <button class="btn" id="obMiniContinue">▶️ 继续引导</button>
-        <button class="btn" id="obMiniClose" title="结束引导">✖</button>
+        <button class="btn" id="obMiniContinue">▶继续引导</button>
+        <button class="btn" id="obMiniClose" title="结束引导"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-x"/></svg></button>
       </div>
       <div class="ob-main" id="obMain">
-      <div class="ob-title">👋 欢迎使用 CivitaiFreeTool</div>
+      <div class="ob-title">欢迎使用 CivitaiFreeTool</div>
       <div class="ob-steps" id="obSteps"></div>
       <div class="ob-body" id="obBody"></div>
       <div class="ob-actions">
@@ -432,7 +433,7 @@
   </div>
   <!-- 右下角关于浮窗 -->
   <div class="bili-float" id="aboutFloat" title="关于">
-    <span class="bili-icon">ℹ️</span><span class="bili-text">关于</span>
+    <span class="bili-icon">ℹ</span><span class="bili-text">关于</span>
   </div>
 </main>
 
