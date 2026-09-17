@@ -11,7 +11,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.1.40"
+APP_VERSION = "2.1.41"
 
 import civitai_api
 import config
@@ -2366,8 +2366,21 @@ class Api:
                 self._mm_upd_state["newer"] = newer
                 self._mm_upd_state["other_base"] = other
                 time.sleep(0.35)
-            self._updates = {"checked_at": now, "items": items}
-            self._save_updates(self._updates)
+            # ★ 合并而不是替换：勾选检查只查了一部分模型，绝不能把其他模型的更新记录冲掉
+            #（旧实现在这里直接 self._updates = {...}，于是"只查勾选"会把整份缓存清成只有那几条）
+            try:
+                cur = self._updates.get("items") or {}
+                cur.update(items)
+                try:
+                    cur = {p: v for p, v in cur.items() if os.path.exists(p)}   # 顺手剔掉文件已不存在的记录
+                except Exception:
+                    pass
+                self._updates["items"] = cur
+                if not only:
+                    self._updates["checked_at"] = now      # 只有"全量检查"才更新上次全量时间
+                self._save_updates(self._updates)
+            except Exception:
+                pass
             self._mm_upd_state.update({"running": False, "items": items, "newer": newer, "other_base": other})
             if newer or other:
                 self._mm_upd_state["msg"] = ("检查完成：%d 个模型有同底模更新%s"
