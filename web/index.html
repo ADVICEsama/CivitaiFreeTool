@@ -324,22 +324,34 @@
   <!-- 反向解析 -->
   <section class="page" id="page-reverse">
     <div class="card">
-      <h2 class="page-title">反向解析</h2>
-      <div class="btn-row">
-        <button class="btn" id="rpAddFiles"><span class="emj">📂</span> <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-file"/></svg>添加文件</button>
-        <button class="btn" id="rpAddDir"><span class="emj">📁</span> <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-folder"/></svg>添加文件夹</button>
-        <button class="btn" id="rpRemoveSel"><span class="emj">🗑️</span> <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-trash"/></svg>移除选中</button>
-        <button class="btn" id="rpClearAll"><span class="emj">🧹</span> <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-trash"/></svg>清空全部</button>
-        <button class="btn btn-primary" id="rpStart"><span class="emj">▶️</span> ▶开始反查</button>
-        <button class="btn" id="rpPause" disabled><span class="emj">⏸️</span> 暂停</button>
-        <button class="btn" id="rpStop" disabled><span class="emj">⏹️</span> 停止</button>
+      <div class="title-row">
+        <span class="page-title rp-title">反向解析</span>
+        <span class="hint">通过 SHA256 反查本地模型对应的 Civitai 信息</span>
+        <span class="rp-prog" id="rpProg" style="display:none"><span class="rp-prog-dot"></span><span id="rpProgTxt">正在反查</span><b id="rpProgN">0 / 0</b></span>
       </div>
-      <div class="tool-row">
-        <input id="rpFilter" class="input" placeholder="筛选：文件名 / 状态 / 模型"/>
-        <button class="btn" id="rpFilterClear">清除</button>
+      <div class="btn-row rp-controls">
+        <div class="rp-grp">
+          <span class="rp-grp-label">文件队列</span>
+          <button class="btn" id="rpRemoveSel"><span class="emj">🗑️</span> <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-trash"/></svg>移除选中</button>
+          <button class="btn" id="rpClearAll"><span class="emj">🧹</span> <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-trash"/></svg>清空全部</button>
+        </div>
+        <div class="rp-grp">
+          <span class="rp-grp-label">任务控制</span>
+          <button class="btn btn-primary" id="rpStart"><span class="emj">▶️</span> ▶开始反查</button>
+          <button class="btn" id="rpPause" disabled><span class="emj">⏸️</span> 暂停</button>
+          <button class="btn" id="rpStop" disabled><span class="emj">⏹️</span> 停止</button>
+        </div>
       </div>
-      <div class="table-wrap">
+      <div class="tool-row rp-tools">
+        <div class="rp-search">
+          <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-search"/></svg>
+          <input id="rpFilter" class="input" placeholder="文件名 / 状态 / 模型"/>
+        </div>
+        <button class="btn" id="rpFilterClear">清除筛选</button>
+      </div>
+      <div class="table-wrap rp-wrap">
         <table class="grid" id="rpTable">
+          <colgroup><col class="rp-c-file"/><col class="rp-c-sha"/><col class="rp-c-st"/><col class="rp-c-model"/><col class="rp-c-ver"/></colgroup>
           <thead><tr><th class="c-file">文件</th><th class="c-sha">SHA256</th><th>状态</th><th class="c-name">模型</th><th>版本</th></tr></thead>
           <tbody></tbody>
         </table>
@@ -350,7 +362,7 @@
   <!-- 工作流分析 -->
   <section class="page" id="page-workflow">
     <div class="card">
-      <div class="title-row"><span class="page-title">工作流分析</span><span class="hint">拖入 ComfyUI 工作流（.json）或带内嵌工作流的图片（.png），解析节点与引用的模型</span></div>
+      <div class="title-row"><span class="page-title">工作流分析</span><span class="hint">拖入 ComfyUI 工作流（.json）或带内嵌工作流的图片（.png），解析节点与引用的模型</span><span class="wf-status" id="wfStatus"></span></div>
       <div class="wf-drop" id="wfDrop">
         <div class="wf-drop-icon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-upload"/></svg></div>
         <div class="wf-drop-text">拖入文件到此处，或 <span class="wf-link" id="wfPick">点击选择</span></div>
@@ -360,7 +372,12 @@
         <div class="wf-result-title" id="wfResultTitle"></div>
         <div class="wf-grid">
           <div class="wf-col">
-            <div class="wf-col-title"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-layers"/></svg>节点列表</div>
+            <div class="wf-col-title"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-layers"/></svg>节点列表<span class="wf-count" id="wfNodeCount"></span></div>
+            <div class="wf-node-search">
+              <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-search"/></svg>
+              <input id="wfNodeSearch" class="input" placeholder="搜索节点名称..."/>
+            </div>
+            <div class="wf-node-head"><span></span><span>节点</span><span>类型</span><span>文件</span></div>
             <div class="wf-nodes" id="wfNodes"></div>
           </div>
           <div class="wf-col">
@@ -369,7 +386,7 @@
           </div>
         </div>
         <div class="wf-col" style="margin-top:10px">
-          <div class="wf-col-title"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-tag"/></svg>提示词</div>
+          <div class="wf-col-title"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-tag"/></svg>提示词<button class="btn wf-copy" id="wfCopy" data-tip="复制提示词"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-copy"/></svg>复制</button></div>
           <div class="wf-prompts" id="wfPrompts"></div>
         </div>
       </div>

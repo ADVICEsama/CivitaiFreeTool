@@ -3185,26 +3185,61 @@ document.addEventListener("dblclick", (e) => {
 });
 
 // ===== 工作流分析（独立页面：拖入/选择 → 解析 → 节点 + 模型哈希匹配） =====
+function wfSetStatus(t, k) {
+  const el = $("#wfStatus");
+  if (!el) return;
+  el.textContent = t || "";
+  el.className = "wf-status" + (k ? " " + k : "");
+}
+let wfLastPath = "";
 async function wfAnalyze(path) {
   if (!path) return;
+  wfLastPath = path;
   setStatus("工作流解析中...");
+  wfSetStatus("分析中…", "on");
   const json = await api.call("analyze_workflow", path);
   let r = {};
   try { r = JSON.parse(json || "{}"); } catch (e) {}
-  if (!r.ok) { setStatus("解析失败: " + (r.msg || "")); return; }
+  if (!r.ok) { setStatus("解析失败: " + (r.msg || "")); wfSetStatus("分析失败", "err"); return; }
   setStatus("工作流分析完成");
+  wfSetStatus("分析完成", "done");
   wfRenderResult(r);
 }
 async function wfRenderResult(r) {
   $("#wfResult").style.display = "block";
-  $("#wfResultTitle").innerHTML = "" + esc(r.file) + ' <span class="wf-info">' + (r.has_workflow ? "含内嵌工作流" : "仅提示词信息") + " · 节点 " + r.node_count + " 个</span>";
+  const isPng = /\.png$/i.test(r.file || "");
+  $("#wfResultTitle").innerHTML =
+    '<div class="wf-file">' +
+    '<span class="wf-file-ico"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-file"/></svg></span>' +
+    '<span class="wf-file-name" title="' + esc(r.file) + '">' + esc(r.file) + "</span>" +
+    '<span class="wf-tags">' +
+    '<span class="wf-tag">' + (isPng ? "PNG" : "JSON") + "</span>" +
+    '<span class="wf-tag">' + (r.has_workflow ? "含内嵌 Workflow" : "仅提示词信息") + "</span>" +
+    '<span class="wf-tag">节点 ' + (r.node_count || 0) + " 个</span>" +
+    "</span>" +
+    '<span class="wf-file-actions"><button class="btn" id="wfRechoose">重新选择</button><button class="btn btn-primary" id="wfReanalyze">重新分析</button></span>' +
+    "</div>";
   const nodes = r.nodes || [];
+  const NODE_COLORS = ["#7c5cff", "#2f7cf6", "#1f9d4d", "#e08a00", "#00a0b0", "#d9534f", "#8e6bbf", "#4a90d9"];
+  const nodeIco = (t) => {
+    let h = 0; const sb = String(t || "?");
+    for (let k = 0; k < sb.length; k++) h = (h * 31 + sb.charCodeAt(k)) >>> 0;
+    const c = NODE_COLORS[h % NODE_COLORS.length];
+    return '<span class="wf-node-ico" style="--nc:' + c + '"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-grid"/></svg></span>';
+  };
   $("#wfNodes").innerHTML = nodes.length
-    ? nodes.map((n) => '<div class="wf-node"><span class="wf-node-type">' + esc(n.type || "?") + "</span>" +
-      (n.title ? '<span class="wf-node-title">' + esc(n.title) + "</span>" : "") +
-      (n.widgets && n.widgets.length ? '<span class="wf-node-widgets">' + esc(n.widgets.join(" · ")) + "</span>" : "") +
-      "</div>").join("")
+    ? nodes.map((n) => {
+      const wtxt = (n.widgets && n.widgets.length) ? n.widgets.join(" · ") : "";
+      const key = [n.type, n.title, wtxt].join(" ").toLowerCase();
+      return '<div class="wf-node" data-search="' + esc(key) + '">' + nodeIco(n.type) +
+        '<span class="wf-node-type">' + esc(n.type || "?") + "</span>" +
+        (n.title ? '<span class="wf-node-title">' + esc(n.title) + "</span>" : "") +
+        (wtxt ? '<span class="wf-node-widgets">' + esc(wtxt) + "</span>" : "") +
+        '<span class="wf-node-arrow">\u203a</span></div>';
+    }).join("")
     : '<div class="wf-empty">未识别到节点</div>';
+  { const nc = $("#wfNodeCount"); if (nc) nc.textContent = nodes.length ? nodes.length + " 个节点" : ""; }
+  { const ns = $("#wfNodeSearch"); if (ns) { ns.value = ""; try { ns.dispatchEvent(new Event("input")); } catch (e) { } } }
   const refs = r.models || [];
   $("#wfModels").innerHTML = '<div class="wf-hint">本地匹配计算中...</div>';
   if (refs.length) {
@@ -3215,9 +3250,11 @@ async function wfRenderResult(r) {
         '<div class="wf-model' + (m.local ? " hit" : "") + '">' +
         '<span class="wf-model-ref">' + esc(m.ref) + "</span>" +
         (m.local
-          ? '<span class="wf-model-path">本地: ' + esc(m.path) + "</span>" +
+          ? '<span class="wf-badge hit">✓ 本地匹配</span>' +
+            '<span class="wf-model-path">' + esc(m.path) + "</span>" +
             (m.sha256 ? '<span class="wf-model-sha">SHA256: ' + esc(m.sha256) + "…</span>" : "")
-          : '<span class="wf-model-miss">本地未找到</span>' +
+          : '<span class="wf-badge miss">未在本地找到</span>' +
+            '<span class="wf-model-sub">本地: 未找到</span>' +
             '<span class="wf-search" data-search="' + esc(m.ref) + '">搜索下载</span>') +
         "</div>").join("");
     } catch (e) {
@@ -3228,10 +3265,12 @@ async function wfRenderResult(r) {
   }
   const pos = r.positive || r.pos_prompt || "";
   const neg = r.negative || r.neg_prompt || "";
+  wfLastPromptText = [pos ? "正向:\n" + pos : "", neg ? "负向:\n" + neg : ""].filter(Boolean).join("\n\n");
+  { const cp = $("#wfCopy"); if (cp) cp.style.display = (pos || neg) ? "" : "none"; }
   $("#wfPrompts").innerHTML =
     (pos ? '<div class="wf-prompt"><span class="wf-prompt-label">正向</span><div class="wf-prompt-text">' + esc(pos) + "</div></div>" : "") +
     (neg ? '<div class="wf-prompt"><span class="wf-prompt-label neg">负向</span><div class="wf-prompt-text">' + esc(neg) + "</div></div>" : "") +
-    ((!pos && !neg) ? '<div class="wf-empty">未提取到提示词</div>' : "");
+    ((!pos && !neg) ? '<div class="wf-empty">未从该 Workflow 中提取到提示词</div>' : "");
 }
 const wfDrop = $("#wfDrop");
 wfDrop.addEventListener("dragover", (e) => { e.preventDefault(); wfDrop.classList.add("over"); });
@@ -3243,6 +3282,7 @@ wfDrop.addEventListener("drop", (e) => {
   if (!f) { setStatus("无法读取拖入文件，请点击选择"); return; }
   if (f.path) { wfAnalyze(f.path); return; }
   setStatus("读取文件中...");
+  wfSetStatus("读取文件中…", "on");
   const rd = new FileReader();
   rd.onload = async () => {
     try {
@@ -3255,17 +3295,42 @@ wfDrop.addEventListener("drop", (e) => {
       const json = await api.call("wf_analyze_data", f.name, b64);
       let r = {};
       try { r = JSON.parse(json || "{}"); } catch (err) {}
-      if (!r.ok) { setStatus("解析失败: " + (r.msg || "")); return; }
+      if (!r.ok) { setStatus("解析失败: " + (r.msg || "")); wfSetStatus("分析失败", "err"); return; }
+      wfSetStatus("分析完成", "done");
       wfRenderResult(r);
-    } catch (err) { setStatus("读取失败: " + err); }
+    } catch (err) { setStatus("读取失败: " + err); wfSetStatus("读取失败", "err"); }
   };
   rd.onerror = () => setStatus("文件读取失败");
   rd.readAsArrayBuffer(f);
 });
+let wfLastPromptText = "";
 $("#wfPick").addEventListener("click", async () => {
   const p = await api.call("pick_file");
   if (p) wfAnalyze(p);
 });
+{ const wfCopyBtn = $("#wfCopy");
+  if (wfCopyBtn) wfCopyBtn.addEventListener("click", async () => {
+    if (!wfLastPromptText) return;
+    const ok = await window.__copyText(wfLastPromptText);
+    setStatus(ok ? "提示词已复制到剪贴板" : "复制失败（可手动选中复制）");
+  }); }
+{ const rl = $("#wfResultTitle");
+  if (rl) rl.addEventListener("click", async (e) => {
+    if (e.target.closest("#wfRechoose")) {
+      const p2 = await api.call("pick_file");
+      if (p2) wfAnalyze(p2);
+    } else if (e.target.closest("#wfReanalyze")) {
+      if (wfLastPath) wfAnalyze(wfLastPath);
+      else setStatus("没有可重新分析的文件");
+    }
+  }); }
+{ const ns = $("#wfNodeSearch");
+  if (ns) ns.addEventListener("input", () => {
+    const kw = ns.value.trim().toLowerCase();
+    document.querySelectorAll("#wfNodes .wf-node").forEach((row) => {
+      row.style.display = (!kw || String(row.dataset.search || "").includes(kw)) ? "" : "none";
+    });
+  }); }
 
 
 // ===== 关于弹窗（右下角「关于」/左上角 logo） =====
@@ -3711,30 +3776,65 @@ document.querySelectorAll(".mm-metro [data-act='syncbatch']").forEach((it) => {
 // 打开入口：行双击 / 瀑布流卡片双击（单击统一为选中）
 
 // ================= 反向解析 =================
+function rpStatusCls(st) {
+  const t = String(st || "");
+  if (/成功|完成|匹配到|已收录/.test(t)) return "ok";
+  if (/反查中|进行|匹配中|处理中/.test(t)) return "run";
+  if (/失败|错误|未收录/.test(t)) return "err";
+  return "wait";
+}
+function rpStatusGlyph(c) { return c === "ok" ? "\u2713 " : c === "run" ? "\u25cc " : c === "err" ? "\u00d7 " : ""; }
+function rpProgRender(s2) {
+  const el = $("#rpProg");
+  if (!el) return;
+  if (s2 && s2.running) {
+    el.style.display = "";
+    el.classList.toggle("paused", !!s2.paused);
+    $("#rpProgTxt").textContent = s2.paused ? "已暂停" : "正在反查";
+    $("#rpProgN").textContent = (s2.done || 0) + " / " + (s2.total || 0);
+  } else if (s2 && s2.total > 0) {
+    el.style.display = "";
+    el.classList.remove("paused");
+    $("#rpProgTxt").textContent = "本轮完成";
+    $("#rpProgN").textContent = (s2.done || 0) + " / " + s2.total;
+  } else {
+    el.style.display = "none";
+  }
+}
 async function rpRefresh() {
   const rows = await api.call("rp_get_rows");
   state.rpRows = rows || [];
   const kw = $("#rpFilter").value.trim().toLowerCase();
   const tbody = $("#rpTable tbody");
-  tbody.innerHTML = rows.filter((r) => !kw ||
-    r.path.toLowerCase().includes(kw) || (r.model || "").toLowerCase().includes(kw) || (r.status || "").toLowerCase().includes(kw))
-    .map((r) =>
-      '<tr data-path="' + esc(r.path) + '">' +
-      "<td class='c-file'>" + esc(r.path) + "</td><td class='c-sha'>" + esc(r.sha || "") + "</td>" +
-      "<td>" + esc(r.status) + "</td><td class='c-name'>" + esc(r.model || "") + "</td><td>" + esc(r.version || "") + "</td></tr>").join("");
+  const shown = rows.filter((r) => !kw ||
+    String(r.path || "").toLowerCase().includes(kw) || (r.model || "").toLowerCase().includes(kw) || (r.status || "").toLowerCase().includes(kw));
+  tbody.innerHTML = shown.map((r) => {
+    const p = String(r.path || "");
+    const base = p.replace(/[\\/]+$/, "").split(/[\\/]/).pop() || p;
+    const dir = base.length < p.length ? p.slice(0, p.length - base.length) : "";
+    const st = rpStatusCls(r.status);
+    const sha = String(r.sha || "");
+    return '<tr data-path="' + esc(p) + '">' +
+      '<td class="c-file" title="' + esc(p) + '"><div class="rp-fname">' + esc(base) + '</div><div class="rp-fdir">' + esc(dir) + '</div></td>' +
+      '<td class="c-sha"><span class="rp-sha" title="' + esc(sha) + '">' + esc(sha.length > 18 ? sha.slice(0, 18) + "\u2026" : sha) + '</span></td>' +
+      '<td><span class="rp-st ' + st + '">' + rpStatusGlyph(st) + esc(r.status || "") + '</span></td>' +
+      '<td class="c-name"><div class="rp-model" title="' + esc(r.model || "") + '">' + esc(r.model || "") + '</div></td>' +
+      '<td>' + (r.version ? '<span class="rp-ver">' + esc(r.version) + '</span>' : '') + '</td></tr>';
+  }).join("") || '<tr class="rp-empty"><td colspan="5">' + (rows.length ? "没有符合筛选的项目" : "暂无待反查任务") + '</td></tr>';
 }
 
 $("#rpFilter").addEventListener("input", rpRefresh);
 $("#rpFilterClear").addEventListener("click", () => { $("#rpFilter").value = ""; rpRefresh(); });
 
-$("#rpAddFiles").addEventListener("click", async () => {
-  const files = await api.call("pick_files");
-  if (files && files.length) { await api.call("rp_add_paths", files); rpRefresh(); }
-});
-$("#rpAddDir").addEventListener("click", async () => {
-  const d = await api.call("pick_dir");
-  if (d) { await api.call("rp_add_dir", d); rpRefresh(); }
-});
+// v2.2.1：入口已移除（模型统一在模型管理页添加/发起识别，反向解析页只做结果管理）
+// $("#rpAddFiles").addEventListener("click", async () => {
+//   const files = await api.call("pick_files");
+//   if (files && files.length) { await api.call("rp_add_paths", files); rpRefresh(); }
+// });
+// $("#rpAddDir").addEventListener("click", async () => {
+//   const d = await api.call("pick_dir");
+//   if (d) { await api.call("rp_add_dir", d); rpRefresh(); }
+// });
 $("#rpRemoveSel").addEventListener("click", async () => {
   const paths = Array.from($$("#rpTable tbody tr.sel-row")).map((r) => r.dataset.path);
   if (paths.length) { await api.call("rp_remove", paths); rpRefresh(); }
@@ -3788,6 +3888,7 @@ function pollRp() {
       s = await api.call("rp_state");
       await rpRefresh();
     } catch (e) { s = null; }
+    rpProgRender(s);
     if (s && s.running) setStatus("反向解析 " + s.done + "/" + s.total + (s.paused ? "（已暂停）" : ""));
     else if (s && !s.running && s.total > 0) {
       clearInterval(t);
@@ -3795,6 +3896,7 @@ function pollRp() {
       $("#rpPause").disabled = true;
       $("#rpStop").disabled = true;
       $("#rpPause").textContent = "暂停";
+      rpProgRender(s);
       setStatus("反向解析完成");
     }
   }, 800);
