@@ -637,18 +637,23 @@
 [data-theme="metro"] .dt-author { color: var(--metro-text-2); font-size: 12px; }
 [data-theme="metro"] .dt-author:hover { color: var(--metro-accent); }
 [data-theme="metro"] .dt-close { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; }
-[data-theme="metro"] .dt-body { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(300px, 42%) 1fr; }
+/* 图片列宽度收窄到贴合竖版作品图（此前 42% 列里装着 226px 的图，右侧留 ~250px 盒内空白） */
+[data-theme="metro"] .dt-body { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(260px, 34%) minmax(0, 1fr); }
 [data-theme="metro"] .detail-left {
   border-right: 1px solid var(--metro-border-hair);
   padding: 14px; min-height: 0; overflow: auto;
   display: flex; flex-direction: column; gap: 10px;
+  align-items: center;               /* 图片与缩略图条水平居中 */
 }
-[data-theme="metro"] .detail-main-img { width: 100%; max-height: 44vh; object-fit: contain; background: #f6f6f6; border-radius: 0; }
+[data-theme="metro"] .detail-left .detail-main-img { align-self: center; }
+/* ★ 关键：width:auto 让图片盒子贴合作品自身比例（不再拉满列宽产生盒内信箱空白），限高略放宽到 52vh */
+[data-theme="metro"] .detail-main-img { width: auto; max-width: 100%; max-height: 52vh; object-fit: contain; background: #f6f6f6; border-radius: 0; }
 [data-theme="metro"] .detail-main-img.dt-empty {
+  width: 100%; align-self: stretch;   /* 无封面占位仍占满列宽 */
   height: 210px; display: flex; align-items: center; justify-content: center; gap: 8px;
   color: var(--metro-text-3); font-size: 13px;
 }
-[data-theme="metro"] .detail-thumbs { display: flex; flex-wrap: wrap; gap: 6px; }
+[data-theme="metro"] .detail-thumbs { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
 [data-theme="metro"] .detail-thumb { width: 56px; height: 56px; object-fit: cover; border: 1px solid var(--metro-border-input); border-radius: 0; background: #f6f6f6; }
 [data-theme="metro"] .detail-thumb.on { border: 2px solid var(--metro-accent); }
 [data-theme="metro"] .detail-right {
