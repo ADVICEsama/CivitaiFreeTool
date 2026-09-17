@@ -739,7 +739,7 @@
 [data-theme="metro"] .upd-acts2 { display: flex; align-items: center; gap: 6px; }
 [data-theme="metro"] .upd-acts2 .upd-go { max-width: 154px; display: inline-block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 [data-theme="metro"] .upd-vsel { height: 30px; min-height: 30px; max-width: 100%; font-size: 12.5px; padding: 4px 26px 4px 8px; }
-[data-theme="metro"] .ver-badge { font-weight: 600; color: var(--text); }
+.ver-badge { font-weight: 600; color: var(--text); }
 [data-theme="metro"] .upd-dim { color: var(--text-dim); font-size: 11px; }
 [data-theme="metro"] .upd-sub2 { color: var(--text-dim); }
 [data-theme="metro"] .upd-table th.c-ck, [data-theme="metro"] .upd-table td.c-ck { width: 44px; }
@@ -759,7 +759,7 @@
    ========================================================================== */
 [data-theme="metro"] .sp-btn {
   display: inline-flex;
-  border: 1px solid transparent;      /* 由外层提供唯一边框 */
+  border: 1px solid var(--border);   /* 外层提供唯一边框 */
   border-radius: 2px;
 }
 [data-theme="metro"] .sp-btn > .btn {
@@ -815,9 +815,9 @@
 /* ============================================================================
    v2.1.50：列表视图两行结构（固定行高 68px / 缩略图 52px / 省略号 + tooltip）
    ========================================================================== */
-[data-theme="metro"] #mmTable tbody tr { height: 68px; }
-[data-theme="metro"] #mmTable tbody td { height: 68px; vertical-align: middle; padding: 6px 10px; }
-[data-theme="metro"] #mmTable .thumb { width: 52px; height: 52px; object-fit: cover; }
+#mmTable tbody tr { height: 68px; }
+#mmTable tbody td { height: 68px; vertical-align: middle; padding: 6px 10px; }
+#mmTable .thumb { width: 52px; height: 52px; object-fit: cover; }
 [data-theme="metro"] .ml-wrap { display: flex; align-items: center; gap: 8px; min-width: 0; }
 [data-theme="metro"] .ml-wrap .mm-upd { color: var(--metro-accent); display: inline-flex; }
 [data-theme="metro"] .ml-txt { min-width: 0; flex: 1 1 auto; }
@@ -830,13 +830,13 @@
   --status-base: #555555;     --status-base-bg: #F0F0F0;
   --status-unknown: #B26A00;  --status-unknown-bg: #FBF0DC;
 }
-[data-theme="metro"] .st-mini { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; padding: 1px 6px; border-radius: 2px; }
-[data-theme="metro"] .st-mini .ic { width: 12px; height: 12px; }
-[data-theme="metro"] .st-mini.upd { background: var(--status-upd-bg); color: var(--status-upd); }
-[data-theme="metro"] .st-mini.ok { background: var(--status-latest-bg); color: var(--status-latest); }
-[data-theme="metro"] #mmTable td.c-name { max-width: 0; }          /* 配合 ellipsis 生效 */
-[data-theme="metro"] #mmTable th.c-ver, [data-theme="metro"] #mmTable td.c-ver,
-[data-theme="metro"] #mmTable td.c-time { white-space: nowrap; }
+.st-mini { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; padding: 1px 6px; border-radius: 2px; }
+.st-mini .ic { width: 12px; height: 12px; }
+.st-mini.upd { background: var(--status-upd-bg); color: var(--status-upd); }
+.st-mini.ok { background: var(--status-latest-bg); color: var(--status-latest); }
+#mmTable td.c-name { max-width: 0; }          /* 配合 ellipsis 生效 */
+#mmTable th.c-ver, [data-theme="metro"] #mmTable td.c-ver,
+#mmTable td.c-time { white-space: nowrap; }
 
 /* ============================================================================
    v2.1.50：App Shell 边界（Header / Page Header / Toolbar / Filter / Content）
@@ -848,7 +848,7 @@
 [data-theme="metro"] .tool-row.mm-filter { background: var(--surface); border-bottom: 1px solid #e6e6e6; }
 [data-theme="metro"] .masonry { background: var(--bg); }
 [data-theme="metro"] .table-wrap { background: var(--surface); border: 1px solid var(--border); margin: 10px 14px 52px 14px; }
-[data-theme="metro"] #mmTable thead th { background: var(--surface2); }
+#mmTable thead th { background: var(--surface2); }
 [data-theme="metro"] .upd-title-row { background: var(--surface); }
 [data-theme="metro"] .upd-filters { background: var(--surface); }
 
@@ -859,7 +859,7 @@
 [data-theme="metro"] .detail-title, [data-theme="metro"] .dt-head-t { font-size: var(--fs-title); font-weight: var(--fw-bold); color: var(--c1); }
 /* 一级：模型名 / 核心版本 / 状态 */
 [data-theme="metro"] .ml-1, [data-theme="metro"] .upd-nm, [data-theme="metro"] .ms-name { font-size: var(--fs-md); font-weight: var(--fw-bold); color: var(--c1); }
-[data-theme="metro"] .ver-badge { font-size: var(--fs-md); font-weight: var(--fw-bold); color: var(--c1); }
+.ver-badge { font-size: var(--fs-md); font-weight: var(--fw-bold); color: var(--c1); }
 /* 二级：作者 / 类型 / 底模 / 版本 */
 [data-theme="metro"] .upd-sub2, [data-theme="metro"] .ms-meta, [data-theme="metro"] .dt-mr .v { font-size: var(--fs-sm); color: var(--c2); }
 [data-theme="metro"] .dt-mr .k { font-size: var(--fs-sm); color: var(--c3); }
@@ -873,24 +873,24 @@
 
 /* ---- 列表：三行信息格 + 缩略图入格 ---- */
 /* 表头一律左对齐（除选择列），数据都是左对齐 —— 此前 th 默认居中导致"表头悬浮在数据中间" */
-[data-theme="metro"] #mmTable thead th { text-align: left; }
-[data-theme="metro"] #mmTable thead th.c-sel { text-align: center; }
+#mmTable thead th { text-align: left; }
+#mmTable thead th.c-sel { text-align: center; }
 /* 行高统一 72px（信息三行 + 48px 缩略图；文件名再长也不撑高） */
-[data-theme="metro"] #mmTable tbody tr { height: 72px; }
-[data-theme="metro"] #mmTable tbody td { padding-top: 10px; padding-bottom: 10px; }
+#mmTable tbody tr { height: 72px; }
+#mmTable tbody td { padding-top: 10px; padding-bottom: 10px; }
 /* 未检查：中性灰徽章（此前是"-"，看起来像坏掉的列） */
-[data-theme="metro"] .st-mini.none { background: var(--status-base-bg); color: var(--status-base); font-weight: var(--fw-body); }
-[data-theme="metro"] #mmTable .ml-thumb { width: 48px; height: 48px; object-fit: cover; border: 1px solid var(--border); flex: 0 0 48px; }
-[data-theme="metro"] #mmTable tbody tr { height: 72px; }
-[data-theme="metro"] #mmTable tbody td { height: 72px; }
+.st-mini.none { background: var(--status-base-bg); color: var(--status-base); font-weight: var(--fw-body); }
+#mmTable .ml-thumb { width: 48px; height: 48px; object-fit: cover; border: 1px solid var(--border); flex: 0 0 48px; }
+#mmTable tbody tr { height: 72px; }
+#mmTable tbody td { height: 72px; }
 [data-theme="metro"] .ml-1 { line-height: 19px; }
 [data-theme="metro"] .ml-2 { line-height: 16px; }
 [data-theme="metro"] .ml-txt { display: flex; flex-direction: column; justify-content: center; gap: 1px; }
 
 /* ---- 状态胶囊（列表/更新页：轻量圆角；其余控件保持直角） ---- */
-[data-theme="metro"] .st-mini { border-radius: 10px; padding: 2px 9px; font-size: var(--fs-xs); font-weight: var(--fw-med); }
+.st-mini { border-radius: 10px; padding: 2px 9px; font-size: var(--fs-xs); font-weight: var(--fw-med); }
 [data-theme="metro"] .st-badge { border-radius: 10px; padding: 2px 10px; font-size: var(--fs-xs); font-weight: var(--fw-med); }
-[data-theme="metro"] .ver-badge { border-radius: 10px; background: var(--surface2); padding: 2px 10px; }
+.ver-badge { border-radius: 10px; background: var(--surface2); padding: 2px 10px; }
 
 /* ============================================================================
    v2.1.51：更新页「版本选择」门户菜单（直角控件 + 全部版本 + ★推荐 + 当前版本）
@@ -923,21 +923,21 @@
 /* ============================================================================
    v2.1.52：表格列定义（colgroup，表头/数据行唯一来源）+ 内容不撑列
    ========================================================================== */
-[data-theme="metro"] #mmTable { table-layout: fixed; width: 100%; }
+#mmTable { table-layout: fixed; width: 100%; }
 /* 列宽：只有「模型信息」是 auto 弹性列 —— fixed 布局下 auto 列会吃掉全部剩余宽度，
    所以无论隐藏多少列、窗口多宽，表格永远铺满，右侧不可能留空。（2026-09 两次踩坑：全 % 会留空、只隐藏单元格会留空槽） */
-[data-theme="metro"] #mmTable col.c-sel { width: 46px; }
-[data-theme="metro"] #mmTable col.c-name { width: auto; }            /* ★ 唯一弹性列，吸收全部剩余宽度 */
-[data-theme="metro"] #mmTable col.c-cname { width: 10%; }
-[data-theme="metro"] #mmTable col.c-type { width: 4.5%; }
-[data-theme="metro"] #mmTable col.c-base { width: 5.5%; }
-[data-theme="metro"] #mmTable col.c-ver { width: 5.5%; }
-[data-theme="metro"] #mmTable col.c-update { width: 6.5%; }
-[data-theme="metro"] #mmTable col.c-hash { width: 6.5%; }
-[data-theme="metro"] #mmTable col.c-size { width: 5.5%; }
-[data-theme="metro"] #mmTable col.c-mtime { width: 8%; }
-[data-theme="metro"] #mmTable col.c-path { width: 12%; }
-[data-theme="metro"] #mmTable thead th, [data-theme="metro"] #mmTable tbody td {
+#mmTable col.c-sel { width: 46px; }
+#mmTable col.c-name { width: auto; }            /* ★ 唯一弹性列，吸收全部剩余宽度 */
+#mmTable col.c-cname { width: 10%; }
+#mmTable col.c-type { width: 4.5%; }
+#mmTable col.c-base { width: 5.5%; }
+#mmTable col.c-ver { width: 5.5%; }
+#mmTable col.c-update { width: 6.5%; }
+#mmTable col.c-hash { width: 6.5%; }
+#mmTable col.c-size { width: 6.5%; }
+#mmTable col.c-mtime { width: 10%; }
+#mmTable col.c-path { width: 12%; }
+#mmTable thead th, #mmTable tbody td {
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
