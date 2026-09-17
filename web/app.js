@@ -1285,19 +1285,36 @@ const MM_COLS = [["sel", "勾选"], ["thumb", "缩略图"], ["name", "文件名"
                  ["hash", "哈希"], ["size", "大小"], ["mtime", "下载时间"], ["path", "路径"]];
 function mmApplyCols() {
   let hidden = [];
+  const DEFAULT_HIDDEN = ["cname", "hash"];   // 只收起「C站模型名」「哈希」；大小/时间/路径都保留（信息密度优先）
   try {
-    const raw = localStorage.getItem("mm_hidden_cols");
-    if (raw === null) {                       // 首次：默认收起次级列（用户可在表头右键里改，改过就永久生效）
-      hidden = ["cname", "hash", "size", "path"];
+    // v2 迁移：早期版本默认藏得太多（fixed 布局下会留下空槽 → 右侧一片空白），升级时重置一次
+    if (localStorage.getItem("mm_hidden_cols_v") !== "2") {
+      hidden = DEFAULT_HIDDEN.slice();
       localStorage.setItem("mm_hidden_cols", JSON.stringify(hidden));
+      localStorage.setItem("mm_hidden_cols_v", "2");
     } else {
-      hidden = JSON.parse(raw || "[]");
+      hidden = JSON.parse(localStorage.getItem("mm_hidden_cols") || "[]");
     }
-  } catch (e) { hidden = []; }
+  } catch (e) { hidden = DEFAULT_HIDDEN.slice(); }
   const hs = new Set(hidden);
   // 表头与数据行必须用同一份清单、同步隐藏（否则表头 A 位置/数据 B 位置）
   document.querySelectorAll("#mmTable thead [data-col], #mmTable tbody [data-col]").forEach((el) => {
     el.style.display = hs.has(el.dataset.col) ? "none" : "";
+  });
+  // 关键：table-layout:fixed 下列宽由 <colgroup> 决定，只隐藏单元格会留下空槽 →
+  // 必须同步把对应的 <col> 归零（显示时再复原），否则右侧会出现大片空白
+  document.querySelectorAll("#mmTable colgroup col").forEach((col, idx) => {
+    try {
+      const th = document.querySelector("#mmTable thead th:nth-child(" + (idx + 1) + ")");
+      const key = th && th.dataset ? th.dataset.col : "";
+      if (!key) return;
+      if (hs.has(key)) {
+        if (col.dataset.w === undefined) col.dataset.w = col.style.width || "";
+        col.style.width = "0px";
+      } else {
+        col.style.width = col.dataset.w || "";
+      }
+    } catch (e) { /* 忽略 */ }
   });
 }
 $("#mmTable thead").addEventListener("contextmenu", (e) => {

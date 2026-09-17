@@ -874,12 +874,12 @@
 [data-theme="metro"] #mmTable col.c-cname { width: 170px; }
 [data-theme="metro"] #mmTable col.c-type { width: 76px; }
 [data-theme="metro"] #mmTable col.c-base { width: 86px; }
-[data-theme="metro"] #mmTable col.c-ver { width: 88px; }
-[data-theme="metro"] #mmTable col.c-update { width: 104px; }
+[data-theme="metro"] #mmTable col.c-ver { width: 96px; }
+[data-theme="metro"] #mmTable col.c-update { width: 112px; }
 [data-theme="metro"] #mmTable col.c-hash { width: 118px; }
-[data-theme="metro"] #mmTable col.c-size { width: 82px; }
-[data-theme="metro"] #mmTable col.c-mtime { width: 118px; }
-[data-theme="metro"] #mmTable col.c-path { width: 170px; }           /* 路径列最窄，空间不足先让位 */
+[data-theme="metro"] #mmTable col.c-size { width: 92px; }
+[data-theme="metro"] #mmTable col.c-mtime { width: 136px; }
+[data-theme="metro"] #mmTable col.c-path { width: 220px; }           /* 路径列最窄，空间不足先让位 */
 [data-theme="metro"] #mmTable thead th, [data-theme="metro"] #mmTable tbody td {
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
