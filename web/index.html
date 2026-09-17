@@ -267,7 +267,10 @@
   <!-- 设置 -->
   <section class="page" id="page-settings">
     <div class="card">
-      <h2 class="page-title">设置</h2>
+      <div class="title-row">
+        <h2 class="page-title">设置</h2>
+        <button class="btn" id="openLogs" data-tip="打开程序日志文件夹（startup.log / watchdog.log / error.log）—— 排查问题时把这里的日志发出来即可">📂 打开日志文件夹</button>
+      </div>
       <div id="settingsForm"></div>
       <div class="btn-row sticky-actions" id="settingsActions">
         <button class="btn btn-danger" id="btnSaveSettings">保存设置</button>

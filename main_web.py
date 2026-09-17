@@ -63,6 +63,38 @@ def _spawn_external_watchdog():
         _startup_log("external watchdog spawn failed: %r" % (e,))
 
 
+def _install_error_hooks(api=None):
+    """全局异常 → error.log（主线程 + 子线程 + 未捕获异常），下次出问题有据可查"""
+    def _write(where, tb_text):
+        try:
+            import config as _cfg
+            import os as _os
+            p = _os.path.join(_cfg.APP_DIR, "error.log")
+            with open(p, "a", encoding="utf-8") as f:
+                f.write("\n===== %s [%s] =====\n%s\n" % (time.strftime("%Y-%m-%d %H:%M:%S"), where, tb_text[:8000]))
+        except Exception:
+            pass
+
+    def _hook(exc_type, exc, tb):
+        import traceback
+        _write("main", "".join(traceback.format_exception(exc_type, exc, tb)))
+        _startup_log("UNCAUGHT: %s: %s" % (exc_type.__name__, exc))
+
+    def _thread_hook(args):
+        import traceback
+        _write("thread", "".join(traceback.format_exception(args.exc_type, args.exc_value, args.exc_traceback)))
+
+    try:
+        sys.excepthook = _hook
+    except Exception:
+        pass
+    try:
+        import threading as _th
+        _th.excepthook = _thread_hook
+    except Exception:
+        pass
+
+
 def _startup_log(msg):
     """启动里程碑日志（%LOCALAPPDATA%\\CivitaiFreeToolWeb\\startup.log）。
     用于定位「有后台无前台」类启动卡死：写出每个启动步骤，卡在哪一目了然。"""
@@ -419,6 +451,7 @@ def _browser_mode():
     _startup_log("browser mode: single-instance ok")
     _write_app_pid()
     api = webui.Api()
+    _install_error_hooks(api)
     web_root = os.path.join(_app_dir(), "web")
     browser_bridge.set_api(api, web_root)
     port = browser_bridge.port() or browser_bridge.DEFAULT_PORT

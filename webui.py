@@ -11,7 +11,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.1.41"
+APP_VERSION = "2.1.42"
 
 import civitai_api
 import config
@@ -2091,6 +2091,46 @@ class Api:
         threading.Thread(target=work, daemon=True).start()
         return {"ok": True, "started": True, "total": len(ps), "msg": "开始清理 %d 个文件" % len(ps)}
 
+    def error_log_path(self):
+        return os.path.join(config.APP_DIR, "error.log")
+
+    def log_error(self, where, detail):
+        """把错误写进 error.log（带时间戳；超过 2MB 自动滚成 .1）。前端也能通过 log_ui_error 写。"""
+        try:
+            p = self.error_log_path()
+            try:
+                if os.path.exists(p) and os.path.getsize(p) > 2 * 1024 * 1024:
+                    bak = p + ".1"
+                    if os.path.exists(bak):
+                        os.remove(bak)
+                    os.rename(p, bak)
+            except Exception:
+                pass
+            with open(p, "a", encoding="utf-8") as f:
+                f.write("\n===== %s [%s] =====\n%s\n" % (
+                    time.strftime("%Y-%m-%d %H:%M:%S"), where, str(detail)[:8000]))
+            return {"ok": True}
+        except Exception:
+            return {"ok": False}
+
+    def log_ui_error(self, msg, source="", line="", stack=""):
+        """前端 JS 错误（window.onerror / unhandledrejection）转发到这里"""
+        return self.log_error("ui", "%s\n  来源: %s:%s\n  堆栈: %s" % (msg, source, line, str(stack)[:3000]))
+
+    def open_logs_dir(self):
+        """打开日志所在文件夹（设置页按钮）"""
+        try:
+            d = config.APP_DIR
+            os.makedirs(d, exist_ok=True)
+            if posix_compat.IS_WINDOWS:
+                os.startfile(d)                       # noqa: S606
+            else:
+                import subprocess
+                subprocess.Popen(["xdg-open", d])
+            return {"ok": True, "msg": "已打开日志文件夹：%s" % d}
+        except Exception as e:
+            return {"ok": False, "msg": str(e)[:150]}
+
     def cancel_mm_op(self):
         """中断当前的长任务（检查更新 / 查重 / 扫描）：置位后各循环在下一次迭代退出，已算出的结果会保存"""
         self._mm_cancel = True
@@ -2413,7 +2453,7 @@ class Api:
         st = self.mm_progress
 
         def work():
-            okn, fail, fails = 0, 0, []
+            okn, fail, skipped, fails = 0, 0, 0, []
             for i, (p, it) in enumerate(picked):
                 url = it.get("url") or self._site_url(it.get("model_id"), it.get("latest_version"))
                 try:
@@ -2433,8 +2473,10 @@ class Api:
                 st["msg"] = "更新中 %d/%d（已入队 %d）" % (i + 1, len(picked), okn)
             st["result"] = fails
             st["running"] = False
-            st["msg"] = ("更新完成：%d 个新版已加入下载队列%s（默认下到旧版所在文件夹，进度看「下载管理」）"
-                         % (okn, ("，%d 个失败" % fail) if fail else ""))
+            st["msg"] = ("更新完成：%d 个新版已加入下载队列%s%s（默认下到旧版所在文件夹，进度看「下载管理」）"
+                         % (okn,
+                            ("，跳过 %d 个（已在队列或已存在）" % skipped) if skipped else "",
+                            ("，%d 个失败" % fail) if fail else ""))
 
         threading.Thread(target=work, daemon=True).start()
         return {"ok": True, "started": True, "total": len(picked),

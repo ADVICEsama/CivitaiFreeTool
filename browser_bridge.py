@@ -35,6 +35,17 @@ _handler = None        # def download_url(url) -> dict（同步返回，如 {"st
 _api = None            # webui.Api 实例：浏览器模式 RPC 用
 _web_root = ""         # 界面文件根目录（浏览器模式）
 _last_seen = 0.0       # 页面最后一次请求时间（心跳）
+# 界面状态（看门狗与诊断用）：mode=window/browser；window=窗口是否已可见
+_ui_state = {"mode": "window", "window": False, "pid": os.getpid(), "started_at": int(time.time())}
+
+
+def set_ui_state(**kw):
+    """主程序报告界面状态（/api/health 会带上，看门狗用它判定「界面到底出来没有」）"""
+    try:
+        _ui_state.update(kw)
+        _ui_state["reported_at"] = int(time.time())
+    except Exception:
+        pass
 
 
 def set_download_handler(fn):
@@ -140,7 +151,12 @@ class _Handler(BaseHTTPRequestHandler):
         path = urlsplit(self.path).path
         touch()
         if path == "/api/health":
-            return self._json(200, {"ok": True, "app": "CivitaiFreeTool", "version": _version}, origin)
+            d = {"ok": True, "app": "CivitaiFreeTool", "version": _version}
+            try:
+                d.update(_ui_state)          # mode / window / pid：看门狗与诊断用
+            except Exception:
+                pass
+            return self._json(200, d, origin)
         if path == "/api/heartbeat":
             return self._json(200, {"ok": True}, origin)
         # 浏览器模式：直接由本服务提供界面文件（只在注册了 web 根目录时启用）
@@ -166,7 +182,13 @@ class _Handler(BaseHTTPRequestHandler):
             with open(full, "rb") as f:
                 body = f.read()
         except Exception as e:
-            return self._json(500, {"ok": False, "msg": str(e)[:120]}, "")
+            try:
+                if _api is not None and hasattr(_api, "log_error"):
+                    import traceback as _tb
+                    _api.log_error("rpc", "%s\n%s" % _tb.format_exc())
+            except Exception:
+                pass
+        return self._json(500, {"ok": False, "msg": str(e)[:120]}, "")
         self.send_response(200)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))

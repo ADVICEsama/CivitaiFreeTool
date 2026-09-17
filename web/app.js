@@ -32,6 +32,15 @@
   setInterval(function () { fetch("/api/heartbeat").catch(function () {}); }, 2000);
 })();
 
+// 前端错误也写进后端日志（error.log），出问题时可以查
+window.addEventListener("error", (e) => {
+  try { api.call("log_ui_error", String(e.message || e.error || "?"), String(e.filename || ""), String(e.lineno || ""), String((e.error && e.error.stack) || "")); } catch (err) { /* 忽略 */ }
+});
+window.addEventListener("unhandledrejection", (e) => {
+  const r = e.reason || {};
+  try { api.call("log_ui_error", "未处理的 Promise 拒绝: " + String(r.message || r), "", "", String(r.stack || "")); } catch (err) { /* 忽略 */ }
+});
+
 const api = {
   call(method, ...args) {
     return window.pywebview.api[method](...args);
@@ -831,7 +840,7 @@ async function showDedupeDialog(groups, modelGroups) {
       clearInterval(timer);
       setStatus(p.msg || "清理完成");
       if (Array.isArray(p.result) && p.result.length) {
-        confirmBoxRaw('<div style="font-size:12px;line-height:1.8">' +
+        infoBox('<div style="font-size:12px;line-height:1.8">' +
           p.result.map((f) => "· <b>" + esc(f.file) + "</b>：" + esc(f.msg)).join("<br/>") +
           "</div>", "⚠️ 这些没能清理（可在资源管理器里手动删除）");
       }
@@ -2047,6 +2056,26 @@ if ($("#updPager")) $("#updPager").addEventListener("click", (e) => {
   renderUpdatesPage();
 });
 
+// 纯提示弹窗：只有一个「知道了」，点它就关（修"关不掉的弹窗"）
+function infoBox(html, title) {
+  const mask = document.createElement("div");
+  mask.className = "rd-mask";
+  const dlg = document.createElement("div");
+  dlg.className = "rename-dialog";
+  dlg.style.width = "560px";
+  dlg.innerHTML =
+    '<div class="rd-title">' + (title || "提示") + "</div>" +
+    '<div style="font-size:13px;color:var(--text);line-height:1.7">' + html + "</div>" +
+    '<div class="rd-actions"><button class="btn btn-primary" id="ibOk">知道了</button></div>';
+  const close = () => { mask.remove(); dlg.remove(); };
+  document.body.appendChild(mask);
+  document.body.appendChild(dlg);
+  const ok = dlg.querySelector("#ibOk");
+  if (ok) ok.addEventListener("click", close);
+  mask.addEventListener("click", close);
+  return close;
+}
+
 async function showUpdateResults(items) {
   const rows = Object.entries(items || {}).filter(([, it]) => it && it.has_update);
   const others = Object.entries(items || {}).filter(([, it]) => it && it.other_base);
@@ -2156,7 +2185,7 @@ async function mmUpdateFlow(paths) {
     clearInterval(timer);
     setStatus(p.msg || "更新完成");
     if (Array.isArray(p.result) && p.result.length) {
-      confirmBoxRaw("<div style='font-size:12px;line-height:1.9'>" +
+      infoBox("<div style='font-size:12px;line-height:1.9'>" +
         p.result.map((f) => "· <b>" + esc(f.file) + "</b>：" + esc(f.msg)).join("<br/>") +
         "</div>", "⚠️ 这些没能加入下载队列");
     }
@@ -2176,8 +2205,14 @@ async function mmUpdateSelectedFlow() {
     "<div style='font-size:12px;color:var(--text-dim);margin-top:6px'>新版会下到旧版所在文件夹；<b>旧版文件不会被动</b>（要清理可用「🧬 查重」的删旧留新）。</div></div>",
     "⬇️ 更新选中的 " + paths.length + " 个模型");
   if (!ok) return;
+  if (ok.root) ok.root.remove();
   await mmUpdateFlow(paths);
 }
+if ($("#openLogs")) $("#openLogs").addEventListener("click", async () => {
+  const r = await api.call("open_logs_dir");
+  setStatus((r && r.msg) || "已打开日志文件夹");
+});
+
 if ($("#mmGoUpdates")) $("#mmGoUpdates").addEventListener("click", () => {
   state.updState = "upd";                 // 默认只看「❗ 有更新」
   state.updQ = "";
