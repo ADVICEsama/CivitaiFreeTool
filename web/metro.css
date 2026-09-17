@@ -821,8 +821,8 @@
 [data-theme="metro"] .ml-wrap { display: flex; align-items: center; gap: 8px; min-width: 0; }
 [data-theme="metro"] .ml-wrap .mm-upd { color: var(--metro-accent); display: inline-flex; }
 [data-theme="metro"] .ml-txt { min-width: 0; flex: 1 1 auto; }
-[data-theme="metro"] .ml-1 { font-size: 13px; font-weight: 600; color: var(--text); line-height: 20px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-[data-theme="metro"] .ml-2 { font-size: 11.5px; color: var(--text-dim); line-height: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ml-1 { font-size: 13px; font-weight: 600; color: var(--text); line-height: 20px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ml-2 { font-size: 11.5px; color: var(--text-dim); line-height: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* ===== 状态色令牌：全应用唯一定义（列表徽章 / 更新页徽章 / 状态选项卡 共用） ===== */
 [data-theme="metro"] {
   --status-upd: #107C10;      --status-upd-bg: #E7F4E8;
@@ -858,15 +858,15 @@
 [data-theme="metro"] .page-title { font-size: var(--fs-hero); font-weight: var(--fw-bold); color: var(--c1); line-height: var(--lh-tight); }
 [data-theme="metro"] .detail-title, [data-theme="metro"] .dt-head-t { font-size: var(--fs-title); font-weight: var(--fw-bold); color: var(--c1); }
 /* 一级：模型名 / 核心版本 / 状态 */
-[data-theme="metro"] .ml-1, [data-theme="metro"] .upd-nm, [data-theme="metro"] .ms-name { font-size: var(--fs-md); font-weight: var(--fw-bold); color: var(--c1); }
+.ml-1, .upd-nm, .ms-name { font-size: var(--fs-md); font-weight: var(--fw-bold); color: var(--c1); }
 .ver-badge { font-size: var(--fs-md); font-weight: var(--fw-bold); color: var(--c1); }
 /* 二级：作者 / 类型 / 底模 / 版本 */
 [data-theme="metro"] .upd-sub2, [data-theme="metro"] .ms-meta, [data-theme="metro"] .dt-mr .v { font-size: var(--fs-sm); color: var(--c2); }
 [data-theme="metro"] .dt-mr .k { font-size: var(--fs-sm); color: var(--c3); }
 /* 辅助：文件名 / 路径 / 时间 / 哈希 */
-[data-theme="metro"] .ml-2, [data-theme="metro"] .ml-3, [data-theme="metro"] .upd-dim, [data-theme="metro"] .ms-size,
+.ml-2, .ml-3, .upd-dim, .ms-size,
 [data-theme="metro"] .c-time, [data-theme="metro"] .c-path, [data-theme="metro"] .dt-mono { font-size: var(--fs-xs); color: var(--c3); }
-[data-theme="metro"] .ml-3 { line-height: 16px; }
+.ml-3 { line-height: 16px; }
 /* 正文 */
 [data-theme="metro"] .detail-desc { font-size: var(--fs-sm); line-height: var(--lh-body); color: var(--c1); }
 [data-theme="metro"] .detail-desc-orig { font-size: var(--fs-xs); color: var(--c3); line-height: var(--lh-body); }
@@ -883,8 +883,8 @@
 #mmTable .ml-thumb { width: 48px; height: 48px; object-fit: cover; border: 1px solid var(--border); flex: 0 0 48px; }
 #mmTable tbody tr { height: 72px; }
 #mmTable tbody td { height: 72px; }
-[data-theme="metro"] .ml-1 { line-height: 19px; }
-[data-theme="metro"] .ml-2 { line-height: 16px; }
+.ml-1 { line-height: 19px; }
+.ml-2 { line-height: 16px; }
 [data-theme="metro"] .ml-txt { display: flex; flex-direction: column; justify-content: center; gap: 1px; }
 
 /* ---- 状态胶囊（列表/更新页：轻量圆角；其余控件保持直角） ---- */
@@ -1182,3 +1182,7 @@ html:not([data-theme="metro"]) .detail-tag { display: inline-block; padding: 2px
   background: var(--surface2); font-size: 12px; color: var(--text-dim); }
 html:not([data-theme="metro"]) .dt-sec { margin-top: 12px; }
 html:not([data-theme="metro"]) .dt-sec-h { font-size: 13px; font-weight: 600; color: var(--text-dim); margin-bottom: 6px; }
+
+
+/* 列表与更新页：等宽数字（大小/时间纵向对齐） */
+#mmTable, .upd-table { font-variant-numeric: tabular-nums; }
