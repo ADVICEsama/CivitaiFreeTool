@@ -224,6 +224,7 @@ const state = {
   mmChecked: new Set(),
   mmSel: new Set(),
   mmSort: { col: null, rev: false },
+  mmBaseF: "", mmStF: "",            // Metro 筛选：底模 / 更新状态
   mmUpdOnly: false,          // 只看有更新的模型（更新检测筛选）
   mmUpdItems: null,          // 更新检测结果（path → 记录），「更新」页面用
   mmUpdCheckedAt: 0,
@@ -1333,8 +1334,9 @@ function renderMasonry(rows) {
       (r.upd && r.upd.has_update ? '<a href="#" class="ms-upd" data-url="' + esc(r.upd.url || "") + '" title="' + esc(updTip(r.upd)) + '">❗</a>' : "") +
       '<div class="ms-img-wrap"><img class="ms-img" data-idx="' + i + '" data-path="' + esc(r.path) + '" alt=""/></div>' +
       '<div class="ms-name">' + esc(short(r.name, 26)) + "</div>" +
-      '<div class="ms-meta">' + esc(r.type || "-") + (r.ver ? " · " + esc(short(r.ver, 18)) : "") + "</div>" +
-      '<div class="ms-size">' + fmtSize(r.size) + "</div></div>";
+      (r.civitai_name && r.civitai_name !== r.name ? '<div class="ms-sub">' + esc(short(r.civitai_name, 30)) + "</div>" : "") +
+      '<div class="ms-meta">' + esc(r.type || "-") + (r.base ? " · " + esc(short(r.base, 14)) : "") + (r.ver ? " · " + esc(short(r.ver, 14)) : "") + "</div>" +
+      '<div class="ms-size">' + fmtSize(r.size) + _msTag(r) + "</div></div>";
   }).join("");
   $("#mmCheckLabel").textContent = "已勾选 " + state.mmChecked.size + " 个";
   loadMasonryThumbs(0);
@@ -1489,8 +1491,17 @@ function applyMmFilter() {
       (r.civitai_name || "").toLowerCase().includes(kw) ||
       (r.path || "").toLowerCase().includes(kw));
   }
+  if (state.mmBaseF) rows = rows.filter((r) => String(r.base || "") === state.mmBaseF);
+  if (state.mmStF) {
+    rows = rows.filter((r) => {
+      const u = r.upd || {};
+      const st = u.has_update ? "upd" : (r.upd ? (u.other_base ? "other" : "latest") : "none");
+      return st === state.mmStF;
+    });
+  }
   state.display = rows.slice();
   renderMm();
+  fillMmBaseOptions();
   if (state.mmUpdOnly) setStatus("筛选：有更新的模型 " + state.display.length + " 个（点「❗有更新」可取消）");
 }
 $("#mmFilter").addEventListener("input", () => {
@@ -3358,6 +3369,7 @@ const SETTING_FIELDS = [
     ["light_blue", "🔷 晴空（亮）"],
     ["light_pink", "🌸 樱粉（亮）"],
     ["light_green", "🌿 薄荷（亮）"],
+    ["metro", "🟦 Metro 磁贴（Win10 风 · 直角扁平）"],
     ["modern", "🎨 现代浅色"],
   ]],
   ["🎨 界面", "ui_zoom", "界面缩放", "select", ["80", "90", "100", "110", "125", "150"]],
@@ -3401,7 +3413,7 @@ const SETTING_TIPS = {
   "baidu_key": "百度翻译开放平台密钥，与 APP ID 配套",
   "auto_translate": "反向解析时自动把模型名/简介翻译成中文",
   "translate_filename": "下载时把模型名翻译成中文作为文件名（需要配置百度翻译）",
-  "theme": "界面主题：深色 / 浅色 / 现代浅色",
+  "theme": "界面主题：深色 / 浅色 / 现代浅色；选 🟦 Metro 磁贴 = Win10 直角扁平风（顶部按钮分组 + 默认瀑布流）",
   "ui_zoom": "界面整体缩放比例（百分比）",
   "rename_menu_default": "点「改名」默认执行的动作：自定义 / 改成 C 站模型名 / 文件名翻中文",
   "confirm_buttons_flip": "交换确认弹窗中「确定/取消」按钮位置（防误点）",
@@ -3893,3 +3905,112 @@ document.addEventListener("click", (e) => {
   e.preventDefault();
   api.call("open_url", el.dataset.url);
 });
+
+/* ============================================================================
+   Metro 工具区（仅 Metro 主题可见）——
+   按钮全部是"代理"：点击转交给下面老按钮的 click()，业务逻辑零改动；
+   标签/禁用/显隐用 MutationObserver 跟随原按钮（如「⏹ 停止检查（N/M）」、恢复误整理的显隐）。
+   ========================================================================== */
+function _msTag(r) {
+  const u = (r && r.upd) || {};
+  if (u.has_update) return ' <span class="ms-tag upd">❗ 有更新</span>';
+  if (u.other_base) return ' <span class="ms-tag other">🔀 仅换底模</span>';
+  if (r && r.upd) return ' <span class="ms-tag latest">✅ 已是最新</span>';
+  return "";
+}
+
+function syncSortDir() {
+  const sd = document.getElementById("mmSortDir");
+  if (sd) sd.textContent = state.mmSort.rev ? "↓ 降序" : "↑ 升序";
+}
+
+function fillMmBaseOptions() {
+  const bf = document.getElementById("mmBaseF");
+  if (!bf) return;
+  const bases = [...new Set(state.models.map((r) => String(r.base || "").trim()).filter(Boolean))].sort();
+  const sig = bases.join("|");
+  if (bf._sig === sig) return;
+  bf._sig = sig;
+  const cur = bf.value;
+  bf.innerHTML = '<option value="">全部底模</option>' +
+    bases.map((b) => '<option value="' + esc(b) + '">' + esc(b) + "</option>").join("");
+  bf.value = cur;
+}
+
+function _closeMmMenus() {
+  document.querySelectorAll(".btn-group.open").forEach((g) => g.classList.remove("open"));
+}
+
+function bindMmMetro() {
+  // 1) 代理按钮：点击 → 原按钮 click()
+  document.querySelectorAll(".mm-metro [data-proxy]").forEach((el) => {
+    if (el._px) return; el._px = 1;
+    el.addEventListener("click", () => {
+      _closeMmMenus();
+      const src = document.getElementById(el.dataset.proxy);
+      if (src && !src.disabled) src.click();
+    });
+  });
+  // 2) 菜单开合（点击式；再点收起；外点/Esc 关闭）
+  document.querySelectorAll(".mm-metro [data-menu]").forEach((btn) => {
+    if (btn._mn) return; btn._mn = 1;
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const grp = btn.closest(".btn-group");
+      const wasOpen = grp.classList.contains("open");
+      _closeMmMenus();
+      if (!wasOpen) grp.classList.add("open");
+    });
+  });
+  // 3) 改名菜单（复用 mmRenameRun，功能与老菜单完全一致）
+  document.querySelectorAll(".mm-metro [data-ract]").forEach((it) => {
+    if (it._ra) return; it._ra = 1;
+    it.addEventListener("click", () => { _closeMmMenus(); mmRenameRun(it.dataset.ract); });
+  });
+  // 4) 跳设置 / 打开日志
+  document.querySelectorAll(".mm-metro [data-goto='settings']").forEach((it) => {
+    if (it._gt) return; it._gt = 1;
+    it.addEventListener("click", () => { _closeMmMenus(); switchPage("settings"); });
+  });
+  document.querySelectorAll(".mm-metro [data-act='logs']").forEach((it) => {
+    if (it._lg) return; it._lg = 1;
+    it.addEventListener("click", async () => {
+      _closeMmMenus();
+      const r = await api.call("open_logs_dir");
+      setStatus((r && r.msg) || "已打开日志文件夹");
+    });
+  });
+  document.addEventListener("click", _closeMmMenus);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") _closeMmMenus(); });
+  // 5) Metro 筛选（底模 / 状态 / 排序），复用既有 state 与排序机制
+  const bf = document.getElementById("mmBaseF"), sf = document.getElementById("mmStF"),
+        so = document.getElementById("mmSortF"), sd = document.getElementById("mmSortDir");
+  if (bf) bf.addEventListener("change", () => { state.mmBaseF = bf.value; applyMmFilter(); });
+  if (sf) sf.addEventListener("change", () => { state.mmStF = sf.value; applyMmFilter(); });
+  if (so) so.addEventListener("change", () => {
+    if (!so.value) state.mmSort = { col: null, rev: false };
+    else state.mmSort = { col: so.value, rev: state.mmSort.col === so.value ? state.mmSort.rev : false };
+    syncSortDir(); applyMmFilter();
+  });
+  if (sd) sd.addEventListener("click", () => {
+    state.mmSort = { col: state.mmSort.col || "name", rev: !state.mmSort.rev };
+    if (so) so.value = state.mmSort.col;
+    syncSortDir(); applyMmFilter();
+  });
+  syncSortDir();
+  // 6) 代理跟随原按钮（文字/禁用/显隐）
+  document.querySelectorAll(".mm-metro [data-proxy]").forEach((el) => {
+    const src = document.getElementById(el.dataset.proxy);
+    if (!src) return;
+    const sync = () => {
+      if (el.textContent !== src.textContent) el.textContent = src.textContent;
+      el.disabled = !!src.disabled;
+      el.style.display = (src.style.display === "none") ? "none" : "";
+    };
+    try {
+      new MutationObserver(sync).observe(src, { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ["style", "disabled"] });
+    } catch (e) { /* 忽略 */ }
+    sync();
+  });
+}
+try { bindMmMetro(); } catch (e) { /* Metro 未启用时也不报错 */ }

@@ -11,7 +11,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.1.43"
+APP_VERSION = "2.1.44"
 
 import civitai_api
 import config

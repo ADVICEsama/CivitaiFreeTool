@@ -155,6 +155,8 @@
 
   let rafId = 0;
   function draw(ts) {
+    // Metro 主题：保持背景纯色（不做 GPU 绘制，但保留循环以便切回时恢复）
+    if ((document.documentElement.dataset.theme || "") === "metro") { rafId = requestAnimationFrame(draw); return; }
     // 窗口最小化/切后台、或氛围背景被关掉时，跳过绘制（软渲染下全屏动画很吃 CPU，跳过立刻凉）
     const hidden = document.hidden || canvas.style.display === "none" || canvas.offsetParent === null;
     if (!hidden) {

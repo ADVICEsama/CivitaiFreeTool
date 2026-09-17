@@ -6,6 +6,7 @@
 <title>CivitaiFreeTool</title>
 <link rel="icon" type="image/x-icon" href="favicon.ico"/>
 <link rel="stylesheet" href="style.css"/>
+<link rel="stylesheet" href="metro.css"/>
 </head>
 <body>
 <!-- WebGL shader 背景 -->
@@ -84,7 +85,85 @@
         <h2 class="page-title">模型管理</h2>
         <span class="status-pill" id="mmCount">未扫描</span>
       </div>
-      <div class="btn-row">
+
+      <!-- ===== Metro 工具区（仅 Metro 主题显示；按钮全部是"代理"，点击转给下面老按钮，逻辑零改动） ===== -->
+      <div class="mm-metro">
+        <div class="mm-row">
+          <button class="btn btn-primary" data-proxy="mmScan">🔍 扫描模型</button>
+          <button class="btn" data-proxy="mmRefresh">🔄 刷新</button>
+          <button class="btn" data-proxy="mmCheckUpd">⏫ 检查更新</button>
+          <span class="mm-sep"></span>
+          <span class="sp-btn btn-group">
+            <button class="btn" data-proxy="mmRenameMain" data-tip="改文件名（执行默认动作；右侧 ▾ 选择其它方式）">✏️ 改名</button>
+            <button class="btn sp-caret" data-menu="mmRenameMenu" data-tip="选择改名方式">▾</button>
+            <div class="mm-menu" id="mmRenameMenu">
+              <div class="mm-item" data-ract="custom">✏️ 自定义改名</div>
+              <div class="mm-item" data-ract="rename_c">🏷️ 文件名改成C站名</div>
+              <div class="mm-item" data-ract="localize">🀄 文件名翻中文</div>
+              <div class="mm-sep-h"></div>
+              <div class="mm-item" data-goto="settings">⚙️ 改名设置</div>
+            </div>
+          </span>
+          <span class="btn-group">
+            <button class="btn" data-menu="mmOrganizeMenu">📂 整理 ▾</button>
+            <div class="mm-menu" id="mmOrganizeMenu">
+              <div class="mm-item" data-proxy="mmOrganize">📂 整理模型</div>
+              <div class="mm-item" data-proxy="mmRestore">🔧 恢复误整理</div>
+            </div>
+          </span>
+          <span class="btn-group">
+            <button class="btn" data-menu="mmCheckMenu">🧪 检查 ▾</button>
+            <div class="mm-menu" id="mmCheckMenu">
+              <div class="mm-item" data-proxy="mmVerify">✅ 校验完整性</div>
+              <div class="mm-item" data-proxy="mmDedupe">🧬 查重</div>
+              <div class="mm-sep-h"></div>
+              <div class="mm-item danger" data-proxy="mmCleanup">🗑️ 清理冗余文件</div>
+            </div>
+          </span>
+          <span class="btn-group">
+            <button class="btn" data-menu="mmInfoMenu">🗂️ 信息处理 ▾</button>
+            <div class="mm-menu" id="mmInfoMenu">
+              <div class="mm-item" data-proxy="mmJson">📄 生成SD可读json</div>
+              <div class="mm-item" data-proxy="mmCovers">🖼️ 下载封面图</div>
+              <div class="mm-item" data-proxy="mmTranslate">🌏 翻译成中文</div>
+              <div class="mm-item" data-proxy="mmSendRp">📤 识别模型信息</div>
+            </div>
+          </span>
+          <span class="mm-sep"></span>
+          <button class="btn" data-proxy="mmUpdDl">⬇️ 更新选中</button>
+          <button class="btn" data-proxy="mmGoUpdates">⏫ 去更新</button>
+          <span class="mm-spacer"></span>
+          <span class="btn-group">
+            <button class="btn" data-menu="mmMoreMenu">⋯ 更多</button>
+            <div class="mm-menu" id="mmMoreMenu" style="left:auto;right:0">
+              <div class="mm-item" data-act="logs">📂 打开日志文件夹</div>
+              <div class="mm-item" data-goto="settings">⚙️ 打开设置</div>
+            </div>
+          </span>
+        </div>
+        <div class="mm-row mm-row2">
+          <select class="input" id="mmBaseF" data-tip="按底模筛选">
+            <option value="">全部底模</option>
+          </select>
+          <select class="input" id="mmStF" data-tip="按更新状态筛选（需先检查更新）">
+            <option value="">全部状态</option>
+            <option value="upd">❗ 有更新</option>
+            <option value="latest">✅ 已是最新</option>
+            <option value="none">◻ 未检查</option>
+          </select>
+          <select class="input" id="mmSortF" data-tip="排序方式（列表/瀑布流都生效）">
+            <option value="">默认排序</option>
+            <option value="name">文件名</option>
+            <option value="size">大小</option>
+            <option value="mtime">下载时间</option>
+            <option value="type">类型</option>
+            <option value="base">基础模型</option>
+          </select>
+          <button class="btn" id="mmSortDir" data-tip="切换升序 / 降序">↑ 升序</button>
+        </div>
+      </div>
+
+      <div class="btn-row mm-legacy">
         <button class="btn btn-primary" id="mmScan" data-tip="扫描所有模型管理目录，发现模型并读取元数据/封面">🔍 扫描模型</button>
         <button class="btn" id="mmRefresh" data-tip="重新扫描（不读元数据，只刷新列表）">🔄 刷新</button>
         <button class="btn" id="mmVerify" data-tip="计算文件哈希并与 C 站比对，校验文件是否完整">✅ 校验完整性</button>
@@ -105,22 +184,22 @@
         <button class="btn" id="mmTranslate" data-tip="把 C 站模型简介翻译成中文（需在设置配置百度翻译）">🌏 翻译成中文</button>
         <button class="btn" id="mmSendRp" data-tip="把选中模型送去反向解析：从 C 站匹配名字/触发词/封面">📤 识别模型信息</button>
       </div>
-      <div class="btn-row">
+      <div class="btn-row mm-legacy">
         <button class="btn" id="mmOrganize" data-tip="把选中的模型按规则移动到分类文件夹（需先在设置选 🎯 目标环境）">📂 整理模型</button>
         <button class="btn" id="mmRestore" style="display:none" data-tip="恢复误整理的模型到原位置（按移动日志回退）">🔧 恢复误整理</button>
-        <span class="folders-wrap" id="mmFoldersWrap">
-          <button class="btn" id="mmFolders" data-tip="切换文件夹列表显示，可单独隐藏/显示各分类文件夹">📁 文件夹显示</button>
-          <div class="folders-panel" id="mmFoldersPanel"></div>
-        </span>
         <button class="btn btn-danger" id="mmCleanup" data-tip="清理冗余文件：删除失效 info、孤儿封面等多余文件">🗑️ 清理冗余文件</button>
       </div>
-      <div class="tool-row">
+      <div class="tool-row mm-filter">
         <input id="mmFilter" class="input" placeholder="筛选：文件名 / C站名 / 路径"/>
         <button class="btn" id="mmFilterClear">清除</button>
         <button class="btn" id="mmUpdOnly" data-tip="只看有更新的模型（先点「⏫ 检查更新」生成结果）">❗ 有更新</button>
         <button class="btn" id="mmSelAll">全选</button>
         <button class="btn" id="mmSelNone">清除勾选</button>
         <button class="btn" id="mmSelInv">反选</button>
+        <span class="folders-wrap" id="mmFoldersWrap">
+          <button class="btn" id="mmFolders" data-tip="切换文件夹列表显示，可单独隐藏/显示各分类文件夹">📁 文件夹显示</button>
+          <div class="folders-panel" id="mmFoldersPanel"></div>
+        </span>
         <button class="btn" id="mmViewToggle" data-tip="切换瀑布流 / 列表视图">🖼️ 瀑布流</button>
         <span class="status-pill" id="mmCheckLabel">已勾选 0 个</span>
       </div>

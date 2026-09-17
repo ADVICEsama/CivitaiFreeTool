@@ -1,0 +1,424 @@
+/* ============================================================================
+   Metro 主题（Win10 磁贴风格）—— 独立主题，200% 与 Classic 解耦
+   ----------------------------------------------------------------------------
+   规则：所有覆盖必须写在 [data-theme="metro"] 下，绝不裸写，避免污染其他主题。
+   Token：--metro-*（本文件专有）；同时覆盖通用变量（--primary 等）以便老组件自动跟随。
+   风格：直角(0~2px) / 扁平 / 无渐变 / 极少阴影 / Segoe UI / Win10 蓝 #0078D4
+   ========================================================================== */
+
+[data-theme="metro"] {
+  /* 通用变量（让全部老组件先自动变"色"） */
+  --bg: #f2f2f2;
+  --surface: #ffffff;
+  --surface2: #f7f7f7;
+  --border: #d9d9d9;
+  --text: #1f1f1f;
+  --text-dim: #5f5f5f;
+  --primary: #0078d4;
+  --primary-hover: #106ebe;
+  --primary-fg: #ffffff;
+  --danger: #c42b1c;
+  --radius: 2px;
+  --radius-sm: 2px;
+  --shadow: none;
+  --shadow-hover: 0 2px 6px rgba(0, 0, 0, 0.10);
+  --font: "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, sans-serif;
+
+  /* Metro 专有 Token */
+  --metro-bg: #f2f2f2;
+  --metro-surface: #ffffff;
+  --metro-surface-alt: #fafafa;
+  --metro-border: #d9d9d9;
+  --metro-border-strong: #adadad;
+  --metro-accent: #0078d4;
+  --metro-accent-hover: #106ebe;
+  --metro-accent-pressed: #005a9e;
+  --metro-text: #1f1f1f;
+  --metro-text-2: #5f5f5f;
+  --metro-text-3: #767676;
+  --metro-hover: #e5f1fb;          /* Win10 悬停浅蓝 */
+  --metro-selected: #cce4f7;       /* Win10 选中蓝 */
+  --metro-pressed: #c3ddf5;
+  --metro-green: #107c10;
+  --metro-orange: #ca5010;
+  --metro-red: #c42b1c;
+  --metro-sep: #e0e0e0;
+}
+
+/* ---------------------------------------------------------------- 基础 */
+[data-theme="metro"] body,
+[data-theme="metro"] { font-family: var(--font); color: var(--metro-text); }
+
+[data-theme="metro"] body { background: var(--metro-bg) !important; }
+
+/* 滚动条：Win10 细直角 */
+[data-theme="metro"] ::-webkit-scrollbar { width: 10px; height: 10px; }
+[data-theme="metro"] ::-webkit-scrollbar-track { background: #f2f2f2; }
+[data-theme="metro"] ::-webkit-scrollbar-thumb { background: #c8c8c8; border-radius: 0; border: 2px solid #f2f2f2; }
+[data-theme="metro"] ::-webkit-scrollbar-thumb:hover { background: #a6a6a6; }
+
+[data-theme="metro"] ::selection { background: var(--metro-selected); color: #000; }
+
+/* 焦点圈：Win10 方框 */
+[data-theme="metro"] :focus-visible { outline: 2px solid var(--metro-accent); outline-offset: -1px; }
+
+/* 背景 shader 画布：Metro 下保持安静 */
+[data-theme="metro"] canvas#bg,
+[data-theme="metro"] canvas.bg-shader,
+[data-theme="metro"] #bgCanvas { opacity: 0 !important; }
+
+/* ---------------------------------------------------------------- 顶部导航 */
+[data-theme="metro"] .nav {
+  background: var(--metro-surface);
+  border-radius: 0;
+  border-bottom: 1px solid var(--metro-sep);
+  box-shadow: none;
+  padding: 0 12px;
+}
+[data-theme="metro"] .nav-logo { border-radius: 2px; background: var(--metro-accent); }
+[data-theme="metro"] .nav-tab {
+  border-radius: 0;
+  background: transparent;
+  color: var(--metro-text-2);
+  border-bottom: 2px solid transparent;
+  padding: 10px 14px;
+  font-weight: 400;
+}
+[data-theme="metro"] .nav-tab:hover { background: var(--metro-hover); color: var(--metro-text); }
+[data-theme="metro"] .nav-tab.active {
+  background: transparent;
+  color: var(--metro-text);
+  font-weight: 600;
+  border-bottom-color: var(--metro-accent);
+}
+[data-theme="metro"] .nav-tab.active::after { background: var(--metro-accent); border-radius: 0; }
+
+/* ---------------------------------------------------------------- 卡片/面板 */
+[data-theme="metro"] .card {
+  background: var(--metro-surface);
+  border: 1px solid var(--metro-sep);
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0 0 14px 0;
+}
+[data-theme="metro"] .page-title { font-size: 19px; font-weight: 600; }
+[data-theme="metro"] .title-row { padding: 12px 16px 8px 16px; margin: 0; border-bottom: none; }
+
+/* ---------------------------------------------------------------- 按钮 */
+[data-theme="metro"] .btn {
+  border-radius: 2px;
+  background: #e1e1e1;
+  border: 1px solid var(--metro-border-strong);
+  color: var(--metro-text);
+  box-shadow: none;
+  padding: 7px 14px;
+  font-weight: 400;
+  transition: background .08s linear, border-color .08s linear;
+}
+[data-theme="metro"] .btn:hover {
+  background: var(--metro-hover);
+  border-color: var(--metro-accent);
+  color: var(--metro-text);
+}
+[data-theme="metro"] .btn:active { background: var(--metro-pressed); border-color: var(--metro-accent-pressed); }
+[data-theme="metro"] .btn:disabled { background: #f2f2f2; color: #9a9a9a; border-color: #e0e0e0; }
+
+[data-theme="metro"] .btn-primary {
+  background: var(--metro-accent);
+  border-color: var(--metro-accent);
+  color: #fff;
+}
+[data-theme="metro"] .btn-primary:hover { background: var(--metro-accent-hover); border-color: var(--metro-accent-hover); color: #fff; }
+[data-theme="metro"] .btn-primary:active { background: var(--metro-accent-pressed); }
+
+[data-theme="metro"] .btn-danger { background: #fff; border-color: var(--metro-red); color: var(--metro-red); }
+[data-theme="metro"] .btn-danger:hover { background: #fdf3f2; border-color: var(--metro-red); color: var(--metro-red); }
+
+[data-theme="metro"] .icon-btn { border-radius: 2px; background: transparent; border: 1px solid transparent; }
+[data-theme="metro"] .icon-btn:hover { background: var(--metro-hover); border-color: var(--metro-border); }
+
+/* ---------------------------------------------------------------- 输入 / 下拉 / 勾选 */
+[data-theme="metro"] .input,
+[data-theme="metro"] input[type="text"],
+[data-theme="metro"] input[type="number"],
+[data-theme="metro"] input[type="password"],
+[data-theme="metro"] select,
+[data-theme="metro"] textarea {
+  border-radius: 2px;
+  background: #fff;
+  border: 1px solid var(--metro-border-strong);
+  color: var(--metro-text);
+  padding: 6px 8px;
+  box-shadow: none;
+}
+[data-theme="metro"] .input:hover,
+[data-theme="metro"] select:hover { border-color: #8a8a8a; }
+[data-theme="metro"] .input:focus,
+[data-theme="metro"] input:focus,
+[data-theme="metro"] select:focus,
+[data-theme="metro"] textarea:focus {
+  border-color: var(--metro-accent);
+  outline: 1px solid var(--metro-accent);
+  outline-offset: -2px;
+}
+[data-theme="metro"] select {
+  appearance: none;
+  padding-right: 26px;
+  background-image: linear-gradient(45deg, transparent 50%, #4a4a4a 50%), linear-gradient(135deg, #4a4a4a 50%, transparent 50%);
+  background-position: calc(100% - 14px) 52%, calc(100% - 9px) 52%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+[data-theme="metro"] input[type="checkbox"],
+[data-theme="metro"] input[type="radio"] { accent-color: var(--metro-accent); border-radius: 0; width: 15px; height: 15px; }
+
+/* ---------------------------------------------------------------------- 
+   模型管理 · Metro 顶部工具区（.mm-metro 只在 metro 显示；classic 隐藏）
+   -------------------------------------------------------------------- */
+[data-theme="metro"] .mm-metro { display: block; padding: 8px 16px 6px 16px; }
+[data-theme="metro"] .mm-legacy { display: none !important; }        /* 老平铺按钮区：Metro 下隐藏 */
+[data-theme="metro"] .mm-metro .mm-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+[data-theme="metro"] .mm-metro .mm-sep { width: 1px; height: 22px; background: var(--metro-sep); margin: 0 6px; }
+[data-theme="metro"] .mm-metro .mm-spacer { flex: 1 1 auto; }
+[data-theme="metro"] .mm-count { color: var(--metro-text-2); font-size: 13px; }
+
+/* 筛选行（两个主题共用）：Metro 下变直角工具栏 */
+[data-theme="metro"] .tool-row.mm-filter .input { min-width: 260px; }
+[data-theme="metro"] .tool-row.mm-filter { padding: 6px 16px; gap: 6px; }
+
+/* 下拉菜单（Metro：点击打开、直角、细边框、蓝色悬停） */
+[data-theme="metro"] .btn-group .submenu,
+[data-theme="metro"] .mm-menu {
+  display: none;
+  position: absolute;
+  z-index: 80;
+  min-width: 190px;
+  padding: 4px 0;
+  background: var(--metro-surface);
+  border: 1px solid #c8c8c8;
+  border-radius: 0;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.14);
+}
+[data-theme="metro"] .mm-menu { left: 0; top: 100%; margin-top: 2px; }
+[data-theme="metro"] .btn-group.open .submenu,
+[data-theme="metro"] .mm-menu.open { display: block; }
+[data-theme="metro"] .btn-group:hover .submenu { display: none; }     /* 关掉 classic 的 hover 展开 */
+[data-theme="metro"] .btn-group.open:hover .submenu { display: block; }
+
+[data-theme="metro"] .submenu-item,
+[data-theme="metro"] .mm-menu .mm-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 0;
+  font-size: 13px;
+  color: var(--metro-text);
+  cursor: default;
+  background: transparent;
+}
+[data-theme="metro"] .submenu-item:hover,
+[data-theme="metro"] .mm-menu .mm-item:hover { background: var(--metro-hover); }
+[data-theme="metro"] .submenu-item:active,
+[data-theme="metro"] .mm-menu .mm-item:active { background: var(--metro-selected); }
+[data-theme="metro"] .submenu-item.danger,
+[data-theme="metro"] .mm-menu .mm-item.danger { color: var(--metro-red); }
+[data-theme="metro"] .submenu-item.danger:hover { background: #fdf3f2; }
+[data-theme="metro"] .submenu-sep,
+[data-theme="metro"] .mm-menu .mm-sep-h {
+  height: 1px;
+  background: var(--metro-sep);
+  margin: 4px 0;
+  border: none;
+}
+
+/* 分裂按钮（主按钮 + 小角 ▾） */
+[data-theme="metro"] .sp-btn { display: inline-flex; position: relative; }
+[data-theme="metro"] .sp-btn .btn:first-child { border-right: none; }
+[data-theme="metro"] .sp-btn .sp-caret {
+  border-radius: 0 2px 2px 0;
+  padding: 7px 8px;
+  min-width: 0;
+  border-left: 1px solid #c8c8c8;
+}
+[data-theme="metro"] .sp-btn:hover .btn:first-child { border-color: var(--metro-accent); }
+
+/* Classic 主题下这些是"不存在的元素"，全部藏起来（互不干扰） */
+.mm-metro, .mm-legacy-note { display: none; }
+
+/* ---------------------------------------------------------------- 徽章 / 药丸 */
+[data-theme="metro"] .status-pill {
+  border-radius: 2px;
+  background: var(--metro-surface-alt);
+  border: 1px solid var(--metro-border);
+  color: var(--metro-text-2);
+  padding: 3px 8px;
+  font-size: 12px;
+}
+[data-theme="metro"] .chip,
+[data-theme="metro"] .chip-dl,
+[data-theme="metro"] .upd-chip,
+[data-theme="metro"] .about-ver,
+[data-theme="metro"] .bd-links,
+[data-theme="metro"] .bili-float,
+[data-theme="metro"] .ud-tag,
+[data-theme="metro"] .ms-badge {
+  border-radius: 2px !important;
+  box-shadow: none;
+}
+[data-theme="metro"] .chip-dl { background: #fff; border: 1px solid var(--metro-accent); color: var(--metro-accent); }
+[data-theme="metro"] .chip-dl:hover { background: var(--metro-hover); }
+[data-theme="metro"] .upd-chip.is-down { background: #fff; border-color: var(--metro-orange); color: var(--metro-orange); }
+
+/* ---------------------------------------------------------------- 列表（表格视图） */
+[data-theme="metro"] table.grid { border-collapse: collapse; }
+[data-theme="metro"] table.grid thead th {
+  background: var(--metro-surface-alt);
+  border-bottom: 1px solid var(--metro-sep);
+  border-radius: 0;
+  color: var(--metro-text);
+  font-weight: 600;
+}
+[data-theme="metro"] table.grid thead th:hover { background: var(--metro-hover); }
+[data-theme="metro"] table.grid tbody tr { border-bottom: 1px solid #efefef; }
+[data-theme="metro"] table.grid tbody tr:nth-child(even) { background: #fbfbfb !important; }
+[data-theme="metro"] table.grid tbody tr:hover { background: var(--metro-hover) !important; }
+[data-theme="metro"] table.grid tbody tr.selected,
+[data-theme="metro"] table.grid tbody tr.sel-row { background: var(--metro-selected) !important; }
+[data-theme="metro"] .cell-sel { color: var(--metro-accent); }
+[data-theme="metro"] .thumb { border-radius: 0; border: 1px solid var(--metro-sep); }
+
+/* ---------------------------------------------------------------- 瀑布流卡片（Metro 磁贴） */
+[data-theme="metro"] .masonry { gap: 10px; }
+[data-theme="metro"] .ms-card {
+  border-radius: 0;
+  background: var(--metro-surface);
+  border: 1px solid #e3e3e3;
+  box-shadow: none;
+  overflow: hidden;
+  transition: border-color .08s linear, background .08s linear;
+}
+[data-theme="metro"] .ms-card:hover { border-color: var(--metro-accent); background: #fbfdff; box-shadow: none; transform: none; }
+[data-theme="metro"] .ms-card.checked { border-color: var(--metro-accent); box-shadow: inset 0 0 0 1px var(--metro-accent); }
+[data-theme="metro"] .ms-img { border-radius: 0; }
+[data-theme="metro"] .ms-check { border-radius: 0; background: rgba(255, 255, 255, .92); border: 1px solid var(--metro-border); color: var(--metro-text); }
+[data-theme="metro"] .ms-upd { border-radius: 0; background: var(--metro-accent); color: #fff; }
+[data-theme="metro"] .ms-name { font-weight: 600; font-size: 13px; color: var(--metro-text); }
+[data-theme="metro"] .ms-meta, [data-theme="metro"] .ms-sub { color: var(--metro-text-2); font-size: 12px; }
+[data-theme="metro"] .ms-size { color: var(--metro-text-3); font-size: 12px; }
+/* 卡片状态徽章（新增） */
+[data-theme="metro"] .ms-tag {
+  display: inline-block; font-size: 11px; line-height: 16px; padding: 0 5px;
+  border-radius: 2px; border: 1px solid transparent;
+}
+[data-theme="metro"] .ms-tag.upd { background: #dff6dd; border-color: #107c10; color: #0b5e0b; }
+[data-theme="metro"] .ms-tag.latest { background: #f2f2f2; border-color: #d9d9d9; color: #5f5f5f; }
+[data-theme="metro"] .ms-tag.other { background: #fff4ce; border-color: #ca8a04; color: #7a5200; }
+
+/* ---------------------------------------------------------------- 右键菜单 / 面板 */
+[data-theme="metro"] .ctx-menu {
+  border-radius: 0;
+  background: var(--metro-surface);
+  border: 1px solid #c8c8c8;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, .14);
+  padding: 4px 0;
+}
+[data-theme="metro"] .ctx-menu .ctx-item { border-radius: 0; padding: 8px 14px; font-size: 13px; }
+[data-theme="metro"] .ctx-menu .ctx-item:hover { background: var(--metro-hover); }
+[data-theme="metro"] .ctx-menu .ctx-item.danger { color: var(--metro-red); }
+[data-theme="metro"] .ctx-menu .ctx-item.danger:hover { background: #fdf3f2; }
+[data-theme="metro"] .ctx-menu .ctx-sep { border-top-color: var(--metro-sep); }
+
+[data-theme="metro"] .folders-panel {
+  border-radius: 0;
+  background: var(--metro-surface);
+  border: 1px solid #c8c8c8;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, .14);
+}
+[data-theme="metro"] .folders-panel .fm-item { border-radius: 0; }
+[data-theme="metro"] .folders-panel .fm-item:hover { background: var(--metro-hover); }
+[data-theme="metro"] .folders-panel .fm-state { border-radius: 2px; }
+
+/* ---------------------------------------------------------------- 弹窗 */
+[data-theme="metro"] .rd-mask { background: rgba(0, 0, 0, .25); }
+[data-theme="metro"] .rename-dialog {
+  border-radius: 0;
+  background: var(--metro-surface);
+  border: 1px solid #b8b8b8;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, .20);
+  padding: 0;
+  overflow: hidden;
+}
+[data-theme="metro"] .rd-title {
+  background: var(--metro-surface-alt);
+  border-bottom: 1px solid var(--metro-sep);
+  border-radius: 0;
+  padding: 10px 14px;
+  font-weight: 600;
+  font-size: 14px;
+}
+[data-theme="metro"] .rd-actions { border-top: 1px solid var(--metro-sep); padding: 10px 14px; gap: 8px; background: #fbfbfb; }
+[data-theme="metro"] .rd-actions .btn { min-width: 84px; justify-content: center; }
+[data-theme="metro"] .rd-group, [data-theme="metro"] .rd-home, [data-theme="metro"] .rd-img { border-radius: 0; }
+
+[data-theme="metro"] #toast { border-radius: 0; background: #1f1f1f; color: #fff; border: none; }
+
+/* ---------------------------------------------------------------- Tooltip */
+[data-theme="metro"] [data-tip]:hover::after,
+[data-theme="metro"] .tipbox {
+  border-radius: 2px !important;
+  background: #f2f2f2 !important;
+  color: var(--metro-text) !important;
+  border: 1px solid #c8c8c8 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .12) !important;
+}
+
+/* ---------------------------------------------------------------- 更新页表格（同步 Metro 化） */
+[data-theme="metro"] .upd-table thead th { background: var(--metro-surface-alt); border-bottom: 1px solid var(--metro-sep); }
+[data-theme="metro"] .upd-table thead th.sortable:hover { background: var(--metro-hover); }
+[data-theme="metro"] .upd-table tbody tr:hover { background: var(--metro-hover) !important; }
+[data-theme="metro"] .upd-table tbody tr.sel { background: var(--metro-selected) !important; }
+[data-theme="metro"] .upd-table .ver-sel { border-radius: 2px; }
+[data-theme="metro"] .pager .btn { min-width: 32px; }
+
+/* ---------------------------------------------------------------- 平直角清单（把残留的圆角/药丸压平） */
+[data-theme="metro"] .about-logo,
+[data-theme="metro"] .about-contrib-avatar,
+[data-theme="metro"] .bili-icon,
+[data-theme="metro"] .nav-logo { border-radius: 2px !important; }
+[data-theme="metro"] .ob-card,
+[data-theme="metro"] .ob-mask.mini .ob-card,
+[data-theme="metro"] .ob-theme,
+[data-theme="metro"] .ob-theme .sw,
+[data-theme="metro"] .ob-step,
+[data-theme="metro"] .ob-feat-btn,
+[data-theme="metro"] .ob-github,
+[data-theme="metro"] .ob-guide,
+[data-theme="metro"] .about-updates,
+[data-theme="metro"] .about-up-item,
+[data-theme="metro"] .about-thanks,
+[data-theme="metro"] .about-contrib,
+[data-theme="metro"] .detail-panel,
+[data-theme="metro"] .detail-main-img,
+[data-theme="metro"] .folders-panel,
+[data-theme="metro"] .folders-panel .fm-item,
+[data-theme="metro"] .wf-info,
+[data-theme="metro"] .wf-node,
+[data-theme="metro"] .hf-item,
+[data-theme="metro"] .bd-link,
+[data-theme="metro"] .rd-group,
+[data-theme="metro"] .rd-home,
+[data-theme="metro"] .ms-check,
+[data-theme="metro"] .ctx-menu .ctx-item { border-radius: 2px !important; }
+
+/* 状态圆点保持圆（Metro 也是圆点），其余 50% 圆形的清单一并处理 */
+[data-theme="metro"] .dot,
+[data-theme="metro"] .status-dot { border-radius: 50% !important; }
+
+/* ---------------------------------------------------------------- 细节 */
+[data-theme="metro"] a { color: var(--metro-accent); text-decoration: none; }
+[data-theme="metro"] a:hover { text-decoration: underline; }
+[data-theme="metro"] hr, [data-theme="metro"] .sep { border-color: var(--metro-sep); }
+[data-theme="metro"] ::-webkit-scrollbar-corner { background: var(--metro-bg); }
+[data-theme="metro"] .stat-line, [data-theme="metro"] .dim { color: var(--metro-text-2); }
+[data-theme="metro"] .ob-mask, [data-theme="metro"] .wf-mask { background: rgba(0, 0, 0, .25); }

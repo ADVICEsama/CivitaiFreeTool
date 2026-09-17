@@ -13,7 +13,7 @@ else:
 
 # 界面主题（必须与 web/style.css 的 [data-theme=...] 与 app.js 设置项保持一致）
 THEMES = ("dark", "dark_purple", "dark_blue", "dark_green", "dark_red",
-          "light", "light_blue", "light_pink", "light_green", "modern")
+          "light", "light_blue", "light_pink", "light_green", "modern", "metro")
 
 DEFAULTS = {
     "api_key": "",
