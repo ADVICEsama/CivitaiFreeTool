@@ -11,7 +11,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.1.61"
+APP_VERSION = "2.1.62"
 
 import civitai_api
 import config
@@ -1912,6 +1912,38 @@ class Api:
         if getattr(self, "_wl_cache", None) is None:
             self._wl_cache = self._load_wl()
         return self._wl_cache
+
+    def get_system_accent(self):
+        """读取 Windows 个性化主题色（AccentColorMenu / ColorizationColor，ABGR）→ #RRGGBB；失败回默认蓝"""
+        import winreg
+        def _conv(v):
+            r, g, b = v & 0xFF, (v >> 8) & 0xFF, (v >> 16) & 0xFF
+            if r + g + b < 30:      # 无效/全黑 → 视为未设置
+                return None
+            return "#%02X%02X%02X" % (r, g, b)
+        try:
+            k = winreg.OpenKey(winreg.HKEY_CURRENT_USER, "Software" + chr(92) + "Microsoft" + chr(92) + "Windows" + chr(92) + "CurrentVersion" + chr(92) + "Explorer" + chr(92) + "Accent")
+            try:
+                v, _ = winreg.QueryValueEx(k, "AccentColorMenu")
+            finally:
+                winreg.CloseKey(k)
+            c = _conv(int(v))
+            if c:
+                return c
+        except Exception:
+            pass
+        try:
+            k = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\DWM")
+            try:
+                v, _ = winreg.QueryValueEx(k, "ColorizationColor")
+            finally:
+                winreg.CloseKey(k)
+            c = _conv(int(v))
+            if c:
+                return c
+        except Exception:
+            pass
+        return "#0078D4"
 
     def get_update_whitelist(self):
         wl = self._wl()

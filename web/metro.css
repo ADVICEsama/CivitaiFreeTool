@@ -33,11 +33,12 @@
   --metro-border-hair: #ececec;      /* 极浅分隔线 */
   --metro-border-input: #e0e0e0;     /* 输入类控件描边（浅） */
   --metro-accent: #0078d4;
-  --metro-accent-hover: #106ebe;
-  --metro-accent-press: #005a9e;
-  --metro-tint: rgba(0, 120, 212, .08);       /* 非常浅的蓝（hover） */
-  --metro-tint-2: rgba(0, 120, 212, .16);     /* 按下 */
-  --metro-sel-bg: #dcebfa;                    /* 选中行底 */
+  --m-gray: #f6f6f6;                 /* 浅灰底（缩略图/占位，暗色下变深灰） */
+  --metro-accent-hover: color-mix(in srgb, var(--metro-accent) 85%, #000);
+  --metro-accent-press: color-mix(in srgb, var(--metro-accent) 72%, #000);
+  --metro-tint: color-mix(in srgb, var(--metro-accent) 8%, transparent);   /* 跟随主题色的极浅 hover */
+  --metro-tint-2: color-mix(in srgb, var(--metro-accent) 16%, transparent);
+  --metro-sel-bg: color-mix(in srgb, var(--metro-accent) 14%, #fff);      /* 选中行底（跟随主题色） */
   --metro-text: #202020;
   --metro-text-2: #737373;
   --metro-text-3: #9a9a9a;
@@ -90,7 +91,7 @@
   box-shadow: none;
   padding: 0 14px;
 }
-[data-theme="metro"] .nav-logo { border-radius: 2px; background: var(--metro-accent); box-shadow: none; }
+[data-theme="metro"] .nav-logo { border-radius: 2px; background: none; box-shadow: none; }   /* 左上角 logo 不要蓝底 */
 [data-theme="metro"] .nav-tab {
   background: transparent;
   border: none;
@@ -165,7 +166,7 @@
 [data-theme="metro"] input[type="number"],
 [data-theme="metro"] input[type="password"],
 [data-theme="metro"] textarea {
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--metro-border-input);
   border-radius: 2px;
   box-shadow: none;
@@ -185,7 +186,7 @@
 [data-theme="metro"] select {
   -webkit-appearance: none;
   appearance: none;
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--metro-border-input);
   border-radius: 2px;
   color: var(--metro-text);
@@ -206,7 +207,7 @@
   width: 18px; height: 18px;
   margin: 0;
   position: relative;
-  background: #fff;
+  background: var(--surface);
   border: 1px solid #bdbdbd;
   border-radius: 2px;
   vertical-align: middle;
@@ -251,7 +252,7 @@
   z-index: 80;
   min-width: 208px;
   padding: 4px 0;
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--metro-border-hair);
   border-radius: 0;
   box-shadow: 0 2px 10px rgba(0, 0, 0, .12);
@@ -297,7 +298,7 @@
 /* ---------------------------------------------------------------- 瀑布流：Metro Tile + Masonry（大图为主、文字克制） */
 [data-theme="metro"] .masonry { padding: 14px 16px; }
 [data-theme="metro"] .ms-card {
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--metro-border-hair);
   border-radius: 0;
   box-shadow: none;
@@ -307,7 +308,7 @@
 }
 [data-theme="metro"] .ms-card:hover { border-color: var(--metro-accent); background: #fbfdff; transform: none; }
 [data-theme="metro"] .ms-card.checked { border-color: var(--metro-accent); box-shadow: inset 0 0 0 1px var(--metro-accent); }
-[data-theme="metro"] .ms-img-wrap { background: #f2f2f2; }
+[data-theme="metro"] .ms-img-wrap { background: var(--m-gray); }
 [data-theme="metro"] .ms-img { display: block; width: 100%; border-radius: 0; }
 [data-theme="metro"] .ms-name {
   padding: 8px 10px 0 10px;
@@ -374,7 +375,7 @@
 
 /* ---------------------------------------------------------------- 右键菜单 / 文件夹面板 */
 [data-theme="metro"] .ctx-menu {
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--metro-border-hair);
   border-radius: 0;
   box-shadow: 0 2px 10px rgba(0, 0, 0, .12);
@@ -387,7 +388,7 @@
 [data-theme="metro"] .ctx-menu .ctx-sep { border-top-color: var(--metro-border-hair); }
 
 [data-theme="metro"] .folders-panel {
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--metro-border-hair);
   border-radius: 0;
   box-shadow: 0 2px 10px rgba(0, 0, 0, .12);
@@ -399,7 +400,7 @@
 /* ---------------------------------------------------------------- 弹窗 / 提示 */
 [data-theme="metro"] .rd-mask { background: rgba(0, 0, 0, .22); }
 [data-theme="metro"] .rename-dialog {
-  background: #fff;
+  background: var(--surface);
   border: none;
   border-radius: 0;
   box-shadow: 0 8px 28px rgba(0, 0, 0, .18);
@@ -407,7 +408,7 @@
   overflow: hidden;
 }
 [data-theme="metro"] .rd-title { background: var(--metro-accent); color: #fff; padding: 12px 16px; font-weight: 600; font-size: 14px; border: none; }
-[data-theme="metro"] .rd-actions { padding: 12px 16px; gap: 8px; border-top: 1px solid var(--metro-border-hair); background: #fafafa; }
+[data-theme="metro"] .rd-actions { padding: 12px 16px; gap: 8px; border-top: 1px solid var(--metro-border-hair); background: var(--surface2); }
 [data-theme="metro"] .rd-actions .btn { min-width: 84px; justify-content: center; }
 [data-theme="metro"] .rd-group, [data-theme="metro"] .rd-home, [data-theme="metro"] .rd-img { border-radius: 0; }
 [data-theme="metro"] #toast { border-radius: 2px; background: #202020; color: #fff; border: none; }
@@ -502,7 +503,7 @@
   line-height: 1;
 }
 [data-theme="metro"] .btn.btn-l2 {                 /* 常用动作：白底 + 极细边框 */
-  background: #fff;
+  background: var(--surface);
   border: 1px solid #dcdcdc;
   color: var(--metro-text);
 }
@@ -517,7 +518,7 @@
 
 /* ---- 分段视图切换 ---- */
 [data-theme="metro"] .mm-seg { display: inline-flex; border: 1px solid #dcdcdc; border-radius: 2px; overflow: hidden; }
-[data-theme="metro"] .mm-seg .btn.seg { height: 32px; border-radius: 0; border: none; background: #fff; color: var(--metro-text-2); padding: 0 12px; }
+[data-theme="metro"] .mm-seg .btn.seg { height: 32px; border-radius: 0; border: none; background: var(--surface); color: var(--metro-text-2); padding: 0 12px; }
 [data-theme="metro"] .mm-seg .btn.seg + .btn.seg { border-left: 1px solid #dcdcdc; }
 [data-theme="metro"] .mm-seg .btn.seg:hover { background: var(--metro-tint); color: var(--metro-text); }
 [data-theme="metro"] .mm-seg .btn.seg.on { background: var(--metro-accent); color: #fff; font-weight: 600; }
@@ -566,7 +567,7 @@
 /* ---- 右下角「关于」：Metro 化 + 固定角落留边距，不压住卡片 ---- */
 [data-theme="metro"] .bili-float {
   right: 18px; bottom: 18px;
-  background: #fff;
+  background: var(--surface);
   border: 1px solid #e0e0e0;
   border-radius: 2px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, .08);
@@ -593,7 +594,7 @@
 [data-theme="metro"] .mm-menu.open {
   display: block;
   position: fixed;
-  background: #fff !important;          /* 实体不透明：绝不透出下层文字 */
+  background: var(--surface) !important;          /* 实体不透明：绝不透出下层文字 */
   opacity: 1 !important;
   backdrop-filter: none !important;
   border: 1px solid #e3e3e3;
@@ -620,7 +621,7 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  background: #fff;
+  background: var(--surface);
   border: none;
   border-radius: 0;
   overflow: hidden;
@@ -629,7 +630,7 @@
   flex: 0 0 auto;
   display: flex; align-items: center; justify-content: space-between;
   padding: 10px 14px;
-  background: #fafafa;
+  background: var(--surface2);
   border-bottom: 1px solid var(--metro-border-hair);
 }
 [data-theme="metro"] .dt-head-t { font-size: 15px; font-weight: 600; }
@@ -655,7 +656,7 @@
   color: var(--metro-text-3); font-size: 13px;
 }
 [data-theme="metro"] .detail-thumbs { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; flex: 0 0 auto; }
-[data-theme="metro"] .detail-thumb { width: 44px; height: 44px; object-fit: cover; border: 1px solid var(--metro-border-input); border-radius: 0; background: #f6f6f6; }
+[data-theme="metro"] .detail-thumb { width: 44px; height: 44px; object-fit: cover; border: 1px solid var(--metro-border-input); border-radius: 0; background: var(--m-gray); }
 [data-theme="metro"] .detail-thumb.on { border: 2px solid var(--metro-accent); }
 [data-theme="metro"] .detail-right {
   padding: 14px 16px; min-height: 0; overflow: auto;
@@ -769,7 +770,7 @@
   position: sticky;
   top: 0;
   z-index: 2;
-  background: #fff;
+  background: var(--surface);
   box-shadow: inset 0 -1px 0 var(--metro-border-hair);
 }
 [data-theme="metro"] .upd-table td.c-cur, [data-theme="metro"] .upd-table td.c-date,
@@ -809,14 +810,14 @@
    ========================================================================== */
 [data-theme="metro"] .nav { background: #fbfbfb; box-shadow: inset 0 -1px 0 #e6e6e6; }
 [data-theme="metro"] #page-models { background: var(--metro-bg); }
-[data-theme="metro"] .title-row { background: #fff; padding: 12px 16px 6px 16px; border-bottom: 1px solid var(--metro-border-hair); }
-[data-theme="metro"] .mm-metro { background: #fff; }
-[data-theme="metro"] .tool-row.mm-filter { background: #fff; border-bottom: 1px solid #e6e6e6; }
+[data-theme="metro"] .title-row { background: var(--surface); padding: 12px 16px 6px 16px; border-bottom: 1px solid var(--metro-border-hair); }
+[data-theme="metro"] .mm-metro { background: var(--surface); }
+[data-theme="metro"] .tool-row.mm-filter { background: var(--surface); border-bottom: 1px solid #e6e6e6; }
 [data-theme="metro"] .masonry { background: var(--metro-bg); }
-[data-theme="metro"] .table-wrap { background: #fff; border: 1px solid var(--metro-border-hair); margin: 10px 14px 52px 14px; }
-[data-theme="metro"] #mmTable thead th { background: #fafafa; }
-[data-theme="metro"] .upd-title-row { background: #fff; }
-[data-theme="metro"] .upd-filters { background: #fff; }
+[data-theme="metro"] .table-wrap { background: var(--surface); border: 1px solid var(--metro-border-hair); margin: 10px 14px 52px 14px; }
+[data-theme="metro"] #mmTable thead th { background: var(--surface2); }
+[data-theme="metro"] .upd-title-row { background: var(--surface); }
+[data-theme="metro"] .upd-filters { background: var(--surface); }
 
 /* ============================================================================
    v2.1.51：Typography 令牌落地（禁止全站同一字号/字重/颜色）
@@ -856,7 +857,7 @@
 /* ---- 状态胶囊（列表/更新页：轻量圆角；其余控件保持直角） ---- */
 [data-theme="metro"] .st-mini { border-radius: 10px; padding: 2px 9px; font-size: var(--fs-xs); font-weight: var(--fw-med); }
 [data-theme="metro"] .st-badge { border-radius: 10px; padding: 2px 10px; font-size: var(--fs-xs); font-weight: var(--fw-med); }
-[data-theme="metro"] .ver-badge { border-radius: 10px; background: #f4f4f4; padding: 2px 10px; }
+[data-theme="metro"] .ver-badge { border-radius: 10px; background: var(--surface2); padding: 2px 10px; }
 
 /* ============================================================================
    v2.1.51：更新页「版本选择」门户菜单（直角控件 + 全部版本 + ★推荐 + 当前版本）
@@ -865,7 +866,7 @@
 [data-theme="metro"] .vsel-btn {
   display: inline-flex; align-items: center; gap: 6px;
   max-width: 100%; height: 32px; padding: 0 8px 0 10px;
-  border: 1px solid var(--metro-border-input); background: #fff;
+  border: 1px solid var(--metro-border-input); background: var(--surface);
   font-size: var(--fs-sm); font-weight: var(--fw-med);
 }
 [data-theme="metro"] .vsel-btn:hover { border-color: var(--metro-accent); background: var(--metro-tint); }
@@ -921,13 +922,13 @@
   display: inline-flex; align-items: center; gap: 5px;
   height: 30px; padding: 0 10px;
   border: 1px solid var(--metro-border-input); border-radius: 2px;
-  background: #fff; color: var(--metro-accent); font-size: var(--fs-sm);
+  background: var(--surface); color: var(--metro-accent); font-size: var(--fs-sm);
 }
 [data-theme="metro"] .upd-site:hover { background: var(--metro-tint); border-color: var(--metro-accent); text-decoration: none; }
 [data-theme="metro"] .upd-site .ic { width: 13px; height: 13px; }
 [data-theme="metro"] .upd-more {
   width: 30px; height: 30px; border: 1px solid var(--metro-border-input); border-radius: 2px;
-  background: #fff; color: var(--c2); display: inline-flex; align-items: center; justify-content: center;
+  background: var(--surface); color: var(--c2); display: inline-flex; align-items: center; justify-content: center;
 }
 [data-theme="metro"] .upd-more:hover { background: var(--metro-tint); border-color: var(--metro-accent); color: var(--metro-accent); }
 [data-theme="metro"] .upd-go { height: 30px; padding: 0 12px; font-size: var(--fs-sm); }
@@ -951,9 +952,9 @@
 [data-theme="metro"] .st-badge.gray { background: var(--status-unknown-bg); color: var(--status-unknown); }
 
 /* ===== 更新页：状态选项卡（Status Tabs） ===== */
-[data-theme="metro"] .upd-tabs { display: inline-flex; align-items: stretch; height: 34px; border: 1px solid var(--metro-line); background: #fff; }
+[data-theme="metro"] .upd-tabs { display: inline-flex; align-items: stretch; height: 34px; border: 1px solid var(--metro-line); background: var(--surface); }
 [data-theme="metro"] .upd-tabs .upd-tab {
-  display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; background: #fff; border: 0;
+  display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; background: var(--surface); border: 0;
   border-right: 1px solid var(--metro-line); font-size: var(--fs-sm); color: var(--c2);
   cursor: pointer; white-space: nowrap; box-shadow: inset 0 -2px 0 0 transparent;
 }
@@ -1031,3 +1032,47 @@
 /* ===== 详情：键值对标签略放宽、简介可视高度 ===== */
 [data-theme="metro"] .dt-mr .k { flex: 0 0 40px; }
 [data-theme="metro"] .detail-desc { max-height: 260px; overflow: auto; }
+
+
+/* ===== 设置页底部操作条：去亚克力圆角，改 Metro 直角面板 ===== */
+[data-theme="metro"] .sticky-actions {
+  border-radius: 0;
+  background: var(--surface);
+  border: 1px solid var(--metro-border-hair);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  padding: 8px 12px;
+}
+
+/* ===== Metro 暗色（data-scheme=dark）===== */
+[data-theme="metro"][data-scheme="dark"] {
+  --bg: #1b1b1b;
+  --surface: #232323;
+  --surface2: #2a2a2a;
+  --border: #3a3a3a;
+  --text: #e8e8e8;
+  --text-dim: #a0a0a0;
+  --primary-fg: #ffffff;
+  --m-gray: #2a2a2a;
+  --metro-bg: #1b1b1b;
+  --metro-surface: #232323;
+  --metro-border-hair: #333333;
+  --metro-border-input: #454545;
+  --metro-text: #e8e8e8;
+  --metro-text-2: #a8a8a8;
+  --metro-text-3: #808080;
+  --metro-hover: color-mix(in srgb, var(--metro-accent) 22%, transparent);
+  --metro-sel-bg: color-mix(in srgb, var(--metro-accent) 30%, #232323);
+  --c1: #e8e8e8;
+  --c2: #a8a8a8;
+  --c3: #7d7d7d;
+  --status-upd-bg: #16351c;
+  --status-latest-bg: #12283c;
+  --status-base-bg: #333333;
+  --status-unknown-bg: #3a2e14;
+}
+
+
+/* Metro 专属设置项：只在 Metro 主题下显示（亮暗 / 主题色） */
+html:not([data-theme="metro"]) .metro-opt { display: none !important; }

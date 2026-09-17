@@ -56,6 +56,8 @@ DEFAULTS = {
     "organize_mode": "manual",          # 整理模式：manual=手动 / civitai=C站tags分类 / rules=自定义规则
     "ambient_bg": True,                 # 顶部氛围动态背景（流动光晕，近似 shader）
     "ui_zoom": 100,                     # 界面缩放百分比（80-150）
+    "ui_scheme": "light",               # Metro 亮暗：light / dark / auto（跟随系统）
+    "metro_accent": "#0078D4",          # Metro 主题色（#RRGGBB 或 system=跟随 Windows 主题色）
     "rename_menu_default": "custom",
     "default_view": "waterfall",  # 模型管理默认视图 list / waterfall  # 修改名称按钮默认动作：custom/rename_c/localize
     "rename_clean_rules": "comma,paren",  # 改名/下载命名时清理符号：comma 逗号→空格 / paren 括号删除 / dash 横线下划线→空格

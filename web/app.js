@@ -1549,8 +1549,12 @@ function applyMmFilter() {
       (r.path || "").toLowerCase().includes(kw));
   }
   if (state.mmFolderF) {
-    const _fp = String(state.mmFolderF).toLowerCase();
-    rows = rows.filter((r) => String(r.path || "").toLowerCase().indexOf(_fp) === 0);
+    // 相对文件夹路径（Lora/风格）对绝对模型路径做"目录段"匹配；统一斜杠与大小写
+    const _fp = String(state.mmFolderF).toLowerCase().replace(/^[\/]+|[\/]+$/g, "");
+    rows = rows.filter((r) => {
+      const p2 = String(r.path || "").replace(/\\/g, "/").toLowerCase();
+      return p2.indexOf("/" + _fp + "/") >= 0 || p2.indexOf("/" + _fp) === p2.length - _fp.length - 1;
+    });
   }
   if (state.mmBaseF) rows = rows.filter((r) => String(r.base || "") === state.mmBaseF);
   if (state.mmStF) {
@@ -3730,6 +3734,8 @@ const SETTING_FIELDS = [
     ["modern", "现代浅色"],
   ]],
   ["界面", "ui_zoom", "界面缩放", "select", ["80", "90", "100", "110", "125", "150"]],
+  ["界面", "ui_scheme", "Metro 亮暗", "select", [["light", "亮色"], ["dark", "暗色"], ["auto", "跟随系统"]]],
+  ["界面", "metro_accent", "Metro 主题色", "select", [["#0078D4", "Windows 蓝（默认）"], ["#107C10", "翡翠绿"], ["#7A3FF2", "紫罗兰"], ["#B26A00", "琥珀橙"], ["#C42B1C", "绛红"], ["#006E8C", "青碧"], ["system", "跟随系统主题色"]]],
   ["界面", "rename_menu_default", "改名默认动作", "select", [["custom", "自定义改名"], ["rename_c", "文件名改成C站名"], ["localize", "文件名翻中文"]]],
   ["界面", "confirm_buttons_flip", "确认弹窗按钮翻转", "bool"],
   ["界面", "default_page", "启动默认页", "select", [["models", "模型管理"], ["download", "批量下载"], ["dlmanager", "下载管理"], ["reverse", "反向解析"], ["workflow", "工作流分析"], ["settings", "设置"]]],
@@ -3744,6 +3750,36 @@ const SETTING_FIELDS = [
   ["界面", "tray_icon", "浏览器模式：托盘图标", "bool"],
   ["界面", "exit_when_page_closed", "浏览器模式：关页面后自动退出", "bool"],
 ];
+
+// ===== Metro 外观：亮暗（可跟随系统）+ 主题色（可跟随系统主题色）=====
+let _schemeMQ = null;
+function applyUiAppearance() {
+  const scheme = String((state.cfg && state.cfg.ui_scheme) || "light");
+  const acc = String((state.cfg && state.cfg.metro_accent) || "#0078D4");
+  const root = document.documentElement;
+  if (scheme === "auto") {
+    if (!_schemeMQ) {
+      try {
+        _schemeMQ = window.matchMedia("(prefers-color-scheme: dark)");
+        _schemeMQ.addEventListener("change", () => applyUiAppearance());
+      } catch (e) { _schemeMQ = null; }
+    }
+    root.dataset.scheme = (_schemeMQ && _schemeMQ.matches) ? "dark" : "light";
+  } else {
+    root.dataset.scheme = scheme === "dark" ? "dark" : "light";
+  }
+  if (/^#([0-9a-f]{6})$/i.test(acc)) {
+    root.style.setProperty("--metro-accent", acc);
+    root.style.setProperty("--primary", acc);
+  } else if (acc === "system") {
+    api.call("get_system_accent").then((c) => {
+      if (c && /^#([0-9a-fA-F]{6})$/.test(c)) {
+        root.style.setProperty("--metro-accent", c);
+        root.style.setProperty("--primary", c);
+      }
+    }).catch(() => { });
+  }
+}
 
 // 设置项 hover 说明（鼠标移到标签上显示功能作用）
 const SETTING_TIPS = {
@@ -3772,6 +3808,8 @@ const SETTING_TIPS = {
   "translate_filename": "下载时把模型名翻译成中文作为文件名（需要配置百度翻译）",
   "theme": "界面主题：深色 / 浅色 / 现代浅色；选 Metro 磁贴 = Win10 直角扁平风（顶部按钮分组 + 默认瀑布流）",
   "ui_zoom": "界面整体缩放比例（百分比）",
+  "ui_scheme": "Metro 主题的亮暗模式：亮色 / 暗色 / 跟随系统（Windows 的浅色/深色设置）",
+  "metro_accent": "Metro 主题的强调色：影响按钮、选中、链接等；「跟随系统主题色」读取 Windows 个性化里的主题色",
   "rename_menu_default": "点「改名」默认执行的动作：自定义 / 改成 C 站模型名 / 文件名翻中文",
   "confirm_buttons_flip": "交换确认弹窗中「确定/取消」按钮位置（防误点）",
   "default_page": "启动软件后默认打开的页面",
@@ -3881,6 +3919,16 @@ function buildSettingsForm() {
     '<label data-tip="删除模型目录下所有「模型名.images」图片缓存文件夹（详情面板里下载的示例图），释放磁盘空间；封面缩略图不受影响">图片缓存清理</label>' +
     '<div><button class="btn" id="btnCleanImgCache">删除下载的图片文件夹</button></div>' +
     "</div></fieldset>";
+  // Metro 专属项（亮暗 / 主题色）仅在 Metro 主题下显示
+  try {
+    ["ui_scheme", "metro_accent"].forEach((k) => {
+      const el = document.querySelector('#settingsForm [data-key="' + k + '"]');
+      if (!el) return;
+      const cell = el.parentElement; if (cell) cell.classList.add("metro-opt");
+      const lab = cell && cell.previousElementSibling; if (lab) lab.classList.add("metro-opt");
+    });
+  } catch (e) { }
+
 }
 
 // 密码框小眼睛（切换明文显示）
@@ -3960,6 +4008,9 @@ $("#settingsForm").addEventListener("change", (e) => {
   if (key === "theme") {
     state.cfg.theme = val;
     document.documentElement.dataset.theme = val || "modern";
+  } else if (key === "ui_scheme" || key === "metro_accent") {
+    if (state.cfg) state.cfg[key] = val;
+    applyUiAppearance();
   } else if (key === "ui_zoom") {
     applyZoom(Number(val) || 100);
   }
@@ -4312,7 +4363,10 @@ async function fillMmFolderOptions() {
   const sel = document.getElementById("mmFolderF");
   if (!sel) return;
   if (!_mmFolderTree) {
-    try { _mmFolderTree = JSON.parse((await api.call("get_folders")) || "[]"); } catch (e) { _mmFolderTree = []; }
+    try {
+      const j = JSON.parse((await api.call("get_folders")) || "{}");
+      _mmFolderTree = Array.isArray(j) ? j : ((j && j.tree) || []);   // ★ get_folders 返回 {root, tree, hidden, show_root}
+    } catch (e) { _mmFolderTree = []; }
   }
   const flat = [];
   const walk = (nodes, depth) => (nodes || []).forEach((n) => {
@@ -4354,7 +4408,7 @@ function _closeMmMenus() {
 function _mmOpenMenu(grp, menu, btn) {
   if (menu.parentElement !== document.body) document.body.appendChild(menu);
   menu.style.position = "fixed";
-  menu.style.background = "#fff";
+  menu.style.background = "var(--surface, #fff)";   // 暗色模式下跟随主题面
   menu.style.zIndex = "var(--z-dropdown, 340)";
   const r = btn.getBoundingClientRect();
   const w = menu.offsetWidth || 220;
@@ -4367,6 +4421,7 @@ function _mmOpenMenu(grp, menu, btn) {
 }
 
 function bindMmMetro() {
+  const _sec = (name, fn) => { try { fn(); } catch (e) { console.error("[bindMmMetro]", name, e); try { api.call("log_ui_error", "bindMmMetro/" + name + ": " + (e && e.message || e)); } catch (e2) { } } };
   // 1) 代理按钮：点击 → 原按钮 click()
   document.querySelectorAll(".mm-metro [data-proxy]").forEach((el) => {
     if (el._px) return; el._px = 1;
@@ -4377,24 +4432,30 @@ function bindMmMetro() {
     });
   });
   // 2) 菜单开合（点击式；再点收起；外点/Esc 关闭）
+  _sec("menus", () => {
   document.querySelectorAll(".mm-metro [data-menu]").forEach((btn) => {
     if (btn._mn) return; btn._mn = 1;
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
       const grp = btn.closest(".btn-group");
       if (!grp) return;
-      const menu = grp.querySelector(".mm-menu");
+      // 菜单首次打开后会 portal 到 body，此时 grp.querySelector 找不到它 → 用记住的引用兜底（否则第二次点不开）
+      const menu = grp.querySelector(".mm-menu") || grp._menu || null;
       const wasOpen = grp.classList.contains("open");
       _closeMmMenus();
       if (!wasOpen && menu) _mmOpenMenu(grp, menu, btn);   // 箭头翻转由 CSS 负责（.btn-group.open .car svg）
     });
   });
+  });
   // 3) 改名菜单（复用 mmRenameRun，功能与老菜单完全一致）
+  _sec("rename", () => {
   document.querySelectorAll(".mm-metro [data-ract]").forEach((it) => {
     if (it._ra) return; it._ra = 1;
     it.addEventListener("click", () => { _closeMmMenus(); mmRenameRun(it.dataset.ract); });
   });
+  });
   // 4) 跳设置 / 打开日志
+  _sec("goto", () => {
   document.querySelectorAll(".mm-metro [data-goto='settings']").forEach((it) => {
     if (it._gt) return; it._gt = 1;
     it.addEventListener("click", () => { _closeMmMenus(); switchPage("settings"); });
@@ -4407,6 +4468,8 @@ function bindMmMetro() {
       setStatus((r && r.msg) || "已打开日志文件夹");
     });
   });
+  });
+  _sec("outside", () => {
   document.addEventListener("click", (e) => {
     if (e.target && e.target.closest && e.target.closest(".mm-menu")) return;   // 点在菜单里不关
     _closeMmMenus();
@@ -4419,7 +4482,9 @@ function bindMmMetro() {
       if (b && g._menu) _mmOpenMenu(g, g._menu, b);
     });
   });
+  });
   // 5) Metro 筛选（底模 / 状态 / 排序），复用既有 state 与排序机制
+  _sec("filters", () => {
   const bf = document.getElementById("mmBaseF"), sf = document.getElementById("mmStF"),
         so = document.getElementById("mmSortF"), sd = document.getElementById("mmSortDir");
   const ff = document.getElementById("mmFolderF");
@@ -4442,6 +4507,8 @@ function bindMmMetro() {
   if (_vl) _vl.addEventListener("click", () => mmSetView("list"));
   if (_vm) _vm.addEventListener("click", () => mmSetView("masonry"));
   syncViewSeg();
+  });
+  _sec("appearance", () => { applyUiAppearance(); });
   // 6) 代理跟随原按钮（文字/禁用/显隐）
   document.querySelectorAll(".mm-metro [data-proxy]").forEach((el) => {
     const src = document.getElementById(el.dataset.proxy);
