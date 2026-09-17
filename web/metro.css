@@ -832,6 +832,14 @@
 [data-theme="metro"] .detail-desc-orig { font-size: var(--fs-xs); color: var(--c3); line-height: var(--lh-body); }
 
 /* ---- 列表：三行信息格 + 缩略图入格 ---- */
+/* 表头一律左对齐（除选择列），数据都是左对齐 —— 此前 th 默认居中导致"表头悬浮在数据中间" */
+[data-theme="metro"] #mmTable thead th { text-align: left; }
+[data-theme="metro"] #mmTable thead th.c-sel { text-align: center; }
+/* 行高统一 72px（信息三行 + 48px 缩略图；文件名再长也不撑高） */
+[data-theme="metro"] #mmTable tbody tr { height: 72px; }
+[data-theme="metro"] #mmTable tbody td { padding-top: 10px; padding-bottom: 10px; }
+/* 未检查：中性灰徽章（此前是"-"，看起来像坏掉的列） */
+[data-theme="metro"] .st-mini.none { background: var(--status-base-bg); color: var(--status-base); font-weight: var(--fw-body); }
 [data-theme="metro"] #mmTable .ml-thumb { width: 48px; height: 48px; object-fit: cover; border: 1px solid var(--metro-border-hair); flex: 0 0 48px; }
 [data-theme="metro"] #mmTable tbody tr { height: 72px; }
 [data-theme="metro"] #mmTable tbody td { height: 72px; }
@@ -876,18 +884,19 @@
    v2.1.52：表格列定义（colgroup，表头/数据行唯一来源）+ 内容不撑列
    ========================================================================== */
 [data-theme="metro"] #mmTable { table-layout: fixed; width: 100%; }
-/* 列宽用比例分配（等价于 minmax 思路）：合计 <100%，剩余按比例摊回各列 → 任何宽度下都铺满，不会右侧留空 */
+/* 列宽：只有「模型信息」是 auto 弹性列 —— fixed 布局下 auto 列会吃掉全部剩余宽度，
+   所以无论隐藏多少列、窗口多宽，表格永远铺满，右侧不可能留空。（2026-09 两次踩坑：全 % 会留空、只隐藏单元格会留空槽） */
 [data-theme="metro"] #mmTable col.c-sel { width: 46px; }
-[data-theme="metro"] #mmTable col.c-name { width: 36%; }             /* 模型信息 = 最大弹性列 */
+[data-theme="metro"] #mmTable col.c-name { width: auto; }            /* ★ 唯一弹性列，吸收全部剩余宽度 */
 [data-theme="metro"] #mmTable col.c-cname { width: 10%; }
-[data-theme="metro"] #mmTable col.c-type { width: 4%; }
-[data-theme="metro"] #mmTable col.c-base { width: 4.5%; }
-[data-theme="metro"] #mmTable col.c-ver { width: 5%; }
-[data-theme="metro"] #mmTable col.c-update { width: 6%; }
+[data-theme="metro"] #mmTable col.c-type { width: 4.5%; }
+[data-theme="metro"] #mmTable col.c-base { width: 5.5%; }
+[data-theme="metro"] #mmTable col.c-ver { width: 5.5%; }
+[data-theme="metro"] #mmTable col.c-update { width: 6.5%; }
 [data-theme="metro"] #mmTable col.c-hash { width: 6.5%; }
-[data-theme="metro"] #mmTable col.c-size { width: 5%; }
-[data-theme="metro"] #mmTable col.c-mtime { width: 7.5%; }
-[data-theme="metro"] #mmTable col.c-path { width: 11%; }
+[data-theme="metro"] #mmTable col.c-size { width: 5.5%; }
+[data-theme="metro"] #mmTable col.c-mtime { width: 8%; }
+[data-theme="metro"] #mmTable col.c-path { width: 12%; }
 [data-theme="metro"] #mmTable thead th, [data-theme="metro"] #mmTable tbody td {
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }

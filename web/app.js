@@ -1189,7 +1189,7 @@ function renderMm() {
       "<td class='c-name' data-col='cname' data-tip='' >" + esc(r.civitai_name || "-") + "</td>" +
       "<td data-col='type'>" + esc(r.type || "-") + "</td><td data-col='base'>" + esc(r.base || "-") + "</td>" +
       "<td class='c-ver' data-col='ver'>" + esc(r.ver || "-") + "</td>" +
-      "<td data-col='update'>" + ((r.upd && (r.upd.has_update || r.upd.other_base)) ? '<span class="st-mini upd">' + _icon("alert") + '有更新</span>' : (r.upd ? '<span class="st-mini ok">' + _icon("check") + '已最新</span>' : "-")) + "</td>" +
+      "<td data-col='update'>" + ((r.upd && (r.upd.has_update || r.upd.other_base)) ? '<span class="st-mini upd">' + _icon("alert") + '有更新</span>' : (r.upd ? '<span class="st-mini ok">' + _icon("check") + '已最新</span>' : '<span class="st-mini none">未检查</span>')) + "</td>" +
       "<td data-col='hash'>" + esc(r.hash || "-") + "</td>" +
       "<td data-col='size'>" + fmtSize(r.size) + "</td><td class='c-time' data-col='mtime'>" + fmtTime(r.mtime) + "</td>" +
       "<td class='c-path' data-col='path' data-full='" + esc(rel.replace(/[^\\/]+$/, "")) + "'>" + esc(short(rel, 30)) + "</td></tr>";
@@ -1288,10 +1288,10 @@ function mmApplyCols() {
   const DEFAULT_HIDDEN = ["cname", "hash"];   // 只收起「C站模型名」「哈希」；大小/时间/路径都保留（信息密度优先）
   try {
     // v2 迁移：早期版本默认藏得太多（fixed 布局下会留下空槽 → 右侧一片空白），升级时重置一次
-    if (localStorage.getItem("mm_hidden_cols_v") !== "2") {
+    if (localStorage.getItem("mm_hidden_cols_v") !== "3") {
       hidden = DEFAULT_HIDDEN.slice();
       localStorage.setItem("mm_hidden_cols", JSON.stringify(hidden));
-      localStorage.setItem("mm_hidden_cols_v", "2");
+      localStorage.setItem("mm_hidden_cols_v", "3");
     } else {
       hidden = JSON.parse(localStorage.getItem("mm_hidden_cols") || "[]");
     }
