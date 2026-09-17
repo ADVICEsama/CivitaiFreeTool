@@ -1200,6 +1200,17 @@ function renderMm() {
 }
 
 // 分批加载封面缩略图（每次 40 个，避免大传输卡顿）
+async function loadUpdThumbs() {
+  const imgs = Array.from(document.querySelectorAll("#updTable img.upd-cov[data-path]"));
+  const paths = imgs.map((i) => i.dataset.path).filter(Boolean);
+  if (!paths.length) return;
+  try {
+    const json = await api.call("get_covers", Array.from(new Set(paths)));
+    const covers = JSON.parse(json || "{}");
+    imgs.forEach((i) => { const b = covers[i.dataset.path]; if (b) i.src = "data:image/jpeg;base64," + b; });
+  } catch (e) { /* 缩略图失败不影响 */ }
+}
+
 async function loadThumbs(start) {
   const batch = state.display.slice(start, start + 40);
   if (!batch.length) return;
@@ -1470,6 +1481,7 @@ $("#mmMasonry").addEventListener("contextmenu", (e) => {
     '<div class="ctx-item" data-act="sdjson" data-tip="生成 WebUI 能识别的「模型名.json」元数据文件">生成SD可读json</div>' +
     '<div class="ctx-item" data-act="localize" data-tip="把本地文件名翻译成中文">🀄 文件名翻中文</div>' +
     '<div class="ctx-item" data-act="rp" data-tip="从 C 站匹配该模型的名字/触发词/封面">识别模型信息</div>' +
+    '<div class="ctx-item" data-act="wl" data-tip="以后不再提示这个模型的更新（按模型记入白名单）">不再提醒更新（加入白名单）</div>' +
     '<div class="ctx-item" data-act="organize" data-tip="把该模型移动到分类文件夹（需先在设置选 目标环境）">整理模型</div>' +
     '<hr class="ctx-sep"/>' +
     '<div class="ctx-item danger" data-act="del" data-tip="把该模型文件移入回收站（可还原）">移入回收站</div>';
@@ -1783,7 +1795,7 @@ function _updRowHtml(x) {
     '<td class="c-st"><span class="st-badge ' + st.cls + '">' + st.t + "</span></td>" +
     '<td class="c-act"><div class="upd-acts2">' +
       ((!selIsCurrent && sel) ? '<button class="btn btn-tiny upd-go' + (isDown ? " is-down" : " btn-primary") + '" data-path="' + esc(x.path) + '" data-vid="' + esc(sel) + '" data-tip="' + actTip + '">' + actLabel + "</button>" : "") +
-      (it.url ? '<a href="#" class="dd-link upd-site" data-url="' + esc(it.url) + '" data-tip="在浏览器打开 C 站页面">C 站</a>' : "") +
+      (it.url ? '<a href="#" class="upd-site" data-url="' + esc(it.url) + '" data-tip="在浏览器打开 C 站页面"><img class="thumb upd-cov" data-path="' + esc(x.path) + '" alt=""/></a>' : "") +
       '<button class="icon-btn upd-more" data-path="' + esc(x.path) + '" data-tip="更多：打开文件夹 / 复制路径 / 不再提醒">···</button>' +
     "</div></td></tr>";
 }
@@ -1886,6 +1898,7 @@ async function renderUpdatesPage() {
   } else {
     if (empty) empty.style.display = "none";
     tbody.innerHTML = pageRows.map(_updRowHtml).join("");
+  loadUpdThumbs();
     loadDdThumbs(tbody, pageRows.map((x) => x.path), 64);
   }
 
@@ -2019,7 +2032,7 @@ function _updCtxMenu(path, anchor, cx, cy) {
   const menu = $("#ctxMenu");
   menu.innerHTML =
     (it.has_update ? '<div class="ctx-item" data-act="upd_dl" data-tip="把下拉里选中的版本加入下载队列">更新到选中版本</div>' : "") +
-    (it.has_update ? '<div class="ctx-item" data-act="upd_wl" data-tip="以后不再提示这个模型的更新（按模型记入白名单）">不再提醒更新（加入白名单）</div>' : "") +
+    '<div class="ctx-item" data-act="upd_wl" data-tip="以后不再提示这个模型的更新（按模型记入白名单；对已最新的模型也有效）">不再提醒更新（加入白名单）</div>' +
     (it.url ? '<div class="ctx-item" data-act="upd_site2" data-tip="在浏览器打开 C 站页面">打开 C 站页面</div>' : "") +
     '<div class="ctx-item" data-act="upd_folder" data-tip="打开资源管理器并选中该文件">打开所在文件夹</div>' +
     '<div class="ctx-item" data-act="upd_copy" data-tip="复制文件完整路径">复制文件路径</div>';
@@ -3337,6 +3350,7 @@ $("#mmTable tbody").addEventListener("contextmenu", (e) => {
     '<div class="ctx-item" data-act="sdjson" data-tip="生成 WebUI 能识别的「模型名.json」元数据文件">生成SD可读json</div>' +
     '<div class="ctx-item" data-act="localize" data-tip="把本地文件名翻译成中文">🀄 文件名翻中文</div>' +
     '<div class="ctx-item" data-act="rp" data-tip="从 C 站匹配该模型的名字/触发词/封面">识别模型信息</div>' +
+    '<div class="ctx-item" data-act="wl" data-tip="以后不再提示这个模型的更新（按模型记入白名单）">不再提醒更新（加入白名单）</div>' +
     '<div class="ctx-item" data-act="organize" data-tip="把该模型移动到分类文件夹（需先在设置选 目标环境）">整理模型</div>' +
     '<hr class="ctx-sep"/>' +
     '<div class="ctx-item danger" data-act="del" data-tip="把该模型文件移入回收站（可还原）">移入回收站</div>';
@@ -3379,6 +3393,11 @@ $("#ctxMenu").addEventListener("click", async (e) => {
     } else if (act === "site") {
       const url = ctxRow.url || ("https://" + (state.cfg.site_domain || "civitai.red") + "/models/" + (ctxRow.modelId || ""));
       api.call("open_url", url);
+    } else if (act === "wl") {
+      const mid = ctxRow.modelId || "";
+      if (!mid) { setStatus("该模型没有 C 站信息，无法加入白名单"); return; }
+      const r = await api.call("add_update_whitelist", mid, ctxRow.civitai_name || ctxRow.name || "");
+      setStatus((r && r.msg) || "已加入白名单");
     } else if (act === "rename") {
       showRenameDialog(path, ctxRow.name);
     } else if (act === "rename_c") {

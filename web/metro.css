@@ -1118,9 +1118,12 @@ svg.ic { width: 16px; height: 16px; flex: 0 0 auto; vertical-align: -3px; }
 
 /* 更新页「C 站」链接：紧凑小按钮（原先是大号裸链接） */
 .upd-acts2 { display: flex; align-items: center; gap: 6px; justify-content: flex-end; }
-.upd-acts2 .upd-site { font-size: 12px; line-height: 1.5; color: var(--text-dim); text-decoration: none;
-  padding: 2px 8px; border: 1px solid var(--border); border-radius: 2px; white-space: nowrap; }
-.upd-acts2 .upd-site:hover { color: var(--text); border-color: var(--text-dim); }
+.upd-acts2 .upd-site { display: inline-flex; padding: 0; border: 0; text-decoration: none; line-height: 0; }
+.upd-acts2 .upd-site img.upd-cov {
+  width: 34px; height: 34px; object-fit: cover; display: block;
+  border-radius: 3px; border: 1px solid var(--border); background: var(--surface2);
+}
+.upd-acts2 .upd-site:hover img.upd-cov { border-color: var(--metro-accent); }
 
 
 /* 经典主题显示 emoji、Metro 主题隐藏：按钮里的 emoji 一律包在 .emj 中 */
