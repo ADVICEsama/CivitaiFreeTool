@@ -1180,11 +1180,19 @@ function renderMm() {
     return '<tr data-idx="' + i + '" data-path="' + esc(r.path) + '" class="' + (state.mmSel.has(r.path) ? "sel-row" : "") + '">' +
       '<td class="cell-sel">' + (state.mmChecked.has(r.path) ? "✅" : "⬜") + "</td>" +
       '<td class="c-thumb"><img data-idx="' + i + '" data-path="' + esc(r.path) + '" class="thumb" alt=""/></td>' +
-      "<td class='c-name'>" + (r.upd && r.upd.has_update ? '<a href="#" class="mm-upd" data-url="' + esc(r.upd.url || "") + '" title="' + esc(updTip(r.upd)) + '">❗</a> ' : "") + esc(r.name) + "</td>" +
-      "<td class='c-name'>" + esc(r.civitai_name || "-") + "</td>" +
+      "<td class='c-name'><div class='ml-wrap'>" +
+        (r.upd && r.upd.has_update ? '<a href="#" class="mm-upd" data-url="' + esc(r.upd.url || "") + '" title="' + esc(updTip(r.upd)) + '">' + _icon("alert") + '</a>' : "") +
+        '<div class="ml-txt">' +
+          '<div class="ml-1" data-tip="' + esc(r.civitai_name || r.name) + '">' + esc(r.civitai_name || r.name) + "</div>" +
+          '<div class="ml-2" data-tip="' + esc(r.name + "　·　" + rel + "　·　" + fmtSize(r.size) + (r.hash ? "　·　" + r.hash : "")) + '">' +
+            esc(short(r.name, 40)) + " · " + esc(r.type || "-") + " · " + esc(r.base || "-") + " · " + esc(r.ver || "-") + " · " + fmtSize(r.size) +
+          "</div>" +
+        "</div></div></td>" +
+      "<td class='c-name' data-tip='' >" + esc(r.civitai_name || "-") + "</td>" +
       "<td>" + esc(r.type || "-") + "</td><td>" + esc(r.base || "-") + "</td>" +
       "<td class='c-ver'>" + esc(r.ver || "-") + "</td>" +
-      "<td>" + esc(r.update || "-") + "</td><td>" + esc(r.hash || "-") + "</td>" +
+      "<td>" + ((r.upd && (r.upd.has_update || r.upd.other_base)) ? '<span class="st-mini upd">' + _icon("alert") + '有更新</span>' : (r.upd ? '<span class="st-mini ok">' + _icon("check") + '已最新</span>' : "-")) + "</td>" +
+      "<td>" + esc(r.hash || "-") + "</td>" +
       "<td>" + fmtSize(r.size) + "</td><td class='c-time'>" + fmtTime(r.mtime) + "</td>" +
       "<td class='c-path' data-full='" + esc(rel.replace(/[^\\/]+$/, "")) + "'>" + esc(short(rel, 30)) + "</td></tr>";
   }).join("");
@@ -1279,7 +1287,15 @@ const MM_COLS = [["sel", "☑ 勾选"], ["thumb", "缩略图"], ["name", "文件
                  ["hash", "哈希"], ["size", "大小"], ["mtime", "下载时间"], ["path", "路径"]];
 function mmApplyCols() {
   let hidden = [];
-  try { hidden = JSON.parse(localStorage.getItem("mm_hidden_cols") || "[]"); } catch (e) {}
+  try {
+    const raw = localStorage.getItem("mm_hidden_cols");
+    if (raw === null) {                       // 首次：默认收起次级列（用户可在表头右键里改，改过就永久生效）
+      hidden = ["cname", "hash", "size", "path"];
+      localStorage.setItem("mm_hidden_cols", JSON.stringify(hidden));
+    } else {
+      hidden = JSON.parse(raw || "[]");
+    }
+  } catch (e) { hidden = []; }
   const hs = new Set(hidden);
   document.querySelectorAll("#mmTable thead th[data-col]").forEach((th) => {
     th.style.display = hs.has(th.dataset.col) ? "none" : "";

@@ -755,3 +755,36 @@
 [data-theme="metro"] .upd-table td.c-ver { white-space: nowrap; }
 [data-theme="metro"] .upd-table .upd-nm,
 [data-theme="metro"] .upd-table .upd-sub2 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ============================================================================
+   v2.1.50：列表视图两行结构（固定行高 68px / 缩略图 52px / 省略号 + tooltip）
+   ========================================================================== */
+[data-theme="metro"] #mmTable tbody tr { height: 68px; }
+[data-theme="metro"] #mmTable tbody td { height: 68px; vertical-align: middle; padding: 6px 10px; }
+[data-theme="metro"] #mmTable .thumb { width: 52px; height: 52px; object-fit: cover; }
+[data-theme="metro"] .ml-wrap { display: flex; align-items: center; gap: 8px; min-width: 0; }
+[data-theme="metro"] .ml-wrap .mm-upd { color: var(--metro-accent); display: inline-flex; }
+[data-theme="metro"] .ml-txt { min-width: 0; flex: 1 1 auto; }
+[data-theme="metro"] .ml-1 { font-size: 13px; font-weight: 600; color: var(--metro-text); line-height: 20px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+[data-theme="metro"] .ml-2 { font-size: 11.5px; color: var(--metro-text-2); line-height: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+[data-theme="metro"] .st-mini { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; padding: 1px 6px; border-radius: 2px; }
+[data-theme="metro"] .st-mini .ic { width: 12px; height: 12px; }
+[data-theme="metro"] .st-mini.upd { background: var(--metro-tint); color: var(--metro-accent); }
+[data-theme="metro"] .st-mini.ok { background: var(--metro-green-bg); color: var(--metro-green); }
+[data-theme="metro"] #mmTable td.c-name { max-width: 0; }          /* 配合 ellipsis 生效 */
+[data-theme="metro"] #mmTable th.c-ver, [data-theme="metro"] #mmTable td.c-ver,
+[data-theme="metro"] #mmTable td.c-time { white-space: nowrap; }
+
+/* ============================================================================
+   v2.1.50：App Shell 边界（Header / Page Header / Toolbar / Filter / Content）
+   ========================================================================== */
+[data-theme="metro"] .nav { background: #fbfbfb; box-shadow: inset 0 -1px 0 #e6e6e6; }
+[data-theme="metro"] #page-models { background: var(--metro-bg); }
+[data-theme="metro"] .title-row { background: #fff; padding: 12px 16px 6px 16px; border-bottom: 1px solid var(--metro-border-hair); }
+[data-theme="metro"] .mm-metro { background: #fff; }
+[data-theme="metro"] .tool-row.mm-filter { background: #fff; border-bottom: 1px solid #e6e6e6; }
+[data-theme="metro"] .masonry { background: var(--metro-bg); }
+[data-theme="metro"] .table-wrap { background: #fff; border: 1px solid var(--metro-border-hair); margin: 10px 14px 52px 14px; }
+[data-theme="metro"] #mmTable thead th { background: #fafafa; }
+[data-theme="metro"] .upd-title-row { background: #fff; }
+[data-theme="metro"] .upd-filters { background: #fff; }
