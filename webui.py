@@ -11,7 +11,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.1.39"
+APP_VERSION = "2.1.40"
 
 import civitai_api
 import config
@@ -2194,34 +2194,46 @@ class Api:
     def get_mm_update_state(self):
         return self._mm_upd_state
 
-    def mm_check_updates(self, force=False):
+    def mm_check_updates(self, force=False, paths=None):
         """检查更新（后台，不会自动下载）。
 
         规则：以本地版本所在底模为准 —— **同底模有更新**才算「有新版」；
         最新版换了底模（如 Anima→Krea）只记为「其它底模版本」，不算更新、不打扰。
         结果写 model_updates.json 缓存，默认 24 小时内不重复查（force=True 强制）。
+
+        paths 非空时**只检查勾选的这几个**（显式选择 → 忽略 24h 缓存与更新白名单，立即查）。
         """
         if self._mm_upd_state.get("running"):
             return {"started": False, "msg": "正在检查中…"}
-        rows = [r for r in self.model_rows if r.get("modelId") and r.get("verId")]
-        if not rows:
-            return {"started": False, "msg": "没有可检查的模型（需要先扫描；缺侧车信息的可先跑反向解析）"}
+        only = [p for p in (paths or []) if p]
+        if only:
+            want = set(only)
+            rows = [r for r in self.model_rows if r.get("path") in want and r.get("modelId") and r.get("verId")]
+            if not rows:
+                return {"started": False,
+                        "msg": "勾选的条目里没有可检查的（需要 C 站信息；缺的可先跑一次「🔍 反向解析」）"}
+            force = True                       # 显式勾选 = 直接重查
+        else:
+            rows = [r for r in self.model_rows if r.get("modelId") and r.get("verId")]
+            if not rows:
+                return {"started": False, "msg": "没有可检查的模型（需要先扫描；缺侧车信息的可先跑反向解析）"}
         now = int(time.time())
         fresh = int(self._updates.get("checked_at") or 0)
-        if (not force) and self._updates.get("items") and (now - fresh) < 24 * 3600:
+        if (not only) and (not force) and self._updates.get("items") and (now - fresh) < 24 * 3600:
             return {"started": False, "recent": True,
                     "msg": "24 小时内已检查过（%s）；要重查请点「强制刷新」" % time.strftime("%m-%d %H:%M", time.localtime(fresh))}
         wl = self._wl()
         groups = {}
         for r in rows:
             mid = str(r.get("modelId") or "")
-            if mid in wl:
-                continue                      # 更新白名单：这个模型不再提醒
+            if (not only) and mid in wl:
+                continue                      # 更新白名单：这个模型不再提醒（勾选手动检查时除外）
             groups.setdefault(mid, []).append(r)
         if not groups:
             return {"started": False, "msg": "所有模型都在更新白名单里（可在更新页面「📋 白名单」里移除）"}
         self._mm_cancel = False
-        self._mm_upd_state = {"running": True, "total": len(groups), "done": 0, "msg": "检查更新…",
+        self._mm_upd_state = {"running": True, "total": len(groups), "done": 0,
+                              "msg": ("检查勾选的 %d 个…" % len(groups)) if only else "检查更新…",
                               "newer": 0, "other_base": 0, "checked_at": now, "items": {},
                               "wl_skipped": len(wl)}
 

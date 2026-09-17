@@ -1512,8 +1512,8 @@ function applyUpdatesToRows(items) {
     r.upd = it || null;
   }
 }
-async function mmCheckUpdatesFlow(force) {
-  const r = await api.call("mm_check_updates", !!force);
+async function mmCheckUpdatesFlow(force, paths) {
+  const r = await api.call("mm_check_updates", !!force, (paths && paths.length) ? paths : null);
   if (!r || !r.started) {
     if (r && r.recent) {
       const ok = await confirmBox(r.msg + "<br/><br/>要现在强制重新检查一遍吗？<br/>（约 200 个模型，需要 1~2 分钟）");
@@ -2011,6 +2011,8 @@ if ($("#updCheck")) $("#updCheck").addEventListener("click", async () => {
     setStatus((r && r.msg) || "已请求停止检查");
     return;
   }
+  const sel = [...state.updSel];                // ★ 有勾选 → 只检查勾选的这几个
+  if (sel.length) { setStatus("只检查勾选的 " + sel.length + " 个模型…"); mmCheckUpdatesFlow(true, sel); return; }
   mmCheckUpdatesFlow(false);
 });
 if ($("#updWl")) $("#updWl").addEventListener("click", updWhitelistDialog);
@@ -2137,6 +2139,8 @@ if ($("#mmCheckUpd")) $("#mmCheckUpd").addEventListener("click", async () => {
     setStatus((r && r.msg) || "已请求停止检查");
     return;
   }
+  const sel = [...state.mmChecked];             // ★ 勾了模型就只查勾选的
+  if (sel.length) { setStatus("只检查勾选的 " + sel.length + " 个模型…"); mmCheckUpdatesFlow(true, sel); return; }
   mmCheckUpdatesFlow(false);
 });
 
