@@ -2784,6 +2784,7 @@ async function showModelDetail(path) {
   const descIsRich = /<[a-z][\s\S]*>/i.test(descOrig);       // 含标签 → 富文本
   const descRich = descIsRich ? sanitizeDescHtml(descOrig) : "";
   const descPlain = descIsRich ? descToPlain(descOrig) : descOrig;   // 复制用：纯文本、保留段落
+  const descZhIsRich = /<[a-z][\s\S]*>/i.test(descZh);      // 中文翻译里带标签（旧数据）→ 按富文本渲染
   const descRaw = descPlain;                                  // 兼容旧引用
   const desc = descPlain;
   const covers = d.covers || [];
@@ -2833,7 +2834,8 @@ async function showModelDetail(path) {
       '<div class="detail-desc' + (descIsRich ? " rich" : "") + '">' + (descIsRich
         ? descRich
         : (descPlain || descZh ? esc(descPlain || descZh) : '<span class="dt-dim">暂无简介</span>')) + '</div>' +
-      (descZh ? '<div class="detail-desc-zh"><span class="dz-label">' + _icon("globe") + '中文翻译</span>' + esc(descZh) + "</div>" : "") + "</div>" +
+      (descZh ? '<div class="detail-desc-zh' + (descZhIsRich ? "" : " plain") + '"><span class="dz-label">' + _icon("globe") + '中文翻译</span>' +
+        (descZhIsRich ? sanitizeDescHtml(descZh) : esc(descZh)) + "</div>" : "") + "</div>" +
     '<div class="dt-sec"><div class="dt-sec-h">' + _icon("settings") + '操作</div>' +
       '<div class="dt-ag"><div class="dt-ag-h">主要操作</div><div class="dt-ag-b">' +
         '<button class="btn btn-primary" id="dEditInfo">' + _icon("pencil") + '编辑信息</button>' +

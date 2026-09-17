@@ -11,7 +11,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.2.4"
+APP_VERSION = "2.2.5"
 
 import civitai_api
 import config
@@ -2774,7 +2774,14 @@ class Api:
                         info["description_zh"] = zh_in_sd
                         changed = True
                     elif not translator._is_cjk(desc):
-                        zh = translator.translate(desc, appid, key)
+                        # 翻译前把 HTML 转成带段落换行的纯文本（标签不喂翻译接口，避免译文混入标签）
+                        _d2 = re.sub(r"<\s*br\s*/?>|</\s*(?:p|div|li|h[1-6]|tr)\s*>", "\n", desc, flags=re.IGNORECASE)
+                        _d2 = re.sub(r"<[^>]+>", " ", _d2)
+                        for _a, _b in (("&nbsp;", " "), ("&amp;", "&"), ("&lt;", "<"), ("&gt;", ">"), ("&quot;", '"'), ("&#39;", "'")):
+                            _d2 = _d2.replace(_a, _b)
+                        _d2 = re.sub(r"[ \t]+", " ", _d2)
+                        _d2 = re.sub(r"\n\s*\n+", "\n", _d2).strip()
+                        zh = translator.translate(_d2 or desc, appid, key)
                         if zh and zh != desc:
                             info["description_zh"] = zh
                             sd["description_zh"] = zh
