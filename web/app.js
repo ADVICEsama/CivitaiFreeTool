@@ -224,7 +224,7 @@ const state = {
   mmChecked: new Set(),
   mmSel: new Set(),
   mmSort: { col: null, rev: false },
-  mmBaseF: "", mmStF: "",            // Metro 筛选：底模 / 更新状态
+  mmBaseF: "", mmStF: "", mmFolderF: "",   // Metro 筛选：底模 / 更新状态 / 所在文件夹
   mmUpdOnly: false,          // 只看有更新的模型（更新检测筛选）
   mmUpdItems: null,          // 更新检测结果（path → 记录），「更新」页面用
   mmUpdCheckedAt: 0,
@@ -1520,6 +1520,10 @@ function applyMmFilter() {
       (r.civitai_name || "").toLowerCase().includes(kw) ||
       (r.path || "").toLowerCase().includes(kw));
   }
+  if (state.mmFolderF) {
+    const _fp = String(state.mmFolderF).toLowerCase();
+    rows = rows.filter((r) => String(r.path || "").toLowerCase().indexOf(_fp) === 0);
+  }
   if (state.mmBaseF) rows = rows.filter((r) => String(r.base || "") === state.mmBaseF);
   if (state.mmStF) {
     rows = rows.filter((r) => {
@@ -1531,6 +1535,7 @@ function applyMmFilter() {
   state.display = rows.slice();
   renderMm();
   fillMmBaseOptions();
+  fillMmFolderOptions();
   if (state.mmUpdOnly) setStatus("筛选：有更新的模型 " + state.display.length + " 个（点「❗有更新」可取消）");
 }
 $("#mmFilter").addEventListener("input", () => {
@@ -1631,11 +1636,11 @@ function _verCmp(a, b) {
 }
 
 function _updState(it) {
-  if (it && it.has_update) return { k: "upd", t: "有更新", cls: "green" };
-  if (it && it.other_base) return { k: "other", t: "仅换底模", cls: "mut" };
-  if (it && it.unknown) return { k: "unknown", t: "无法判定", cls: "gray" };
-  if (it && !it.checked_at) return { k: "todo", t: "未检查", cls: "gray" };   // 扫到但没检查过（新下载的模型常见）
-  return { k: "latest", t: "已是最新", cls: "blue" };
+  if (it && it.has_update) return { k: "upd", t: _icon("alert") + "有更新", cls: "green" };
+  if (it && it.other_base) return { k: "other", t: _icon("layers") + "仅换底模", cls: "mut" };
+  if (it && it.unknown) return { k: "unknown", t: _icon("info") + "无法判定", cls: "gray" };
+  if (it && !it.checked_at) return { k: "todo", t: _icon("info") + "未检查", cls: "gray" };
+  return { k: "latest", t: _icon("check") + "已是最新", cls: "blue" };
 }
 
 // 该行的「可选版本」清单：优先用后端 ver_list（含当前/推荐），老缓存退化到只知最新版
@@ -1702,7 +1707,7 @@ function _updRowHtml(x) {
     '<td class="c-ver">' + (opts.length > 1 ? '<select class="input upd-vsel" data-path="' + esc(x.path) + '">' + opts.join("") + "</select>"
                                              : '<span class="upd-dim">—</span>') + "</td>" +
     '<td class="c-date">' + esc(date || "—") + "</td>" +
-    '<td class="c-st"><span class="st-badge ' + st.cls + '">' + esc(st.t) + "</span></td>" +
+    '<td class="c-st"><span class="st-badge ' + st.cls + '">' + st.t + "</span></td>" +
     '<td class="c-act"><div class="upd-acts2">' +
       ((!selIsCurrent && sel) ? '<button class="btn btn-tiny upd-go' + (isDown ? " is-down" : " btn-primary") + '" data-path="' + esc(x.path) + '" data-vid="' + esc(sel) + '" data-tip="' + actTip + '">' + actLabel + "</button>" : "") +
       (it.url ? '<a href="#" class="dd-link upd-site" data-url="' + esc(it.url) + '" data-tip="在浏览器打开 C 站页面">C 站</a>' : "") +
@@ -2528,7 +2533,7 @@ async function showModelDetail(path) {
       "</div></div>" +
       '<div class="dt-ag"><div class="dt-ag-h">文件</div><div class="dt-ag-b">' +
         '<button class="btn" id="dRename" data-tip="自定义改名（保留扩展名）">' + _icon("pencil") + '改名</button>' +
-        '<button class="btn" id="dCover" data-tip="用本地图片替换封面">' + _icon("image") + '自定义封面</button>' +
+        '<button class="btn" id="dCover" data-tip="用本地图片替换封面">' + _icon("image") + '设置封面</button>' +
       "</div></div>" +
       '<div class="dt-ag"><div class="dt-ag-h">信息处理</div><div class="dt-ag-b">' +
         '<button class="btn" id="dRp" data-tip="从 C 站匹配该模型的名字/触发词/封面">' + _icon("upload") + '识别模型信息</button>' +
@@ -3986,9 +3991,34 @@ function mmSetView(v) {
 
 function syncSortDir() {
   const sd = document.getElementById("mmSortDir");
-  if (sd) sd.textContent = state.mmSort.rev ? "↓ 降序" : "↑ 升序";
+  if (sd) {
+    sd.innerHTML = _icon("sort") + (state.mmSort.rev ? "降序" : "升序");
+    sd.dataset.tip = state.mmSort.rev ? "当前降序，点击切换为升序" : "当前升序，点击切换为降序";
+  }
 }
 
+let _mmFolderTree = null;
+async function fillMmFolderOptions() {
+  // 复用现有 get_folders（与「文件夹显隐」面板同源），只做"拉平 + 填充下拉"
+  const sel = document.getElementById("mmFolderF");
+  if (!sel) return;
+  if (!_mmFolderTree) {
+    try { _mmFolderTree = JSON.parse((await api.call("get_folders")) || "[]"); } catch (e) { _mmFolderTree = []; }
+  }
+  const flat = [];
+  const walk = (nodes, depth) => (nodes || []).forEach((n) => {
+    if (n && n.path) flat.push({ path: n.path, name: (depth ? "　".repeat(depth) : "") + (n.name || n.path) });
+    if (n && n.children) walk(n.children, depth + 1);
+  });
+  walk(_mmFolderTree, 0);
+  const sig = flat.map((f) => f.path).join("|");
+  if (sel._sig === sig) return;
+  sel._sig = sig;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">全部文件夹</option>' + flat.map((f) =>
+    '<option value="' + esc(f.path) + '">' + esc(f.name) + "</option>").join("");
+  sel.value = cur;
+}
 function fillMmBaseOptions() {
   const bf = document.getElementById("mmBaseF");
   if (!bf) return;
@@ -4005,8 +4035,6 @@ function fillMmBaseOptions() {
 function _closeMmMenus() {
   document.querySelectorAll(".btn-group.open").forEach((g) => {
     g.classList.remove("open");
-    const b = g.querySelector(".btn[data-menu]");
-    if (b && b.dataset.label) b.innerHTML = b.dataset.label;   // 箭头复原
     const m = g._menu;
     if (m) m.classList.remove("open");
   });
@@ -4046,14 +4074,10 @@ function bindMmMetro() {
       e.stopPropagation();
       const grp = btn.closest(".btn-group");
       if (!grp) return;
-      const label = btn.dataset.label || (btn.dataset.label = btn.innerHTML);
       const menu = grp.querySelector(".mm-menu");
       const wasOpen = grp.classList.contains("open");
       _closeMmMenus();
-      if (!wasOpen && menu) {
-        _mmOpenMenu(grp, menu, btn);
-        if (label.indexOf("\u25be") >= 0) btn.innerHTML = label.replace("\u25be", "\u25b4");   // ▼ → ▲
-      }
+      if (!wasOpen && menu) _mmOpenMenu(grp, menu, btn);   // 箭头翻转由 CSS 负责（.btn-group.open .car svg）
     });
   });
   // 3) 改名菜单（复用 mmRenameRun，功能与老菜单完全一致）
@@ -4089,6 +4113,8 @@ function bindMmMetro() {
   // 5) Metro 筛选（底模 / 状态 / 排序），复用既有 state 与排序机制
   const bf = document.getElementById("mmBaseF"), sf = document.getElementById("mmStF"),
         so = document.getElementById("mmSortF"), sd = document.getElementById("mmSortDir");
+  const ff = document.getElementById("mmFolderF");
+  if (ff) ff.addEventListener("change", () => { state.mmFolderF = ff.value; applyMmFilter(); });
   if (bf) bf.addEventListener("change", () => { state.mmBaseF = bf.value; applyMmFilter(); });
   if (sf) sf.addEventListener("change", () => { state.mmStF = sf.value; applyMmFilter(); });
   if (so) so.addEventListener("change", () => {

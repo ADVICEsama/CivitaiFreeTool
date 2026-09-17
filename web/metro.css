@@ -697,3 +697,61 @@
 /* 菜单箭头 span（图标化后仍可翻转） */
 [data-theme="metro"] .btn .car { font-size: 10px; opacity: .75; }
 [data-theme="metro"] .btn .car-only { font-size: 14px; letter-spacing: 1px; opacity: .85; }
+
+/* ============================================================================
+   v2.1.49：Split Button 合并为一个控件（一体边框 / 一体 hover / 内部细分隔）
+   ========================================================================== */
+[data-theme="metro"] .sp-btn {
+  display: inline-flex;
+  border: 1px solid transparent;      /* 由外层提供唯一边框 */
+  border-radius: 2px;
+}
+[data-theme="metro"] .sp-btn > .btn {
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent;
+}
+[data-theme="metro"] .sp-btn:hover { background: var(--metro-tint); }
+[data-theme="metro"] .sp-btn > .btn:hover { background: transparent; }
+[data-theme="metro"] .sp-btn.open { background: var(--metro-tint); }
+[data-theme="metro"] .sp-btn > .sp-caret {
+  border-left: 1px solid var(--metro-border-hair) !important;
+  padding: 0 8px;
+  color: var(--metro-text-2);
+}
+[data-theme="metro"] .sp-btn .ic { width: 14px; height: 14px; }
+
+/* 下拉箭头：打开时旋转 180°（不再改文字/HTML） */
+[data-theme="metro"] .btn .car .ic,
+[data-theme="metro"] .sp-caret .ic { transition: transform .12s ease; }
+[data-theme="metro"] .btn-group.open .car .ic,
+[data-theme="metro"] .btn-group.open .sp-caret .ic { transform: rotate(180deg); }
+[data-theme="metro"] .btn .car { display: inline-flex; margin-left: 4px; opacity: .8; }
+
+/* 状态徽章带图标 */
+[data-theme="metro"] .st-badge { display: inline-flex; align-items: center; gap: 5px; }
+[data-theme="metro"] .st-badge .ic { width: 13px; height: 13px; }
+
+/* ============================================================================
+   v2.1.49：更新页列宽改为比例（宽屏自然扩展）+ 表头 Sticky
+   ========================================================================== */
+[data-theme="metro"] .upd-table { table-layout: fixed; width: 100%; }
+[data-theme="metro"] .upd-table col.c-ck { width: 44px; }
+[data-theme="metro"] .upd-table col.c-info { width: 32%; }
+[data-theme="metro"] .upd-table col.c-cur { width: 10%; }
+[data-theme="metro"] .upd-table col.c-ver { width: 23%; }
+[data-theme="metro"] .upd-table col.c-date { width: 11%; }
+[data-theme="metro"] .upd-table col.c-st { width: 10%; }
+[data-theme="metro"] .upd-table col.c-act { width: 14%; }
+[data-theme="metro"] .upd-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #fff;
+  box-shadow: inset 0 -1px 0 var(--metro-border-hair);
+}
+[data-theme="metro"] .upd-table td.c-cur, [data-theme="metro"] .upd-table td.c-date,
+[data-theme="metro"] .upd-table td.c-st { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+[data-theme="metro"] .upd-table td.c-ver { white-space: nowrap; }
+[data-theme="metro"] .upd-table .upd-nm,
+[data-theme="metro"] .upd-table .upd-sub2 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
