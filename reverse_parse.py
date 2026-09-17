@@ -77,7 +77,7 @@ def reverse_by_hash(file_path, api, cfg, progress_cb=None, translate_desc=False,
         result["info_path"] = out_path
         if translate_desc and info.get("description"):
             translated = translator.translate(
-                info["description"],
+                strip_html(info["description"]),   # 翻译纯文本（HTML 标签不喂给翻译接口；富文本原文仍原样保存）
                 appid=((cfg or {}).get("baidu_appid") or "").strip(),
                 key=((cfg or {}).get("baidu_key") or "").strip())
             if translated and translated != info["description"]:

@@ -2123,7 +2123,7 @@ async function updWhitelistDialog() {
     const r = await api.call("get_update_whitelist");
     items = ((r && r.items) || []).slice();
   } catch (e) {
-    infoBox("更新白名单", "<div class='dt-dim'>白名单读取失败：" + esc(String(e)) + "</div>");
+    infoBox("<div class='dt-dim'>白名单读取失败：" + esc(String(e)) + "</div>", "更新白名单");
     return;
   }
   const dlg = document.createElement("div");
@@ -2242,14 +2242,19 @@ function infoBox(html, title) {
   dlg.className = "rename-dialog";
   dlg.style.width = "560px";
   dlg.innerHTML =
-    '<div class="rd-title">' + (title || "提示") + "</div>" +
-    '<div style="font-size:13px;color:var(--text);line-height:1.7">' + html + "</div>" +
+    '<div class="rd-title">' + (title || "提示") + '<span class="dlg-x" id="ibX" title="关闭（Esc）">' + _icon("x") + "</span></div>" +
+    '<div class="ib-body" style="font-size:13px;color:var(--text);line-height:1.7">' + html + "</div>" +
     '<div class="rd-actions"><button class="btn btn-primary" id="ibOk">知道了</button></div>';
-  const close = () => { mask.remove(); dlg.remove(); };
+  const onKey = (e) => { if (e.key === "Escape") close(); };
+  const close = () => { document.removeEventListener("keydown", onKey); mask.remove(); dlg.remove(); };
   document.body.appendChild(mask);
   document.body.appendChild(dlg);
+  document.addEventListener("keydown", onKey);
+  mask.addEventListener("click", close);
   const ok = dlg.querySelector("#ibOk");
   if (ok) ok.addEventListener("click", close);
+  const bx = dlg.querySelector("#ibX");
+  if (bx) bx.addEventListener("click", close);
   mask.addEventListener("click", close);
   return close;
 }
@@ -2544,6 +2549,120 @@ let detailRow = null;
 // 详情面板全局状态（document 级图片右键委托需要访问）
 let detailImgIdx = 0;
 let detailImgLocalPath = null;
+// ===== 简介富文本：白名单 sanitize + 纯文本转换（零依赖；不直接 innerHTML 注入 C 站原始 HTML） =====
+const DESC_OK_TAGS = { P: 1, BR: 1, STRONG: 1, B: 1, EM: 1, I: 1, U: 1, S: 1, DEL: 1, INS: 1, UL: 1, OL: 1, LI: 1, H1: 1, H2: 1, H3: 1, H4: 1, BLOCKQUOTE: 1, CODE: 1, PRE: 1, A: 1, IMG: 1, HR: 1, SPAN: 1, DIV: 1, FONT: 1, SUB: 1, SUP: 1 };
+const DESC_DROP_TAGS = { SCRIPT: 1, STYLE: 1, IFRAME: 1, OBJECT: 1, EMBED: 1, FORM: 1, INPUT: 1, BUTTON: 1, TEXTAREA: 1, SELECT: 1, LINK: 1, META: 1, SVG: 1, MATH: 1, VIDEO: 1, AUDIO: 1, SOURCE: 1 };
+function sanitizeDescHtml(html) {
+  if (!html) return "";
+  let doc;
+  try { doc = new DOMParser().parseFromString(String(html), "text/html"); } catch (e) { return ""; }
+  const body = doc.body;
+  if (!body) return "";
+  const walk = (node) => {
+    Array.from(node.childNodes).forEach((ch) => {
+      if (ch.nodeType === 3) return;                       // 纯文本：保留
+      if (ch.nodeType !== 1) { ch.remove(); return; }      // 注释/处理指令：丢
+      const tag = ch.tagName;
+      if (DESC_DROP_TAGS[tag]) { ch.remove(); return; }    // script/iframe/style…：连内容一起丢
+      if (!DESC_OK_TAGS[tag]) {
+        walk(ch);                                          // 未知标签（如 <section>、<figure>）：原样展开、保留文字
+        while (ch.firstChild) node.insertBefore(ch.firstChild, ch);
+        ch.remove();
+        return;
+      }
+      Array.from(ch.attributes).forEach((at) => {          // 属性白名单：其余全删（含 style/class/on*）
+        const n = at.name.toLowerCase();
+        const keep = (tag === "A" && n === "href") || (tag === "IMG" && (n === "src" || n === "alt"));
+        if (!keep) ch.removeAttribute(at.name);
+      });
+      if (tag === "A") {
+        const href = ch.getAttribute("href") || "";
+        if (/^https?:\/\//i.test(href)) { ch.setAttribute("target", "_blank"); ch.setAttribute("rel", "noopener noreferrer"); }
+        else ch.removeAttribute("href");                   // javascript:/data: 等一律拆掉链接
+      }
+      if (tag === "IMG") {
+        const src = ch.getAttribute("src") || "";
+        if (/^https?:\/\//i.test(src) || /^data:image\//i.test(src)) ch.setAttribute("loading", "lazy");
+        else ch.remove();
+      }
+      walk(ch);
+    });
+  };
+  walk(body);
+  return body.innerHTML;
+}
+// 富文本 → 人类可读纯文本（段落保留换行、列表加 •，复制用）
+function descToPlain(html) {
+  if (!html) return "";
+  const BLOCK = { P: 1, DIV: 1, H1: 1, H2: 1, H3: 1, H4: 1, LI: 1, BLOCKQUOTE: 1, PRE: 1 };
+  let doc;
+  try { doc = new DOMParser().parseFromString("<div id='__r'>" + sanitizeDescHtml(html) + "</div>", "text/html"); }
+  catch (e) { return String(html).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim(); }
+  const root = doc.getElementById("__r");
+  if (!root) return "";
+  const out = [];
+  const rec = (n) => {
+    if (n.nodeType === 3) { out.push(n.nodeValue.replace(/\s+/g, " ")); return; }
+    if (n.nodeType !== 1) return;
+    const t = n.tagName;
+    if (t === "BR") { out.push("\n"); return; }
+    if (BLOCK[t]) out.push("\n");
+    if (t === "LI") out.push("• ");
+    Array.from(n.childNodes).forEach(rec);
+    if (BLOCK[t]) out.push("\n\n");
+  };
+  Array.from(root.childNodes).forEach(rec);
+  return out.join("").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").replace(/[ \t]{2,}/g, " ").trim();
+}
+
+// ===== 从 C 站同步：Metro 对话框（四态状态机 + 实际更新字段 diff） =====
+function syncDialogClose(d) {
+  try { document.removeEventListener("keydown", d.onKey); } catch (e) { }
+  try { d.mask.remove(); } catch (e) { }
+  try { d.dlg.remove(); } catch (e) { }
+}
+function syncDialogOpen() {
+  const mask = document.createElement("div");
+  mask.className = "rd-mask";
+  const dlg = document.createElement("div");
+  dlg.className = "rename-dialog m-dlg";
+  dlg.style.width = "520px";
+  const d = { mask: mask, dlg: dlg, onKey: null };
+  d.onKey = (e) => { if (e.key === "Escape") syncDialogClose(d); };
+  document.addEventListener("keydown", d.onKey);
+  mask.addEventListener("click", () => syncDialogClose(d));
+  document.body.appendChild(mask);
+  document.body.appendChild(dlg);
+  return d;
+}
+function syncDialogRender(d, st) {
+  const dlg = d.dlg; if (!dlg) return;
+  const ICON = { run: "refresh", ok: "check", fail: "x", notfound: "search", net: "alert" };
+  const TXT = { run: "正在从 C 站同步 …", ok: "同步成功", fail: "同步失败", notfound: "未找到对应 C 站模型", net: "无法连接 C 站" };
+  const cls = st.state === "ok" ? "ok" : (st.state === "run" ? "run" : (st.state === "notfound" ? "warn" : "fail"));
+  let html = '<div class="rd-title">从 C 站同步<span class="dlg-x" id="sdX" title="关闭（Esc）">' + _icon("x") + "</span></div>" +
+    '<div class="sb-status ' + cls + '">' + _icon(ICON[st.state] || "info") + "<span>" + (TXT[st.state] || "") +
+    (st.note ? "（" + esc(String(st.note)) + "）" : "") + "</span></div>";
+  if (st.model) html += '<div class="sb-kv"><span class="k">模型</span><span class="v">' + esc(String(st.model)) + "</span></div>";
+  if (st.version) html += '<div class="sb-kv"><span class="k">版本</span><span class="v">' + esc(String(st.version)) + "</span></div>";
+  if (st.state === "ok") {
+    if (st.changed && st.changed.length) {
+      html += '<div class="sb-fields"><div class="sb-fields-h">已更新字段（' + st.changed.length + " 项）</div><ul>" +
+        st.changed.map((x) => "<li>" + esc(x) + "</li>").join("") + "</ul></div>";
+    } else {
+      html += '<div class="sb-fields"><div class="sb-dim">信息已是最新，无需变更。</div></div>';
+    }
+  } else if (st.state === "notfound") {
+    html += '<div class="sb-dim">C 站没有匹配到该模型；可到「反向解析」页用哈希排查，或确认该模型是否已从 C 站删除。</div>';
+  } else if (st.err) {
+    html += '<div class="sb-err">' + esc(String(st.err).slice(0, 200)) + "</div>";
+  }
+  if (st.state !== "run") html += '<div class="rd-actions"><button class="btn btn-primary" id="sdOk">知道了</button></div>';
+  dlg.innerHTML = html;
+  const bx = dlg.querySelector("#sdX"); if (bx) bx.addEventListener("click", () => syncDialogClose(d));
+  const okb = dlg.querySelector("#sdOk"); if (okb) okb.addEventListener("click", () => syncDialogClose(d));
+}
+
 async function showModelDetail(path) {
   const json = await api.call("get_model_detail", path);
   let d;
@@ -2554,8 +2673,13 @@ async function showModelDetail(path) {
   const v = info.version || {};
   const creator = (info.creator && info.creator.username) || info.creator || "";
   const trained = Array.isArray(info.trainedWords) ? info.trainedWords : [];
-  const descRaw = String(info.description || "").replace(/<[^>]+>/g, "");
-  const desc = String(info.description_zh || info.description || "").replace(/<[^>]+>/g, "");
+  const descOrig = String(info.description || "");            // C 站原始 description（HTML 富文本，保持原样）
+  const descZh = String(info.description_zh || "");           // 中文翻译（纯文本）
+  const descIsRich = /<[a-z][\s\S]*>/i.test(descOrig);       // 含标签 → 富文本
+  const descRich = descIsRich ? sanitizeDescHtml(descOrig) : "";
+  const descPlain = descIsRich ? descToPlain(descOrig) : descOrig;   // 复制用：纯文本、保留段落
+  const descRaw = descPlain;                                  // 兼容旧引用
+  const desc = descPlain;
   const covers = d.covers || [];
   detailImgIdx = 0;
   detailImgLocalPath = null;
@@ -2599,8 +2723,11 @@ async function showModelDetail(path) {
           '<span class="dt-copy">' + _icon("copy") + "</span></div>";
       }).join("") : '<span class="dt-dim">无触发词信息（可先「识别模型信息」）</span>') + "</div></div>" +
     '<div class="dt-sec"><div class="dt-sec-h">' + _icon("file") + '简介' +
-      (desc ? '<button class="btn dt-copy" id="dCopyDesc" data-tip="复制完整简介到剪贴板（含英文原文）">' + _icon("copy") + '复制</button>' : "") + '</div>' +
-      '<div class="detail-desc">' + (desc ? esc(desc) + (descRaw && descRaw !== desc ? '<div class="detail-desc-orig">' + esc(descRaw) + "</div>" : "") : '<span class="dt-dim">暂无简介</span>') + "</div></div>" +
+      (descPlain || descZh ? '<button class="btn dt-copy" id="dCopyDesc" data-tip="复制纯文本简介（保留段落与列表）">' + _icon("copy") + '复制</button>' : "") + '</div>' +
+      '<div class="detail-desc' + (descIsRich ? " rich" : "") + '">' + (descIsRich
+        ? descRich
+        : (descPlain || descZh ? esc(descPlain || descZh) : '<span class="dt-dim">暂无简介</span>')) + '</div>' +
+      (descZh && descIsRich ? '<div class="detail-desc-zh"><span class="dz-label">' + _icon("globe") + '中文翻译</span>' + esc(descZh) + "</div>" : "") + "</div>" +
     '<div class="dt-sec"><div class="dt-sec-h">' + _icon("settings") + '操作</div>' +
       '<div class="dt-ag"><div class="dt-ag-h">主要操作</div><div class="dt-ag-b">' +
         '<button class="btn btn-primary" id="dEditInfo">' + _icon("pencil") + '编辑信息</button>' +
@@ -2782,40 +2909,63 @@ async function showModelDetail(path) {
   $("#dSync", panel).addEventListener("click", async () => {
     const btn = $("#dSync", panel);
     if (btn) btn.disabled = true;
-    setStatus("正在获取 C 站信息 …");
-    let last = null;
+    setStatus("正在从 C 站同步 …");
+    const pick = (x) => {
+      const it = (x && x.info) || {};
+      return {
+        name: String(it.name || ""),
+        author: String((it.creator && it.creator.username) || it.creator || ""),
+        version: String((it.version && it.version.name) || ""),
+        words: (Array.isArray(it.trainedWords) ? it.trainedWords.join("|") : ""),
+        desc: String(it.description || ""),
+        type: String(it.type || ""),
+        base: String(it.baseModel || ""),
+        imgs: (Array.isArray(it.images) ? it.images.length : 0)
+      };
+    };
+    let before = null;
+    try { before = pick(await api.call("get_model_detail", d.path)); } catch (e) { before = null; }
+    const dlg = syncDialogOpen();
+    syncDialogRender(dlg, { state: "run" });
+    let last = null, errText = "";
     try {
       await api.call("rp_add_paths", [d.path]);
       await api.call("rp_start");
-      for (let i = 0; i < 60; i++) {
+      for (let i = 0; i < 90; i++) {
         await new Promise((r) => setTimeout(r, 1000));
         const rows = (await api.call("rp_get_rows").catch(() => null)) || [];
         last = rows.find((x) => x.path === d.path) || null;
-        const st = last ? String(last.status || "") : "";
-        if (/完成|成功|失败|错误|未匹配|已跳过/.test(st)) break;
-        if (i === 4) setStatus("正在获取 C 站信息 …（" + (st || "排队中") + "）");
+        const st0 = last ? String(last.status || "") : "";
+        if (/完成|成功|失败|错误|未匹配|未收录|已跳过|已取消/.test(st0)) break;
+        if (i === 4) {
+          syncDialogRender(dlg, { state: "run", note: st0 || "排队中" });
+          setStatus("正在从 C 站同步 …（" + (st0 || "排队中") + "）");
+        }
       }
-    } catch (e) {
-      if (btn) btn.disabled = false;
-      setStatus("同步请求失败");
-      infoBox("从 C 站同步", "<div class='dt-dim'>请求失败：" + esc(String(e)) + "</div>");
-      return;
-    }
+    } catch (e) { errText = String(e || ""); }
     if (btn) btn.disabled = false;
-    const st = last ? String(last.status || "") : "无结果";
-    const okSync = /完成|成功/.test(st);
-    const html =
-      "<div class='sync-row'><span>状态</span><b>" + esc(st || "无结果") + "</b></div>" +
-      ((last && last.model) ? "<div class='sync-row'><span>匹配模型</span><b>" + esc(last.model) + "</b></div>" : "") +
-      ((last && last.version) ? "<div class='sync-row'><span>版本</span><b>" + esc(last.version) + "</b></div>" : "") +
-      (okSync
-        ? "<div class='dt-dim' style='margin-top:6px'>信息已写回本地（模型名 / 触发词 / 版本 / 封面等），详情将自动刷新。</div>"
-        : (/未匹配/.test(st)
-          ? "<div class='dt-dim' style='margin-top:6px'>C 站没有匹配到该模型；可到「反向解析」页查看具体原因（哈希 / 链接 / 文件名）。</div>"
-          : "<div class='dt-dim' style='margin-top:6px'>暂未拿到完成状态：可能仍在后台处理，稍后刷新详情即可。</div>"));
-    infoBox("从 C 站同步", html);
-    setStatus("同步结束：" + (st || "无结果"));
-    if (okSync) setTimeout(() => { try { showModelDetail(d.path); } catch (e) { } }, 500);
+    const st = last ? String(last.status || "") : "";
+    let state, model = (last && last.model) || "", version = (last && last.version) || "", err = "";
+    if (/完成|成功/.test(st)) state = "ok";
+    else if (/未匹配|未收录|404/.test(st)) state = "notfound";
+    else if (errText && /timeout|timed out|connect|network|SSL|ECONN|HTTP|proxy/i.test(errText)) { state = "net"; err = errText; }
+    else if (/失败|错误|已取消/.test(st)) { state = "fail"; err = String((last && last.model) || ""); }
+    else { state = "fail"; err = st || errText || "未收到完成状态"; }
+    let changed = [];
+    if (state === "ok") {
+      await new Promise((r) => setTimeout(r, 700));
+      let after = null;
+      try { after = pick(await api.call("get_model_detail", d.path)); } catch (e) { after = null; }
+      const LABELS = [["name", "模型名称"], ["author", "作者"], ["version", "版本"], ["words", "触发词"], ["desc", "简介"], ["type", "类型"], ["base", "基础模型"], ["imgs", "示例图片"]];
+      if (before && after) LABELS.forEach((p2) => { if (before[p2[0]] !== after[p2[0]]) changed.push(p2[1]); });
+      if (after && after.name) model = after.name;
+      if (after && after.version) version = after.version;
+      try { showModelDetail(d.path); } catch (e) { }
+    }
+    syncDialogRender(dlg, { state: state, model: model, version: version, changed: changed, err: err });
+    setStatus(state === "ok"
+      ? ("同步完成：" + (changed.length ? "更新 " + changed.length + " 项" : "信息已是最新"))
+      : ("同步未完成：" + (st || err || "无结果")));
   });
   $("#dJson", panel).addEventListener("click", async () => {
     await api.call("mm_gen_json", [d.path], true);
@@ -2823,8 +2973,8 @@ async function showModelDetail(path) {
     closeDetail();
   });
   const dCopyBtn = $("#dCopyDesc", panel);
-  if (dCopyBtn) dCopyBtn.addEventListener("click", async () => {
-    const full = [desc, (descRaw && descRaw !== desc) ? descRaw : ""].filter(Boolean).join("\n\n——\n");
+  if (dCopyBtn) dCopyBtn.addEventListener("click", async () => {   // 复制：纯文本（段落/列表保留，无 HTML 标签）
+    const full = [descPlain, descZh ? "—— 中文翻译 ——\n" + descZh : ""].filter(Boolean).join("\n\n");
     let ok = false;
     try { ok = await window.__copyText(full); } catch (e) { ok = false; }
     if (!ok) {
