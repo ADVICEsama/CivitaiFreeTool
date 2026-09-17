@@ -1301,21 +1301,17 @@ function mmApplyCols() {
   document.querySelectorAll("#mmTable thead [data-col], #mmTable tbody [data-col]").forEach((el) => {
     el.style.display = hs.has(el.dataset.col) ? "none" : "";
   });
-  // 关键：table-layout:fixed 下列宽由 <colgroup> 决定，只隐藏单元格会留下空槽 →
-  // 必须同步把对应的 <col> 归零（显示时再复原），否则右侧会出现大片空白
-  document.querySelectorAll("#mmTable colgroup col").forEach((col, idx) => {
-    try {
-      const th = document.querySelector("#mmTable thead th:nth-child(" + (idx + 1) + ")");
-      const key = th && th.dataset ? th.dataset.col : "";
-      if (!key) return;
-      if (hs.has(key)) {
-        if (col.dataset.w === undefined) col.dataset.w = col.style.width || "";
-        col.style.width = "0px";
-      } else {
-        col.style.width = col.dataset.w || "";
-      }
-    } catch (e) { /* 忽略 */ }
-  });
+  // ★ 关键根因修复（2026-09 用无头浏览器实测量出来的，勿改回）：
+  //   CSS 表格里 display:none 的单元格会让后续单元格"左移"，错误占用 <colgroup> 的列槽
+  //   → 列宽整体错位、表格尾部无列覆盖 → 右侧出现固定空白（实测 1280 宽下 237px）。
+  //   正确做法：<colgroup> 只重建"可见列"的 <col>（class 与 CSS 的 col.c-* 规则同源），
+  //   让可见单元格与 <col> 一一对应；弹性列（c-name = auto）随之吃掉全部剩余宽度 → 永远铺满。
+  const cg = document.querySelector("#mmTable colgroup");
+  const ths = Array.from(document.querySelectorAll("#mmTable thead th"));
+  if (cg) {
+    cg.innerHTML = ths.filter((th) => !hs.has(th.dataset.col))
+      .map((th) => '<col class="c-' + th.dataset.col + '"/>').join("");
+  }
 }
 $("#mmTable thead").addEventListener("contextmenu", (e) => {
   e.preventDefault();
@@ -2967,6 +2963,8 @@ $("#detailMask").addEventListener("click", (e) => {
 });
 // 打开入口：行双击 / 瀑布流卡片双击（单击统一为选中）
 document.addEventListener("dblclick", (e) => {
+  // 双击只对"模型主体"生效：按钮 / 链接 / 输入 / 下拉 / 自绘勾选 等交互控件上的双击不打开详情（防冒泡误触）
+  if (e.target.closest("button, a, input, select, textarea, .cbox, .ms-check, .ms-upd, .btn, .mm-menu")) return;
   const tr = e.target.closest("tr[data-path]");
   if (tr && tr.dataset.path) showModelDetail(tr.dataset.path);
   const card = e.target.closest(".ms-card");
@@ -3452,15 +3450,7 @@ $("#mmSendRp").addEventListener("click", async () => {
   setStatus("已发送 " + p.length + " 个到反向解析");
 });
 
-// 详情：点击行显示 info
-$("#mmTable tbody").addEventListener("dblclick", (e) => {
-  const tr = e.target.closest("tr");
-  if (!tr) return;
-  const r = state.models.find((m) => m.path === tr.dataset.path);
-  if (!r) return;
-  $("#mmDetail").textContent = "文件: " + r.path + "\n类型: " + (r.type || "-") + "  基础模型: " + (r.base || "-") + "  版本: " + (r.ver || "-") +
-    "\n触发词: " + ((r.trainedWords || []).join("，") || "-") + "\nC站链接: " + (r.url || "-");
-});
+// 打开入口：行双击 / 瀑布流卡片双击（单击统一为选中）
 
 // ================= 反向解析 =================
 async function rpRefresh() {
