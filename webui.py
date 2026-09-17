@@ -11,7 +11,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.2.1"
+APP_VERSION = "2.2.2"
 
 import civitai_api
 import config
@@ -61,6 +61,8 @@ class Api:
         self.lock = threading.Lock()
         # 模型管理
         self.model_rows = []
+        # 封面缩略图缓存：{(path, mtime_ns, size, edge): b64} —— 删除/刷新后无需重算重传
+        self._cover_cache = {}
         self.mm_checked_paths = []
         self.mm_progress = {"running": False, "total": 0, "done": 0, "msg": "", "result": None}
         self._mm_cancel = False          # 长任务的中断标志（检查更新/查重/扫描共用）
@@ -735,6 +737,10 @@ class Api:
                     ver = v.get("name", "") if isinstance(v, dict) else (v or "")
                     tw = meta.get("trainedWords") or meta.get("trained_words") \
                         or meta.get("trigger_words") or []
+                    _cre = meta.get("creator")
+                    if isinstance(_cre, dict):
+                        _cre = _cre.get("username") or _cre.get("name") or ""
+                    _cre = str(_cre or "").strip()
                     rows.append({
                         "path": f["path"], "name": f["name"], "size": f["size"],
                         "mtime": f.get("mtime") or 0,
@@ -746,6 +752,7 @@ class Api:
                         "url": meta.get("url", ""),
                         "trainedWords": tw,
                         "civitai_name": meta.get("name", ""),
+                        "author": _cre,
                         "info": meta,
                     })
                 self.mm_scan_state["rows"] = rows
@@ -777,6 +784,7 @@ class Api:
                 "modelId": r.get("modelId", ""), "url": r.get("url", ""),
                 "trainedWords": r.get("trainedWords", []),
                 "civitai_name": r.get("civitai_name", ""),
+                "author": r.get("author", ""),
                 "update": r.get("update", ""), "hash": r.get("hash", ""),
             })
         return json.dumps(rows, ensure_ascii=False)
@@ -895,6 +903,32 @@ class Api:
             "info": info,
             "covers": covers,
         }, ensure_ascii=False)
+
+    def set_model_cover(self, path, img_path):
+        """把本地图片设为模型缩略图：覆盖当前封面文件；无封面时生成 <名>.preview.png"""
+        try:
+            import os as _os
+            from PIL import Image
+            if not path or not img_path or not _os.path.exists(path) or not _os.path.exists(img_path):
+                return {"ok": False, "msg": "文件不存在"}
+            base, _ = _os.path.splitext(path)
+            mdir = _os.path.dirname(_os.path.abspath(path))
+            idir = _os.path.abspath(img_path)
+            bimg = _os.path.abspath(base + ".images")
+            same_dir = _os.path.dirname(idir) == mdir
+            in_imgs = idir.lower().startswith((bimg + _os.sep).lower())
+            if not (same_dir or in_imgs):
+                return {"ok": False, "msg": "图片不在该模型目录内，已拒绝"}
+            target = model_manager.find_cover(path) or (base + ".preview.png")
+            ext = _os.path.splitext(target)[1].lower()
+            fmt = {".jpg": "JPEG", ".jpeg": "JPEG", ".webp": "WEBP"}.get(ext, "PNG")
+            im = Image.open(img_path)
+            if fmt == "JPEG":
+                im = im.convert("RGB")
+            im.save(target, fmt)
+            return {"ok": True, "msg": "已设为缩略图：" + _os.path.basename(target), "cover": target}
+        except Exception as e:
+            return {"ok": False, "msg": "设置失败: %s" % str(e)[:120]}
 
     def get_local_img_b64(self, path):
         """读取本地图片原图 → base64（用于复制图片到剪贴板）。超大图限制 4096px"""
@@ -1508,6 +1542,12 @@ class Api:
             if not cover or not os.path.exists(cover):
                 continue
             try:
+                stt = os.stat(cover)
+                key = (p, int(stt.st_mtime_ns), stt.st_size, int(size))
+                hit = self._cover_cache.get(key)
+                if hit:
+                    out[p] = hit
+                    continue
                 from PIL import Image
                 import io
                 import base64
@@ -1515,7 +1555,11 @@ class Api:
                 im.thumbnail((size, size))
                 buf = io.BytesIO()
                 im.save(buf, "JPEG", quality=82)
-                out[p] = base64.b64encode(buf.getvalue()).decode()
+                b64s = base64.b64encode(buf.getvalue()).decode()
+                if len(self._cover_cache) > 4000:
+                    self._cover_cache.clear()
+                self._cover_cache[key] = b64s
+                out[p] = b64s
             except Exception:
                 continue
         return json.dumps(out, ensure_ascii=False)

@@ -222,9 +222,10 @@ const state = {
   models: [],
   display: [],
   mmChecked: new Set(),
+  coverCache: new Map(),   // 前端封面缓存（path → dataURI）：重绘时同步填充，删除/刷新不再闪屏
   mmSel: new Set(),
   mmSort: { col: "name", rev: false },
-  mmBaseF: "", mmStF: "", mmFolderF: "",   // Metro 筛选：底模 / 更新状态 / 所在文件夹
+  mmBaseF: "", mmStF: "", mmFolderF: "", mmAuthorF: "",   // Metro 筛选：底模 / 更新状态 / 文件夹 / 作者
   mmUpdOnly: false,          // 只看有更新的模型（更新检测筛选）
   mmUpdItems: null,          // 更新检测结果（path → 记录），「更新」页面用
   mmUpdCheckedAt: 0,
@@ -1137,13 +1138,16 @@ function pollMmScan() {
         state.models = [];
         setStatus("行数据解析失败: " + e);
       }
-      state.display = state.models.slice();
-      state.mmChecked.clear();
-      state.mmSort = { col: "name", rev: false };
+      // 保留用户的排序与筛选（删除/刷新后不再重置）；勾选只清掉已不存在的模型
       try {
-        const u = await api.call("get_model_updates");   // 缓存的更新检测结果 → 卡片         if (u && u.items) applyUpdatesToRows(u.items);
+        const alive = new Set(state.models.map((r) => r.path));
+        Array.from(state.mmChecked).forEach((p) => { if (!alive.has(p)) state.mmChecked.delete(p); });
+      } catch (e) { state.mmChecked.clear(); }
+      try {
+        const u = await api.call("get_model_updates");   // 缓存的更新检测结果 → 卡片
+        if (u && u.items) applyUpdatesToRows(u.items);
       } catch (e) { /* 忽略 */ }
-      renderMm();
+      applyMmFilter();
       setStatus(s.msg || "扫描完成：" + state.models.length + " 个模型");
       $("#mmCount").textContent = state.models.length + " 个";
     } else if (s && s.msg) setStatus(s.msg);
@@ -1151,6 +1155,8 @@ function pollMmScan() {
 }
 
 function renderMm() {
+  const _scM = ($("#mmMasonry") || {}).scrollTop || 0;
+  const _scT = ($("#mmTableWrap") || {}).scrollTop || 0;
   const rows = state.display.slice();
   if (state.mmSort.col) {
     const c = state.mmSort.col;
@@ -1167,6 +1173,8 @@ function renderMm() {
   state.display = rows.slice();  // 同步排序后的显示顺序（shift 区间 / data-idx 依赖）
   if (state.mmView === "masonry") {
     renderMasonry(rows);
+    if ($("#mmMasonry")) $("#mmMasonry").scrollTop = _scM;
+    if ($("#mmTableWrap")) $("#mmTableWrap").scrollTop = _scT;
     return;
   }
   // 切回列表时恢复容器显示
@@ -1195,8 +1203,11 @@ function renderMm() {
       "<td class='c-path' data-col='path' data-full='" + esc(rel.replace(/[^\\/]+$/, "")) + "' data-tip='" + esc(r.path) + "'>" + esc(short(rel.replace(/[^\\/]+$/, ""), 26) || "\\") + "</td></tr>";
   }).join("");
   $("#mmCheckLabel").textContent = "已勾选 " + state.mmChecked.size + " 个";
+  _applyCoverCache($("#mmTable"));
   loadThumbs(0);
   mmApplyCols();
+  if ($("#mmMasonry")) $("#mmMasonry").scrollTop = _scM;
+  if ($("#mmTableWrap")) $("#mmTableWrap").scrollTop = _scT;
 }
 
 // 分批加载封面缩略图（每次 40 个，避免大传输卡顿）
@@ -1211,18 +1222,38 @@ async function loadUpdThumbs() {
   } catch (e) { /* 缩略图失败不影响 */ }
 }
 
+function _applyCoverCache(root) {
+  // 重绘后立刻用缓存同步填充已加载过的封面（同一 JS 任务内完成 → 不闪屏）
+  const scope = root || document;
+  scope.querySelectorAll("img.thumb, img.ms-img").forEach((img) => {
+    const p = img.dataset.path;
+    if (!p || !state.coverCache) return;
+    const du = state.coverCache.get(p);
+    if (du && !String(img.src || "").startsWith("data:")) {
+      img.src = du;
+      const w = img.closest(".ms-img-wrap");
+      if (w && w.dataset.ph === "loading") w.dataset.ph = "ok";
+    }
+  });
+}
 async function loadThumbs(start) {
   const batch = state.display.slice(start, start + 40);
   if (!batch.length) return;
-  try {
-    const json = await api.call("get_covers", batch.map((r) => r.path));
-    const covers = JSON.parse(json || "{}");
-    for (const [p, b64] of Object.entries(covers)) {
-      document.querySelectorAll(".thumb").forEach((img) => {
-        if (img.dataset.path === p) img.src = "data:image/jpeg;base64," + b64;
-      });
-    }
-  } catch (e) { /* 缩略图失败不影响列表 */ }
+  const miss = batch.filter((r) => !state.coverCache.has(r.path));
+  if (miss.length) {
+    try {
+      const json = await api.call("get_covers", miss.map((r) => r.path));
+      const covers = JSON.parse(json || "{}");
+      if (state.coverCache.size > 4000) state.coverCache.clear();
+      for (const [p, b64] of Object.entries(covers)) {
+        const du = "data:image/jpeg;base64," + b64;
+        state.coverCache.set(p, du);
+        document.querySelectorAll(".thumb").forEach((img) => {
+          if (img.dataset.path === p) img.src = du;
+        });
+      }
+    } catch (e) { /* 缩略图失败不影响列表 */ }
+  }
   loadThumbs(start + 40);
 }
 
@@ -1429,6 +1460,7 @@ function renderMasonry(rows) {
       '<div class="ms-meta">' + esc(_meta || (r.type || "-")) + "</div>" +
       '<div class="ms-size">' + esc(_meta2 || fmtSize(r.size)) + "</div></div>";
   }).join("");
+  _applyCoverCache($("#mmMasonry"));
   $("#mmCheckLabel").textContent = "已勾选 " + state.mmChecked.size + " 个";
   loadMasonryThumbs(0);
 }
@@ -1449,22 +1481,28 @@ async function loadMasonryThumbs(start) {
       });
     });
   };
-  try {
-    const json = await api.call("get_covers", batch.map((r) => r.path), 320);
-    const covers = JSON.parse(json || "{}");
-    for (const [p, b64] of Object.entries(covers)) {
-      document.querySelectorAll(".ms-img").forEach((img) => {
-        if (img.dataset.path === p) {
-          const w = img.closest(".ms-img-wrap");
-          img.onload = () => { if (w) w.dataset.ph = "ok"; };
-          img.onerror = () => { if (w) w.dataset.ph = "fail"; };
-          img.src = "data:image/jpeg;base64," + b64;
-        }
-      });
+  const miss = batch.filter((r) => !state.coverCache.has(r.path));
+  if (miss.length) {
+    try {
+      const json = await api.call("get_covers", miss.map((r) => r.path), 320);
+      const covers = JSON.parse(json || "{}");
+      if (state.coverCache.size > 4000) state.coverCache.clear();
+      for (const [p, b64] of Object.entries(covers)) {
+        const du = "data:image/jpeg;base64," + b64;
+        state.coverCache.set(p, du);
+        document.querySelectorAll(".ms-img").forEach((img) => {
+          if (img.dataset.path === p) {
+            const w = img.closest(".ms-img-wrap");
+            img.onload = () => { if (w) w.dataset.ph = "ok"; };
+            img.onerror = () => { if (w) w.dataset.ph = "fail"; };
+            img.src = du;
+          }
+        });
+      }
+      _markBatch(miss.filter((r) => !covers[r.path]).map((r) => r.path), "none");
+    } catch (e) {
+      _markBatch(miss.map((r) => r.path), "fail");     // 拉取失败：统一显示"封面加载失败"
     }
-    _markBatch(batch.filter((r) => !covers[r.path]).map((r) => r.path), "none");
-  } catch (e) {
-    _markBatch(batch.map((r) => r.path), "fail");     // 拉取失败：统一显示"封面加载失败"
   }
   loadMasonryThumbs(start + 40);
 }
@@ -1615,6 +1653,7 @@ function applyMmFilter() {
     });
   }
   if (state.mmBaseF) rows = rows.filter((r) => String(r.base || "") === state.mmBaseF);
+  if (state.mmAuthorF) rows = rows.filter((r) => String(r.author || "") === state.mmAuthorF);
   if (state.mmStF) {
     rows = rows.filter((r) => {
       const u = r.upd || {};
@@ -1626,6 +1665,7 @@ function applyMmFilter() {
   renderMm();
   fillMmBaseOptions();
   fillMmFolderOptions();
+  fillMmAuthorOptions();
   if (state.mmUpdOnly) setStatus("筛选：有更新的模型 " + state.display.length + " 个（点「有更新」可取消）");
 }
 $("#mmFilter").addEventListener("input", () => {
@@ -3067,6 +3107,7 @@ document.addEventListener("contextmenu", (e) => {
     '<div class="ctx-item" data-act="img_prompt" data-tip="复制该图片的正面提示词（本地 PNG 元数据 / C 站 info）">复制正面提示词</div>' +
     '<div class="ctx-item" data-act="img_neg" data-tip="复制该图片的负面提示词">复制负面提示词</div>' +
     '<div class="ctx-item" data-act="img_tags" data-tip="复制模型级触发词（与图片提示词分开）">复制触发词（模型 tags）</div>' +
+    '<div class="ctx-item" data-act="img_ascover" data-tip="把这张图设为该模型在列表/瀑布流里显示的缩略图（覆盖当前封面文件）">设为模型缩略图</div>' +
     '<div class="ctx-item" data-act="img_folder" data-tip="打开资源管理器并选中该图片">打开图片所在文件夹</div>' +
     '<div class="ctx-item" data-act="img_orig" data-tip="在浏览器打开该图片在 C 站的原页">打开原图片网站</div>';
   menu.style.display = "block";
@@ -3116,6 +3157,21 @@ $("#ctxMenu").addEventListener("click", async (e) => {
       } else {
         await window.__copyText(c.local_path || c.orig_url || c.url || "");
         showToast("已复制路径/链接");
+      }
+    } else if (act === "img_ascover") {
+      // 设为模型缩略图：用右键的这张本地图覆盖封面（无封面则生成 <名>.preview.png）
+      if (!localImgPath) { showToast("该图没有本地文件（先等详情页把示例图下载到本地）"); }
+      else {
+        const rCov = await api.call("set_model_cover", detailRow.path, localImgPath);
+        if (rCov && rCov.ok) {
+          showToast("已把这张图设为模型缩略图");
+          setStatus("已设为模型缩略图：" + (detailRow.name || detailRow.path || ""));
+          try { state.coverCache.delete(detailRow.path); } catch (e) { }
+          try { await loadThumbs(0); } catch (e) { }
+          try { if (state.mmView === "masonry") await loadMasonryThumbs(0); } catch (e) { }
+        } else {
+          showToast((rCov && rCov.msg) || "设为缩略图失败");
+        }
       }
     } else if (act === "img_folder") {
       // 只打开本地文件夹；远程图没有本地文件时提示，不打开网站（打开网站走"打开原图片网站"）
@@ -4571,9 +4627,8 @@ function _icon(name, cls) {
 }
 
 function _msTag(r) {
-  const u = (r && r.upd) || {};
-  if (u.has_update || u.other_base) return "";          // 有更新 → 用 角标（可点去 C 站）
-  if (r && r.upd) return '<span class="ms-tag ok">已最新</span>';
+  // 卡片上不再显示「已最新」等文字标签（无更新默认不显示任何标记）；
+  // 有更新的模型用右上角 ❗ 角标（.ms-upd，点击去 C 站）
   return "";
 }
 
@@ -4623,6 +4678,19 @@ async function fillMmFolderOptions() {
   sel.innerHTML = '<option value="">全部文件夹</option>' + flat.map((f) =>
     '<option value="' + esc(f.path) + '">' + esc(f.name) + "</option>").join("");
   sel.value = cur;
+}
+function fillMmAuthorOptions() {
+  const af = document.getElementById("mmAuthorF");
+  if (!af) return;
+  const authors = [...new Set(state.models.map((r) => String(r.author || "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "zh"));
+  const sig = authors.join("|");
+  if (af._sig === sig) return;
+  af._sig = sig;
+  const cur = af.value;
+  af.innerHTML = '<option value="">全部作者</option>' + authors.map((a) =>
+    '<option value="' + esc(a) + '">' + esc(a) + "</option>").join("");
+  af.value = cur;
+  if (af.value !== cur) { state.mmAuthorF = ""; }
 }
 function fillMmBaseOptions() {
   const bf = document.getElementById("mmBaseF");
@@ -4732,6 +4800,8 @@ function bindMmMetro() {
   const ff = document.getElementById("mmFolderF");
   if (ff) ff.addEventListener("change", () => { state.mmFolderF = ff.value; applyMmFilter(); });
   if (bf) bf.addEventListener("change", () => { state.mmBaseF = bf.value; applyMmFilter(); });
+  const af2 = document.getElementById("mmAuthorF");
+  if (af2) af2.addEventListener("change", () => { state.mmAuthorF = af2.value; applyMmFilter(); });
   if (sf) sf.addEventListener("change", () => { state.mmStF = sf.value; applyMmFilter(); });
   if (so) so.addEventListener("change", () => {
     if (!so.value) state.mmSort = { col: null, rev: false };
