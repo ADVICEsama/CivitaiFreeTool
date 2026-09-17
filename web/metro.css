@@ -1,19 +1,22 @@
 /* ============================================================================
-   Metro 主题（Win10 磁贴风格）—— 独立主题，200% 与 Classic 解耦
+   Metro 主题 v2 —— 现代 Win10 Metro（扁平 / 几何 / 直角 / 强网格感）
    ----------------------------------------------------------------------------
-   规则：所有覆盖必须写在 [data-theme="metro"] 下，绝不裸写，避免污染其他主题。
-   Token：--metro-*（本文件专有）；同时覆盖通用变量（--primary 等）以便老组件自动跟随。
-   风格：直角(0~2px) / 扁平 / 无渐变 / 极少阴影 / Segoe UI / Win10 蓝 #0078D4
+   设计原则（按用户验收标准）：
+   · 纯色块 + 简洁文字 + 轻微 hover + 极少量边框   × 灰色立体按钮 / 深描边 / 凹陷
+   · 直角（0~2px）但现代几何                    × 旧式 Windows 控件感
+   · 只用一个强调色（Win10 蓝 #0078D4）+ 状态绿  × 粉色 / 渐变 / 彩虹
+   · 主要结构：浅灰白底 / 白控件 / 浅蓝 hover / 蓝选中
+   作用域：全部规则限定 [data-theme="metro"]，与 Classic 完全解耦
    ========================================================================== */
 
 [data-theme="metro"] {
-  /* 通用变量（让全部老组件先自动变"色"） */
-  --bg: #f2f2f2;
+  /* 通用变量（老组件先自动跟随） */
+  --bg: #f6f6f6;
   --surface: #ffffff;
-  --surface2: #f7f7f7;
-  --border: #d9d9d9;
-  --text: #1f1f1f;
-  --text-dim: #5f5f5f;
+  --surface2: #fafafa;
+  --border: #ececec;
+  --text: #202020;
+  --text-dim: #737373;
   --primary: #0078d4;
   --primary-hover: #106ebe;
   --primary-fg: #ffffff;
@@ -21,48 +24,37 @@
   --radius: 2px;
   --radius-sm: 2px;
   --shadow: none;
-  --shadow-hover: 0 2px 6px rgba(0, 0, 0, 0.10);
+  --shadow-hover: none;
   --font: "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, sans-serif;
 
-  /* Metro 专有 Token */
-  --metro-bg: #f2f2f2;
+  /* Metro Token */
+  --metro-bg: #f6f6f6;
   --metro-surface: #ffffff;
-  --metro-surface-alt: #fafafa;
-  --metro-border: #d9d9d9;
-  --metro-border-strong: #adadad;
+  --metro-border-hair: #ececec;      /* 极浅分隔线 */
+  --metro-border-input: #e0e0e0;     /* 输入类控件描边（浅） */
   --metro-accent: #0078d4;
   --metro-accent-hover: #106ebe;
-  --metro-accent-pressed: #005a9e;
-  --metro-text: #1f1f1f;
-  --metro-text-2: #5f5f5f;
-  --metro-text-3: #767676;
-  --metro-hover: #e5f1fb;          /* Win10 悬停浅蓝 */
-  --metro-selected: #cce4f7;       /* Win10 选中蓝 */
-  --metro-pressed: #c3ddf5;
+  --metro-accent-press: #005a9e;
+  --metro-tint: rgba(0, 120, 212, .08);       /* 非常浅的蓝（hover） */
+  --metro-tint-2: rgba(0, 120, 212, .16);     /* 按下 */
+  --metro-sel-bg: #dcebfa;                    /* 选中行底 */
+  --metro-text: #202020;
+  --metro-text-2: #737373;
+  --metro-text-3: #9a9a9a;
   --metro-green: #107c10;
+  --metro-green-bg: #e8f5e9;
   --metro-orange: #ca5010;
-  --metro-red: #c42b1c;
-  --metro-sep: #e0e0e0;
 }
 
 /* ---------------------------------------------------------------- 基础 */
-[data-theme="metro"] body,
-[data-theme="metro"] { font-family: var(--font); color: var(--metro-text); }
-
 [data-theme="metro"] body { background: var(--metro-bg) !important; }
-
-/* 滚动条：Win10 细直角 */
+[data-theme="metro"] { font-family: var(--font); color: var(--metro-text); }
+[data-theme="metro"] ::selection { background: var(--metro-sel-bg); }
 [data-theme="metro"] ::-webkit-scrollbar { width: 10px; height: 10px; }
-[data-theme="metro"] ::-webkit-scrollbar-track { background: #f2f2f2; }
-[data-theme="metro"] ::-webkit-scrollbar-thumb { background: #c8c8c8; border-radius: 0; border: 2px solid #f2f2f2; }
-[data-theme="metro"] ::-webkit-scrollbar-thumb:hover { background: #a6a6a6; }
-
-[data-theme="metro"] ::selection { background: var(--metro-selected); color: #000; }
-
-/* 焦点圈：Win10 方框 */
-[data-theme="metro"] :focus-visible { outline: 2px solid var(--metro-accent); outline-offset: -1px; }
-
-/* 背景 shader 画布：Metro 下保持安静 */
+[data-theme="metro"] ::-webkit-scrollbar-track { background: transparent; }
+[data-theme="metro"] ::-webkit-scrollbar-thumb { background: #cfcfcf; border-radius: 0; border: 2px solid transparent; background-clip: padding-box; }
+[data-theme="metro"] ::-webkit-scrollbar-thumb:hover { background: #b0b0b0; background-clip: padding-box; }
+[data-theme="metro"] :focus-visible { outline: 2px solid var(--metro-accent); outline-offset: 0; }
 [data-theme="metro"] canvas#bg,
 [data-theme="metro"] canvas.bg-shader,
 [data-theme="metro"] #bgCanvas { opacity: 0 !important; }
@@ -70,139 +62,180 @@
 /* ---------------------------------------------------------------- 顶部导航 */
 [data-theme="metro"] .nav {
   background: var(--metro-surface);
+  border-bottom: 1px solid var(--metro-border-hair);
   border-radius: 0;
-  border-bottom: 1px solid var(--metro-sep);
   box-shadow: none;
-  padding: 0 12px;
+  padding: 0 14px;
 }
-[data-theme="metro"] .nav-logo { border-radius: 2px; background: var(--metro-accent); }
+[data-theme="metro"] .nav-logo { border-radius: 2px; background: var(--metro-accent); box-shadow: none; }
 [data-theme="metro"] .nav-tab {
-  border-radius: 0;
   background: transparent;
-  color: var(--metro-text-2);
+  border: none;
   border-bottom: 2px solid transparent;
-  padding: 10px 14px;
+  border-radius: 0;
+  color: var(--metro-text-2);
   font-weight: 400;
+  padding: 11px 14px;
 }
-[data-theme="metro"] .nav-tab:hover { background: var(--metro-hover); color: var(--metro-text); }
+[data-theme="metro"] .nav-tab:hover { background: var(--metro-tint); color: var(--metro-text); }
 [data-theme="metro"] .nav-tab.active {
   background: transparent;
   color: var(--metro-text);
   font-weight: 600;
   border-bottom-color: var(--metro-accent);
 }
-[data-theme="metro"] .nav-tab.active::after { background: var(--metro-accent); border-radius: 0; }
+[data-theme="metro"] .nav-tab.active::after { display: none; }
 
-/* ---------------------------------------------------------------- 卡片/面板 */
+/* ---------------------------------------------------------------- 页面骨架 */
 [data-theme="metro"] .card {
-  background: var(--metro-surface);
-  border: 1px solid var(--metro-sep);
+  background: transparent;
+  border: none;
   border-radius: 0;
   box-shadow: none;
-  padding: 0 0 14px 0;
+  padding: 0;
 }
-[data-theme="metro"] .page-title { font-size: 19px; font-weight: 600; }
-[data-theme="metro"] .title-row { padding: 12px 16px 8px 16px; margin: 0; border-bottom: none; }
+[data-theme="metro"] .page-title { font-size: 20px; font-weight: 600; color: var(--metro-text); }
+[data-theme="metro"] .title-row { padding: 16px 16px 4px 16px; margin: 0; align-items: baseline; }
+[data-theme="metro"] .status-pill {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  color: var(--metro-text-2);
+  font-size: 13px;
+  padding: 0 6px;
+}
 
-/* ---------------------------------------------------------------- 按钮 */
+/* ---------------------------------------------------------------- 按钮（扁平：纯色块 + 文字 + 轻微 hover） */
 [data-theme="metro"] .btn {
+  background: transparent;
+  border: 1px solid transparent;
   border-radius: 2px;
-  background: #e1e1e1;
-  border: 1px solid var(--metro-border-strong);
-  color: var(--metro-text);
   box-shadow: none;
-  padding: 7px 14px;
-  font-weight: 400;
-  transition: background .08s linear, border-color .08s linear;
-}
-[data-theme="metro"] .btn:hover {
-  background: var(--metro-hover);
-  border-color: var(--metro-accent);
   color: var(--metro-text);
+  font-weight: 400;
+  padding: 8px 14px;
+  min-height: 34px;
+  transition: background .08s linear;
 }
-[data-theme="metro"] .btn:active { background: var(--metro-pressed); border-color: var(--metro-accent-pressed); }
-[data-theme="metro"] .btn:disabled { background: #f2f2f2; color: #9a9a9a; border-color: #e0e0e0; }
+[data-theme="metro"] .btn:hover { background: var(--metro-tint); border-color: transparent; color: var(--metro-text); }
+[data-theme="metro"] .btn:active { background: var(--metro-tint-2); }
+[data-theme="metro"] .btn:disabled { background: transparent; color: var(--metro-text-3); }
 
 [data-theme="metro"] .btn-primary {
   background: var(--metro-accent);
   border-color: var(--metro-accent);
   color: #fff;
+  font-weight: 600;
 }
 [data-theme="metro"] .btn-primary:hover { background: var(--metro-accent-hover); border-color: var(--metro-accent-hover); color: #fff; }
-[data-theme="metro"] .btn-primary:active { background: var(--metro-accent-pressed); }
+[data-theme="metro"] .btn-primary:active { background: var(--metro-accent-press); }
 
-[data-theme="metro"] .btn-danger { background: #fff; border-color: var(--metro-red); color: var(--metro-red); }
-[data-theme="metro"] .btn-danger:hover { background: #fdf3f2; border-color: var(--metro-red); color: var(--metro-red); }
+[data-theme="metro"] .btn-danger { background: transparent; border-color: transparent; color: var(--metro-danger, #c42b1c); }
+[data-theme="metro"] .btn-danger:hover { background: rgba(196, 43, 28, .08); color: #c42b1c; }
 
-[data-theme="metro"] .icon-btn { border-radius: 2px; background: transparent; border: 1px solid transparent; }
-[data-theme="metro"] .icon-btn:hover { background: var(--metro-hover); border-color: var(--metro-border); }
+[data-theme="metro"] .icon-btn { background: transparent; border: none; border-radius: 2px; }
+[data-theme="metro"] .icon-btn:hover { background: var(--metro-tint); }
 
-/* ---------------------------------------------------------------- 输入 / 下拉 / 勾选 */
+/* ---------------------------------------------------------------- 输入 / 下拉（自定义，不用浏览器默认样） */
 [data-theme="metro"] .input,
 [data-theme="metro"] input[type="text"],
 [data-theme="metro"] input[type="number"],
 [data-theme="metro"] input[type="password"],
-[data-theme="metro"] select,
 [data-theme="metro"] textarea {
-  border-radius: 2px;
   background: #fff;
-  border: 1px solid var(--metro-border-strong);
-  color: var(--metro-text);
-  padding: 6px 8px;
+  border: 1px solid var(--metro-border-input);
+  border-radius: 2px;
   box-shadow: none;
+  color: var(--metro-text);
+  min-height: 34px;
+  padding: 6px 10px;
 }
-[data-theme="metro"] .input:hover,
-[data-theme="metro"] select:hover { border-color: #8a8a8a; }
+[data-theme="metro"] .input:hover, [data-theme="metro"] input:hover, [data-theme="metro"] textarea:hover { border-color: #c8c8c8; }
 [data-theme="metro"] .input:focus,
 [data-theme="metro"] input:focus,
-[data-theme="metro"] select:focus,
 [data-theme="metro"] textarea:focus {
   border-color: var(--metro-accent);
-  outline: 1px solid var(--metro-accent);
-  outline-offset: -2px;
+  outline: none;
+  box-shadow: inset 0 -2px 0 var(--metro-accent);
 }
+
 [data-theme="metro"] select {
+  -webkit-appearance: none;
   appearance: none;
-  padding-right: 26px;
-  background-image: linear-gradient(45deg, transparent 50%, #4a4a4a 50%), linear-gradient(135deg, #4a4a4a 50%, transparent 50%);
-  background-position: calc(100% - 14px) 52%, calc(100% - 9px) 52%;
+  background: #fff;
+  border: 1px solid var(--metro-border-input);
+  border-radius: 2px;
+  color: var(--metro-text);
+  min-height: 34px;
+  padding: 6px 30px 6px 10px;
+  background-image: linear-gradient(45deg, transparent 50%, #5f5f5f 50%), linear-gradient(135deg, #5f5f5f 50%, transparent 50%);
+  background-position: calc(100% - 15px) 54%, calc(100% - 10px) 54%;
   background-size: 5px 5px, 5px 5px;
   background-repeat: no-repeat;
 }
-[data-theme="metro"] input[type="checkbox"],
-[data-theme="metro"] input[type="radio"] { accent-color: var(--metro-accent); border-radius: 0; width: 15px; height: 15px; }
+[data-theme="metro"] select:hover { border-color: #c8c8c8; }
+[data-theme="metro"] select:focus { border-color: var(--metro-accent); outline: none; box-shadow: inset 0 -2px 0 var(--metro-accent); }
+
+/* ---- Metro 方框 Checkbox（完全自绘：白底浅灰描边 → 选中蓝底白勾） ---- */
+[data-theme="metro"] input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px; height: 18px;
+  margin: 0;
+  position: relative;
+  background: #fff;
+  border: 1px solid #bdbdbd;
+  border-radius: 2px;
+  vertical-align: middle;
+  cursor: default;
+  transition: background .06s linear, border-color .06s linear;
+}
+[data-theme="metro"] input[type="checkbox"]:hover { border-color: var(--metro-accent); }
+[data-theme="metro"] input[type="checkbox"]:checked { background: var(--metro-accent); border-color: var(--metro-accent); }
+[data-theme="metro"] input[type="checkbox"]:checked::after {
+  content: ""; position: absolute; left: 5px; top: 1px; width: 4px; height: 9px;
+  border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg);
+}
+[data-theme="metro"] input[type="checkbox"]:indeterminate { background: var(--metro-accent); border-color: var(--metro-accent); }
+[data-theme="metro"] input[type="checkbox"]:indeterminate::after {
+  content: ""; position: absolute; left: 3px; top: 7px; width: 10px; height: 2px; background: #fff;
+}
+[data-theme="metro"] input[type="radio"] { accent-color: var(--metro-accent); }
 
 /* ---------------------------------------------------------------------- 
-   模型管理 · Metro 顶部工具区（.mm-metro 只在 metro 显示；classic 隐藏）
+   模型管理 · Metro 顶部工具区（.mm-metro 仅 metro 显示；.mm-legacy 仅 classic）
    -------------------------------------------------------------------- */
-[data-theme="metro"] .mm-metro { display: block; padding: 8px 16px 6px 16px; }
-[data-theme="metro"] .mm-legacy { display: none !important; }        /* 老平铺按钮区：Metro 下隐藏 */
-[data-theme="metro"] .mm-metro .mm-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-[data-theme="metro"] .mm-metro .mm-sep { width: 1px; height: 22px; background: var(--metro-sep); margin: 0 6px; }
+[data-theme="metro"] .mm-metro { display: block; padding: 10px 16px 4px 16px; }
+[data-theme="metro"] .mm-legacy { display: none !important; }
+[data-theme="metro"] .mm-metro .mm-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+[data-theme="metro"] .mm-metro .mm-row2 { margin-top: 8px; gap: 8px; }
+[data-theme="metro"] .mm-metro .mm-sep { width: 1px; height: 20px; background: var(--metro-border-hair); margin: 0 8px; }
 [data-theme="metro"] .mm-metro .mm-spacer { flex: 1 1 auto; }
-[data-theme="metro"] .mm-count { color: var(--metro-text-2); font-size: 13px; }
 
-/* 筛选行（两个主题共用）：Metro 下变直角工具栏 */
+/* 筛选区（共用行；Metro 下扁平化） */
+[data-theme="metro"] .tool-row.mm-filter { padding: 8px 16px 12px 16px; gap: 8px; align-items: center; border-bottom: 1px solid var(--metro-border-hair); }
 [data-theme="metro"] .tool-row.mm-filter .input { min-width: 260px; }
-[data-theme="metro"] .tool-row.mm-filter { padding: 6px 16px; gap: 6px; }
+[data-theme="metro"] #mmCheckLabel { color: var(--metro-text-2); font-size: 13px; margin-left: auto; margin-right: 6px; }
 
-/* 下拉菜单（Metro：点击打开、直角、细边框、蓝色悬停） */
+/* ---------------------------------------------------------------- Dropdown（点击式；白底 / 浅边框 / 直角 / 浅蓝 hover / 蓝选中标记） */
+[data-theme="metro"] .btn-group { position: relative; }
 [data-theme="metro"] .btn-group .submenu,
 [data-theme="metro"] .mm-menu {
   display: none;
   position: absolute;
+  left: 0;
+  top: calc(100% + 2px);
   z-index: 80;
-  min-width: 190px;
+  min-width: 208px;
   padding: 4px 0;
-  background: var(--metro-surface);
-  border: 1px solid #c8c8c8;
+  background: #fff;
+  border: 1px solid var(--metro-border-hair);
   border-radius: 0;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.14);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, .12);
 }
-[data-theme="metro"] .mm-menu { left: 0; top: 100%; margin-top: 2px; }
 [data-theme="metro"] .btn-group.open .submenu,
 [data-theme="metro"] .mm-menu.open { display: block; }
-[data-theme="metro"] .btn-group:hover .submenu { display: none; }     /* 关掉 classic 的 hover 展开 */
+[data-theme="metro"] .btn-group:hover .submenu { display: none; }
 [data-theme="metro"] .btn-group.open:hover .submenu { display: block; }
 
 [data-theme="metro"] .submenu-item,
@@ -210,182 +243,177 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 14px;
+  padding: 9px 16px 9px 30px;
+  position: relative;
   border-radius: 0;
-  font-size: 13px;
-  color: var(--metro-text);
-  cursor: default;
   background: transparent;
+  color: var(--metro-text);
+  font-size: 13px;
 }
 [data-theme="metro"] .submenu-item:hover,
-[data-theme="metro"] .mm-menu .mm-item:hover { background: var(--metro-hover); }
+[data-theme="metro"] .mm-menu .mm-item:hover { background: var(--metro-tint); }
 [data-theme="metro"] .submenu-item:active,
-[data-theme="metro"] .mm-menu .mm-item:active { background: var(--metro-selected); }
-[data-theme="metro"] .submenu-item.danger,
-[data-theme="metro"] .mm-menu .mm-item.danger { color: var(--metro-red); }
-[data-theme="metro"] .submenu-item.danger:hover { background: #fdf3f2; }
-[data-theme="metro"] .submenu-sep,
-[data-theme="metro"] .mm-menu .mm-sep-h {
-  height: 1px;
-  background: var(--metro-sep);
-  margin: 4px 0;
-  border: none;
+[data-theme="metro"] .mm-menu .mm-item:active { background: var(--metro-tint-2); }
+[data-theme="metro"] .submenu-item.sel::before,
+[data-theme="metro"] .mm-menu .mm-item.sel::before {
+  content: ""; position: absolute; left: 12px; top: 50%; width: 4px; height: 4px;
+  margin-top: -2px; background: var(--metro-accent);
 }
+[data-theme="metro"] .submenu-item.danger, [data-theme="metro"] .mm-menu .mm-item.danger { color: #c42b1c; }
+[data-theme="metro"] .submenu-item.danger:hover { background: rgba(196, 43, 28, .07); }
+[data-theme="metro"] .submenu-sep, [data-theme="metro"] .mm-menu .mm-sep-h { height: 1px; background: var(--metro-border-hair); margin: 4px 0; }
 
-/* 分裂按钮（主按钮 + 小角 ▾） */
-[data-theme="metro"] .sp-btn { display: inline-flex; position: relative; }
-[data-theme="metro"] .sp-btn .btn:first-child { border-right: none; }
-[data-theme="metro"] .sp-btn .sp-caret {
-  border-radius: 0 2px 2px 0;
-  padding: 7px 8px;
-  min-width: 0;
-  border-left: 1px solid #c8c8c8;
-}
-[data-theme="metro"] .sp-btn:hover .btn:first-child { border-color: var(--metro-accent); }
+/* 分裂按钮（改名：主按钮 + 小角 ▾） */
+[data-theme="metro"] .sp-btn { display: inline-flex; }
+[data-theme="metro"] .sp-btn .sp-caret { padding: 8px 8px; min-width: 0; color: var(--metro-text-2); }
+[data-theme="metro"] .sp-btn:hover .sp-caret { color: var(--metro-text); }
 
-/* Classic 主题下这些是"不存在的元素"，全部藏起来（互不干扰） */
+/* Classic 下这些是新元素，全部隐藏（互不干扰） */
 .mm-metro, .mm-legacy-note { display: none; }
 
-/* ---------------------------------------------------------------- 徽章 / 药丸 */
-[data-theme="metro"] .status-pill {
+/* ---------------------------------------------------------------- 瀑布流：Metro Tile + Masonry（大图为主、文字克制） */
+[data-theme="metro"] .masonry { padding: 14px 16px; }
+[data-theme="metro"] .ms-card {
+  background: #fff;
+  border: 1px solid var(--metro-border-hair);
+  border-radius: 0;
+  box-shadow: none;
+  overflow: hidden;
+  position: relative;
+  transition: border-color .08s linear, background .08s linear;
+}
+[data-theme="metro"] .ms-card:hover { border-color: var(--metro-accent); background: #fbfdff; transform: none; }
+[data-theme="metro"] .ms-card.checked { border-color: var(--metro-accent); box-shadow: inset 0 0 0 1px var(--metro-accent); }
+[data-theme="metro"] .ms-img-wrap { background: #f2f2f2; }
+[data-theme="metro"] .ms-img { display: block; width: 100%; border-radius: 0; }
+[data-theme="metro"] .ms-name {
+  padding: 8px 10px 0 10px;
+  font-size: 13px; font-weight: 600; color: var(--metro-text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+[data-theme="metro"] .ms-meta { padding: 2px 10px 0 10px; font-size: 12px; color: var(--metro-text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+[data-theme="metro"] .ms-size { padding: 1px 10px 9px 10px; font-size: 11px; color: var(--metro-text-3); }
+[data-theme="metro"] .ms-sub { display: none; }          /* C站名已在主名位置；文件名走悬停 title */
+[data-theme="metro"] .ms-check {
+  position: absolute; top: 8px; left: 8px; z-index: 2;
+  width: 20px; height: 20px; line-height: 18px; text-align: center;
+  background: rgba(255, 255, 255, .92);
+  border: 1px solid var(--metro-border-input);
   border-radius: 2px;
-  background: var(--metro-surface-alt);
-  border: 1px solid var(--metro-border);
-  color: var(--metro-text-2);
-  padding: 3px 8px;
   font-size: 12px;
 }
+[data-theme="metro"] .ms-upd { border-radius: 2px; background: var(--metro-accent); color: #fff; }
+/* 状态徽章：只保留一个（有更新=蓝 / 已最新=绿），贴在图上 */
+[data-theme="metro"] .ms-tag {
+  position: absolute; top: 8px; right: 8px; z-index: 2;
+  font-size: 11px; line-height: 18px; padding: 0 7px;
+  border-radius: 2px; border: none;
+}
+[data-theme="metro"] .ms-tag.upd { background: var(--metro-accent); color: #fff; }
+[data-theme="metro"] .ms-tag.ok { background: var(--metro-green-bg); color: var(--metro-green); }
+
+/* ---------------------------------------------------------------- 列表视图（轻量：极少描边） */
+[data-theme="metro"] table.grid { border-collapse: collapse; }
+[data-theme="metro"] table.grid thead th {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--metro-border-hair);
+  border-radius: 0;
+  color: var(--metro-text-2);
+  font-weight: 600;
+  font-size: 12px;
+  padding: 9px 10px;
+}
+[data-theme="metro"] table.grid thead th:hover { background: var(--metro-tint); color: var(--metro-text); }
+[data-theme="metro"] table.grid tbody tr { border: none; }
+[data-theme="metro"] table.grid tbody td { border-bottom: 1px solid #f4f4f4; padding: 6px 10px; }
+[data-theme="metro"] table.grid tbody tr:nth-child(even) { background: transparent !important; }
+[data-theme="metro"] table.grid tbody tr:hover { background: var(--metro-tint) !important; }
+[data-theme="metro"] table.grid tbody tr.selected,
+[data-theme="metro"] table.grid tbody tr.sel-row { background: var(--metro-sel-bg) !important; }
+[data-theme="metro"] table.grid tbody tr.selected td:first-child,
+[data-theme="metro"] table.grid tbody tr.sel-row td:first-child { box-shadow: inset 2px 0 0 var(--metro-accent); }
+[data-theme="metro"] .cell-sel { color: var(--metro-accent); }
+[data-theme="metro"] .thumb { border-radius: 2px; border: 1px solid var(--metro-border-hair); }
+[data-theme="metro"] .table-wrap { border: none; }
+
+/* ---------------------------------------------------------------- 徽章 / 药丸（扁平，无描边） */
 [data-theme="metro"] .chip,
 [data-theme="metro"] .chip-dl,
 [data-theme="metro"] .upd-chip,
 [data-theme="metro"] .about-ver,
 [data-theme="metro"] .bd-links,
 [data-theme="metro"] .bili-float,
-[data-theme="metro"] .ud-tag,
-[data-theme="metro"] .ms-badge {
-  border-radius: 2px !important;
-  box-shadow: none;
-}
-[data-theme="metro"] .chip-dl { background: #fff; border: 1px solid var(--metro-accent); color: var(--metro-accent); }
-[data-theme="metro"] .chip-dl:hover { background: var(--metro-hover); }
-[data-theme="metro"] .upd-chip.is-down { background: #fff; border-color: var(--metro-orange); color: var(--metro-orange); }
+[data-theme="metro"] .ud-tag { border-radius: 2px !important; box-shadow: none; border: none; }
+[data-theme="metro"] .chip-dl { background: var(--metro-tint); color: var(--metro-accent); }
+[data-theme="metro"] .chip-dl:hover { background: var(--metro-tint-2); }
+[data-theme="metro"] .upd-chip.is-down { background: rgba(202, 80, 16, .10); color: var(--metro-orange); }
 
-/* ---------------------------------------------------------------- 列表（表格视图） */
-[data-theme="metro"] table.grid { border-collapse: collapse; }
-[data-theme="metro"] table.grid thead th {
-  background: var(--metro-surface-alt);
-  border-bottom: 1px solid var(--metro-sep);
-  border-radius: 0;
-  color: var(--metro-text);
-  font-weight: 600;
-}
-[data-theme="metro"] table.grid thead th:hover { background: var(--metro-hover); }
-[data-theme="metro"] table.grid tbody tr { border-bottom: 1px solid #efefef; }
-[data-theme="metro"] table.grid tbody tr:nth-child(even) { background: #fbfbfb !important; }
-[data-theme="metro"] table.grid tbody tr:hover { background: var(--metro-hover) !important; }
-[data-theme="metro"] table.grid tbody tr.selected,
-[data-theme="metro"] table.grid tbody tr.sel-row { background: var(--metro-selected) !important; }
-[data-theme="metro"] .cell-sel { color: var(--metro-accent); }
-[data-theme="metro"] .thumb { border-radius: 0; border: 1px solid var(--metro-sep); }
-
-/* ---------------------------------------------------------------- 瀑布流卡片（Metro 磁贴） */
-[data-theme="metro"] .masonry { gap: 10px; }
-[data-theme="metro"] .ms-card {
-  border-radius: 0;
-  background: var(--metro-surface);
-  border: 1px solid #e3e3e3;
-  box-shadow: none;
-  overflow: hidden;
-  transition: border-color .08s linear, background .08s linear;
-}
-[data-theme="metro"] .ms-card:hover { border-color: var(--metro-accent); background: #fbfdff; box-shadow: none; transform: none; }
-[data-theme="metro"] .ms-card.checked { border-color: var(--metro-accent); box-shadow: inset 0 0 0 1px var(--metro-accent); }
-[data-theme="metro"] .ms-img { border-radius: 0; }
-[data-theme="metro"] .ms-check { border-radius: 0; background: rgba(255, 255, 255, .92); border: 1px solid var(--metro-border); color: var(--metro-text); }
-[data-theme="metro"] .ms-upd { border-radius: 0; background: var(--metro-accent); color: #fff; }
-[data-theme="metro"] .ms-name { font-weight: 600; font-size: 13px; color: var(--metro-text); }
-[data-theme="metro"] .ms-meta, [data-theme="metro"] .ms-sub { color: var(--metro-text-2); font-size: 12px; }
-[data-theme="metro"] .ms-size { color: var(--metro-text-3); font-size: 12px; }
-/* 卡片状态徽章（新增） */
-[data-theme="metro"] .ms-tag {
-  display: inline-block; font-size: 11px; line-height: 16px; padding: 0 5px;
-  border-radius: 2px; border: 1px solid transparent;
-}
-[data-theme="metro"] .ms-tag.upd { background: #dff6dd; border-color: #107c10; color: #0b5e0b; }
-[data-theme="metro"] .ms-tag.latest { background: #f2f2f2; border-color: #d9d9d9; color: #5f5f5f; }
-[data-theme="metro"] .ms-tag.other { background: #fff4ce; border-color: #ca8a04; color: #7a5200; }
-
-/* ---------------------------------------------------------------- 右键菜单 / 面板 */
+/* ---------------------------------------------------------------- 右键菜单 / 文件夹面板 */
 [data-theme="metro"] .ctx-menu {
+  background: #fff;
+  border: 1px solid var(--metro-border-hair);
   border-radius: 0;
-  background: var(--metro-surface);
-  border: 1px solid #c8c8c8;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, .14);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, .12);
   padding: 4px 0;
 }
-[data-theme="metro"] .ctx-menu .ctx-item { border-radius: 0; padding: 8px 14px; font-size: 13px; }
-[data-theme="metro"] .ctx-menu .ctx-item:hover { background: var(--metro-hover); }
-[data-theme="metro"] .ctx-menu .ctx-item.danger { color: var(--metro-red); }
-[data-theme="metro"] .ctx-menu .ctx-item.danger:hover { background: #fdf3f2; }
-[data-theme="metro"] .ctx-menu .ctx-sep { border-top-color: var(--metro-sep); }
+[data-theme="metro"] .ctx-menu .ctx-item { border-radius: 0; padding: 9px 16px; font-size: 13px; }
+[data-theme="metro"] .ctx-menu .ctx-item:hover { background: var(--metro-tint); }
+[data-theme="metro"] .ctx-menu .ctx-item.danger { color: #c42b1c; }
+[data-theme="metro"] .ctx-menu .ctx-item.danger:hover { background: rgba(196, 43, 28, .07); }
+[data-theme="metro"] .ctx-menu .ctx-sep { border-top-color: var(--metro-border-hair); }
 
 [data-theme="metro"] .folders-panel {
+  background: #fff;
+  border: 1px solid var(--metro-border-hair);
   border-radius: 0;
-  background: var(--metro-surface);
-  border: 1px solid #c8c8c8;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, .14);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, .12);
 }
 [data-theme="metro"] .folders-panel .fm-item { border-radius: 0; }
-[data-theme="metro"] .folders-panel .fm-item:hover { background: var(--metro-hover); }
-[data-theme="metro"] .folders-panel .fm-state { border-radius: 2px; }
+[data-theme="metro"] .folders-panel .fm-item:hover { background: var(--metro-tint); }
+[data-theme="metro"] .folders-panel .fm-state { border-radius: 2px; border: none; }
 
-/* ---------------------------------------------------------------- 弹窗 */
-[data-theme="metro"] .rd-mask { background: rgba(0, 0, 0, .25); }
+/* ---------------------------------------------------------------- 弹窗 / 提示 */
+[data-theme="metro"] .rd-mask { background: rgba(0, 0, 0, .22); }
 [data-theme="metro"] .rename-dialog {
+  background: #fff;
+  border: none;
   border-radius: 0;
-  background: var(--metro-surface);
-  border: 1px solid #b8b8b8;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, .20);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, .18);
   padding: 0;
   overflow: hidden;
 }
-[data-theme="metro"] .rd-title {
-  background: var(--metro-surface-alt);
-  border-bottom: 1px solid var(--metro-sep);
-  border-radius: 0;
-  padding: 10px 14px;
-  font-weight: 600;
-  font-size: 14px;
-}
-[data-theme="metro"] .rd-actions { border-top: 1px solid var(--metro-sep); padding: 10px 14px; gap: 8px; background: #fbfbfb; }
+[data-theme="metro"] .rd-title { background: var(--metro-accent); color: #fff; padding: 12px 16px; font-weight: 600; font-size: 14px; border: none; }
+[data-theme="metro"] .rd-actions { padding: 12px 16px; gap: 8px; border-top: 1px solid var(--metro-border-hair); background: #fafafa; }
 [data-theme="metro"] .rd-actions .btn { min-width: 84px; justify-content: center; }
 [data-theme="metro"] .rd-group, [data-theme="metro"] .rd-home, [data-theme="metro"] .rd-img { border-radius: 0; }
-
-[data-theme="metro"] #toast { border-radius: 0; background: #1f1f1f; color: #fff; border: none; }
+[data-theme="metro"] #toast { border-radius: 2px; background: #202020; color: #fff; border: none; }
 
 /* ---------------------------------------------------------------- Tooltip */
 [data-theme="metro"] [data-tip]:hover::after,
 [data-theme="metro"] .tipbox {
-  border-radius: 2px !important;
-  background: #f2f2f2 !important;
-  color: var(--metro-text) !important;
-  border: 1px solid #c8c8c8 !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, .12) !important;
+  border-radius: 0 !important;
+  background: #2b2b2b !important;
+  color: #f5f5f5 !important;
+  border: none !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .18) !important;
+  font-size: 12px;
 }
 
-/* ---------------------------------------------------------------- 更新页表格（同步 Metro 化） */
-[data-theme="metro"] .upd-table thead th { background: var(--metro-surface-alt); border-bottom: 1px solid var(--metro-sep); }
-[data-theme="metro"] .upd-table thead th.sortable:hover { background: var(--metro-hover); }
-[data-theme="metro"] .upd-table tbody tr:hover { background: var(--metro-hover) !important; }
-[data-theme="metro"] .upd-table tbody tr.sel { background: var(--metro-selected) !important; }
+/* ---------------------------------------------------------------- 更新页同步扁平化 */
+[data-theme="metro"] .upd-table thead th { background: transparent; border-bottom: 1px solid var(--metro-border-hair); color: var(--metro-text-2); }
+[data-theme="metro"] .upd-table thead th.sortable:hover { background: var(--metro-tint); color: var(--metro-text); }
+[data-theme="metro"] .upd-table tbody tr:hover { background: var(--metro-tint) !important; }
+[data-theme="metro"] .upd-table tbody tr.sel { background: var(--metro-sel-bg) !important; }
 [data-theme="metro"] .upd-table .ver-sel { border-radius: 2px; }
 [data-theme="metro"] .pager .btn { min-width: 32px; }
+[data-theme="metro"] .masonry, [data-theme="metro"] .table-wrap { background: transparent; }
 
-/* ---------------------------------------------------------------- 平直角清单（把残留的圆角/药丸压平） */
+/* ---------------------------------------------------------------- 边角清理（直角 + 去阴影） */
 [data-theme="metro"] .about-logo,
 [data-theme="metro"] .about-contrib-avatar,
 [data-theme="metro"] .bili-icon,
-[data-theme="metro"] .nav-logo { border-radius: 2px !important; }
+[data-theme="metro"] .nav-logo,
 [data-theme="metro"] .ob-card,
 [data-theme="metro"] .ob-mask.mini .ob-card,
 [data-theme="metro"] .ob-theme,
@@ -408,17 +436,12 @@
 [data-theme="metro"] .bd-link,
 [data-theme="metro"] .rd-group,
 [data-theme="metro"] .rd-home,
-[data-theme="metro"] .ms-check,
 [data-theme="metro"] .ctx-menu .ctx-item { border-radius: 2px !important; }
-
-/* 状态圆点保持圆（Metro 也是圆点），其余 50% 圆形的清单一并处理 */
-[data-theme="metro"] .dot,
-[data-theme="metro"] .status-dot { border-radius: 50% !important; }
+[data-theme="metro"] .dot, [data-theme="metro"] .status-dot { border-radius: 50% !important; }
 
 /* ---------------------------------------------------------------- 细节 */
 [data-theme="metro"] a { color: var(--metro-accent); text-decoration: none; }
 [data-theme="metro"] a:hover { text-decoration: underline; }
-[data-theme="metro"] hr, [data-theme="metro"] .sep { border-color: var(--metro-sep); }
-[data-theme="metro"] ::-webkit-scrollbar-corner { background: var(--metro-bg); }
+[data-theme="metro"] hr, [data-theme="metro"] .sep { border-color: var(--metro-border-hair); }
 [data-theme="metro"] .stat-line, [data-theme="metro"] .dim { color: var(--metro-text-2); }
-[data-theme="metro"] .ob-mask, [data-theme="metro"] .wf-mask { background: rgba(0, 0, 0, .25); }
+[data-theme="metro"] .ob-mask, [data-theme="metro"] .wf-mask { background: rgba(0, 0, 0, .22); }

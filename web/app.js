@@ -1329,14 +1329,19 @@ function renderMasonry(rows) {
   $("#mmMasonry").style.display = "block";
   $("#mmMasonry").innerHTML = rows.map((r, i) => {
     const checked = state.mmChecked.has(r.path) ? "checked" : "";
-    return '<div class="ms-card' + (checked ? " checked" : "") + '" data-idx="' + i + '" data-path="' + esc(r.path) + '">' +
+    const _cn = String(r.civitai_name || "").trim();
+    const _disp = _cn || String(r.name || "");
+    const _sub = (_cn && _cn !== r.name) ? String(r.name || "") : "";
+    const _meta = [r.base, r.type, r.ver].filter(Boolean).map((x) => short(String(x), 16)).join(" · ");
+    return '<div class="ms-card' + (checked ? " checked" : "") + '" data-idx="' + i + '" data-path="' + esc(r.path) + '" title="' + esc(String(r.name || "") + " · " + String(r.path || "")) + '">' +
       '<span class="ms-check">' + (checked ? "✅" : "⬜") + "</span>" +
+      _msTag(r) +
       (r.upd && r.upd.has_update ? '<a href="#" class="ms-upd" data-url="' + esc(r.upd.url || "") + '" title="' + esc(updTip(r.upd)) + '">❗</a>' : "") +
       '<div class="ms-img-wrap"><img class="ms-img" data-idx="' + i + '" data-path="' + esc(r.path) + '" alt=""/></div>' +
-      '<div class="ms-name">' + esc(short(r.name, 26)) + "</div>" +
-      (r.civitai_name && r.civitai_name !== r.name ? '<div class="ms-sub">' + esc(short(r.civitai_name, 30)) + "</div>" : "") +
-      '<div class="ms-meta">' + esc(r.type || "-") + (r.base ? " · " + esc(short(r.base, 14)) : "") + (r.ver ? " · " + esc(short(r.ver, 14)) : "") + "</div>" +
-      '<div class="ms-size">' + fmtSize(r.size) + _msTag(r) + "</div></div>";
+      '<div class="ms-name">' + esc(short(_disp, 30)) + "</div>" +
+      (_sub ? '<div class="ms-sub">' + esc(short(_sub, 30)) + "</div>" : "") +
+      '<div class="ms-meta">' + esc(_meta || (r.type || "-")) + "</div>" +
+      '<div class="ms-size">' + fmtSize(r.size) + "</div></div>";
   }).join("");
   $("#mmCheckLabel").textContent = "已勾选 " + state.mmChecked.size + " 个";
   loadMasonryThumbs(0);
@@ -3913,9 +3918,8 @@ document.addEventListener("click", (e) => {
    ========================================================================== */
 function _msTag(r) {
   const u = (r && r.upd) || {};
-  if (u.has_update) return ' <span class="ms-tag upd">❗ 有更新</span>';
-  if (u.other_base) return ' <span class="ms-tag other">🔀 仅换底模</span>';
-  if (r && r.upd) return ' <span class="ms-tag latest">✅ 已是最新</span>';
+  if (u.has_update || u.other_base) return "";          // 有更新 → 用 ❗ 角标（可点去 C 站）
+  if (r && r.upd) return '<span class="ms-tag ok">已最新</span>';
   return "";
 }
 
