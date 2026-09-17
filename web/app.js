@@ -223,7 +223,7 @@ const state = {
   display: [],
   mmChecked: new Set(),
   mmSel: new Set(),
-  mmSort: { col: null, rev: false },
+  mmSort: { col: "name", rev: false },
   mmBaseF: "", mmStF: "", mmFolderF: "",   // Metro 筛选：底模 / 更新状态 / 所在文件夹
   mmUpdOnly: false,          // 只看有更新的模型（更新检测筛选）
   mmUpdItems: null,          // 更新检测结果（path → 记录），「更新」页面用
@@ -1139,7 +1139,7 @@ function pollMmScan() {
       }
       state.display = state.models.slice();
       state.mmChecked.clear();
-      state.mmSort = { col: null, rev: false };
+      state.mmSort = { col: "name", rev: false };
       try {
         const u = await api.call("get_model_updates");   // 缓存的更新检测结果 → 卡片 ❗
         if (u && u.items) applyUpdatesToRows(u.items);
@@ -1181,12 +1181,12 @@ function renderMm() {
       '<td class="cell-sel">' + (state.mmChecked.has(r.path) ? "✅" : "⬜") + "</td>" +
       '<td class="c-thumb"><img data-idx="' + i + '" data-path="' + esc(r.path) + '" class="thumb" alt=""/></td>' +
       "<td class='c-name'><div class='ml-wrap'>" +
+        '<img data-idx="' + i + '" data-path="' + esc(r.path) + '" class="thumb ml-thumb" alt=""/>' +
         (r.upd && r.upd.has_update ? '<a href="#" class="mm-upd" data-url="' + esc(r.upd.url || "") + '" title="' + esc(updTip(r.upd)) + '">' + _icon("alert") + '</a>' : "") +
         '<div class="ml-txt">' +
           '<div class="ml-1" data-tip="' + esc(r.civitai_name || r.name) + '">' + esc(r.civitai_name || r.name) + "</div>" +
-          '<div class="ml-2" data-tip="' + esc(r.name + "　·　" + rel + "　·　" + fmtSize(r.size) + (r.hash ? "　·　" + r.hash : "")) + '">' +
-            esc(short(r.name, 40)) + " · " + esc(r.type || "-") + " · " + esc(r.base || "-") + " · " + esc(r.ver || "-") + " · " + fmtSize(r.size) +
-          "</div>" +
+          '<div class="ml-2" data-tip="' + esc(r.path) + '">' + esc(short(r.name, 46)) + "</div>" +
+          ((r.author || (r.info && r.info.creator)) ? '<div class="ml-3">作者 ' + esc(r.author || (r.info && r.info.creator)) + "</div>" : "") +
         "</div></div></td>" +
       "<td class='c-name' data-tip='' >" + esc(r.civitai_name || "-") + "</td>" +
       "<td>" + esc(r.type || "-") + "</td><td>" + esc(r.base || "-") + "</td>" +
@@ -1290,7 +1290,7 @@ function mmApplyCols() {
   try {
     const raw = localStorage.getItem("mm_hidden_cols");
     if (raw === null) {                       // 首次：默认收起次级列（用户可在表头右键里改，改过就永久生效）
-      hidden = ["cname", "hash", "size", "path"];
+      hidden = ["cname", "hash", "size", "path", "thumb"];
       localStorage.setItem("mm_hidden_cols", JSON.stringify(hidden));
     } else {
       hidden = JSON.parse(raw || "[]");
@@ -1672,6 +1672,27 @@ function _updVers(x) {
   return { list: vl, rec };
 }
 
+// 版本选择控件：Metro 直角按钮 + 门户菜单（列出全部同底模版本）
+function vselHtml(x, list, rec, sel, selEntry) {
+  const cur = String(x.path);
+  const label = selEntry ? ((String(selEntry.id) === String(rec) ? '<span class="v-star">★</span> ' : "") + esc(selEntry.name || sel)) : "选择版本";
+  const items = list.map((v) => {
+    const isRec = String(v.id) === String(rec);
+    const isCur = !!v.current;
+    return '<div class="vitem' + (String(v.id) === String(sel) ? " on" : "") + '" data-vpath="' + esc(cur) + '" data-vid="' + esc(v.id) + '">' +
+      '<span class="v-name">' + (isRec ? '<span class="v-star">★</span> ' : "") + esc(v.name || ("ID " + v.id)) +
+      (isCur ? '<span class="v-cur">当前版本</span>' : "") + "</span>" +
+      '<span class="v-date">' + esc(String(v.date || "").slice(0, 10)) + "</span></div>";
+  }).join("");
+  const site = x.it && x.it.url
+    ? '<div class="mm-sep-h"></div><div class="vitem vopen" data-vsite="' + esc(x.it.url) + '">打开 C 站查看全部版本 →</div>'
+    : "";
+  return '<span class="btn-group vsel-wrap">' +
+    '<button class="btn vsel-btn" data-vsel="' + esc(cur) + '" data-tip="选择要更新到的版本（推荐版本默认选中）">' +
+    '<span class="vsel-label">' + label + '</span>' + _icon("chevron-down") + "</button>" +
+    '<div class="mm-menu vmenu">' + items + site + "</div></span>";
+}
+
 function _updRowHtml(x) {
   const it = x.it || {};
   const st = _updState(it);
@@ -1682,18 +1703,7 @@ function _updRowHtml(x) {
   const curName = it.local_name || "";
   const date = String(it.latest_date || it.local_date || "").slice(0, 10);
 
-  const opts = [];
-  const recEntry = list.find((v) => String(v.id) === rec);
-  if (recEntry) opts.push('<option value="' + esc(rec) + '"' + (String(sel) === rec ? " selected" : "") + ">★ 推荐  " + esc(recEntry.name || rec) + (recEntry.date ? "  " + esc(recEntry.date) : "") + "</option>");
-  list.forEach((v) => {
-    if (String(v.id) === rec) return;
-    const label = esc(v.name || ("ID " + v.id)) + (v.current ? " · 当前版本" : "") + (v.date ? "  " + esc(v.date) : "");
-    opts.push('<option value="' + esc(v.id) + '"' + (String(v.id) === String(sel) ? " selected" : "") + ">" + label + "</option>");
-  });
-  if (curName && !list.some((v) => v.current)) {
-    opts.push('<option value="__cur">' + esc(curName) + " · 当前版本</option>");
-  }
-  opts.push('<option value="__site">🌐 在 C 站查看全部版本</option>');
+  // 版本清单直接由 vselHtml() 渲染（自定义门户菜单，列出全部版本）
 
   // 降级判断：选中的版本比当前版本旧（按发布日期；没有日期就用语义化版本名兜底）
   const curEntry = list.find((v) => v.current) || null;
@@ -1720,8 +1730,7 @@ function _updRowHtml(x) {
       "</div></div></td>" +
     '<td class="c-cur"><span class="ver-badge" data-tip="' + esc(it.local_name || "") + '">' + esc(curName || "未知") + "</span>" +
       (!curName && it.local_version ? '<div class="upd-dim upd-id">ID ' + esc(it.local_version) + "</div>" : "") + "</td>" +
-    '<td class="c-ver">' + (opts.length > 1 ? '<select class="input upd-vsel" data-path="' + esc(x.path) + '">' + opts.join("") + "</select>"
-                                             : '<span class="upd-dim">—</span>') + "</td>" +
+    '<td class="c-ver">' + (list.length ? vselHtml(x, list, rec, sel, selEntry) : '<span class="upd-dim">—</span>') + "</td>" +
     '<td class="c-date">' + esc(date || "—") + "</td>" +
     '<td class="c-st"><span class="st-badge ' + st.cls + '">' + st.t + "</span></td>" +
     '<td class="c-act"><div class="upd-acts2">' +
@@ -4171,3 +4180,37 @@ function bindMmMetro() {
   });
 }
 try { bindMmMetro(); } catch (e) { /* Metro 未启用时也不报错 */ }
+
+/* ===== 更新页「版本选择」控件的事件（委托；与门户菜单同一套逻辑） ===== */
+document.addEventListener("click", (e) => {
+  const t = e.target;
+  if (!t || !t.closest) return;
+  // 打开/关闭
+  const btn = t.closest(".vsel-btn");
+  if (btn) {
+    e.stopPropagation();
+    const wrap = btn.closest(".btn-group");
+    const menu = wrap && wrap.querySelector(".mm-menu");
+    const wasOpen = wrap && wrap.classList.contains("open");
+    _closeMmMenus();
+    if (!wasOpen && menu) _mmOpenMenu(wrap, menu, btn);
+    return;
+  }
+  // 选择版本
+  const item = t.closest(".vitem[data-vid]");
+  if (item) {
+    const pth = item.dataset.vpath, vid = item.dataset.vid;
+    state.updPick[pth] = vid;
+    _closeMmMenus();
+    renderUpdatesPage();
+    return;
+  }
+  // 去 C 站
+  const site = t.closest(".vopen[data-vsite]");
+  if (site) {
+    _closeMmMenus();
+    api.call("open_url", site.dataset.vsite);
+  }
+}, true);
+
+// 门户菜单挂在 body 后仍可点（portal 出去的菜单也走上面的委托）
