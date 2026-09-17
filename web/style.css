@@ -1445,3 +1445,17 @@ td.cell-dest:hover { color: var(--accent, #4da3ff); text-decoration: underline d
 .dlg-x { float: right; cursor: pointer; color: var(--text-dim); width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; }
 .dlg-x:hover { color: var(--text); }
 .sync-row b { color: var(--text); }
+
+
+/* 更新页状态选项卡（基础样式；Metro 主题另有精修覆盖） */
+.upd-tabs { display: inline-flex; align-items: stretch; border: 1px solid var(--border); background: var(--surface); border-radius: var(--radius-sm); overflow: hidden; }
+.upd-tabs .upd-tab { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: var(--surface); border: 0; border-right: 1px solid var(--border); font-size: 12.5px; color: var(--text-dim); cursor: pointer; white-space: nowrap; }
+.upd-tabs .upd-tab:last-child { border-right: 0; }
+.upd-tabs .upd-tab:hover { background: var(--surface2); }
+.upd-tabs .upd-tab .n { font-size: 11px; color: var(--text-dim); opacity: .85; }
+.upd-tabs .upd-tab .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-dim); }
+.upd-tabs .upd-tab .dot.upd { background: #107C10; }
+.upd-tabs .upd-tab .dot.latest { background: #0078D4; }
+.upd-tabs .upd-tab .dot.other { background: #666; }
+.upd-tabs .upd-tab .dot.unknown, .upd-tabs .upd-tab .dot.todo { background: #B26A00; }
+.upd-tabs .upd-tab.on { color: var(--text); font-weight: 600; background: var(--surface2); }

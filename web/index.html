@@ -208,15 +208,15 @@
         </div>
       </div>
 <div class="btn-row mm-legacy">
-        <button class="btn btn-primary" id="mmScan" data-tip="扫描所有模型管理目录，发现模型并读取元数据/封面">扫描模型</button>
-        <button class="btn" id="mmRefresh" data-tip="重新扫描（不读元数据，只刷新列表）">刷新</button>
-        <button class="btn" id="mmVerify" data-tip="计算文件哈希并与 C 站比对，校验文件是否完整">校验完整性</button>
-        <button class="btn" id="mmDedupe" data-tip="按 SHA256 查找重复模型（同一文件放了多份）+ 同一模型的新旧版本，可勾选把多余的移入回收站">查重</button>
-        <button class="btn" id="mmCheckUpd" data-tip="检查更新：对比 C 站，找出同底模有新版的模型（不会自动下载）。有更新的卡片右上角出现 ，点击可去 C 站看新版">检查更新</button>
-        <button class="btn" id="mmUpdDl" data-tip="更新选中：把勾选的、带 的模型加入下载队列（新版默认下到旧版所在文件夹；不会动旧版文件）">更新选中</button>
-        <button class="btn" id="mmGoUpdates" data-tip="打开「更新」页，并默认只看有更新的（）模型：可以按版本下拉更新或降级，支持勾选批量">去更新</button>
+        <button class="btn btn-primary" id="mmScan" data-tip="扫描所有模型管理目录，发现模型并读取元数据/封面">🔍 扫描模型</button>
+        <button class="btn" id="mmRefresh" data-tip="重新扫描（不读元数据，只刷新列表）">🔄 刷新</button>
+        <button class="btn" id="mmVerify" data-tip="计算文件哈希并与 C 站比对，校验文件是否完整">✅ 校验完整性</button>
+        <button class="btn" id="mmDedupe" data-tip="按 SHA256 查找重复模型（同一文件放了多份）+ 同一模型的新旧版本，可勾选把多余的移入回收站">🧬 查重</button>
+        <button class="btn" id="mmCheckUpd" data-tip="检查更新：对比 C 站，找出同底模有新版的模型（不会自动下载）。有更新的卡片右上角出现 ❗，点击可去 C 站看新版">⏫ 检查更新</button>
+        <button class="btn" id="mmUpdDl" data-tip="更新选中：把勾选的、带 ❗ 的模型加入下载队列（新版默认下到旧版所在文件夹；不会动旧版文件）">⬇️ 更新选中</button>
+        <button class="btn" id="mmGoUpdates" data-tip="打开「更新」页，并默认只看有更新的（❗）模型：可以按版本下拉更新或降级，支持勾选批量">⏫ 去更新</button>
         <span class="btn-group" id="mmRenameGroup">
-          <button class="btn" id="mmRenameMain" data-tip="改文件名：自定义 / 改成 C 站模型名 / 翻译成中文">改名</button>
+          <button class="btn" id="mmRenameMain" data-tip="改文件名：自定义 / 改成 C 站模型名 / 翻译成中文">✏️ 改名</button>
           <div class="submenu" id="mmRenameSub">
             <div class="submenu-item" data-act="custom">自定义改名</div>
             <div class="submenu-item" data-act="rename_c">文件名改成C站名</div>
@@ -229,9 +229,9 @@
         <button class="btn" id="mmSendRp" data-tip="把选中模型送去反向解析：从 C 站匹配名字/触发词/封面">识别模型信息</button>
       </div>
       <div class="btn-row mm-legacy">
-        <button class="btn" id="mmOrganize" data-tip="把选中的模型按规则移动到分类文件夹（需先在设置选 目标环境）">整理模型</button>
-        <button class="btn" id="mmRestore" style="display:none" data-tip="恢复误整理的模型到原位置（按移动日志回退）">恢复误整理</button>
-        <button class="btn btn-danger" id="mmCleanup" data-tip="清理冗余文件：删除失效 info、孤儿封面等多余文件">清理冗余文件</button>
+        <button class="btn" id="mmOrganize" data-tip="把选中的模型按规则移动到分类文件夹（需先在设置选 目标环境）">📂 整理模型</button>
+        <button class="btn" id="mmRestore" style="display:none" data-tip="恢复误整理的模型到原位置（按移动日志回退）">🔧 恢复误整理</button>
+        <button class="btn btn-danger" id="mmCleanup" data-tip="清理冗余文件：删除失效 info、孤儿封面等多余文件">🗑️ 清理冗余文件</button>
       </div>
       <div class="tool-row mm-filter">
         <input id="mmFilter" class="input" placeholder="筛选：文件名 / C站名 / 路径"/>
@@ -290,9 +290,9 @@
           <option value="state">排序：状态</option>
         </select>
         <span class="upd-spacer"></span>
-        <button class="btn btn-primary" id="updCheck" data-tip="对比 C 站：找出「和你所用底模相同、且比你的版本新」的版本（只列出，不会自动下载）。勾选了条目时只检查勾选的这几个">检查更新</button>
-        <button class="btn" id="updDlSel" disabled data-tip="把勾选的模型更新到各自下拉里选中的版本（默认推荐版）">批量更新</button>
-        <button class="btn" id="updWl" data-tip="更新白名单：名单里的模型不再提示更新（行右键 / ··· 菜单里可加入）">白名单</button>
+        <button class="btn btn-primary" id="updCheck" data-tip="对比 C 站：找出「和你所用底模相同、且比你的版本新」的版本（只列出，不会自动下载）。勾选了条目时只检查勾选的这几个">⏫ 检查更新</button>
+        <button class="btn" id="updDlSel" disabled data-tip="把勾选的模型更新到各自下拉里选中的版本（默认推荐版）">⬇️ 批量更新</button>
+        <button class="btn" id="updWl" data-tip="📋 更新白名单：名单里的模型不再提示更新（行右键 / ··· 菜单里可加入）">📋 白名单</button>
       </div>
     </div>
     <div class="upd-table-wrap">
