@@ -1483,8 +1483,10 @@ async function loadMasonryThumbs(start) {
   };
   const miss = batch.filter((r) => !state.coverCache.has(r.path));
   if (miss.length) {
+    const _dpr = Math.max(1, window.devicePixelRatio || 1);
+    const _edge = Math.min(960, Math.round(320 * _dpr));   // 高缩放屏按物理像素取图，避免放大发糊
     try {
-      const json = await api.call("get_covers", miss.map((r) => r.path), 320);
+      const json = await api.call("get_covers", miss.map((r) => r.path), _edge);
       const covers = JSON.parse(json || "{}");
       if (state.coverCache.size > 4000) state.coverCache.clear();
       for (const [p, b64] of Object.entries(covers)) {
@@ -2831,7 +2833,7 @@ async function showModelDetail(path) {
       '<div class="detail-desc' + (descIsRich ? " rich" : "") + '">' + (descIsRich
         ? descRich
         : (descPlain || descZh ? esc(descPlain || descZh) : '<span class="dt-dim">暂无简介</span>')) + '</div>' +
-      (descZh && descIsRich ? '<div class="detail-desc-zh"><span class="dz-label">' + _icon("globe") + '中文翻译</span>' + esc(descZh) + "</div>" : "") + "</div>" +
+      (descZh ? '<div class="detail-desc-zh"><span class="dz-label">' + _icon("globe") + '中文翻译</span>' + esc(descZh) + "</div>" : "") + "</div>" +
     '<div class="dt-sec"><div class="dt-sec-h">' + _icon("settings") + '操作</div>' +
       '<div class="dt-ag"><div class="dt-ag-h">主要操作</div><div class="dt-ag-b">' +
         '<button class="btn btn-primary" id="dEditInfo">' + _icon("pencil") + '编辑信息</button>' +

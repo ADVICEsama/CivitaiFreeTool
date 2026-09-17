@@ -11,7 +11,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.2.3"
+APP_VERSION = "2.2.4"
 
 import civitai_api
 import config
@@ -1569,7 +1569,7 @@ class Api:
                 im = Image.open(cover).convert("RGB")
                 im.thumbnail((size, size))
                 buf = io.BytesIO()
-                im.save(buf, "JPEG", quality=82)
+                im.save(buf, "JPEG", quality=(88 if int(size) > 320 else 82))
                 b64s = base64.b64encode(buf.getvalue()).decode()
                 if len(self._cover_cache) > 4000:
                     self._cover_cache.clear()
