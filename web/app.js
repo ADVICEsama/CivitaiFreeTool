@@ -3270,12 +3270,49 @@ function mmRenameRun(act) {
     if (first) { showRenameDialog(first.path, first.name); return; }
     setStatus("未找到选中模型"); return;
   }
-  setStatus((act === "rename_c" ? "文件名改成C站名" : "文件名翻中文") + " 开始 ...");
-  api.call(act === "rename_c" ? "mm_rename" : "mm_localize", p).then(() => {
-    setStatus("完成，刷新中 ...");
-    api.call("scan_models");
-    pollMmScan();
-  }).catch(() => {});
+  mmRenamePreview(act, p);      // 批量改名：先试算预览，确认后才执行
+}
+
+// 批量改名预览（只读试算 → 用户确认 → 才真正执行）
+async function mmRenamePreview(act, paths) {
+  const label = act === "rename_c" ? "文件名 → C站名称" : "文件名 → 中文";
+  setStatus("试算中（未修改任何文件）…");
+  let r = null;
+  try { r = await api.call("mm_rename_preview", act, paths); } catch (e) { setStatus("试算失败：" + e); return; }
+  const items = ((r && r.items) || []).filter((x) => x && x.old);
+  if (!items.length) { setStatus("没有可改名的模型（先勾选）"); return; }
+  const willChange = items.filter((x) => x.new && !x.same);
+  const rows = items.map((it) => {
+    const tag = it.new && !it.same ? "" : ' <span class="rp-skip">' + (it.new ? "名字已相同" : "跳过") + "</span>";
+    return "<tr><td class=\"rp-old\" data-tip=\"" + esc(it.old) + "\">" + esc(short(it.old, 46)) + "</td>" +
+      '<td class="rp-arrow">→</td>' +
+      '<td class="rp-new" data-tip="' + esc(it.new || "") + '">' + esc(short(it.new || "—", 46)) + tag + "</td></tr>";
+  }).join("");
+  const mask = document.createElement("div");
+  mask.className = "rd-mask";
+  const dlg = document.createElement("div");
+  dlg.className = "rename-dialog rp-dlg";
+  dlg.innerHTML =
+    '<div class="rd-title">批量改名预览 · ' + esc(label) + "</div>" +
+    '<div class="rp-hint">以下为<b>试算结果，尚未修改任何文件</b>；点「应用」才会执行。</div>' +
+    '<div class="rp-list"><table class="rp-tb"><thead><tr><th>原文件名</th><th></th><th>新文件名</th></tr></thead><tbody>' + rows + "</tbody></table></div>" +
+    '<div class="rd-actions"><span class="rp-count">共 ' + items.length + " 项，将改动 " + willChange.length + " 项</span><span style=\"flex:1\"></span>" +
+    '<button class="btn" id="rpCancel">取消</button>' +
+    '<button class="btn btn-primary" id="rpApply"' + (willChange.length ? "" : " disabled") + ">应用 " + willChange.length + " 项</button></div>";
+  const close = () => { try { mask.remove(); dlg.remove(); } catch (e) { /* 忽略 */ } };
+  document.body.appendChild(mask);
+  document.body.appendChild(dlg);
+  mask.addEventListener("click", close);
+  dlg.querySelector("#rpCancel").addEventListener("click", close);
+  dlg.querySelector("#rpApply").addEventListener("click", () => {
+    close();
+    setStatus(label + " 开始 …");
+    api.call(act === "rename_c" ? "mm_rename" : "mm_localize", paths).then(() => {
+      setStatus("完成，刷新中 …");
+      api.call("scan_models");
+      pollMmScan();
+    }).catch(() => {});
+  });
 }
 $("#mmRenameMain").addEventListener("click", () => {
   const def = (state.cfg && state.cfg.rename_menu_default) || "custom";

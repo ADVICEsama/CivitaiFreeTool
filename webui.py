@@ -11,7 +11,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.1.53"
+APP_VERSION = "2.1.54"
 
 import civitai_api
 import config
@@ -2489,6 +2489,31 @@ class Api:
         if version_id:
             u += "?modelVersionId=%s" % version_id
         return u
+
+    def mm_rename_preview(self, act="rename_c", paths=None):
+        """批量改名「只读试算」：算出新旧文件名给用户预览，绝不修改任何文件。
+        act: rename_c（文件名→C站名） / localize（文件名→中文，需要翻译时走百度翻译，不落盘）"""
+        rows = [r for r in self.model_rows if r["path"] in (paths or [])] or list(self.model_rows)
+        out = []
+        appid = self.cfg.get("baidu_appid", "").strip()
+        key = self.cfg.get("baidu_key", "").strip()
+        for r in rows:
+            old = os.path.basename(r["path"])
+            try:
+                info = dict(r.get("info") or {})
+                if act == "localize":
+                    nm = (info.get("name") or "").strip()
+                    if nm and not translator._is_cjk(nm):
+                        info["name"] = translator.translate(nm, appid, key) or nm
+                newp, msgs = model_manager.rename_to_civitai(
+                    r["path"], info, dry_run=True, clean_rules=self.cfg.get("rename_clean_rules") or "")
+                out.append({"path": r["path"], "old": old,
+                            "new": os.path.basename(newp) if newp else "",
+                            "same": os.path.normpath(newp or "") == os.path.normpath(r["path"]),
+                            "msg": "; ".join(msgs or [])[:140]})
+            except Exception as e:
+                out.append({"path": r["path"], "old": old, "new": "", "same": False, "msg": str(e)[:140]})
+        return {"ok": True, "items": out}
 
     def mm_rename(self, paths=None):
         """重命名为 C 站模型名（后台线程）；按设置里的清理规则去掉逗号/括号等符号"""
