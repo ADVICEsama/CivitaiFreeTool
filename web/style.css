@@ -1433,3 +1433,15 @@ td.cell-dest:hover { color: var(--accent, #4da3ff); text-decoration: underline d
 .rp-new { color: var(--text); font-weight: 500; }
 .rp-skip { font-size: 11px; color: var(--text-dim); font-weight: 400; }
 .rp-count { font-size: 12px; color: var(--text-dim); }
+
+
+/* 模型管理列表：表格必须铺满容器（fixed 布局 + 100% 宽 = 列宽再怎么变都不会右侧留白） */
+#mmTable { width: 100%; min-width: 980px; }
+#mmTableWrap { overflow: auto; }
+
+/* 从 C 站同步结果 / 弹窗关闭按钮（通用） */
+.sync-row { display: flex; gap: 10px; font-size: 13px; padding: 3px 0; }
+.sync-row span { color: var(--text-dim); min-width: 64px; }
+.dlg-x { float: right; cursor: pointer; color: var(--text-dim); width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; }
+.dlg-x:hover { color: var(--text); }
+.sync-row b { color: var(--text); }

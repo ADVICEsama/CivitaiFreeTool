@@ -1675,6 +1675,27 @@ function _updState(it) {
   return { k: "latest", t: _icon("check") + "已是最新", cls: "blue" };
 }
 
+// 更新页状态选项卡：与列表徽章共用同一套状态色令牌；再点当前项 = 取消筛选
+const UPD_ST_DEF = [["", "全部"], ["upd", "有更新"], ["latest", "已是最新"], ["other", "仅换底模"], ["unknown", "无法判定"], ["todo", "未检查"]];
+function renderUpdTabs(baseRows) {
+  const host = $("#updTabs");
+  if (!host) return;
+  const cnt = { "": (baseRows || []).length };
+  (baseRows || []).forEach((x) => { const k = _updState(x.it).k; cnt[k] = (cnt[k] || 0) + 1; });
+  host.innerHTML = UPD_ST_DEF.map(([k, t]) => {
+    const on = state.updState === k ? " on" : "";
+    const dot = k ? '<span class="dot ' + k + '"></span>' : "";
+    return '<button type="button" class="upd-tab' + on + '" data-st="' + k + '" role="tab" aria-selected="' + (on ? "true" : "false") + '">' +
+      dot + t + ' <span class="n">' + (cnt[k] || 0) + "</span></button>";
+  }).join("");
+  host.querySelectorAll(".upd-tab").forEach((b) => b.addEventListener("click", () => {
+    const k = b.dataset.st || "";
+    state.updState = (state.updState === k) ? "" : k;   // 再点当前筛选 = 取消
+    state.updPage = 1;
+    renderUpdatesPage();
+  }));
+}
+
 // 该行的「可选版本」清单：优先用后端 ver_list（含当前/推荐），老缓存退化到只知最新版
 function _updVers(x) {
   const it = x.it || {};
@@ -1768,8 +1789,9 @@ function _updFilterRows() {
   let rows = Object.entries(union).map(([path, it]) => ({ path, it: it || {} }));
   const q = String(state.updQ || "").trim().toLowerCase();
   if (state.updBase) rows = rows.filter((x) => String(x.it.local_base || "") === state.updBase);
-  if (state.updState) rows = rows.filter((x) => _updState(x.it).k === state.updState);
   if (q) rows = rows.filter((x) => ((x.it.model_name || "") + " " + x.path + " " + (x.it.local_name || "") + " " + (x.it.author || "")).toLowerCase().includes(q));
+  renderUpdTabs(rows);                                                    // 计数：底模/搜索过滤后、状态过滤前的行
+  if (state.updState) rows = rows.filter((x) => _updState(x.it).k === state.updState);
   const sk = state.updSortKey || "date";
   const rev = !!state.updSortRev;
   // 各列默认方向：date/ver 默认"新的多者在前"(降序)，其余默认升序
@@ -2100,27 +2122,44 @@ async function updBatchIgnore(paths) {
 }
 
 async function updWhitelistDialog() {
-  const r = await api.call("get_update_whitelist");
-  const items = ((r && r.items) || []).slice();
+  let items = [];
+  try {
+    const r = await api.call("get_update_whitelist");
+    items = ((r && r.items) || []).slice();
+  } catch (e) {
+    infoBox("更新白名单", "<div class='dt-dim'>白名单读取失败：" + esc(String(e)) + "</div>");
+    return;
+  }
   const dlg = document.createElement("div");
   dlg.className = "rd-mask";
   const box = document.createElement("div");
   box.className = "rename-dialog";
   box.style.width = "620px";
-  const closeAll = () => { dlg.remove(); box.remove(); };
+  const onKey = (e) => { if (e.key === "Escape") closeAll(); };
+  const closeAll = () => { document.removeEventListener("keydown", onKey); dlg.remove(); box.remove(); };
+  document.addEventListener("keydown", onKey);
   const render = () => {
     box.innerHTML =
-      '<div class="rd-title">更新白名单（' + items.length + "）</div>" +
+      '<div class="rd-title">更新白名单 <span class="dt-dim">（' + items.length + ' 个模型）</span><span class="dlg-x" id="wlX" title="关闭" data-tip="关闭（Esc）">' + _icon("x") + "</span></div>" +
+      '<input class="input" id="wlQ" placeholder="搜索模型名称 / modelId…" style="width:100%;margin:6px 0 8px" />' +
       '<div class="dd-hint">名单里的模型<b>不再提示更新</b>（检查时直接跳过）。加入方式：行内「···」→「不再提醒更新」。</div>' +
       '<div style="max-height:320px;overflow:auto">' +
       (items.length ? items.map((x) =>
-        '<div class="cf-row"><div class="dd-text"><b>' + esc(x.name || x.model_id) + "</b>" +
+        '<div class="cf-row" data-name="' + esc(((x.name || "") + " " + x.model_id).toLowerCase()) + '"><div class="dd-text"><b>' + esc(x.name || x.model_id) + "</b>" +
         '<div class="dedup-dir">modelId ' + esc(x.model_id) + '</div></div>' +
         '<button class="btn btn-tiny wl-del" data-mid="' + esc(x.model_id) + '">移出</button></div>').join("")
         : '<div class="upd-empty">白名单是空的。</div>') +
       "</div>" +
       '<div class="rd-actions"><button class="btn" id="wlClose">关闭</button></div>';
     $("#wlClose", box).addEventListener("click", closeAll);
+    $("#wlX", box).addEventListener("click", closeAll);
+    const qEl = $("#wlQ", box);
+    if (qEl) qEl.addEventListener("input", () => {
+      const q = qEl.value.trim().toLowerCase();
+      box.querySelectorAll('.cf-row[data-name]').forEach((row) => {
+        row.style.display = (!q || row.dataset.name.includes(q)) ? "" : "none";
+      });
+    });
     box.querySelectorAll(".wl-del").forEach((b) => b.addEventListener("click", async () => {
       const rr = await api.call("remove_update_whitelist", b.dataset.mid);
       setStatus((rr && rr.msg) || "已移出");
@@ -2169,7 +2208,7 @@ if ($("#updSearch")) {
   });
 }
 if ($("#updBase")) $("#updBase").addEventListener("change", (e) => { state.updBase = e.target.value; state.updPage = 1; renderUpdatesPage(); });
-if ($("#updState")) $("#updState").addEventListener("change", (e) => { state.updState = e.target.value; state.updPage = 1; renderUpdatesPage(); });
+// 状态筛选已改为 #updTabs 选项卡（点击逻辑在 renderUpdTabs 内绑定）
 if ($("#updSort")) $("#updSort").addEventListener("change", (e) => { state.updSortKey = e.target.value; state.updSortRev = (e.target.value === "date"); state.updPage = 1; renderUpdatesPage(); });   // 下拉只有 时间/名称/状态，方向与表头一致
 if ($("#updPer")) $("#updPer").addEventListener("change", (e) => { state.updPer = Number(e.target.value) || 50; state.updPage = 1; renderUpdatesPage(); });
 // 表头点击排序：同一列再点一次切换升/降序
@@ -2360,9 +2399,7 @@ if ($("#mmGoUpdates")) $("#mmGoUpdates").addEventListener("click", () => {
   state.updState = "upd";                 // 默认只看「有更新」
   state.updQ = "";
   state.updPage = 1;
-  const ss = $("#updState");
-  if (ss) ss.value = "upd";
-  switchPage("updates");                  // switchPage 内部会调 renderUpdatesPage
+  switchPage("updates");                  // switchPage 内部会调 renderUpdatesPage（含 tabs 刷新）                  // switchPage 内部会调 renderUpdatesPage
 });
 
 if ($("#mmUpdDl")) $("#mmUpdDl").addEventListener("click", () => {
@@ -2565,7 +2602,8 @@ async function showModelDetail(path) {
           '<span class="detail-tag-txt">' + esc(t) + "</span>" +
           '<span class="dt-copy">' + _icon("copy") + "</span></div>";
       }).join("") : '<span class="dt-dim">无触发词信息（可先「识别模型信息」）</span>') + "</div></div>" +
-    '<div class="dt-sec"><div class="dt-sec-h">' + _icon("file") + '简介</div>' +
+    '<div class="dt-sec"><div class="dt-sec-h">' + _icon("file") + '简介' +
+      (desc ? '<button class="btn dt-copy" id="dCopyDesc" data-tip="复制完整简介到剪贴板（含英文原文）">' + _icon("copy") + '复制</button>' : "") + '</div>' +
       '<div class="detail-desc">' + (desc ? esc(desc) + (descRaw && descRaw !== desc ? '<div class="detail-desc-orig">' + esc(descRaw) + "</div>" : "") : '<span class="dt-dim">暂无简介</span>') + "</div></div>" +
     '<div class="dt-sec"><div class="dt-sec-h">' + _icon("settings") + '操作</div>' +
       '<div class="dt-ag"><div class="dt-ag-h">主要操作</div><div class="dt-ag-b">' +
@@ -2578,6 +2616,7 @@ async function showModelDetail(path) {
       "</div></div>" +
       '<div class="dt-ag"><div class="dt-ag-h">信息处理</div><div class="dt-ag-b">' +
         '<button class="btn" id="dRp" data-tip="从 C 站匹配该模型的名字/触发词/封面">' + _icon("upload") + '识别模型信息</button>' +
+        '<button class="btn" id="dSync" data-tip="立即从 C 站重新匹配并写回本模型信息（模型名/触发词/版本/封面，沿用现有识别逻辑）">' + _icon("refresh") + '从 C 站同步</button>' +
         '<button class="btn" id="dTranslate" data-tip="把简介翻译成中文（需在设置配置百度翻译）">' + _icon("globe") + '翻译成中文</button>' +
         '<button class="btn" id="dLocalize" data-tip="把本地文件名翻译成中文">' + _icon("globe") + '文件名翻中文</button>' +
         '<button class="btn" id="dJson" data-tip="生成 WebUI 能识别的元数据文件">' + _icon("file") + '生成 SD 可读 JSON</button>' +
@@ -2744,10 +2783,62 @@ async function showModelDetail(path) {
     setStatus("已发送去识别模型信息");
     document.querySelector('.nav-tab[data-page="reverse"]').click();
   });
+  $("#dSync", panel).addEventListener("click", async () => {
+    const btn = $("#dSync", panel);
+    if (btn) btn.disabled = true;
+    setStatus("正在获取 C 站信息 …");
+    let last = null;
+    try {
+      await api.call("rp_add_paths", [d.path]);
+      await api.call("rp_start");
+      for (let i = 0; i < 60; i++) {
+        await new Promise((r) => setTimeout(r, 1000));
+        const rows = (await api.call("rp_get_rows").catch(() => null)) || [];
+        last = rows.find((x) => x.path === d.path) || null;
+        const st = last ? String(last.status || "") : "";
+        if (/完成|成功|失败|错误|未匹配|已跳过/.test(st)) break;
+        if (i === 4) setStatus("正在获取 C 站信息 …（" + (st || "排队中") + "）");
+      }
+    } catch (e) {
+      if (btn) btn.disabled = false;
+      setStatus("同步请求失败");
+      infoBox("从 C 站同步", "<div class='dt-dim'>请求失败：" + esc(String(e)) + "</div>");
+      return;
+    }
+    if (btn) btn.disabled = false;
+    const st = last ? String(last.status || "") : "无结果";
+    const okSync = /完成|成功/.test(st);
+    const html =
+      "<div class='sync-row'><span>状态</span><b>" + esc(st || "无结果") + "</b></div>" +
+      ((last && last.model) ? "<div class='sync-row'><span>匹配模型</span><b>" + esc(last.model) + "</b></div>" : "") +
+      ((last && last.version) ? "<div class='sync-row'><span>版本</span><b>" + esc(last.version) + "</b></div>" : "") +
+      (okSync
+        ? "<div class='dt-dim' style='margin-top:6px'>信息已写回本地（模型名 / 触发词 / 版本 / 封面等），详情将自动刷新。</div>"
+        : (/未匹配/.test(st)
+          ? "<div class='dt-dim' style='margin-top:6px'>C 站没有匹配到该模型；可到「反向解析」页查看具体原因（哈希 / 链接 / 文件名）。</div>"
+          : "<div class='dt-dim' style='margin-top:6px'>暂未拿到完成状态：可能仍在后台处理，稍后刷新详情即可。</div>"));
+    infoBox("从 C 站同步", html);
+    setStatus("同步结束：" + (st || "无结果"));
+    if (okSync) setTimeout(() => { try { showModelDetail(d.path); } catch (e) { } }, 500);
+  });
   $("#dJson", panel).addEventListener("click", async () => {
     await api.call("mm_gen_json", [d.path], true);
     setStatus("SD json 已生成");
     closeDetail();
+  });
+  const dCopyBtn = $("#dCopyDesc", panel);
+  if (dCopyBtn) dCopyBtn.addEventListener("click", async () => {
+    const full = [desc, (descRaw && descRaw !== desc) ? descRaw : ""].filter(Boolean).join("\n\n——\n");
+    let ok = false;
+    try { ok = await window.__copyText(full); } catch (e) { ok = false; }
+    if (!ok) {
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = full; ta.style.position = "fixed"; ta.style.opacity = "0";
+        document.body.appendChild(ta); ta.select(); ok = document.execCommand("copy"); ta.remove();
+      } catch (e2) { ok = false; }
+    }
+    setStatus(ok ? "简介已复制" : "复制失败（可手动选中复制）");
   });
   $("#dClose", panel).addEventListener("click", closeDetail);
 }

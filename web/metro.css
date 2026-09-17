@@ -783,10 +783,17 @@
 [data-theme="metro"] .ml-txt { min-width: 0; flex: 1 1 auto; }
 [data-theme="metro"] .ml-1 { font-size: 13px; font-weight: 600; color: var(--metro-text); line-height: 20px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 [data-theme="metro"] .ml-2 { font-size: 11.5px; color: var(--metro-text-2); line-height: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* ===== 状态色令牌：全应用唯一定义（列表徽章 / 更新页徽章 / 状态选项卡 共用） ===== */
+[data-theme="metro"] {
+  --status-upd: #107C10;      --status-upd-bg: #E7F4E8;
+  --status-latest: #0078D4;   --status-latest-bg: #E5F0FA;
+  --status-base: #555555;     --status-base-bg: #F0F0F0;
+  --status-unknown: #B26A00;  --status-unknown-bg: #FBF0DC;
+}
 [data-theme="metro"] .st-mini { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; padding: 1px 6px; border-radius: 2px; }
 [data-theme="metro"] .st-mini .ic { width: 12px; height: 12px; }
-[data-theme="metro"] .st-mini.upd { background: var(--metro-tint); color: var(--metro-accent); }
-[data-theme="metro"] .st-mini.ok { background: var(--metro-green-bg); color: var(--metro-green); }
+[data-theme="metro"] .st-mini.upd { background: var(--status-upd-bg); color: var(--status-upd); }
+[data-theme="metro"] .st-mini.ok { background: var(--status-latest-bg); color: var(--status-latest); }
 [data-theme="metro"] #mmTable td.c-name { max-width: 0; }          /* 配合 ellipsis 生效 */
 [data-theme="metro"] #mmTable th.c-ver, [data-theme="metro"] #mmTable td.c-ver,
 [data-theme="metro"] #mmTable td.c-time { white-space: nowrap; }
@@ -869,17 +876,18 @@
    v2.1.52：表格列定义（colgroup，表头/数据行唯一来源）+ 内容不撑列
    ========================================================================== */
 [data-theme="metro"] #mmTable { table-layout: fixed; width: 100%; }
+/* 列宽用比例分配（等价于 minmax 思路）：合计 <100%，剩余按比例摊回各列 → 任何宽度下都铺满，不会右侧留空 */
 [data-theme="metro"] #mmTable col.c-sel { width: 46px; }
-[data-theme="metro"] #mmTable col.c-name { width: auto; }            /* 模型信息 = 弹性最大列 */
-[data-theme="metro"] #mmTable col.c-cname { width: 170px; }
-[data-theme="metro"] #mmTable col.c-type { width: 76px; }
-[data-theme="metro"] #mmTable col.c-base { width: 86px; }
-[data-theme="metro"] #mmTable col.c-ver { width: 96px; }
-[data-theme="metro"] #mmTable col.c-update { width: 112px; }
-[data-theme="metro"] #mmTable col.c-hash { width: 118px; }
-[data-theme="metro"] #mmTable col.c-size { width: 92px; }
-[data-theme="metro"] #mmTable col.c-mtime { width: 136px; }
-[data-theme="metro"] #mmTable col.c-path { width: 220px; }           /* 路径列最窄，空间不足先让位 */
+[data-theme="metro"] #mmTable col.c-name { width: 36%; }             /* 模型信息 = 最大弹性列 */
+[data-theme="metro"] #mmTable col.c-cname { width: 10%; }
+[data-theme="metro"] #mmTable col.c-type { width: 4%; }
+[data-theme="metro"] #mmTable col.c-base { width: 4.5%; }
+[data-theme="metro"] #mmTable col.c-ver { width: 5%; }
+[data-theme="metro"] #mmTable col.c-update { width: 6%; }
+[data-theme="metro"] #mmTable col.c-hash { width: 6.5%; }
+[data-theme="metro"] #mmTable col.c-size { width: 5%; }
+[data-theme="metro"] #mmTable col.c-mtime { width: 7.5%; }
+[data-theme="metro"] #mmTable col.c-path { width: 11%; }
 [data-theme="metro"] #mmTable thead th, [data-theme="metro"] #mmTable tbody td {
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
@@ -919,3 +927,40 @@
 }
 [data-theme="metro"] .tip-float.show { transform: none !important; }
 [data-theme="metro"] [data-tip]:hover::after { border-radius: 0 !important; }
+
+
+/* ===== 更新页状态徽章：使用统一令牌（green=有更新 blue=已最新 mut=仅底模 gray=未知/未检查） ===== */
+[data-theme="metro"] .st-badge.green { background: var(--status-upd-bg); color: var(--status-upd); }
+[data-theme="metro"] .st-badge.blue { background: var(--status-latest-bg); color: var(--status-latest); }
+[data-theme="metro"] .st-badge.mut { background: var(--status-base-bg); color: var(--status-base); }
+[data-theme="metro"] .st-badge.gray { background: var(--status-unknown-bg); color: var(--status-unknown); }
+
+/* ===== 更新页：状态选项卡（Status Tabs） ===== */
+[data-theme="metro"] .upd-tabs { display: inline-flex; align-items: stretch; height: 34px; border: 1px solid var(--metro-line); background: #fff; }
+[data-theme="metro"] .upd-tabs .upd-tab {
+  display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; background: #fff; border: 0;
+  border-right: 1px solid var(--metro-line); font-size: var(--fs-sm); color: var(--c2);
+  cursor: pointer; white-space: nowrap; box-shadow: inset 0 -2px 0 0 transparent;
+}
+[data-theme="metro"] .upd-tabs .upd-tab:last-child { border-right: 0; }
+[data-theme="metro"] .upd-tabs .upd-tab:hover { background: var(--metro-hover); }
+[data-theme="metro"] .upd-tabs .upd-tab .n { font-size: var(--fs-xs); color: var(--c3); }
+[data-theme="metro"] .upd-tabs .upd-tab .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--c3); }
+[data-theme="metro"] .upd-tabs .upd-tab .dot.upd { background: var(--status-upd); }
+[data-theme="metro"] .upd-tabs .upd-tab .dot.latest { background: var(--status-latest); }
+[data-theme="metro"] .upd-tabs .upd-tab .dot.other { background: var(--status-base); }
+[data-theme="metro"] .upd-tabs .upd-tab .dot.unknown, [data-theme="metro"] .upd-tabs .upd-tab .dot.todo { background: var(--status-unknown); }
+[data-theme="metro"] .upd-tabs .upd-tab.on { color: var(--c1); font-weight: var(--fw-med); }
+[data-theme="metro"] .upd-tabs .upd-tab.on[data-st=""] { box-shadow: inset 0 -2px 0 0 var(--metro-accent); }
+[data-theme="metro"] .upd-tabs .upd-tab.on[data-st="upd"] { box-shadow: inset 0 -2px 0 0 var(--status-upd); }
+[data-theme="metro"] .upd-tabs .upd-tab.on[data-st="latest"] { box-shadow: inset 0 -2px 0 0 var(--status-latest); }
+[data-theme="metro"] .upd-tabs .upd-tab.on[data-st="other"] { box-shadow: inset 0 -2px 0 0 var(--status-base); }
+[data-theme="metro"] .upd-tabs .upd-tab.on[data-st="unknown"], [data-theme="metro"] .upd-tabs .upd-tab.on[data-st="todo"] { box-shadow: inset 0 -2px 0 0 var(--status-unknown); }
+
+/* ===== 详情「简介」：长 URL / 中英混排都能断行；可复制按钮 ===== */
+[data-theme="metro"] .detail-desc { white-space: pre-wrap; overflow-wrap: anywhere; word-break: normal; line-height: 1.7; }
+[data-theme="metro"] .detail-desc-orig { overflow-wrap: anywhere; word-break: normal; }
+[data-theme="metro"] .dt-sec-h .dt-copy { margin-left: auto; height: 26px; padding: 0 8px; font-size: var(--fs-xs); }
+
+/* 页面标题按全局排版规范：20px / 600 */
+[data-theme="metro"] .page-title { font-size: 20px; font-weight: 600; }

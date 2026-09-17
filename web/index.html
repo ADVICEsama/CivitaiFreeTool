@@ -283,14 +283,7 @@
       <div class="upd-filters">
         <input class="input upd-search" id="updSearch" placeholder="搜索模型名称、作者、文件名…" />
         <select class="input upd-sel" id="updBase"><option value="">全部底模</option></select>
-        <select class="input upd-sel" id="updState">
-          <option value="">全部状态</option>
-          <option value="upd">有更新</option>
-          <option value="latest">已是最新</option>
-          <option value="other">仅换底模</option>
-          <option value="unknown">无法判定</option>
-          <option value="todo">未检查</option>
-        </select>
+        <div class="upd-tabs" id="updTabs" role="tablist" aria-label="状态筛选"></div>
         <select class="input upd-sel" id="updSort">
           <option value="date">排序：更新时间</option>
           <option value="name">排序：名称</option>
