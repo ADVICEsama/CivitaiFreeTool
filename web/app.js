@@ -2389,6 +2389,102 @@ function fmRender() {
   const hidden = new Set(foldersState.hidden || []);
   const showRoot = foldersState.show_root;
   panel.innerHTML =
+    '<div class="fm-title">📁 文件夹显示（点击条目切换）</div>' +
+    '<div class="fm-toolbar">' +
+    '<button class="btn btn-tiny" id="fmAll">✅ 全选</button>' +
+    '<button class="btn btn-tiny" id="fmNone">⬜ 全不选</button></div>' +
+    '<div class="fm-item fm-top" data-path="__root__">' +
+      '<span class="fm-icon">🗂️</span><span class="fm-name">根目录下的模型</span>' +
+      '<span class="fm-state ' + (showRoot ? "on" : "off") + '">' + (showRoot ? "显示" : "隐藏") + "</span></div>" +
+    '<hr class="fp-sep"/>' +
+    fmTreeHtml(foldersState.tree || [], hidden, 0);
+}
+// 文件夹全选/全不选：隐藏集合整体变更后保存并刷新
+function fmSetHidden(nextHidden) {
+  foldersState.hidden = nextHidden;
+  api.call("save_folders", nextHidden, foldersState.show_root).then(() => {
+    fmRender();
+    mmScan();
+  });
+}
+$("#mmFoldersPanel").addEventListener("click", (e) => {
+  const btn = e.target.closest("#fmAll, #fmNone");
+  if (!btn) return;
+  if (!foldersState) return;
+  const all = [];
+  (function walk(nodes) {
+    (nodes || []).forEach((n) => {
+      all.push(n.path);
+      walk(n.children);
+    });
+  })(foldersState.tree || []);
+  if (btn.id === "fmAll") fmSetHidden([]);       // 全部显示
+  else fmSetHidden(all);                          // 全部隐藏
+});
+$("#mmFolders").addEventListener("click", async (e) => {
+  e.stopPropagation();
+  const panel = $("#mmFoldersPanel");
+  if (panel && panel.classList.contains("open")) {
+    panel.classList.remove("open");
+    return;
+  }
+  const json = await api.call("get_folders");
+  try {
+    foldersState = JSON.parse(json || "{}");
+  } catch (err) { foldersState = {}; }
+  if (!foldersState || !foldersState.tree) { setStatus("请先配置模型管理目录"); return; }
+  fmRender();
+  panel.classList.add("open");
+});
+document.addEventListener("click", (e) => {
+  const panel = $("#mmFoldersPanel");
+  if (panel && panel.classList.contains("open") && !e.target.closest("#mmFoldersWrap")) {
+    panel.classList.remove("open");
+  }
+});
+$("#mmFoldersPanel").addEventListener("click", async (e) => {
+  const item = e.target.closest(".fm-item");
+  if (!item || !foldersState) return;
+  const path = item.dataset.path;
+  const hidden = new Set(foldersState.hidden || []);
+  if (path === "__root__") {
+    foldersState.show_root = !foldersState.show_root;
+  } else {
+    if (hidden.has(path)) hidden.delete(path); else hidden.add(path);
+    foldersState.hidden = Array.from(hidden);
+  }
+  await api.call("save_folders", Array.from(hidden), foldersState.show_root);
+  fmRender();
+  setStatus("文件夹显示已保存");
+  await api.call("scan_models");
+  pollMmScan();
+});
+
+// 模型详情二级界面（C 站风格）
+let detailRow = null;
+// 详情面板全局状态（document 级图片右键委托需要访问）
+let detailImgIdx = 0;
+let detailImgLocalPath = null;
+async function showModelDetail(path) {
+  const json = await api.call("get_model_detail", path);
+  let d;
+  try { d = JSON.parse(json || "{}"); } catch (e) { d = {}; }
+  if (!d.ok) { setStatus("详情获取失败"); return; }
+  detailRow = d;
+  const info = d.info || {};
+  const v = info.version || {};
+  const creator = (info.creator && info.creator.username) || info.creator || "";
+  const trained = Array.isArray(info.trainedWords) ? info.trainedWords : [];
+  const descRaw = String(info.description || "").replace(/<[^>]+>/g, "");
+  const desc = String(info.description_zh || info.description || "").replace(/<[^>]+>/g, "");
+  const covers = d.covers || [];
+  detailImgIdx = 0;
+  detailImgLocalPath = null;
+  const mainB64 = covers.find((c) => c.b64);
+  detailImgLocalPath = (mainB64 && mainB64.local && d.path) ? d.path : null;
+  detailImgIdx = 0;
+  const panel = $("#detailPanel");
+  panel.innerHTML =
     '<div class="dt-head">' +
       '<div class="dt-head-t">模型详情</div>' +
       '<div class="dt-head-r">' +
