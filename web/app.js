@@ -1332,37 +1332,61 @@ function renderMasonry(rows) {
     const _cn = String(r.civitai_name || "").trim();
     const _disp = _cn || String(r.name || "");
     const _sub = (_cn && _cn !== r.name) ? String(r.name || "") : "";
-    const _meta = [r.base, r.type, r.ver].filter(Boolean).map((x) => short(String(x), 16)).join(" · ");
+    const _meta = [r.base, r.type].filter(Boolean).map((x) => short(String(x), 16)).join(" · ");
+    const _meta2 = [r.ver ? short(String(r.ver), 16) : "", fmtSize(r.size)].filter(Boolean).join(" · ");
     return '<div class="ms-card' + (checked ? " checked" : "") + '" data-idx="' + i + '" data-path="' + esc(r.path) + '" title="' + esc(String(r.name || "") + " · " + String(r.path || "")) + '">' +
       '<span class="ms-check">' + (checked ? "✅" : "⬜") + "</span>" +
       _msTag(r) +
       (r.upd && r.upd.has_update ? '<a href="#" class="ms-upd" data-url="' + esc(r.upd.url || "") + '" title="' + esc(updTip(r.upd)) + '">❗</a>' : "") +
-      '<div class="ms-img-wrap"><img class="ms-img" data-idx="' + i + '" data-path="' + esc(r.path) + '" alt=""/></div>' +
+      '<div class="ms-img-wrap" data-ph="loading"><img class="ms-img" data-idx="' + i + '" data-path="' + esc(r.path) + '" alt=""/></div>' +
       '<div class="ms-name">' + esc(short(_disp, 30)) + "</div>" +
       (_sub ? '<div class="ms-sub">' + esc(short(_sub, 30)) + "</div>" : "") +
       '<div class="ms-meta">' + esc(_meta || (r.type || "-")) + "</div>" +
-      '<div class="ms-size">' + fmtSize(r.size) + "</div></div>";
+      '<div class="ms-size">' + esc(_meta2 || fmtSize(r.size)) + "</div></div>";
   }).join("");
   $("#mmCheckLabel").textContent = "已勾选 " + state.mmChecked.size + " 个";
   loadMasonryThumbs(0);
 }
 async function loadMasonryThumbs(start) {
   const batch = state.display.slice(start, start + 40);
-  if (!batch.length) return;
+  if (!batch.length) {
+    // 所有批次跑完：仍处 loading 的标记为"暂无封面"（保证高度稳定、不再是白块）
+    document.querySelectorAll('.ms-img-wrap[data-ph="loading"]').forEach((w) => { w.dataset.ph = "none"; });
+    return;
+  }
+  const _markBatch = (paths, ph) => {
+    paths.forEach((pp) => {
+      document.querySelectorAll(".ms-img[data-path]").forEach((img) => {
+        if (img.dataset.path === pp) {
+          const w = img.closest(".ms-img-wrap");
+          if (w && w.dataset.ph === "loading") w.dataset.ph = ph;
+        }
+      });
+    });
+  };
   try {
     const json = await api.call("get_covers", batch.map((r) => r.path), 320);
     const covers = JSON.parse(json || "{}");
     for (const [p, b64] of Object.entries(covers)) {
       document.querySelectorAll(".ms-img").forEach((img) => {
-        if (img.dataset.path === p) img.src = "data:image/jpeg;base64," + b64;
+        if (img.dataset.path === p) {
+          const w = img.closest(".ms-img-wrap");
+          img.onload = () => { if (w) w.dataset.ph = "ok"; };
+          img.onerror = () => { if (w) w.dataset.ph = "fail"; };
+          img.src = "data:image/jpeg;base64," + b64;
+        }
       });
     }
-  } catch (e) { /* 封面失败不影响 */ }
+    _markBatch(batch.filter((r) => !covers[r.path]).map((r) => r.path), "none");
+  } catch (e) {
+    _markBatch(batch.map((r) => r.path), "fail");     // 拉取失败：统一显示"封面加载失败"
+  }
   loadMasonryThumbs(start + 40);
 }
 $("#mmViewToggle").addEventListener("click", () => {
   state.mmView = state.mmView === "masonry" ? "list" : "masonry";
   $("#mmViewToggle").textContent = state.mmView === "masonry" ? "📋 列表视图" : "🖼️ 瀑布流";
+  try { syncViewSeg(); } catch (e) { /* 忽略 */ }
   renderMm();
 });
 // 瀑布流：单击卡片打开详情；勾选走卡片角标按钮
@@ -3667,6 +3691,7 @@ async function init() {
   if (tab) tab.click();
   // 应用模型管理默认视图（设置项 default_view）
   state.mmView = state.cfg.default_view === "waterfall" ? "masonry" : "list";
+  try { syncViewSeg(); } catch (e) { /* 忽略 */ }
   const vtb = $("#mmViewToggle");
   if (vtb) vtb.textContent = state.mmView === "masonry" ? "📋 列表视图" : "🖼️ 瀑布流";
   buildSettingsForm();
@@ -3923,6 +3948,20 @@ function _msTag(r) {
   return "";
 }
 
+function syncViewSeg() {
+  const l = document.getElementById("mmViewList"), m = document.getElementById("mmViewMasonry");
+  if (l) l.classList.toggle("on", state.mmView === "list");
+  if (m) m.classList.toggle("on", state.mmView === "masonry");
+}
+
+function mmSetView(v) {
+  state.mmView = (v === "masonry") ? "masonry" : "list";
+  const t = document.getElementById("mmViewToggle");
+  if (t) t.textContent = state.mmView === "masonry" ? "\ud83d\udccb \u5217\u8868\u89c6\u56fe" : "\ud83d\uddbc\ufe0f \u7011\u5e03\u6d41";
+  syncViewSeg();
+  renderMm();
+}
+
 function syncSortDir() {
   const sd = document.getElementById("mmSortDir");
   if (sd) sd.textContent = state.mmSort.rev ? "↓ 降序" : "↑ 升序";
@@ -3942,7 +3981,11 @@ function fillMmBaseOptions() {
 }
 
 function _closeMmMenus() {
-  document.querySelectorAll(".btn-group.open").forEach((g) => g.classList.remove("open"));
+  document.querySelectorAll(".btn-group.open").forEach((g) => {
+    g.classList.remove("open");
+    const b = g.querySelector(".btn[data-menu]");
+    if (b && b.dataset.label) b.textContent = b.dataset.label;   // 箭头复原
+  });
 }
 
 function bindMmMetro() {
@@ -3961,9 +4004,14 @@ function bindMmMetro() {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
       const grp = btn.closest(".btn-group");
+      if (!grp) return;
+      const label = btn.dataset.label || (btn.dataset.label = btn.textContent);
       const wasOpen = grp.classList.contains("open");
       _closeMmMenus();
-      if (!wasOpen) grp.classList.add("open");
+      if (!wasOpen) {
+        grp.classList.add("open");
+        if (label.indexOf("\u25be") >= 0) btn.textContent = label.replace("\u25be", "\u25b4");   // ▼ → ▲
+      }
     });
   });
   // 3) 改名菜单（复用 mmRenameRun，功能与老菜单完全一致）
@@ -4002,6 +4050,11 @@ function bindMmMetro() {
     syncSortDir(); applyMmFilter();
   });
   syncSortDir();
+  // 5b) 分段视图切换
+  const _vl = document.getElementById("mmViewList"), _vm = document.getElementById("mmViewMasonry");
+  if (_vl) _vl.addEventListener("click", () => mmSetView("list"));
+  if (_vm) _vm.addEventListener("click", () => mmSetView("masonry"));
+  syncViewSeg();
   // 6) 代理跟随原按钮（文字/禁用/显隐）
   document.querySelectorAll(".mm-metro [data-proxy]").forEach((el) => {
     const src = document.getElementById(el.dataset.proxy);

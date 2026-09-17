@@ -445,3 +445,121 @@
 [data-theme="metro"] hr, [data-theme="metro"] .sep { border-color: var(--metro-border-hair); }
 [data-theme="metro"] .stat-line, [data-theme="metro"] .dim { color: var(--metro-text-2); }
 [data-theme="metro"] .ob-mask, [data-theme="metro"] .wf-mask { background: rgba(0, 0, 0, .22); }
+
+/* ============================================================================
+   v2.1.46 精修层
+   ========================================================================== */
+
+/* ---- ★ 关键 Bug 修复：.open 加在 .btn-group 上，菜单类名是 .mm-menu ----
+   （旧规则只匹配 .mm-menu.open / .submenu，导致点击后菜单永不显示） */
+[data-theme="metro"] .btn-group.open .mm-menu,
+[data-theme="metro"] .btn-group.open .submenu { display: block; }
+
+/* ---- 菜单不被父容器裁切（.card 原本 overflow:hidden 会剪掉下拉） ---- */
+[data-theme="metro"] .card,
+[data-theme="metro"] section.page,
+[data-theme="metro"] #page-models { overflow: visible; }
+
+/* ---- 层级：工具栏 > 内容；避免菜单被卡片盖住 ---- */
+[data-theme="metro"] .mm-metro,
+[data-theme="metro"] .tool-row.mm-filter { position: relative; z-index: 40; overflow: visible; }
+[data-theme="metro"] .masonry,
+[data-theme="metro"] .table-wrap,
+[data-theme="metro"] .detail { position: relative; z-index: 1; }
+[data-theme="metro"] .mm-menu { z-index: 120; }
+
+/* ---- 按钮三级权重（统一高度/字号/内边距） ---- */
+[data-theme="metro"] .mm-metro .btn {
+  height: 36px;
+  padding: 0 14px;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1;
+}
+[data-theme="metro"] .btn.btn-l2 {                 /* 常用动作：白底 + 极细边框 */
+  background: #fff;
+  border: 1px solid #dcdcdc;
+  color: var(--metro-text);
+}
+[data-theme="metro"] .btn.btn-l2:hover { background: var(--metro-tint); border-color: var(--metro-accent); }
+[data-theme="metro"] .btn.btn-l2:active { background: var(--metro-tint-2); }
+[data-theme="metro"] .mm-metro .btn[data-menu] { padding-right: 10px; }
+
+/* ---- 菜单打开态反馈：按钮持续高亮 + 箭头翻转 ---- */
+[data-theme="metro"] .btn-group.open > .btn { background: var(--metro-tint); color: var(--metro-text); }
+[data-theme="metro"] .btn-group.open > .btn.btn-l2 { border-color: var(--metro-accent); }
+[data-theme="metro"] .sp-btn.open > .btn:first-child { background: var(--metro-tint); }
+
+/* ---- 分段视图切换 ---- */
+[data-theme="metro"] .mm-seg { display: inline-flex; border: 1px solid #dcdcdc; border-radius: 2px; overflow: hidden; }
+[data-theme="metro"] .mm-seg .btn.seg { height: 32px; border-radius: 0; border: none; background: #fff; color: var(--metro-text-2); padding: 0 12px; }
+[data-theme="metro"] .mm-seg .btn.seg + .btn.seg { border-left: 1px solid #dcdcdc; }
+[data-theme="metro"] .mm-seg .btn.seg:hover { background: var(--metro-tint); color: var(--metro-text); }
+[data-theme="metro"] .mm-seg .btn.seg.on { background: var(--metro-accent); color: #fff; font-weight: 600; }
+[data-theme="metro"] .mm-classic-only { display: none !important; }
+
+/* ---- 留白压缩：让模型更早进入视野 ---- */
+[data-theme="metro"] .title-row { padding: 10px 16px 0 16px; }
+[data-theme="metro"] .page-title { font-size: 18px; line-height: 26px; }
+[data-theme="metro"] .mm-metro { padding: 8px 16px 0 16px; }
+[data-theme="metro"] .tool-row.mm-filter { padding: 6px 16px 8px 16px; }
+[data-theme="metro"] .masonry { padding: 10px 14px 52px 14px; }
+
+/* ---- 瀑布流：响应式列宽（1366≈4列 / 1920≈6列 / 2560≈8列） ---- */
+[data-theme="metro"] .masonry { column-width: 280px; column-gap: 12px; }
+
+/* ---- 卡片：底栏三行等高、信息克制 ---- */
+[data-theme="metro"] .ms-card { break-inside: avoid; }
+[data-theme="metro"] .ms-name { padding: 9px 10px 0 10px; line-height: 18px; }
+[data-theme="metro"] .ms-meta { padding: 2px 10px 0 10px; line-height: 16px; }
+[data-theme="metro"] .ms-size { padding: 1px 10px 10px 10px; line-height: 16px; }
+
+/* ---- ★ 空封面 / 载入中 / 加载失败 占位（高度稳定，不再出现白块） ---- */
+[data-theme="metro"] .ms-img-wrap {
+  position: relative;
+  min-height: 190px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f6f6f6;
+}
+[data-theme="metro"] .ms-img-wrap[data-ph="loading"]::after,
+[data-theme="metro"] .ms-img-wrap[data-ph="none"]::after,
+[data-theme="metro"] .ms-img-wrap[data-ph="fail"]::after {
+  content: "◇\A载入中…";
+  white-space: pre;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.7;
+  color: #b3b3b3;
+}
+[data-theme="metro"] .ms-img-wrap[data-ph="none"]::after { content: "◇\A暂无封面"; }
+[data-theme="metro"] .ms-img-wrap[data-ph="fail"]::after { content: "◇\A封面加载失败"; color: #c99; }
+[data-theme="metro"] .ms-img { display: none; border-radius: 0; }
+[data-theme="metro"] .ms-img-wrap[data-ph="ok"] .ms-img { display: block; }
+
+/* ---- 右下角「关于」：Metro 化 + 固定角落留边距，不压住卡片 ---- */
+[data-theme="metro"] .bili-float {
+  right: 18px; bottom: 18px;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 2px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .08);
+  color: var(--metro-text-2);
+  transform: none !important;
+}
+[data-theme="metro"] .bili-float:hover {
+  transform: none !important;
+  background: var(--metro-tint);
+  border-color: var(--metro-accent);
+  color: var(--metro-accent);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .08);
+}
+[data-theme="metro"] .bili-icon { background: transparent; color: var(--metro-accent); }
+
+/* ---- 筛选控件统一高度（搜索框 / 底模 / 状态 / 排序） ---- */
+[data-theme="metro"] .mm-metro select.input,
+[data-theme="metro"] .tool-row.mm-filter .btn,
+[data-theme="metro"] .tool-row.mm-filter .input { height: 34px; min-height: 34px; }

@@ -90,8 +90,8 @@
       <div class="mm-metro">
         <div class="mm-row">
           <button class="btn btn-primary" data-proxy="mmScan">🔍 扫描模型</button>
-          <button class="btn" data-proxy="mmRefresh">🔄 刷新</button>
-          <button class="btn" data-proxy="mmCheckUpd">⏫ 检查更新</button>
+          <button class="btn btn-l2" data-proxy="mmRefresh">🔄 刷新</button>
+          <button class="btn btn-l2" data-proxy="mmCheckUpd">⏫ 检查更新</button>
           <span class="mm-sep"></span>
           <span class="sp-btn btn-group">
             <button class="btn" data-proxy="mmRenameMain" data-tip="改文件名（执行默认动作；右侧 ▾ 选择其它方式）">✏️ 改名</button>
@@ -130,8 +130,8 @@
             </div>
           </span>
           <span class="mm-sep"></span>
-          <button class="btn" data-proxy="mmUpdDl">⬇️ 更新选中</button>
-          <button class="btn" data-proxy="mmGoUpdates">⏫ 去更新</button>
+          <button class="btn btn-l2" data-proxy="mmUpdDl">⬇️ 更新选中</button>
+          <button class="btn btn-l2" data-proxy="mmGoUpdates">⏫ 去更新</button>
           <span class="mm-spacer"></span>
           <span class="btn-group">
             <button class="btn" data-menu="mmMoreMenu">⋯ 更多</button>
@@ -160,6 +160,11 @@
             <option value="base">基础模型</option>
           </select>
           <button class="btn" id="mmSortDir" data-tip="切换升序 / 降序">↑ 升序</button>
+          <span class="mm-spacer"></span>
+          <span class="mm-seg" id="mmViewSeg" data-tip="切换视图（默认瀑布流）">
+            <button class="btn seg" id="mmViewList">☰ 列表</button>
+            <button class="btn seg" id="mmViewMasonry">▦ 瀑布流</button>
+          </span>
         </div>
       </div>
 
@@ -200,7 +205,7 @@
           <button class="btn" id="mmFolders" data-tip="切换文件夹列表显示，可单独隐藏/显示各分类文件夹">📁 文件夹显示</button>
           <div class="folders-panel" id="mmFoldersPanel"></div>
         </span>
-        <button class="btn" id="mmViewToggle" data-tip="切换瀑布流 / 列表视图">🖼️ 瀑布流</button>
+        <button class="btn mm-classic-only" id="mmViewToggle" data-tip="切换瀑布流 / 列表视图">🖼️ 瀑布流</button>
         <span class="status-pill" id="mmCheckLabel">已勾选 0 个</span>
       </div>
       <div class="table-wrap" id="mmTableWrap">
