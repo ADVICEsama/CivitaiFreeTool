@@ -1401,3 +1401,10 @@ td.cell-dest:hover { color: var(--accent, #4da3ff); text-decoration: underline d
 .upd-table thead th.sortable:hover { color: var(--text); background: rgba(127,127,127,.10); }
 .upd-table thead th.on { color: var(--text); }
 .upd-table thead th .th-sort { font-size: 10px; opacity: .9; }
+
+
+/* SVG 图标基础（v2.1.47：替代 Emoji，统一线性单色） */
+.ic { width: 16px; height: 16px; flex: 0 0 auto; vertical-align: -3px; }
+.btn .ic { width: 15px; height: 15px; }
+.icon-btn .ic, .mm-item .ic, .submenu-item .ic { width: 15px; height: 15px; }
+.ic-lg { width: 20px; height: 20px; }

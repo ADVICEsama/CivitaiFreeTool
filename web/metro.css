@@ -42,6 +42,13 @@
   --metro-text-2: #737373;
   --metro-text-3: #9a9a9a;
   --metro-green: #107c10;
+  /* 全局层级令牌（避免各处随手写 9999） */
+  --z-content: 1;
+  --z-toolbar: 40;
+  --z-dropdown: 340;
+  --z-popover: 360;
+  --z-modal: 600;
+  --z-toast: 900;
   --metro-green-bg: #e8f5e9;
   --metro-orange: #ca5010;
 }
@@ -563,3 +570,130 @@
 [data-theme="metro"] .mm-metro select.input,
 [data-theme="metro"] .tool-row.mm-filter .btn,
 [data-theme="metro"] .tool-row.mm-filter .input { height: 34px; min-height: 34px; }
+
+/* ============================================================================
+   v2.1.47：Dropdown portal（挂 body / fixed / 完全不透明 / 高层级）
+   ========================================================================== */
+[data-theme="metro"] .mm-menu.open {
+  display: block;
+  position: fixed;
+  background: #fff !important;          /* 实体不透明：绝不透出下层文字 */
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+  border: 1px solid #e3e3e3;
+  border-radius: 0;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .16);
+  z-index: var(--z-dropdown);
+  min-width: 210px;
+}
+[data-theme="metro"] .mm-menu { isolation: isolate; }
+/* 弹窗/遮罩使用层级令牌 */
+[data-theme="metro"] .rd-mask, [data-theme="metro"] #detailMask, [data-theme="metro"] .ob-mask
+  { z-index: var(--z-modal) !important; }
+[data-theme="metro"] .rename-dialog, [data-theme="metro"] .detail-panel, [data-theme="metro"] .ob-card
+  { z-index: calc(var(--z-modal) + 1) !important; }
+[data-theme="metro"] #toast { z-index: var(--z-toast) !important; }
+[data-theme="metro"] .folders-panel, [data-theme="metro"] .ctx-menu { z-index: var(--z-popover) !important; }
+
+/* ============================================================================
+   v2.1.47：模型详情 = 桌面工具 Inspector（左预览 / 右结构化信息 + 分组操作）
+   ========================================================================== */
+[data-theme="metro"] .detail-panel {
+  width: min(1280px, 94vw);
+  height: min(86vh, 900px);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: none;
+  border-radius: 0;
+  overflow: hidden;
+}
+[data-theme="metro"] .dt-head {
+  flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px;
+  background: #fafafa;
+  border-bottom: 1px solid var(--metro-border-hair);
+}
+[data-theme="metro"] .dt-head-t { font-size: 15px; font-weight: 600; }
+[data-theme="metro"] .dt-head-r { display: flex; align-items: center; gap: 10px; }
+[data-theme="metro"] .dt-author { color: var(--metro-text-2); font-size: 12px; }
+[data-theme="metro"] .dt-author:hover { color: var(--metro-accent); }
+[data-theme="metro"] .dt-close { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; }
+[data-theme="metro"] .dt-body { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(300px, 42%) 1fr; }
+[data-theme="metro"] .detail-left {
+  border-right: 1px solid var(--metro-border-hair);
+  padding: 14px; min-height: 0; overflow: auto;
+  display: flex; flex-direction: column; gap: 10px;
+}
+[data-theme="metro"] .detail-main-img { width: 100%; max-height: 44vh; object-fit: contain; background: #f6f6f6; border-radius: 0; }
+[data-theme="metro"] .detail-main-img.dt-empty {
+  height: 210px; display: flex; align-items: center; justify-content: center; gap: 8px;
+  color: var(--metro-text-3); font-size: 13px;
+}
+[data-theme="metro"] .detail-thumbs { display: flex; flex-wrap: wrap; gap: 6px; }
+[data-theme="metro"] .detail-thumb { width: 56px; height: 56px; object-fit: cover; border: 1px solid var(--metro-border-input); border-radius: 0; background: #f6f6f6; }
+[data-theme="metro"] .detail-thumb.on { border: 2px solid var(--metro-accent); }
+[data-theme="metro"] .detail-right {
+  padding: 14px 16px; min-height: 0; overflow: auto;
+  display: flex; flex-direction: column; gap: 12px;
+}
+[data-theme="metro"] .detail-title { font-size: 17px; font-weight: 600; line-height: 24px; }
+[data-theme="metro"] .detail-cname { color: var(--metro-text-2); font-size: 12px; margin-top: -8px; }
+[data-theme="metro"] .dt-mrs {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 3px 18px;
+  padding-bottom: 10px; border-bottom: 1px solid var(--metro-border-hair);
+}
+[data-theme="metro"] .dt-mr { display: flex; gap: 8px; font-size: 12.5px; line-height: 20px; min-width: 0; }
+[data-theme="metro"] .dt-mr .k { flex: 0 0 34px; color: var(--metro-text-3); }
+[data-theme="metro"] .dt-mr .v { color: var(--metro-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+[data-theme="metro"] .dt-mr .dt-mono { font-family: ui-monospace, Consolas, "Courier New", monospace; }
+[data-theme="metro"] .dt-warn { color: var(--metro-orange); }
+[data-theme="metro"] .dt-sec { display: flex; flex-direction: column; gap: 6px; }
+[data-theme="metro"] .dt-sec-h { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; }
+[data-theme="metro"] .dt-sec-h .ic { width: 14px; height: 14px; color: var(--metro-text-2); }
+[data-theme="metro"] .dt-sec-hint { font-weight: 400; color: var(--metro-text-3); font-size: 11.5px; margin-left: 4px; }
+[data-theme="metro"] .dt-dim { color: var(--metro-text-3); font-size: 12px; }
+[data-theme="metro"] .detail-tags { display: flex; flex-direction: column; gap: 4px; }
+[data-theme="metro"] .detail-tag {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 9px; background: #f8f8f8; border: 1px solid transparent; border-radius: 0; font-size: 12.5px;
+}
+[data-theme="metro"] .detail-tag:hover { background: var(--metro-tint); border-color: var(--metro-accent); }
+[data-theme="metro"] .detail-tag-idx { color: var(--metro-text-3); font-size: 11px; }
+[data-theme="metro"] .detail-tag-txt { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: ui-monospace, Consolas, monospace; }
+[data-theme="metro"] .dt-copy { color: var(--metro-text-3); }
+[data-theme="metro"] .detail-desc { font-size: 12.5px; line-height: 1.7; max-height: 190px; overflow: auto; }
+[data-theme="metro"] .detail-desc-orig { color: var(--metro-text-3); font-size: 11.5px; margin-top: 6px; }
+[data-theme="metro"] .dt-ag { margin-top: 8px; }
+[data-theme="metro"] .dt-ag-h { font-size: 11.5px; color: var(--metro-text-3); margin-bottom: 5px; }
+[data-theme="metro"] .dt-ag-b { display: flex; flex-wrap: wrap; gap: 6px; }
+[data-theme="metro"] .dt-ag-b .btn { height: 32px; padding: 0 12px; font-size: 12.5px; }
+
+/* ============================================================================
+   v2.1.47：更新页表格修复（日期不断行 / 操作不截断 / 行高统一 / 层级清晰）
+   ========================================================================== */
+[data-theme="metro"] .upd-table td, [data-theme="metro"] .upd-table th { height: 56px; vertical-align: middle; }
+[data-theme="metro"] .upd-table th.c-date, [data-theme="metro"] .upd-table td.c-date { white-space: nowrap; width: 108px; }
+[data-theme="metro"] .upd-table th.c-cur, [data-theme="metro"] .upd-table td.c-cur { white-space: nowrap; width: 132px; }
+[data-theme="metro"] .upd-table td.c-ver { min-width: 210px; }
+[data-theme="metro"] .upd-table th.c-st, [data-theme="metro"] .upd-table td.c-st { white-space: nowrap; width: 110px; }
+[data-theme="metro"] .upd-table th.c-act, [data-theme="metro"] .upd-table td.c-act { white-space: nowrap; width: 240px; }
+[data-theme="metro"] .upd-acts2 { display: flex; align-items: center; gap: 6px; }
+[data-theme="metro"] .upd-acts2 .upd-go { max-width: 154px; display: inline-block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+[data-theme="metro"] .upd-vsel { height: 30px; min-height: 30px; max-width: 100%; font-size: 12.5px; padding: 4px 26px 4px 8px; }
+[data-theme="metro"] .ver-badge { font-weight: 600; color: var(--metro-text); }
+[data-theme="metro"] .upd-dim { color: var(--metro-text-3); font-size: 11px; }
+[data-theme="metro"] .upd-sub2 { color: var(--metro-text-2); }
+[data-theme="metro"] .upd-table th.c-ck, [data-theme="metro"] .upd-table td.c-ck { width: 44px; }
+
+/* 更新页顶部筛选行：权重平衡（搜索占主、按钮右对齐） */
+[data-theme="metro"] .upd-filters { gap: 8px; }
+[data-theme="metro"] .upd-filters .upd-search { min-width: 280px; }
+[data-theme="metro"] .upd-filters .btn { height: 34px; }
+[data-theme="metro"] .upd-filters .btn-primary { height: 34px; }
+
+/* 菜单箭头 span（图标化后仍可翻转） */
+[data-theme="metro"] .btn .car { font-size: 10px; opacity: .75; }
+[data-theme="metro"] .btn .car-only { font-size: 14px; letter-spacing: 1px; opacity: .85; }

@@ -1,6 +1,35 @@
-# CivitaiFreeTool 更新日志（v1.5.1 → v2.1.46）
+# CivitaiFreeTool 更新日志（v1.5.1 → v2.1.47）
 
 > 免费 · 全功能 · 无付费墙
+
+---
+
+## 🎨 三页统一 Metro + SVG 图标系统 + 详情页 Inspector + 更新页修复（v2.1.47）
+
+### ① Dropdown 彻底加固（实体不透明 + portal）
+- 菜单打开时**移动到 body（portal）+ fixed 定位**：任何祖先的 overflow / transform / stacking context 都裁不到它；
+- 菜单**背景强制 #fff 实体不透明**（opacity/backdrop 一律 none），叠在内容之上，不再透出下层文字；
+- 新增全局层级令牌 `--z-content/toolbar/dropdown/popover/modal/toast`，不再各处随手写 z-index；
+- 点击菜单内部不再误关；窗口 resize 时已打开菜单自动重新定位。
+
+### ② 全站 SVG 图标系统（去 Emoji）
+- 新增内联 SVG sprite（25 个线性单色图标：search/refresh/scan/check/layers/download/upload/pencil/folder/shield/info/settings/more/external/image/file/tag/trash/x/list/grid/globe/copy/sort/ruler），
+  统一 1.7 描边、currentColor、随主题着色；
+- **模型管理 / 模型详情 / 更新** 三页的按钮、菜单、区块标题全部换图标；顶部导航同时去 Emoji；
+- 代理按钮同步标签时**保留图标**，并自动剥掉动态文案里的 Emoji（如「⏹ 停止检查」）。
+
+### ③ 模型详情 = 桌面工具 Inspector（重做）
+- 结构：顶部标题栏（名称 + 作者 + × 关闭）｜左：大图（限高 44vh）+ 方形缩略图（选中蓝框）｜右：结构化信息；
+- 右侧改为一屏 Inspector：标题 + **轻量 Meta 行**（类型/底模/版本/文件，不再一排彩色胶囊）+
+  **触发词区**（点击复制，带复制图标，去掉长说明）+ 简介 + **分组操作**（主要操作 / 文件 / 信息处理 / 图片）；
+- 11 个功能按钮 id 全部保留，业务逻辑零改动。
+
+### ④ 更新页表格修复
+- 日期列 nowrap + 固定宽（不再断行）；操作列 nowrap + 固定宽，按钮超长省略号 + tooltip；
+- 可用版本列最小宽度（不再挤压）；行高统一 56px；当前版本加粗、可用版本保持下拉；
+- 顶部筛选栏：搜索框加宽、按钮统一 34px、检查更新仍是主按钮。
+
+测试：Dropdown portal / 不透明 / 内部点击 / z 令牌 / 图标交叉引用 / 详情结构与 id / 更新页列规则 共 45 项，全过。
 
 ---
 

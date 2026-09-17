@@ -1631,11 +1631,11 @@ function _verCmp(a, b) {
 }
 
 function _updState(it) {
-  if (it && it.has_update) return { k: "upd", t: "❗ 有更新", cls: "green" };
-  if (it && it.other_base) return { k: "other", t: "🔀 仅换底模", cls: "mut" };
-  if (it && it.unknown) return { k: "unknown", t: "⚠️ 无法判定", cls: "gray" };
-  if (it && !it.checked_at) return { k: "todo", t: "◻ 未检查", cls: "gray" };   // 扫到但没检查过（新下载的模型常见）
-  return { k: "latest", t: "✅ 已是最新", cls: "blue" };
+  if (it && it.has_update) return { k: "upd", t: "有更新", cls: "green" };
+  if (it && it.other_base) return { k: "other", t: "仅换底模", cls: "mut" };
+  if (it && it.unknown) return { k: "unknown", t: "无法判定", cls: "gray" };
+  if (it && !it.checked_at) return { k: "todo", t: "未检查", cls: "gray" };   // 扫到但没检查过（新下载的模型常见）
+  return { k: "latest", t: "已是最新", cls: "blue" };
 }
 
 // 该行的「可选版本」清单：优先用后端 ver_list（含当前/推荐），老缓存退化到只知最新版
@@ -2389,144 +2389,62 @@ function fmRender() {
   const hidden = new Set(foldersState.hidden || []);
   const showRoot = foldersState.show_root;
   panel.innerHTML =
-    '<div class="fm-title">📁 文件夹显示（点击条目切换）</div>' +
-    '<div class="fm-toolbar">' +
-    '<button class="btn btn-tiny" id="fmAll">✅ 全选</button>' +
-    '<button class="btn btn-tiny" id="fmNone">⬜ 全不选</button></div>' +
-    '<div class="fm-item fm-top" data-path="__root__">' +
-      '<span class="fm-icon">🗂️</span><span class="fm-name">根目录下的模型</span>' +
-      '<span class="fm-state ' + (showRoot ? "on" : "off") + '">' + (showRoot ? "显示" : "隐藏") + "</span></div>" +
-    '<hr class="fp-sep"/>' +
-    fmTreeHtml(foldersState.tree || [], hidden, 0);
-}
-// 文件夹全选/全不选：隐藏集合整体变更后保存并刷新
-function fmSetHidden(nextHidden) {
-  foldersState.hidden = nextHidden;
-  api.call("save_folders", nextHidden, foldersState.show_root).then(() => {
-    fmRender();
-    mmScan();
-  });
-}
-$("#mmFoldersPanel").addEventListener("click", (e) => {
-  const btn = e.target.closest("#fmAll, #fmNone");
-  if (!btn) return;
-  if (!foldersState) return;
-  const all = [];
-  (function walk(nodes) {
-    (nodes || []).forEach((n) => {
-      all.push(n.path);
-      walk(n.children);
-    });
-  })(foldersState.tree || []);
-  if (btn.id === "fmAll") fmSetHidden([]);       // 全部显示
-  else fmSetHidden(all);                          // 全部隐藏
-});
-$("#mmFolders").addEventListener("click", async (e) => {
-  e.stopPropagation();
-  const panel = $("#mmFoldersPanel");
-  if (panel && panel.classList.contains("open")) {
-    panel.classList.remove("open");
-    return;
-  }
-  const json = await api.call("get_folders");
-  try {
-    foldersState = JSON.parse(json || "{}");
-  } catch (err) { foldersState = {}; }
-  if (!foldersState || !foldersState.tree) { setStatus("请先配置模型管理目录"); return; }
-  fmRender();
-  panel.classList.add("open");
-});
-document.addEventListener("click", (e) => {
-  const panel = $("#mmFoldersPanel");
-  if (panel && panel.classList.contains("open") && !e.target.closest("#mmFoldersWrap")) {
-    panel.classList.remove("open");
-  }
-});
-$("#mmFoldersPanel").addEventListener("click", async (e) => {
-  const item = e.target.closest(".fm-item");
-  if (!item || !foldersState) return;
-  const path = item.dataset.path;
-  const hidden = new Set(foldersState.hidden || []);
-  if (path === "__root__") {
-    foldersState.show_root = !foldersState.show_root;
-  } else {
-    if (hidden.has(path)) hidden.delete(path); else hidden.add(path);
-    foldersState.hidden = Array.from(hidden);
-  }
-  await api.call("save_folders", Array.from(hidden), foldersState.show_root);
-  fmRender();
-  setStatus("文件夹显示已保存");
-  await api.call("scan_models");
-  pollMmScan();
-});
-
-// 模型详情二级界面（C 站风格）
-let detailRow = null;
-// 详情面板全局状态（document 级图片右键委托需要访问）
-let detailImgIdx = 0;
-let detailImgLocalPath = null;
-async function showModelDetail(path) {
-  const json = await api.call("get_model_detail", path);
-  let d;
-  try { d = JSON.parse(json || "{}"); } catch (e) { d = {}; }
-  if (!d.ok) { setStatus("详情获取失败"); return; }
-  detailRow = d;
-  const info = d.info || {};
-  const v = info.version || {};
-  const creator = (info.creator && info.creator.username) || info.creator || "";
-  const trained = Array.isArray(info.trainedWords) ? info.trainedWords : [];
-  const descRaw = String(info.description || "").replace(/<[^>]+>/g, "");
-  const desc = String(info.description_zh || info.description || "").replace(/<[^>]+>/g, "");
-  const covers = d.covers || [];
-  detailImgIdx = 0;
-  detailImgLocalPath = null;
-  const mainB64 = covers.find((c) => c.b64);
-  detailImgLocalPath = (mainB64 && mainB64.local && d.path) ? d.path : null;
-  detailImgIdx = 0;
-  const panel = $("#detailPanel");
-  panel.innerHTML =
+    '<div class="dt-head">' +
+      '<div class="dt-head-t">模型详情</div>' +
+      '<div class="dt-head-r">' +
+        (creator ? '<span class="dt-author author-chip" data-author="' + esc(creator) + '" data-tip="点击复制作者链接">' + esc(creator) + '</span>' : "") +
+        '<button class="icon-btn dt-close" id="dClose" data-tip="关闭（Esc）">' + _icon("x") + '</button>' +
+      '</div>' +
+    '</div>' +
+    '<div class="dt-body">' +
     '<div class="detail-left">' +
     (mainB64
       ? '<img class="detail-main-img" id="dMain" src="data:image/jpeg;base64,' + mainB64.b64 + '"/>'
-      : '<div class="detail-main-img" id="dMain" style="display:flex;align-items:center;justify-content:center;color:var(--text-dim)">暂无封面</div>') +
+      : '<div class="detail-main-img dt-empty" id="dMain">' + _icon("image", "ic-lg") + '<span>暂无封面</span></div>') +
     '<div class="detail-thumbs">' + covers.map((c, i) =>
       c.b64
         ? '<img class="detail-thumb' + (i === 0 ? " on" : "") + '" data-i="' + i + '" src="data:image/jpeg;base64,' + c.b64 + '"/>'
-        : '<img class="detail-thumb" data-i="' + i + '" data-url="' + esc(c.url || "") + '" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" style="background:var(--surface2)"/>'
+        : '<img class="detail-thumb" data-i="' + i + '" data-url="' + esc(c.url || "") + '" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"/>'
     ).join("") + "</div></div>" +
     '<div class="detail-right">' +
     '<div class="detail-title">' + esc(info.name || d.name || "-") + "</div>" +
-    '<div class="detail-cname">' + esc(info.modelName || "") + "</div>" +
-    '<div class="detail-meta">' +
-    (creator ? '<span class="detail-chip author-chip" data-author="' + esc(creator) + '" data-tip="点击复制作者链接">👤 ' + esc(creator) + '</span>' : "") +
-    (info.type ? '<span class="detail-chip">' + esc(info.type) + "</span>" : "") +
-    (info.baseModel ? '<span class="detail-chip">' + esc(info.baseModel) + "</span>" : "") +
-    (v.name ? '<span class="detail-chip">版本 ' + esc(v.name) + "</span>" : "") +
-
-    (info.nsfw ? '<span class="detail-chip" style="color:var(--danger)">NSFW</span>' : "") +
+    (info.modelName && info.modelName !== info.name ? '<div class="detail-cname">' + esc(info.modelName) + "</div>" : "") +
+    '<div class="dt-mrs">' +
+      '<div class="dt-mr"><span class="k">类型</span><span class="v">' + esc(info.type || "-") + "</span></div>" +
+      '<div class="dt-mr"><span class="k">底模</span><span class="v">' + esc(info.baseModel || d.base || "-") + "</span></div>" +
+      '<div class="dt-mr"><span class="k">版本</span><span class="v">' + esc(v.name || d.ver || "-") + "</span></div>" +
+      '<div class="dt-mr"><span class="k">文件</span><span class="v dt-mono" data-tip="' + esc(d.path || "") + '">' + esc(d.name || "-") + "</span></div>" +
+      (info.nsfw ? '<div class="dt-mr"><span class="k">分级</span><span class="v dt-warn">NSFW</span></div>' : "") +
     "</div>" +
-    '<div class="detail-sec-title">🎯 触发词（Trigger Words）<span class="detail-hint">点击任一触发词串单独复制（保持英文原文，不翻译）</span></div>' +
-    '<div class="detail-tags">' + (trained.length ? trained.map((t, ti) => {
-      return '<div class="detail-tag copy-tag" data-orig="' + esc(t) + '" data-tip="点击复制这一套">' +
-        (trained.length > 1 ? '<span class="detail-tag-idx">' + (ti + 1) + "</span>" : "") +
-        '<span class="detail-tag-txt">' + esc(t) + "</span>" +
-        "</div>";
-    }).join("") : '<span style="font-size:12px;color:var(--text-dim)">无触发词信息</span>') + "</div>" +
-    '<div class="detail-sec-title">📝 简介</div>' +
-    '<div class="detail-desc">' + (desc ? esc(desc) + (descRaw && descRaw !== desc ? '<div class="detail-desc-orig">' + esc(descRaw) + "</div>" : "") : "暂无简介") + "</div>" +
-    '<div class="detail-sec-title">📦 文件</div>' +
-    '<div class="detail-meta"><span class="detail-chip">' + esc(d.name || "") + "</span></div>" +
-    '<div class="detail-actions">' +
-    '<button class="btn btn-primary" id="dEditInfo">✏️ 编辑信息</button>' +
-    '<button class="btn" id="dCover">📤 自定义封面</button>' +
-    '<button class="btn" id="dSite" data-tip="在浏览器打开该模型在 C 站的主页">🌐 打开C站</button>' +
-    '<button class="btn" id="dRename" data-tip="自定义改名（保留扩展名）">✏️ 改名</button>' +
-    '<button class="btn" id="dRp" data-tip="从 C 站匹配该模型的名字/触发词/封面">📤 识别模型信息</button>' +
-    '<button class="btn" id="dTranslate" data-tip="把 C 站模型简介翻译成中文（需在设置配置百度翻译）">🌏 翻译成中文</button>' +
-    '<button class="btn" id="dLocalize" data-tip="把本地文件名翻译成中文">🀄 文件名翻中文</button>' +
-    '<button class="btn" id="dAllImgs" data-tip="把 C 站该模型的全部示例图下载到「模型名.images」文件夹">🖼️ 下载所有示例图</button>' +
-    '<button class="btn" id="dJson" data-tip="生成 WebUI 能识别的「模型名.json」元数据文件">📄 生成SD可读json</button>' +
-    '<button class="btn" id="dClose">关闭</button></div></div>';
+    '<div class="dt-sec"><div class="dt-sec-h">' + _icon("tag") + '触发词<span class="dt-sec-hint">点击复制（英文原文）</span></div>' +
+      '<div class="detail-tags">' + (trained.length ? trained.map((t, ti) => {
+        return '<div class="detail-tag copy-tag" data-orig="' + esc(t) + '" data-tip="点击复制这一套">' +
+          (trained.length > 1 ? '<span class="detail-tag-idx">' + (ti + 1) + "</span>" : "") +
+          '<span class="detail-tag-txt">' + esc(t) + "</span>" +
+          '<span class="dt-copy">' + _icon("copy") + "</span></div>";
+      }).join("") : '<span class="dt-dim">无触发词信息（可先「识别模型信息」）</span>') + "</div></div>" +
+    '<div class="dt-sec"><div class="dt-sec-h">' + _icon("file") + '简介</div>' +
+      '<div class="detail-desc">' + (desc ? esc(desc) + (descRaw && descRaw !== desc ? '<div class="detail-desc-orig">' + esc(descRaw) + "</div>" : "") : '<span class="dt-dim">暂无简介</span>') + "</div></div>" +
+    '<div class="dt-sec"><div class="dt-sec-h">' + _icon("settings") + '操作</div>' +
+      '<div class="dt-ag"><div class="dt-ag-h">主要操作</div><div class="dt-ag-b">' +
+        '<button class="btn btn-primary" id="dEditInfo">' + _icon("pencil") + '编辑信息</button>' +
+        '<button class="btn" id="dSite" data-tip="在浏览器打开该模型在 C 站的主页">' + _icon("external") + '打开 C 站</button>' +
+      "</div></div>" +
+      '<div class="dt-ag"><div class="dt-ag-h">文件</div><div class="dt-ag-b">' +
+        '<button class="btn" id="dRename" data-tip="自定义改名（保留扩展名）">' + _icon("pencil") + '改名</button>' +
+        '<button class="btn" id="dCover" data-tip="用本地图片替换封面">' + _icon("image") + '自定义封面</button>' +
+      "</div></div>" +
+      '<div class="dt-ag"><div class="dt-ag-h">信息处理</div><div class="dt-ag-b">' +
+        '<button class="btn" id="dRp" data-tip="从 C 站匹配该模型的名字/触发词/封面">' + _icon("upload") + '识别模型信息</button>' +
+        '<button class="btn" id="dTranslate" data-tip="把简介翻译成中文（需在设置配置百度翻译）">' + _icon("globe") + '翻译成中文</button>' +
+        '<button class="btn" id="dLocalize" data-tip="把本地文件名翻译成中文">' + _icon("globe") + '文件名翻中文</button>' +
+        '<button class="btn" id="dJson" data-tip="生成 WebUI 能识别的元数据文件">' + _icon("file") + '生成 SD 可读 JSON</button>' +
+      "</div></div>" +
+      '<div class="dt-ag"><div class="dt-ag-h">图片</div><div class="dt-ag-b">' +
+        '<button class="btn" id="dAllImgs" data-tip="把 C 站该模型的全部示例图下载到「模型名.images」文件夹">' + _icon("download") + '下载示例图</button>' +
+      "</div></div>" +
+    "</div>" +
+    "</div></div>";
   $("#detailMask").style.display = "flex";
   // 自动加载所有 URL 缩略图（避免空占位）
   covers.forEach((c, i) => {
@@ -3941,6 +3859,14 @@ document.addEventListener("click", (e) => {
    按钮全部是"代理"：点击转交给下面老按钮的 click()，业务逻辑零改动；
    标签/禁用/显隐用 MutationObserver 跟随原按钮（如「⏹ 停止检查（N/M）」、恢复误整理的显隐）。
    ========================================================================== */
+
+// SVG 图标（内联 sprite，见 index.html 的 #i-* symbols）
+function _icon(name, cls) {
+  return '<svg class="ic' + (cls ? " " + cls : "") + '" viewBox="0 0 24 24" fill="none" stroke="currentColor"' +
+    ' stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<use href="#i-' + name + '"/></svg>';
+}
+
 function _msTag(r) {
   const u = (r && r.upd) || {};
   if (u.has_update || u.other_base) return "";          // 有更新 → 用 ❗ 角标（可点去 C 站）
@@ -3984,8 +3910,27 @@ function _closeMmMenus() {
   document.querySelectorAll(".btn-group.open").forEach((g) => {
     g.classList.remove("open");
     const b = g.querySelector(".btn[data-menu]");
-    if (b && b.dataset.label) b.textContent = b.dataset.label;   // 箭头复原
+    if (b && b.dataset.label) b.innerHTML = b.dataset.label;   // 箭头复原
+    const m = g._menu;
+    if (m) m.classList.remove("open");
   });
+}
+
+// 打开菜单：把菜单移到 body（portal），用 fixed 定位 + 完全不透明背景 —— 任何祖先的
+// overflow / transform / stacking context 都影响不到它
+function _mmOpenMenu(grp, menu, btn) {
+  if (menu.parentElement !== document.body) document.body.appendChild(menu);
+  menu.style.position = "fixed";
+  menu.style.background = "#fff";
+  menu.style.zIndex = "var(--z-dropdown, 340)";
+  const r = btn.getBoundingClientRect();
+  const w = menu.offsetWidth || 220;
+  menu.style.left = Math.max(8, Math.min(r.left, (window.innerWidth || 1920) - w - 8)) + "px";
+  menu.style.top = (r.bottom + 2) + "px";
+  menu.classList.add("open");
+  grp.classList.add("open");
+  grp._menu = menu;
+  menu._owner = grp;
 }
 
 function bindMmMetro() {
@@ -4005,12 +3950,13 @@ function bindMmMetro() {
       e.stopPropagation();
       const grp = btn.closest(".btn-group");
       if (!grp) return;
-      const label = btn.dataset.label || (btn.dataset.label = btn.textContent);
+      const label = btn.dataset.label || (btn.dataset.label = btn.innerHTML);
+      const menu = grp.querySelector(".mm-menu");
       const wasOpen = grp.classList.contains("open");
       _closeMmMenus();
-      if (!wasOpen) {
-        grp.classList.add("open");
-        if (label.indexOf("\u25be") >= 0) btn.textContent = label.replace("\u25be", "\u25b4");   // ▼ → ▲
+      if (!wasOpen && menu) {
+        _mmOpenMenu(grp, menu, btn);
+        if (label.indexOf("\u25be") >= 0) btn.innerHTML = label.replace("\u25be", "\u25b4");   // ▼ → ▲
       }
     });
   });
@@ -4032,8 +3978,18 @@ function bindMmMetro() {
       setStatus((r && r.msg) || "已打开日志文件夹");
     });
   });
-  document.addEventListener("click", _closeMmMenus);
+  document.addEventListener("click", (e) => {
+    if (e.target && e.target.closest && e.target.closest(".mm-menu")) return;   // 点在菜单里不关
+    _closeMmMenus();
+  });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") _closeMmMenus(); });
+  // 窗口尺寸变化时，已打开的菜单重新定位（避免飘走）
+  window.addEventListener("resize", () => {
+    document.querySelectorAll(".btn-group.open").forEach((g) => {
+      const b = g.querySelector(".btn[data-menu]");
+      if (b && g._menu) _mmOpenMenu(g, g._menu, b);
+    });
+  });
   // 5) Metro 筛选（底模 / 状态 / 排序），复用既有 state 与排序机制
   const bf = document.getElementById("mmBaseF"), sf = document.getElementById("mmStF"),
         so = document.getElementById("mmSortF"), sd = document.getElementById("mmSortDir");
@@ -4059,8 +4015,14 @@ function bindMmMetro() {
   document.querySelectorAll(".mm-metro [data-proxy]").forEach((el) => {
     const src = document.getElementById(el.dataset.proxy);
     if (!src) return;
+    const _clean = (t) => String(t || "").replace(/^[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\uFE0F\u200D\s]+/u, "");
     const sync = () => {
-      if (el.textContent !== src.textContent) el.textContent = src.textContent;
+      const lbl = _clean(src.textContent);
+      const want = (_clean(el.textContent) !== lbl);
+      if (want) {
+        const ic = el.dataset.icon ? _icon(el.dataset.icon) : "";
+        el.innerHTML = ic + lbl;
+      }
       el.disabled = !!src.disabled;
       el.style.display = (src.style.display === "none") ? "none" : "";
     };

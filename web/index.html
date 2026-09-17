@@ -9,6 +9,33 @@
 <link rel="stylesheet" href="metro.css"/>
 </head>
 <body>
+  <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20.5 20.5-3.8-3.8"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20.5 12a8.5 8.5 0 1 1-2.6-6.1"/><path d="M20.5 4v5h-5"/></symbol>
+    <symbol id="i-scan" viewBox="0 0 24 24"><path d="M3 8V5.5A2.5 2.5 0 0 1 5.5 3H8M16 3h2.5A2.5 2.5 0 0 1 21 5.5V8M21 16v2.5A2.5 2.5 0 0 1 18.5 21H16M8 21H5.5A2.5 2.5 0 0 1 3 18.5V16M3 12h18"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="m8.5 12.2 2.3 2.3 4.7-4.9"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 3 8.5 4.6L12 12.2 3.5 7.6 12 3Z"/><path d="m4 12.4 8 4.4 8-4.4"/><path d="m4 16.8 8 4.4 8-4.4"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3.5v11"/><path d="m7.5 10.5 4.5 4.5 4.5-4.5"/><path d="M4.5 20.5h15"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 20.5v-11"/><path d="m7.5 13.5 4.5-4.5 4.5 4.5"/><path d="M4.5 3.5h15"/></symbol>
+    <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M12 20.5h8.5"/><path d="M16.4 3.6a2.2 2.2 0 0 1 3.1 3.1L7.5 18.7l-4 1 1-4L16.4 3.6Z"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5h3.6l2 2.5h7.4A2.5 2.5 0 0 1 21 10v7.5a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5v-10Z"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 19 5.8v5.4c0 4.2-2.9 7.6-7 9.8-4.1-2.2-7-5.6-7-9.8V5.8L12 3Z"/><path d="m9 12 2 2 4-4.2"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5"/><path d="M12 8h.01"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="9" cy="7" r="1.9"/><circle cx="15" cy="12" r="1.9"/><circle cx="9" cy="17" r="1.9"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></symbol>
+    <symbol id="i-external" viewBox="0 0 24 24"><path d="M15 3.5h5.5V9"/><path d="M10.5 13.5 20.5 3.5"/><path d="M20.5 14.5V19a1.5 1.5 0 0 1-1.5 1.5H4.5A1.5 1.5 0 0 1 3 19V4.5A1.5 1.5 0 0 1 4.5 3H9"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="15"/><circle cx="9" cy="10" r="1.6"/><path d="m4 18 5-5 3.5 3 3-3 5.5 5"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M6.5 3.5h7l4.5 4.5v12.5h-11.5z"/><path d="M13.5 3.5v4.5H18"/><path d="M9 13h6M9 16.5h6"/></symbol>
+    <symbol id="i-tag" viewBox="0 0 24 24"><path d="M3.5 12V4.5H11L20.5 14l-7 7L3.5 12Z"/><circle cx="8" cy="8" r="1.5"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4.5 7h15"/><path d="M9.5 7V4.5h5V7"/><path d="M6.5 7l1 13.5h9l1-13.5"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6.5 6.5 17.5 17.5M17.5 6.5 6.5 17.5"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M8.5 6.5h12M8.5 12h12M8.5 17.5h12"/><circle cx="4.5" cy="6.5" r="1.3"/><circle cx="4.5" cy="12" r="1.3"/><circle cx="4.5" cy="17.5" r="1.3"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7"/><rect x="13.5" y="3.5" width="7" height="7"/><rect x="3.5" y="13.5" width="7" height="7"/><rect x="13.5" y="13.5" width="7" height="7"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17"/><path d="M12 3.5c2.5 2.3 3.8 5.1 3.8 8.5S14.5 18.2 12 20.5c-2.5-2.3-3.8-5.1-3.8-8.5S9.5 5.8 12 3.5Z"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11"/><path d="M15 9V5.5A1.5 1.5 0 0 0 13.5 4H5.5A1.5 1.5 0 0 0 4 5.5v8A1.5 1.5 0 0 0 5.5 15H9"/></symbol>
+    <symbol id="i-sort" viewBox="0 0 24 24"><path d="M8 5v14M8 5 4.5 8.5M8 5l3.5 3.5"/><path d="M16 19V5M16 19l-3.5-3.5M16 19l3.5-3.5"/></symbol>
+    <symbol id="i-ruler" viewBox="0 0 24 24"><path d="M3.5 14.5 14.5 3.5l6 6-11 11-6-6Z"/><path d="m7 11 2 2M10 8l2 2M13 5l2 2"/></symbol>
+  </svg>
 <!-- WebGL shader 背景 -->
 <canvas id="bg"></canvas>
 
@@ -17,13 +44,13 @@
   <div class="nav">
     <div class="nav-logo"><img src="logo.png" alt=""/></div>
     <div class="nav-tabs" id="navTabs">
-      <button class="nav-tab active" data-page="download">📥 批量下载</button>
+      <button class="nav-tab active" data-page="download">批量下载</button>
       <button class="nav-tab" data-page="dlmanager">📁 下载管理</button>
-      <button class="nav-tab" data-page="models">🧩 模型管理</button>
+      <button class="nav-tab" data-page="models">模型管理</button>
       <button class="nav-tab" data-page="updates">⏫ 更新</button>
-      <button class="nav-tab" data-page="reverse">🔍 反向解析</button>
-      <button class="nav-tab" data-page="workflow">🔬 工作流分析</button>
-      <button class="nav-tab" data-page="settings">⚙️ 设置</button>
+      <button class="nav-tab" data-page="reverse">反向解析</button>
+      <button class="nav-tab" data-page="workflow">工作流分析</button>
+      <button class="nav-tab" data-page="settings">设置</button>
     </div>
     <div class="nav-right">
       <span id="statusText" class="status-pill">就绪</span>
@@ -89,67 +116,65 @@
       <!-- ===== Metro 工具区（仅 Metro 主题显示；按钮全部是"代理"，点击转给下面老按钮，逻辑零改动） ===== -->
       <div class="mm-metro">
         <div class="mm-row">
-          <button class="btn btn-primary" data-proxy="mmScan">🔍 扫描模型</button>
-          <button class="btn btn-l2" data-proxy="mmRefresh">🔄 刷新</button>
-          <button class="btn btn-l2" data-proxy="mmCheckUpd">⏫ 检查更新</button>
+          <button class="btn btn-primary" data-proxy="mmScan" data-icon="scan">扫描模型</button>
+          <button class="btn btn-l2" data-proxy="mmRefresh" data-icon="refresh">刷新</button>
+          <button class="btn btn-l2" data-proxy="mmCheckUpd" data-icon="check">检查更新</button>
           <span class="mm-sep"></span>
           <span class="sp-btn btn-group">
-            <button class="btn" data-proxy="mmRenameMain" data-tip="改文件名（执行默认动作；右侧 ▾ 选择其它方式）">✏️ 改名</button>
+            <button class="btn" data-proxy="mmRenameMain" data-icon="pencil" data-tip="改文件名（执行默认动作；右侧 ▾ 选择其它方式）">改名</button>
             <button class="btn sp-caret" data-menu="mmRenameMenu" data-tip="选择改名方式">▾</button>
             <div class="mm-menu" id="mmRenameMenu">
-              <div class="mm-item" data-ract="custom">✏️ 自定义改名</div>
-              <div class="mm-item" data-ract="rename_c">🏷️ 文件名改成C站名</div>
-              <div class="mm-item" data-ract="localize">🀄 文件名翻中文</div>
+              <div class="mm-item" data-ract="custom">自定义改名</div>
+              <div class="mm-item" data-ract="rename_c">文件名 → C站名称</div>
+              <div class="mm-item" data-ract="localize">文件名 → 中文</div>
               <div class="mm-sep-h"></div>
-              <div class="mm-item" data-goto="settings">⚙️ 改名设置</div>
+              <div class="mm-item" data-goto="settings">改名设置</div>
             </div>
           </span>
           <span class="btn-group">
-            <button class="btn" data-menu="mmOrganizeMenu">📂 整理 ▾</button>
+            <button class="btn" data-menu="mmOrganizeMenu">整理 <span class="car">▾</span></button>
             <div class="mm-menu" id="mmOrganizeMenu">
-              <div class="mm-item" data-proxy="mmOrganize">📂 整理模型</div>
-              <div class="mm-item" data-proxy="mmRestore">🔧 恢复误整理</div>
+              <div class="mm-item" data-proxy="mmOrganize" data-icon="folder">整理模型</div>
+              <div class="mm-item" data-proxy="mmRestore" data-icon="refresh">恢复误整理</div>
             </div>
           </span>
           <span class="btn-group">
-            <button class="btn" data-menu="mmCheckMenu">🧪 检查 ▾</button>
+            <button class="btn" data-menu="mmCheckMenu">检查 <span class="car">▾</span></button>
             <div class="mm-menu" id="mmCheckMenu">
-              <div class="mm-item" data-proxy="mmVerify">✅ 校验完整性</div>
-              <div class="mm-item" data-proxy="mmDedupe">🧬 查重</div>
+              <div class="mm-item" data-proxy="mmVerify" data-icon="shield">校验完整性</div>
+              <div class="mm-item" data-proxy="mmDedupe" data-icon="layers">查重</div>
               <div class="mm-sep-h"></div>
-              <div class="mm-item danger" data-proxy="mmCleanup">🗑️ 清理冗余文件</div>
+              <div class="mm-item danger" data-proxy="mmCleanup" data-icon="trash">清理冗余文件</div>
             </div>
           </span>
           <span class="btn-group">
-            <button class="btn" data-menu="mmInfoMenu">🗂️ 信息处理 ▾</button>
+            <button class="btn" data-menu="mmInfoMenu">信息处理 <span class="car">▾</span></button>
             <div class="mm-menu" id="mmInfoMenu">
-              <div class="mm-item" data-proxy="mmJson">📄 生成SD可读json</div>
-              <div class="mm-item" data-proxy="mmCovers">🖼️ 下载封面图</div>
-              <div class="mm-item" data-proxy="mmTranslate">🌏 翻译成中文</div>
-              <div class="mm-item" data-proxy="mmSendRp">📤 识别模型信息</div>
+              <div class="mm-item" data-proxy="mmSendRp" data-icon="upload">识别模型信息</div>
+              <div class="mm-item" data-proxy="mmTranslate" data-icon="globe">翻译成中文</div>
+              <div class="mm-item" data-proxy="mmJson" data-icon="file">生成 SD 可读 JSON</div>
+              <div class="mm-item" data-proxy="mmCovers" data-icon="image">下载封面图</div>
             </div>
           </span>
           <span class="mm-sep"></span>
-          <button class="btn btn-l2" data-proxy="mmUpdDl">⬇️ 更新选中</button>
-          <button class="btn btn-l2" data-proxy="mmGoUpdates">⏫ 去更新</button>
+          <button class="btn btn-l2" data-proxy="mmUpdDl" data-icon="download">更新选中</button>
+          <button class="btn btn-l2" data-proxy="mmGoUpdates" data-icon="sort">去更新</button>
           <span class="mm-spacer"></span>
           <span class="btn-group">
-            <button class="btn" data-menu="mmMoreMenu">⋯ 更多</button>
+            <button class="btn" data-menu="mmMoreMenu"><span class="car-only">⋯</span> 更多</button>
             <div class="mm-menu" id="mmMoreMenu" style="left:auto;right:0">
-              <div class="mm-item" data-act="logs">📂 打开日志文件夹</div>
-              <div class="mm-item" data-goto="settings">⚙️ 打开设置</div>
+              <div class="mm-item" data-act="logs">打开日志文件夹</div>
+              <div class="mm-item" data-goto="settings">打开设置</div>
             </div>
           </span>
         </div>
         <div class="mm-row mm-row2">
-          <select class="input" id="mmBaseF" data-tip="按底模筛选">
-            <option value="">全部底模</option>
-          </select>
+          <select class="input" id="mmBaseF" data-tip="按底模筛选"><option value="">全部底模</option></select>
           <select class="input" id="mmStF" data-tip="按更新状态筛选（需先检查更新）">
             <option value="">全部状态</option>
-            <option value="upd">❗ 有更新</option>
-            <option value="latest">✅ 已是最新</option>
-            <option value="none">◻ 未检查</option>
+            <option value="upd">有更新</option>
+            <option value="latest">已是最新</option>
+            <option value="none">未检查</option>
           </select>
           <select class="input" id="mmSortF" data-tip="排序方式（列表/瀑布流都生效）">
             <option value="">默认排序</option>
@@ -162,56 +187,57 @@
           <button class="btn" id="mmSortDir" data-tip="切换升序 / 降序">↑ 升序</button>
           <span class="mm-spacer"></span>
           <span class="mm-seg" id="mmViewSeg" data-tip="切换视图（默认瀑布流）">
-            <button class="btn seg" id="mmViewList">☰ 列表</button>
-            <button class="btn seg" id="mmViewMasonry">▦ 瀑布流</button>
+            <button class="btn seg" id="mmViewList"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-list"/></svg>列表</button>
+            <button class="btn seg" id="mmViewMasonry"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-grid"/></svg>瀑布流</button>
           </span>
         </div>
       </div>
+      </div>
 
       <div class="btn-row mm-legacy">
-        <button class="btn btn-primary" id="mmScan" data-tip="扫描所有模型管理目录，发现模型并读取元数据/封面">🔍 扫描模型</button>
-        <button class="btn" id="mmRefresh" data-tip="重新扫描（不读元数据，只刷新列表）">🔄 刷新</button>
-        <button class="btn" id="mmVerify" data-tip="计算文件哈希并与 C 站比对，校验文件是否完整">✅ 校验完整性</button>
-        <button class="btn" id="mmDedupe" data-tip="按 SHA256 查找重复模型（同一文件放了多份）+ 同一模型的新旧版本，可勾选把多余的移入回收站">🧬 查重</button>
-        <button class="btn" id="mmCheckUpd" data-tip="检查更新：对比 C 站，找出同底模有新版的模型（不会自动下载）。有更新的卡片右上角出现 ❗，点击可去 C 站看新版">⏫ 检查更新</button>
-        <button class="btn" id="mmUpdDl" data-tip="更新选中：把勾选的、带 ❗ 的模型加入下载队列（新版默认下到旧版所在文件夹；不会动旧版文件）">⬇️ 更新选中</button>
-        <button class="btn" id="mmGoUpdates" data-tip="打开「⏫ 更新」页，并默认只看有更新的（❗）模型：可以按版本下拉更新或降级，支持勾选批量">⏫ 去更新</button>
+        <button class="btn btn-primary" id="mmScan" data-tip="扫描所有模型管理目录，发现模型并读取元数据/封面">扫描模型</button>
+        <button class="btn" id="mmRefresh" data-tip="重新扫描（不读元数据，只刷新列表）">刷新</button>
+        <button class="btn" id="mmVerify" data-tip="计算文件哈希并与 C 站比对，校验文件是否完整">校验完整性</button>
+        <button class="btn" id="mmDedupe" data-tip="按 SHA256 查找重复模型（同一文件放了多份）+ 同一模型的新旧版本，可勾选把多余的移入回收站">查重</button>
+        <button class="btn" id="mmCheckUpd" data-tip="检查更新：对比 C 站，找出同底模有新版的模型（不会自动下载）。有更新的卡片右上角出现 ❗，点击可去 C 站看新版">检查更新</button>
+        <button class="btn" id="mmUpdDl" data-tip="更新选中：把勾选的、带 ❗ 的模型加入下载队列（新版默认下到旧版所在文件夹；不会动旧版文件）">更新选中</button>
+        <button class="btn" id="mmGoUpdates" data-tip="打开「⏫ 更新」页，并默认只看有更新的（❗）模型：可以按版本下拉更新或降级，支持勾选批量">去更新</button>
         <span class="btn-group" id="mmRenameGroup">
-          <button class="btn" id="mmRenameMain" data-tip="改文件名：自定义 / 改成 C 站模型名 / 翻译成中文">✏️ 改名</button>
+          <button class="btn" id="mmRenameMain" data-tip="改文件名：自定义 / 改成 C 站模型名 / 翻译成中文">改名</button>
           <div class="submenu" id="mmRenameSub">
-            <div class="submenu-item" data-act="custom">✏️ 自定义改名</div>
-            <div class="submenu-item" data-act="rename_c">🏷️ 文件名改成C站名</div>
-            <div class="submenu-item" data-act="localize">🀄 文件名翻中文</div>
+            <div class="submenu-item" data-act="custom">自定义改名</div>
+            <div class="submenu-item" data-act="rename_c">文件名改成C站名</div>
+            <div class="submenu-item" data-act="localize">文件名翻中文</div>
           </div>
         </span>
-        <button class="btn" id="mmJson" data-tip="生成 WebUI 能识别的「模型名.json」元数据文件">📄 生成SD可读json</button>
-        <button class="btn" id="mmCovers" data-tip="把 C 站第一张预览图下载到模型目录作为缩略图">🖼️ 下载封面图</button>
-        <button class="btn" id="mmTranslate" data-tip="把 C 站模型简介翻译成中文（需在设置配置百度翻译）">🌏 翻译成中文</button>
-        <button class="btn" id="mmSendRp" data-tip="把选中模型送去反向解析：从 C 站匹配名字/触发词/封面">📤 识别模型信息</button>
+        <button class="btn" id="mmJson" data-tip="生成 WebUI 能识别的「模型名.json」元数据文件">生成 SD 可读 JSON</button>
+        <button class="btn" id="mmCovers" data-tip="把 C 站第一张预览图下载到模型目录作为缩略图">下载封面图</button>
+        <button class="btn" id="mmTranslate" data-tip="把 C 站模型简介翻译成中文（需在设置配置百度翻译）">翻译成中文</button>
+        <button class="btn" id="mmSendRp" data-tip="把选中模型送去反向解析：从 C 站匹配名字/触发词/封面">识别模型信息</button>
       </div>
       <div class="btn-row mm-legacy">
-        <button class="btn" id="mmOrganize" data-tip="把选中的模型按规则移动到分类文件夹（需先在设置选 🎯 目标环境）">📂 整理模型</button>
-        <button class="btn" id="mmRestore" style="display:none" data-tip="恢复误整理的模型到原位置（按移动日志回退）">🔧 恢复误整理</button>
-        <button class="btn btn-danger" id="mmCleanup" data-tip="清理冗余文件：删除失效 info、孤儿封面等多余文件">🗑️ 清理冗余文件</button>
+        <button class="btn" id="mmOrganize" data-tip="把选中的模型按规则移动到分类文件夹（需先在设置选 🎯 目标环境）">整理模型</button>
+        <button class="btn" id="mmRestore" style="display:none" data-tip="恢复误整理的模型到原位置（按移动日志回退）">恢复误整理</button>
+        <button class="btn btn-danger" id="mmCleanup" data-tip="清理冗余文件：删除失效 info、孤儿封面等多余文件">清理冗余文件</button>
       </div>
       <div class="tool-row mm-filter">
         <input id="mmFilter" class="input" placeholder="筛选：文件名 / C站名 / 路径"/>
         <button class="btn" id="mmFilterClear">清除</button>
-        <button class="btn" id="mmUpdOnly" data-tip="只看有更新的模型（先点「⏫ 检查更新」生成结果）">❗ 有更新</button>
+        <button class="btn" id="mmUpdOnly" data-tip="只看有更新的模型（先点「⏫ 检查更新」生成结果）">有更新</button>
         <button class="btn" id="mmSelAll">全选</button>
         <button class="btn" id="mmSelNone">清除勾选</button>
         <button class="btn" id="mmSelInv">反选</button>
         <span class="folders-wrap" id="mmFoldersWrap">
-          <button class="btn" id="mmFolders" data-tip="切换文件夹列表显示，可单独隐藏/显示各分类文件夹">📁 文件夹显示</button>
+          <button class="btn" id="mmFolders" data-tip="切换文件夹列表显示，可单独隐藏/显示各分类文件夹">文件夹显示</button>
           <div class="folders-panel" id="mmFoldersPanel"></div>
         </span>
-        <button class="btn mm-classic-only" id="mmViewToggle" data-tip="切换瀑布流 / 列表视图">🖼️ 瀑布流</button>
+        <button class="btn mm-classic-only" id="mmViewToggle" data-tip="切换瀑布流 / 列表视图">瀑布流</button>
         <span class="status-pill" id="mmCheckLabel">已勾选 0 个</span>
       </div>
       <div class="table-wrap" id="mmTableWrap">
         <table class="grid" id="mmTable">
           <thead><tr>
-            <th class="c-sel" data-col="sel" id="mmSelAllTh">☑️</th>
+            <th class="c-sel" data-col="sel" id="mmSelAllTh">全选</th>
             <th class="c-thumb" data-col="thumb">图</th>
             <th class="c-name" data-col="name" data-sort="name">文件名</th>
             <th class="c-name" data-col="cname" data-sort="cname">C站模型名</th>
@@ -246,11 +272,11 @@
         <select class="input upd-sel" id="updBase"><option value="">全部底模</option></select>
         <select class="input upd-sel" id="updState">
           <option value="">全部状态</option>
-          <option value="upd">❗ 有更新</option>
-          <option value="latest">✅ 已是最新</option>
-          <option value="other">🔀 仅换底模</option>
-          <option value="unknown">⚠️ 无法判定</option>
-          <option value="todo">◻ 未检查</option>
+          <option value="upd">有更新</option>
+          <option value="latest">已是最新</option>
+          <option value="other">仅换底模</option>
+          <option value="unknown">无法判定</option>
+          <option value="todo">未检查</option>
         </select>
         <select class="input upd-sel" id="updSort">
           <option value="date">排序：更新时间</option>
@@ -258,9 +284,9 @@
           <option value="state">排序：状态</option>
         </select>
         <span class="upd-spacer"></span>
-        <button class="btn btn-primary" id="updCheck" data-tip="对比 C 站：找出「和你所用底模相同、且比你的版本新」的版本（只列出，不会自动下载）。勾选了条目时只检查勾选的这几个">⏫ 检查更新</button>
-        <button class="btn" id="updDlSel" disabled data-tip="把勾选的模型更新到各自下拉里选中的版本（默认推荐版）">⬇️ 批量更新</button>
-        <button class="btn" id="updWl" data-tip="更新白名单：名单里的模型不再提示更新（行右键 / ··· 菜单里可加入）">📋 白名单</button>
+        <button class="btn btn-primary" id="updCheck" data-tip="对比 C 站：找出「和你所用底模相同、且比你的版本新」的版本（只列出，不会自动下载）。勾选了条目时只检查勾选的这几个">检查更新</button>
+        <button class="btn" id="updDlSel" disabled data-tip="把勾选的模型更新到各自下拉里选中的版本（默认推荐版）">批量更新</button>
+        <button class="btn" id="updWl" data-tip="更新白名单：名单里的模型不再提示更新（行右键 / ··· 菜单里可加入）">白名单</button>
       </div>
     </div>
     <div class="upd-table-wrap">
@@ -322,7 +348,7 @@
   <!-- 工作流分析 -->
   <section class="page" id="page-workflow">
     <div class="card">
-      <div class="title-row"><span class="page-title">🔬 工作流分析</span><span class="hint">拖入 ComfyUI 工作流（.json）或带内嵌工作流的图片（.png），解析节点与引用的模型</span></div>
+      <div class="title-row"><span class="page-title">工作流分析</span><span class="hint">拖入 ComfyUI 工作流（.json）或带内嵌工作流的图片（.png），解析节点与引用的模型</span></div>
       <div class="wf-drop" id="wfDrop">
         <div class="wf-drop-icon">📥</div>
         <div class="wf-drop-text">拖入文件到此处，或 <span class="wf-link" id="wfPick">点击选择</span></div>
@@ -353,7 +379,7 @@
     <div class="card">
       <div class="title-row">
         <h2 class="page-title">设置</h2>
-        <button class="btn" id="openLogs" data-tip="打开程序日志文件夹（startup.log / watchdog.log / error.log）—— 排查问题时把这里的日志发出来即可">📂 打开日志文件夹</button>
+        <button class="btn" id="openLogs" data-tip="打开程序日志文件夹（startup.log / watchdog.log / error.log）—— 排查问题时把这里的日志发出来即可">打开日志文件夹</button>
       </div>
       <div id="settingsForm"></div>
       <div class="btn-row sticky-actions" id="settingsActions">
