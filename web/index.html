@@ -117,11 +117,28 @@
 
       <!-- ===== Metro 工具区（仅 Metro 主题显示；按钮全部是"代理"，点击转给下面老按钮，逻辑零改动） ===== -->
       <div class="mm-metro">
-        <div class="mm-row">
+        <!-- 第一行：主操作（Primary / High / Medium） -->
+        <div class="mm-row mm-row1">
           <button class="btn btn-primary" data-proxy="mmScan" data-icon="scan">扫描模型</button>
           <button class="btn btn-l2" data-proxy="mmRefresh" data-icon="refresh">刷新</button>
           <button class="btn btn-l2" data-proxy="mmCheckUpd" data-icon="check">检查更新</button>
           <span class="mm-sep"></span>
+          <button class="btn btn-l2" data-proxy="mmUpdDl" data-icon="download">更新选中</button>
+          <button class="btn btn-l2" data-proxy="mmGoUpdates" data-icon="sort">去更新</button>
+          <span class="mm-spacer"></span>
+          <span class="btn-group">
+            <button class="btn" data-menu="mmMoreMenu"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-more"/></svg> 更多 <span class="car"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-chevron-down"/></svg></span></button>
+            <div class="mm-menu" id="mmMoreMenu">
+              <div class="mm-item" data-proxy="mmFolders" data-icon="folder">文件夹显隐</div>
+              <div class="mm-item" data-proxy="mmCleanup" data-icon="trash">清理冗余文件</div>
+              <div class="mm-sep-h"></div>
+              <div class="mm-item" data-act="logs" data-icon="file">打开日志文件夹</div>
+              <div class="mm-item" data-goto="settings" data-icon="settings">打开设置</div>
+            </div>
+          </span>
+        </div>
+        <!-- 第二行：工具菜单（Low，低视觉权重） -->
+        <div class="mm-row mm-row2">
           <span class="sp-btn btn-group">
             <button class="btn" data-proxy="mmRenameMain" data-icon="pencil" data-tip="改文件名（执行默认动作；右侧 ▾ 选择其它方式）">改名</button>
             <button class="btn sp-caret" data-menu="mmRenameMenu" data-tip="选择改名方式"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-chevron-down"/></svg></button>
@@ -158,19 +175,14 @@
               <div class="mm-item" data-proxy="mmCovers" data-icon="image">下载封面图</div>
             </div>
           </span>
-          <span class="mm-sep"></span>
-          <button class="btn btn-l2" data-proxy="mmUpdDl" data-icon="download">更新选中</button>
-          <button class="btn btn-l2" data-proxy="mmGoUpdates" data-icon="sort">去更新</button>
           <span class="mm-spacer"></span>
-          <span class="btn-group">
-            <button class="btn" data-menu="mmMoreMenu"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-more"/></svg> 更多</button>
-            <div class="mm-menu" id="mmMoreMenu" style="left:auto;right:0">
-              <div class="mm-item" data-act="logs">打开日志文件夹</div>
-              <div class="mm-item" data-goto="settings">打开设置</div>
-            </div>
+          <span class="mm-seg" id="mmViewSeg" data-tip="切换视图（默认瀑布流）">
+            <button class="btn seg" id="mmViewList"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-list"/></svg>列表</button>
+            <button class="btn seg" id="mmViewMasonry"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-grid"/></svg>瀑布流</button>
           </span>
         </div>
-        <div class="mm-row mm-row2">
+        <!-- 第三行：筛选（底模 / 状态 / 排序 + 方向 / 文件夹筛选） -->
+        <div class="mm-row mm-row3">
           <select class="input" id="mmBaseF" data-tip="按底模筛选"><option value="">全部底模</option></select>
           <select class="input" id="mmStF" data-tip="按更新状态筛选（需先检查更新）">
             <option value="">全部状态</option>
@@ -179,29 +191,22 @@
             <option value="none">未检查</option>
           </select>
           <select class="input" id="mmSortF" data-tip="排序方式（列表/瀑布流都生效）">
-                        <option value="name">排序：文件名</option>
+            <option value="name">排序：文件名</option>
             <option value="size">排序：大小</option>
             <option value="cname">排序：C站名称</option>
             <option value="ver">排序：版本</option>
-            <option value="mtime2">排序：更新时间</option>
             <option value="mtime">排序：下载时间</option>
             <option value="type">排序：类型</option>
             <option value="base">排序：基础模型</option>
           </select>
           <button class="btn" id="mmSortDir" data-tip="切换升序 / 降序"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-sort"/></svg>升序</button>
+          <span class="mm-sep"></span>
           <select class="input" id="mmFolderF" data-tip="按所在文件夹筛选模型">
             <option value="">全部文件夹</option>
           </select>
-          <span class="mm-spacer"></span>
-          <span class="mm-seg" id="mmViewSeg" data-tip="切换视图（默认瀑布流）">
-            <button class="btn seg" id="mmViewList"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-list"/></svg>列表</button>
-            <button class="btn seg" id="mmViewMasonry"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-grid"/></svg>瀑布流</button>
-          </span>
         </div>
       </div>
-      </div>
-
-      <div class="btn-row mm-legacy">
+<div class="btn-row mm-legacy">
         <button class="btn btn-primary" id="mmScan" data-tip="扫描所有模型管理目录，发现模型并读取元数据/封面">扫描模型</button>
         <button class="btn" id="mmRefresh" data-tip="重新扫描（不读元数据，只刷新列表）">刷新</button>
         <button class="btn" id="mmVerify" data-tip="计算文件哈希并与 C 站比对，校验文件是否完整">校验完整性</button>
@@ -243,9 +248,9 @@
       </div>
       <div class="table-wrap" id="mmTableWrap">
         <table class="grid" id="mmTable">
+          <colgroup><col class="c-sel"/><col class="c-name"/><col class="c-cname"/><col class="c-type"/><col class="c-base"/><col class="c-ver"/><col class="c-update"/><col class="c-hash"/><col class="c-size"/><col class="c-mtime"/><col class="c-path"/></colgroup>
           <thead><tr>
             <th class="c-sel" data-col="sel" id="mmSelAllTh">全选</th>
-            <th class="c-thumb" data-col="thumb">图</th>
             <th class="c-name" data-col="name" data-sort="name" data-tip="模型信息：上行 C站名（缺则文件名），下行 文件名/类型/底模/版本/大小">模型信息</th>
             <th class="c-name" data-col="cname" data-sort="cname">C站模型名</th>
             <th class="c-tiny" data-col="type" data-sort="type">类型</th>

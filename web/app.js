@@ -1178,9 +1178,8 @@ function renderMm() {
   tbody.innerHTML = rows.map((r, i) => {
     const rel = root ? r.path.replace(root.replace(/\\/g, "/"), "").replace(/^\//, "") : r.path;
     return '<tr data-idx="' + i + '" data-path="' + esc(r.path) + '" class="' + (state.mmSel.has(r.path) ? "sel-row" : "") + '">' +
-      '<td class="cell-sel">' + (state.mmChecked.has(r.path) ? "✅" : "⬜") + "</td>" +
-      '<td class="c-thumb"><img data-idx="' + i + '" data-path="' + esc(r.path) + '" class="thumb" alt=""/></td>' +
-      "<td class='c-name'><div class='ml-wrap'>" +
+      '<td class="cell-sel" data-col="sel">' + (state.mmChecked.has(r.path) ? "✅" : "⬜") + "</td>" +
+      "<td class='c-name' data-col='name'><div class='ml-wrap'>" +
         '<img data-idx="' + i + '" data-path="' + esc(r.path) + '" class="thumb ml-thumb" alt=""/>' +
         (r.upd && r.upd.has_update ? '<a href="#" class="mm-upd" data-url="' + esc(r.upd.url || "") + '" title="' + esc(updTip(r.upd)) + '">' + _icon("alert") + '</a>' : "") +
         '<div class="ml-txt">' +
@@ -1188,13 +1187,13 @@ function renderMm() {
           '<div class="ml-2" data-tip="' + esc(r.path) + '">' + esc(short(r.name, 46)) + "</div>" +
           ((r.author || (r.info && r.info.creator)) ? '<div class="ml-3">作者 ' + esc(r.author || (r.info && r.info.creator)) + "</div>" : "") +
         "</div></div></td>" +
-      "<td class='c-name' data-tip='' >" + esc(r.civitai_name || "-") + "</td>" +
-      "<td>" + esc(r.type || "-") + "</td><td>" + esc(r.base || "-") + "</td>" +
-      "<td class='c-ver'>" + esc(r.ver || "-") + "</td>" +
-      "<td>" + ((r.upd && (r.upd.has_update || r.upd.other_base)) ? '<span class="st-mini upd">' + _icon("alert") + '有更新</span>' : (r.upd ? '<span class="st-mini ok">' + _icon("check") + '已最新</span>' : "-")) + "</td>" +
-      "<td>" + esc(r.hash || "-") + "</td>" +
-      "<td>" + fmtSize(r.size) + "</td><td class='c-time'>" + fmtTime(r.mtime) + "</td>" +
-      "<td class='c-path' data-full='" + esc(rel.replace(/[^\\/]+$/, "")) + "'>" + esc(short(rel, 30)) + "</td></tr>";
+      "<td class='c-name' data-col='cname' data-tip='' >" + esc(r.civitai_name || "-") + "</td>" +
+      "<td data-col='type'>" + esc(r.type || "-") + "</td><td data-col='base'>" + esc(r.base || "-") + "</td>" +
+      "<td class='c-ver' data-col='ver'>" + esc(r.ver || "-") + "</td>" +
+      "<td data-col='update'>" + ((r.upd && (r.upd.has_update || r.upd.other_base)) ? '<span class="st-mini upd">' + _icon("alert") + '有更新</span>' : (r.upd ? '<span class="st-mini ok">' + _icon("check") + '已最新</span>' : "-")) + "</td>" +
+      "<td data-col='hash'>" + esc(r.hash || "-") + "</td>" +
+      "<td data-col='size'>" + fmtSize(r.size) + "</td><td class='c-time' data-col='mtime'>" + fmtTime(r.mtime) + "</td>" +
+      "<td class='c-path' data-col='path' data-full='" + esc(rel.replace(/[^\\/]+$/, "")) + "'>" + esc(short(rel, 30)) + "</td></tr>";
   }).join("");
   $("#mmCheckLabel").textContent = "已勾选 " + state.mmChecked.size + " 个";
   loadThumbs(0);
@@ -1290,15 +1289,16 @@ function mmApplyCols() {
   try {
     const raw = localStorage.getItem("mm_hidden_cols");
     if (raw === null) {                       // 首次：默认收起次级列（用户可在表头右键里改，改过就永久生效）
-      hidden = ["cname", "hash", "size", "path", "thumb"];
+      hidden = ["cname", "hash", "size", "path"];
       localStorage.setItem("mm_hidden_cols", JSON.stringify(hidden));
     } else {
       hidden = JSON.parse(raw || "[]");
     }
   } catch (e) { hidden = []; }
   const hs = new Set(hidden);
-  document.querySelectorAll("#mmTable thead th[data-col]").forEach((th) => {
-    th.style.display = hs.has(th.dataset.col) ? "none" : "";
+  // ★ 表头与数据行必须用同一份清单、同步隐藏（否则表头 A 位置/数据 B 位置）
+  document.querySelectorAll("#mmTable thead [data-col], #mmTable tbody [data-col]").forEach((el) => {
+    el.style.display = hs.has(el.dataset.col) ? "none" : "";
   });
 }
 $("#mmTable thead").addEventListener("contextmenu", (e) => {

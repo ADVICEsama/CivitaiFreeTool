@@ -864,3 +864,58 @@
 [data-theme="metro"] .vmenu .v-star { color: var(--metro-accent); font-weight: var(--fw-bold); }
 [data-theme="metro"] .vmenu .v-cur { font-size: var(--fs-xs); color: var(--c3); border: 1px solid var(--metro-border-input); border-radius: 9px; padding: 0 6px; }
 [data-theme="metro"] .vmenu .vopen { color: var(--metro-accent); font-weight: var(--fw-med); }
+
+/* ============================================================================
+   v2.1.52：表格列定义（colgroup，表头/数据行唯一来源）+ 内容不撑列
+   ========================================================================== */
+[data-theme="metro"] #mmTable { table-layout: fixed; width: 100%; }
+[data-theme="metro"] #mmTable col.c-sel { width: 46px; }
+[data-theme="metro"] #mmTable col.c-name { width: auto; }            /* 模型信息 = 弹性最大列 */
+[data-theme="metro"] #mmTable col.c-cname { width: 170px; }
+[data-theme="metro"] #mmTable col.c-type { width: 76px; }
+[data-theme="metro"] #mmTable col.c-base { width: 86px; }
+[data-theme="metro"] #mmTable col.c-ver { width: 88px; }
+[data-theme="metro"] #mmTable col.c-update { width: 104px; }
+[data-theme="metro"] #mmTable col.c-hash { width: 118px; }
+[data-theme="metro"] #mmTable col.c-size { width: 82px; }
+[data-theme="metro"] #mmTable col.c-mtime { width: 118px; }
+[data-theme="metro"] #mmTable col.c-path { width: 170px; }           /* 路径列最窄，空间不足先让位 */
+[data-theme="metro"] #mmTable thead th, [data-theme="metro"] #mmTable tbody td {
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* 工具栏分层：第一行主操作 / 第二行工具菜单 / 第三行筛选，行间细分隔线 */
+[data-theme="metro"] .mm-metro .mm-row1 { gap: 6px; padding-bottom: 6px; }
+[data-theme="metro"] .mm-metro .mm-row2 { gap: 6px; padding: 6px 0; border-top: 1px solid var(--metro-border-hair); }
+[data-theme="metro"] .mm-metro .mm-row3 { gap: 8px; padding: 8px 0 6px 0; border-top: 1px solid var(--metro-border-hair); }
+[data-theme="metro"] .mm-metro .btn { white-space: nowrap; }         /* 不许断词（"扫描模/型"） */
+
+/* ============================================================================
+   v2.1.52：更新页最右侧 [C站] / [···] 重做（更大更好点）+ 提示框直角化
+   ========================================================================== */
+[data-theme="metro"] .upd-acts2 { gap: 8px; }
+[data-theme="metro"] .upd-site {
+  display: inline-flex; align-items: center; gap: 5px;
+  height: 30px; padding: 0 10px;
+  border: 1px solid var(--metro-border-input); border-radius: 2px;
+  background: #fff; color: var(--metro-accent); font-size: var(--fs-sm);
+}
+[data-theme="metro"] .upd-site:hover { background: var(--metro-tint); border-color: var(--metro-accent); text-decoration: none; }
+[data-theme="metro"] .upd-site .ic { width: 13px; height: 13px; }
+[data-theme="metro"] .upd-more {
+  width: 30px; height: 30px; border: 1px solid var(--metro-border-input); border-radius: 2px;
+  background: #fff; color: var(--c2); display: inline-flex; align-items: center; justify-content: center;
+}
+[data-theme="metro"] .upd-more:hover { background: var(--metro-tint); border-color: var(--metro-accent); color: var(--metro-accent); }
+[data-theme="metro"] .upd-go { height: 30px; padding: 0 12px; font-size: var(--fs-sm); }
+
+/* 提示框：Win10 直角扁平（去掉圆角与缩放） */
+[data-theme="metro"] .tip-float {
+  border-radius: 0 !important;
+  background: #2b2b2b !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, .25) !important;
+  transform: none !important;
+  font-size: var(--fs-xs);
+}
+[data-theme="metro"] .tip-float.show { transform: none !important; }
+[data-theme="metro"] [data-tip]:hover::after { border-radius: 0 !important; }
