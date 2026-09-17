@@ -1395,3 +1395,9 @@ td.cell-dest:hover { color: var(--accent, #4da3ff); text-decoration: underline d
 
 /* 检查更新进行中：按钮显示可停止 */
 .btn.is-busy { border-color: var(--danger, #e5484d); color: var(--danger, #e5484d); }
+
+/* 可排序表头 */
+.upd-table thead th.sortable { cursor: pointer; user-select: none; }
+.upd-table thead th.sortable:hover { color: var(--text); background: rgba(127,127,127,.10); }
+.upd-table thead th.on { color: var(--text); }
+.upd-table thead th .th-sort { font-size: 10px; opacity: .9; }

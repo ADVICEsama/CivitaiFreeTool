@@ -231,6 +231,7 @@ const state = {
   updPick: {},               //「更新」页面每行下拉选中的目标版本 {path: versionId}
   updQ: "", updBase: "", updState: "", updSortKey: "date",
   updPer: 50, updPage: 1,
+  updSortRev: true,          // 表头排序方向（点击切换）
   updCtxPath: "",            //「更新」页面右键/··· 的目标
   updBatchBusy: false,       // 批量更新进行中（防重复点击）
   mmLastSel: -1,
@@ -1684,11 +1685,31 @@ function _updFilterRows() {
   if (state.updState) rows = rows.filter((x) => _updState(x.it).k === state.updState);
   if (q) rows = rows.filter((x) => ((x.it.model_name || "") + " " + x.path + " " + (x.it.local_name || "") + " " + (x.it.author || "")).toLowerCase().includes(q));
   const sk = state.updSortKey || "date";
-  rows.sort((a, b) => {
-    if (sk === "name") return String(a.it.model_name || _updBase(a.path)).localeCompare(String(b.it.model_name || _updBase(b.path)));
-    if (sk === "state") return _updState(a.it).k.localeCompare(_updState(b.it).k) || String(a.path).localeCompare(String(b.path));
-    return String(b.it.latest_date || b.it.local_date || "").localeCompare(String(a.it.latest_date || a.it.local_date || ""));
-  });
+  const rev = !!state.updSortRev;
+  // 各列默认方向：date/ver 默认"新的多者在前"(降序)，其余默认升序
+  // 说明：比较器一律按升序写，rev=true 时才 reverse()
+  const ST_RANK = { upd: 0, other: 1, unknown: 2, todo: 3, latest: 4 };   // 有更新在前
+  const cmp = (a, b) => {
+    if (sk === "name") {
+      const x = String(a.it.model_name || _updBase(a.path)), y = String(b.it.model_name || _updBase(b.path));
+      return x.localeCompare(y, "zh") || String(a.path).localeCompare(b.path);
+    }
+    if (sk === "cur") {
+      return _verCmp(String(a.it.local_name || ""), String(b.it.local_name || "")) || String(a.path).localeCompare(b.path);
+    }
+    if (sk === "ver") {
+      const x = (a.it.ver_list || []).length, y = (b.it.ver_list || []).length;
+      return (x - y) || String(a.path).localeCompare(b.path);          // 升序；"多的在前"是默认方向(rev)
+    }
+    if (sk === "state") {
+      return (ST_RANK[_updState(a.it).k] ?? 9) - (ST_RANK[_updState(b.it).k] ?? 9)
+        || String(a.path).localeCompare(b.path);
+    }
+    const x = String(a.it.latest_date || a.it.local_date || ""), y = String(b.it.latest_date || b.it.local_date || "");
+    return x.localeCompare(y) || String(a.path).localeCompare(b.path);  // 升序；"新的在前"是默认方向(rev)
+  };
+  rows.sort(cmp);
+  if (rev) rows.reverse();
   return rows;
 }
 
@@ -1748,6 +1769,22 @@ async function renderUpdatesPage() {
     tbody.innerHTML = pageRows.map(_updRowHtml).join("");
     loadDdThumbs(tbody, pageRows.map((x) => x.path), 64);
   }
+
+  // 表头排序指示
+  try {
+    const sk2 = state.updSortKey || "date", rv = !!state.updSortRev;
+    document.querySelectorAll("#updTable thead th.sortable").forEach((th) => {
+      const on = th.dataset.key === sk2;
+      th.classList.toggle("on", on);
+      const sp = th.querySelector(".th-sort");
+      if (sp) sp.textContent = on ? (rv ? " ▼" : " ▲") : "";
+    });
+    const sel = $("#updSort");
+    if (sel) {
+      const map = { date: "date", name: "name", state: "state" };
+      if (map[sk2]) sel.value = map[sk2];
+    }
+  } catch (e) { /* 忽略 */ }
 
   // 底栏
   const st1 = $("#updStat");
@@ -2047,8 +2084,28 @@ if ($("#updSearch")) {
 }
 if ($("#updBase")) $("#updBase").addEventListener("change", (e) => { state.updBase = e.target.value; state.updPage = 1; renderUpdatesPage(); });
 if ($("#updState")) $("#updState").addEventListener("change", (e) => { state.updState = e.target.value; state.updPage = 1; renderUpdatesPage(); });
-if ($("#updSort")) $("#updSort").addEventListener("change", (e) => { state.updSortKey = e.target.value; renderUpdatesPage(); });
+if ($("#updSort")) $("#updSort").addEventListener("change", (e) => { state.updSortKey = e.target.value; state.updSortRev = (e.target.value === "date"); state.updPage = 1; renderUpdatesPage(); });   // 下拉只有 时间/名称/状态，方向与表头一致
 if ($("#updPer")) $("#updPer").addEventListener("change", (e) => { state.updPer = Number(e.target.value) || 50; state.updPage = 1; renderUpdatesPage(); });
+// 表头点击排序：同一列再点一次切换升/降序
+(function bindUpdHeaderSort() {
+  const thead = document.querySelector("#updTable thead");
+  if (!thead) return;
+  thead.addEventListener("click", (e) => {
+    const th = e.target.closest("th.sortable");
+    if (!th) return;
+    const key = th.dataset.key || "";
+    if (!key) return;
+    const DEF_REV = { date: true, ver: true };    // 这两列默认"新的/多者在前"
+    if (state.updSortKey === key) state.updSortRev = !state.updSortRev;
+    else {
+      state.updSortKey = key;
+      state.updSortRev = !!DEF_REV[key];
+    }
+    state.updPage = 1;
+    renderUpdatesPage();
+  });
+})();
+
 if ($("#updPager")) $("#updPager").addEventListener("click", (e) => {
   const b = e.target.closest("button.pg");
   if (!b || b.disabled) return;

@@ -184,11 +184,11 @@
         <thead>
           <tr>
             <th class="c-ck"><input type="checkbox" id="updAll" data-tip="全选当前页"/></th>
-            <th class="c-info">模型信息</th>
-            <th class="c-cur">当前版本</th>
-            <th class="c-ver">同底模可用版本</th>
-            <th class="c-date">发布时间</th>
-            <th class="c-st">状态</th>
+            <th class="c-info sortable" data-key="name" data-tip="点击按模型名排序">模型信息<span class="th-sort"></span></th>
+            <th class="c-cur sortable" data-key="cur" data-tip="点击按当前版本排序（语义化：v1.2 在 v1.10 前）">当前版本<span class="th-sort"></span></th>
+            <th class="c-ver sortable" data-key="ver" data-tip="点击按可选版本数量排序">同底模可用版本<span class="th-sort"></span></th>
+            <th class="c-date sortable" data-key="date" data-tip="点击按发布时间排序">发布时间<span class="th-sort"></span></th>
+            <th class="c-st sortable" data-key="state" data-tip="点击按状态排序（有更新在前）">状态<span class="th-sort"></span></th>
             <th class="c-act">操作</th>
           </tr>
         </thead>
