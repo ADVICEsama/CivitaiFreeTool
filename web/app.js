@@ -3614,6 +3614,45 @@ $("#mmSendRp").addEventListener("click", async () => {
   setStatus("已发送 " + p.length + " 个到反向解析");
 });
 
+// 批量从 C 站同步：勾选模型 → 加入反向解析队列并立即开始 → 进度 → 汇总
+let _batchSyncBusy = false;
+async function mmSyncBatchRun() {
+  if (_batchSyncBusy) { setStatus("批量同步正在进行中…"); return; }
+  const paths = mmCheckedPaths();
+  if (!paths) { setStatus("请先勾选要同步的模型（可先「全选」）"); return; }
+  const ok = await confirmBox(
+    "将从 C 站获取这 " + paths.length + " 个模型的最新信息（名称 / 简介 / 触发词 / 版本等），并更新本地记录。" +
+    "\n\n每模型约 1~4 秒，数据量大时需要较长时间。开始吗？");
+  if (!ok) return;
+  _batchSyncBusy = true;
+  try {
+    await api.call("rp_add_paths", paths);
+    await api.call("rp_start");
+    const t0 = Date.now();
+    let st = null;
+    while (true) {
+      await new Promise((r) => setTimeout(r, 1500));
+      st = await api.call("rp_state").catch(() => null);
+      if (st && st.total) setStatus("批量同步中… " + (st.done || 0) + " / " + st.total);
+      if (!st || st.running === false) break;
+      if (Date.now() - t0 > 3 * 3600 * 1000) break;
+    }
+    const rows = (await api.call("rp_get_rows").catch(() => null)) || [];
+    const failN = rows.filter((r) => /失败|未收录|错误/.test(String(r.status || ""))).length;
+    const okN = Math.max(0, rows.length - failN);
+    setStatus("批量同步完成：成功 " + okN + " 个" + (failN ? "，失败/未收录 " + failN + " 个" : "") + "（列表显示如需刷新请点「刷新」）");
+    try { if (typeof window.toast === "function") window.toast("批量同步完成：成功 " + okN + " 个" + (failN ? "，失败 " + failN + " 个" : ""), 5000); } catch (e) { }
+  } catch (e) {
+    setStatus("批量同步失败：" + (e && e.message || e));
+  } finally {
+    _batchSyncBusy = false;
+  }
+}
+document.querySelectorAll(".mm-metro [data-act='syncbatch']").forEach((it) => {
+  if (it._sb) return; it._sb = 1;
+  it.addEventListener("click", () => { _closeMmMenus(); mmSyncBatchRun(); });
+});
+
 // 打开入口：行双击 / 瀑布流卡片双击（单击统一为选中）
 
 // ================= 反向解析 =================
@@ -4099,6 +4138,9 @@ async function init() {
   // 应用主题（dark / light / modern）
   const theme = state.cfg.theme || "modern";
   document.documentElement.dataset.theme = theme;
+  // 主题既已确定：立即重算 亮暗/主题色/设置页联动，并重刷代理按钮标签
+  // （启动时 bindMmMetro 早于 init 运行，那一刻主题还是空的 → 代理标签会走经典分支；这里补一次重刷）
+  try { applyUiAppearance(); } catch (e) { }
   // 界面缩放
   applyZoom(Number(state.cfg.ui_zoom) || 100);
   // 启动默认页
