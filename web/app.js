@@ -1226,23 +1226,54 @@ async function loadThumbs(start) {
   loadThumbs(start + 40);
 }
 
-// ===== 表头列宽拖拽 =====
+// ===== 表头列宽拖拽（v2.1.74 重做）=====
+// 规则：拖动某列右缘的分隔线 → 调整【该列】；若该列是"模型信息"（弹性 auto 列），则调整它右边那一列。
+// 这样：拖「基础」左边的线 = 调「基础」（分隔线归属直觉一致）；宽度增减由弹性列自动吸收 → 表格永远铺满、右侧不留空。
+// 宽度按列名存 localStorage（mm_col_w2），mmApplyCols 重建 colgroup 后自动恢复；双击分隔线 = 重置该列。
 (function () {
   let drag = null;
+  const KEY = "mm_col_w2";
+  const FLEX = "name";                     // 弹性列（width:auto）
+  function thOf(colName) { return document.querySelector('#mmTable th[data-col="' + colName + '"]'); }
+  function colOf(colName) { return document.querySelector('#mmTable col.c-' + colName); }
+  function visibleNext(th) {
+    let el = th.nextElementSibling;
+    while (el && el.style.display === "none") el = el.nextElementSibling;
+    return (el && el.dataset && el.dataset.col) ? el : null;
+  }
+  function targetOf(th) {                  // 分隔线（th 右缘）对应目标列：默认左列；左列是弹性列时取右列
+    if (th.dataset.col !== FLEX) return th;
+    const nx = visibleNext(th);
+    return (nx && nx.dataset.col !== FLEX) ? nx : null;
+  }
+  function applyWidth(colName, px) {
+    const v = Math.round(px) + "px";
+    const col = colOf(colName); if (col) col.style.width = v;
+    const th = thOf(colName); if (th) th.style.width = v;
+  }
+  function saveWidths() {
+    const out = {};
+    document.querySelectorAll("#mmTable col[class^='c-']").forEach((c) => {
+      const name = c.className.replace(/^c-/, "");
+      if (c.style.width && name !== FLEX) out[name] = c.style.width;
+    });
+    try { localStorage.setItem(KEY, JSON.stringify(out)); } catch (e) { }
+  }
+  function restoreWidths() {
+    let w = {};
+    try { w = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) { }
+    Object.keys(w).forEach((k) => { if (k !== FLEX) applyWidth(k, parseFloat(w[k])); });
+  }
   document.addEventListener("mousemove", (e) => {
     if (!drag) return;
-    const zf = parseFloat(document.documentElement.style.zoom) || 1;
+    const zf = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
     const w = Math.max(50, drag.startW + (e.clientX - drag.startX) / zf);
-    drag.th.style.width = w + "px";
+    applyWidth(drag.col, w);
   });
   document.addEventListener("mouseup", () => {
     if (!drag) return;
-    drag.th.classList.remove("resizing");
-    const widths = {};
-    document.querySelectorAll("#mmTable th[data-col]").forEach((th) => {
-      widths[th.dataset.col] = th.style.width;
-    });
-    try { localStorage.setItem("mm_col_widths", JSON.stringify(widths)); } catch (e) {}
+    const th = thOf(drag.col); if (th) th.classList.remove("resizing");
+    saveWidths();
     drag = null;
   });
   function bindResize() {
@@ -1251,20 +1282,24 @@ async function loadThumbs(start) {
       const hd = document.createElement("div");
       hd.className = "col-resize";
       hd.addEventListener("mousedown", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        drag = { th, startX: e.clientX, startW: th.getBoundingClientRect().width };
-        th.classList.add("resizing");
+        const tg = targetOf(th);
+        if (!tg) return;                      // 弹性列两侧（无法定宽）→ 不响应
+        e.preventDefault(); e.stopPropagation();
+        const targetTh = thOf(tg.dataset.col);
+        drag = { col: tg.dataset.col, startX: e.clientX,
+                 startW: targetTh ? targetTh.getBoundingClientRect().width : 100 };
+        tg.classList.add("resizing");
+      });
+      hd.addEventListener("dblclick", () => { // 双击 = 重置该列宽度
+        const tg = targetOf(th);
+        if (!tg) return;
+        const col = colOf(tg.dataset.col); if (col) col.style.width = "";
+        if (tg) tg.style.width = "";
+        saveWidths();
       });
       th.appendChild(hd);
     });
-    // 恢复保存的宽度
-    try {
-      const widths = JSON.parse(localStorage.getItem("mm_col_widths") || "{}");
-      document.querySelectorAll("#mmTable th[data-col]").forEach((th) => {
-        if (widths[th.dataset.col]) th.style.width = widths[th.dataset.col];
-      });
-    } catch (e) {}
+    restoreWidths();
   }
   // 表格渲染后重新绑定（renderMm 调用 mmApplyCols 后）
   const origApply = window.mmApplyCols;
