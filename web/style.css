@@ -1459,3 +1459,13 @@ td.cell-dest:hover { color: var(--accent, #4da3ff); text-decoration: underline d
 .upd-tabs .upd-tab .dot.other { background: #666; }
 .upd-tabs .upd-tab .dot.unknown, .upd-tabs .upd-tab .dot.todo { background: #B26A00; }
 .upd-tabs .upd-tab.on { color: var(--text); font-weight: 600; background: var(--surface2); }
+
+
+/* 模型信息单元格：缩略图与文字左右排列（所有主题统一，勿再做成主题专属——经典主题下缩略图曾叠在文字上方） */
+.ml-wrap { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.ml-wrap .ml-thumb { flex: 0 0 auto; }
+.ml-txt { min-width: 0; flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; gap: 1px; }
+.ml-1, .ml-2, .ml-3 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 暗色主题：使用深色滚动条（WebView2 默认浅色滚动条在暗色主题下是一条白线） */
+html[data-theme^="dark"] { color-scheme: dark; }

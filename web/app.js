@@ -1182,8 +1182,7 @@ function renderMm() {
         '<img data-idx="' + i + '" data-path="' + esc(r.path) + '" class="thumb ml-thumb" alt=""/>' +
         (r.upd && r.upd.has_update ? '<a href="#" class="mm-upd" data-url="' + esc(r.upd.url || "") + '" title="' + esc(updTip(r.upd)) + '">' + _icon("alert") + '</a>' : "") +
         '<div class="ml-txt">' +
-          '<div class="ml-1" data-tip="' + esc(r.civitai_name || r.name) + '">' + esc(r.civitai_name || r.name) + "</div>" +
-          '<div class="ml-2" data-tip="' + esc(r.path) + '">' + esc(short(r.name, 46)) + "</div>" +
+          '<div class="ml-1" data-tip="' + esc((r.civitai_name || r.name) + "\n" + String(r.name || "")) + '">' + esc(r.civitai_name || r.name) + "</div>" +
           ((r.author || (r.info && r.info.creator)) ? '<div class="ml-3">作者 ' + esc(r.author || (r.info && r.info.creator)) + "</div>" : "") +
         "</div></div></td>" +
       "<td class='c-name' data-col='cname' data-tip='' >" + esc(r.civitai_name || "-") + "</td>" +
@@ -1280,7 +1279,7 @@ $("#mmTable thead").addEventListener("click", (e) => {
 });
 
 // ===== 模型列表列显隐（右键表头） =====
-const MM_COLS = [["sel", "勾选"], ["thumb", "缩略图"], ["name", "文件名"], ["cname", "C站模型名"],
+const MM_COLS = [["sel", "勾选"], ["thumb", "缩略图"], ["name", "模型信息"], ["cname", "C站模型名"],
                  ["type", "类型"], ["base", "基础模型"], ["ver", "版本"], ["update", "更新"],
                  ["hash", "哈希"], ["size", "大小"], ["mtime", "下载时间"], ["path", "路径"]];
 function mmApplyCols() {
@@ -1312,6 +1311,9 @@ function mmApplyCols() {
     cg.innerHTML = ths.filter((th) => !hs.has(th.dataset.col))
       .map((th) => '<col class="c-' + th.dataset.col + '"/>').join("");
   }
+  // 「缩略图」是伪列（缩略图在模型信息单元格里，没有独立 <col>）：用表上的 class 控制
+  const tbl = document.getElementById("mmTable");
+  if (tbl) tbl.classList.toggle("no-thumb", hs.has("thumb"));
 }
 $("#mmTable thead").addEventListener("contextmenu", (e) => {
   e.preventDefault();
@@ -1348,6 +1350,14 @@ $("#ctxMenu").addEventListener("click", (e) => {
   localStorage.setItem("mm_hidden_cols", JSON.stringify(Array.from(hs)));
   mmApplyCols();
   $("#ctxMenu").style.display = "none";
+});
+// 「显示列」等右键面板：点击面板外或按 Esc 关闭（此前只能靠再次切换列才会关，用户反馈"关不掉"）
+document.addEventListener("click", (e) => {
+  const m = $("#ctxMenu");
+  if (m && m.style.display === "block" && e.target && !(e.target.closest && e.target.closest("#ctxMenu"))) m.style.display = "none";
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") { const m = $("#ctxMenu"); if (m) m.style.display = "none"; }
 });
 // 渲染后应用列显隐（在 renderMm 列表分支后调用）
 
@@ -3783,6 +3793,7 @@ function applyUiAppearance() {
   }
   // 主题切换后：代理按钮标签需要按主题重刷（经典带 emoji / Metro 不带）
   try { (window._mmLabelSync || []).forEach((f) => f()); } catch (e) { }
+  try { _applyMetroOpts(); } catch (e) { }
 }
 
 // 设置项 hover 说明（鼠标移到标签上显示功能作用）
@@ -3923,16 +3934,36 @@ function buildSettingsForm() {
     '<label data-tip="删除模型目录下所有「模型名.images」图片缓存文件夹（详情面板里下载的示例图），释放磁盘空间；封面缩略图不受影响">图片缓存清理</label>' +
     '<div><button class="btn" id="btnCleanImgCache">删除下载的图片文件夹</button></div>' +
     "</div></fieldset>";
-  // Metro 专属项（亮暗 / 主题色）仅在 Metro 主题下显示
+  // Metro 专属项（亮暗 / 主题色）仅在 Metro 主题下显示；斑马纹在 Metro 下自动关闭（样式不生效，用户要求直接关掉）
+  _applyMetroOpts();
+
+}
+
+
+// Metro 主题的选项联动：亮暗/主题色仅 Metro 显示；斑马纹仅 Metro 下强制关闭
+function _applyMetroOpts() {
   try {
+    const isMetro = document.documentElement.dataset.theme === "metro";
     ["ui_scheme", "metro_accent"].forEach((k) => {
       const el = document.querySelector('#settingsForm [data-key="' + k + '"]');
       if (!el) return;
       const cell = el.parentElement; if (cell) cell.classList.add("metro-opt");
       const lab = cell && cell.previousElementSibling; if (lab) lab.classList.add("metro-opt");
     });
+    const zb = document.querySelector('#settingsForm [data-key="zebra_rows"]');
+    if (zb) {
+      const mode = isMetro ? "metro" : "normal";
+      if (zb._lastMode !== mode) {
+        zb._lastMode = mode;
+        zb.disabled = isMetro;
+        if (isMetro) zb.checked = false;
+        else zb.checked = !!(state.cfg && state.cfg.zebra_rows);
+      }
+      const wrap = zb.closest("div");
+      const lab = wrap && wrap.previousElementSibling;
+      if (lab) lab.dataset.tip = isMetro ? "Metro 主题不使用斑马纹：该选项在 Metro 下自动关闭" : "模型列表行间斑马纹，便于横向对齐查看";
+    }
   } catch (e) { }
-
 }
 
 // 密码框小眼睛（切换明文显示）

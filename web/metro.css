@@ -1128,3 +1128,10 @@ svg.ic { width: 16px; height: 16px; flex: 0 0 auto; vertical-align: -3px; }
 
 /* 经典主题：按钮带 emoji 时隐藏 SVG 图标（emoji 替代图标；Metro 相反） */
 html:not([data-theme="metro"]) .emj ~ .ic { display: none !important; }
+
+
+/* Metro 亮暗的滚动条色 */
+[data-scheme="dark"] { color-scheme: dark; }
+[data-scheme="light"] { color-scheme: light; }
+/* 显示列面板：关闭"缩略图"时隐藏单元格缩略图（伪列，无真实 <col>） */
+#mmTable.no-thumb .ml-thumb { display: none; }
