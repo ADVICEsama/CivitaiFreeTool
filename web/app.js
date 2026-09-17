@@ -1556,6 +1556,7 @@ $("#mmMasonry").addEventListener("contextmenu", (e) => {
     '<div class="ctx-item" data-act="rp" data-tip="从 C 站匹配该模型的名字/触发词/封面">识别模型信息</div>' +
     '<div class="ctx-item" data-act="wl" data-tip="以后不再提示这个模型的更新（按模型记入白名单）">不再提醒更新（加入白名单）</div>' +
     '<div class="ctx-item" data-act="organize" data-tip="把该模型移动到分类文件夹（需先在设置选 目标环境）">整理模型</div>' +
+    '<div class="ctx-item" data-act="move" data-tip="把该模型文件（连同 info/预览图/示例图等附属文件）移动到指定文件夹">移动文件…</div>' +
     '<hr class="ctx-sep"/>' +
     '<div class="ctx-item danger" data-act="del" data-tip="把该模型文件移入回收站（可还原）">移入回收站</div>';
   menu.style.display = "block";
@@ -3159,10 +3160,13 @@ $("#ctxMenu").addEventListener("click", async (e) => {
         showToast("已复制路径/链接");
       }
     } else if (act === "img_ascover") {
-      // 设为模型缩略图：用右键的这张本地图覆盖封面（无封面则生成 <名>.preview.png）
-      if (!localImgPath) { showToast("该图没有本地文件（先等详情页把示例图下载到本地）"); }
+      // 设为模型缩略图：本地图直接设；只有在线地址的先自动下载到本地再设
+      const srcCov = c.local_path || (c.local ? detailRow.path : null);
+      const urlCov = c.orig_url || c.url || "";
+      if (!srcCov && !urlCov) { showToast("这张图既没有本地文件也没有在线地址，无法设置"); }
       else {
-        const rCov = await api.call("set_model_cover", detailRow.path, localImgPath);
+        if (!srcCov) showToast("该图尚未下载到本地，正在在线获取后设为缩略图…");
+        const rCov = await api.call("set_model_cover", detailRow.path, srcCov || "", urlCov);
         if (rCov && rCov.ok) {
           showToast("已把这张图设为模型缩略图");
           setStatus("已设为模型缩略图：" + (detailRow.name || detailRow.path || ""));
@@ -3508,6 +3512,7 @@ $("#mmTable tbody").addEventListener("contextmenu", (e) => {
     '<div class="ctx-item" data-act="rp" data-tip="从 C 站匹配该模型的名字/触发词/封面">识别模型信息</div>' +
     '<div class="ctx-item" data-act="wl" data-tip="以后不再提示这个模型的更新（按模型记入白名单）">不再提醒更新（加入白名单）</div>' +
     '<div class="ctx-item" data-act="organize" data-tip="把该模型移动到分类文件夹（需先在设置选 目标环境）">整理模型</div>' +
+    '<div class="ctx-item" data-act="move" data-tip="把该模型文件（连同 info/预览图/示例图等附属文件）移动到指定文件夹">移动文件…</div>' +
     '<hr class="ctx-sep"/>' +
     '<div class="ctx-item danger" data-act="del" data-tip="把该模型文件移入回收站（可还原）">移入回收站</div>';
   menu.style.display = "block";
@@ -3580,6 +3585,8 @@ $("#ctxMenu").addEventListener("click", async (e) => {
       setStatus("整理完成，刷新中...");
       await api.call("scan_models");
       pollMmScan();
+    } else if (act === "move") {
+      await showMoveDialog(path);
     } else if (act === "del") {
       if (!(await confirmBox("确定将「" + (ctxRow.name || path) + "」移入回收站？"))) return;
       const res = await api.call("rm_file", path);
@@ -3623,6 +3630,71 @@ function showRenameDialog(path, oldName) {
     pollMmScan();
   });
   inp.addEventListener("keydown", (e) => { if (e.key === "Enter") $("#rdOk").click(); });
+}
+
+async function showMoveDialog(path) {
+  // 已知文件夹：实时取 get_folders（树路径是相对 → 拼 root 成绝对路径）
+  let root = "";
+  let tree = null;
+  try {
+    const j = JSON.parse((await api.call("get_folders")) || "{}");
+    root = (j && j.root) || "";
+    tree = Array.isArray(j) ? j : ((j && j.tree) || []);
+    _mmFolderTree = tree;
+  } catch (e) { tree = _mmFolderTree || []; }
+  const _abs = (p2) => (/^([A-Za-z]:[\\/]|\/)/.test(String(p2)) ? p2 : (root ? root.replace(/[\\/]+$/, "") + "/" + p2 : p2));
+  const flat = [];
+  (function walk(nodes, depth) {
+    (nodes || []).forEach((n) => {
+      if (n && n.path) flat.push({ path: _abs(n.path), name: (depth ? "\u3000".repeat(depth) : "") + (n.name || n.path) });
+      if (n && n.children) walk(n.children, depth + 1);
+    });
+  })(tree, 0);
+  const curDir = String(path).replace(/[\\/][^\\/]*$/, "");
+  const mask = document.createElement("div");
+  mask.className = "rd-mask";
+  const dlg = document.createElement("div");
+  dlg.className = "rename-dialog mv-dialog";
+  dlg.innerHTML =
+    '<div class="rd-title">移动文件（含附属文件）</div>' +
+    '<div class="mv-info">' + esc(String(path).split(/[\\/]/).pop() || path) + '</div>' +
+    '<div class="mv-info mv-dim">当前位置：' + esc(curDir) + '</div>' +
+    '<select class="input" id="mvSel">' +
+    (flat.some((f) => f.path === curDir) ? "" : '<option value="' + esc(curDir) + '">' + esc(curDir) + "</option>") +
+    flat.map((f) => '<option value="' + esc(f.path) + '">' + esc(f.name) + "</option>").join("") +
+    "</select>" +
+    '<div class="rd-actions">' +
+    '<button class="btn" id="mvBrowse" data-tip="选择列表之外的文件夹（仍须位于模型管理目录内）">浏览…</button>' +
+    '<span style="flex:1"></span>' +
+    '<button class="btn" id="mvCancel">取消</button>' +
+    '<button class="btn btn-primary" id="mvOk">移动</button></div>';
+  document.body.appendChild(mask);
+  document.body.appendChild(dlg);
+  const sel = $("#mvSel");
+  if (sel && flat.some((f) => f.path === curDir)) sel.value = curDir;
+  const close = () => { mask.remove(); dlg.remove(); };
+  $("#mvCancel").addEventListener("click", close);
+  mask.addEventListener("click", close);
+  $("#mvBrowse").addEventListener("click", async () => {
+    const d = await api.call("pick_dir");
+    const v = Array.isArray(d) ? (d[0] || "") : String(d || "");
+    if (!v) return;
+    if (!Array.from(sel.options).some((o) => o.value === v)) {
+      const o = document.createElement("option");
+      o.value = v; o.textContent = "（浏览）" + v;
+      sel.appendChild(o);
+    }
+    sel.value = v;
+  });
+  $("#mvOk").addEventListener("click", async () => {
+    const dest = sel.value;
+    if (!dest) return;
+    close();
+    setStatus("正在移动…");
+    const res = await api.call("mm_move", path, dest);
+    setStatus((res && res.msg) || "移动完成");
+    if (res && res.ok) { await api.call("scan_models"); pollMmScan(); }
+  });
 }
 
 function pollMmProgress() {

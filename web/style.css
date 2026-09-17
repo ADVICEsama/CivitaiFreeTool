@@ -1562,3 +1562,10 @@ html[data-theme^="dark"] { color-scheme: dark; }
 [data-theme="metro"] .wf-nodes .wf-empty { padding: 10px; }
 [data-theme="metro"] .wf-status { border-radius: 4px; }
 [data-theme="metro"] .wf-tag { background: transparent; }
+
+
+/* ===== 移动文件弹窗（v2.2.3）===== */
+.mv-info { font-size: 12.5px; color: var(--text); margin: 2px 0 4px; word-break: break-all; }
+.mv-info.mv-dim { color: var(--text-dim); font-size: 11.5px; margin-bottom: 10px; }
+.mv-dialog select.input { width: 100%; box-sizing: border-box; margin-bottom: 6px; }
+.mv-dialog .rd-actions { display: flex; gap: 8px; align-items: center; }

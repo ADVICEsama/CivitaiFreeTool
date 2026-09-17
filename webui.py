@@ -11,7 +11,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.2.2"
+APP_VERSION = "2.2.3"
 
 import civitai_api
 import config
@@ -904,15 +904,30 @@ class Api:
             "covers": covers,
         }, ensure_ascii=False)
 
-    def set_model_cover(self, path, img_path):
-        """把本地图片设为模型缩略图：覆盖当前封面文件；无封面时生成 <名>.preview.png"""
+    def set_model_cover(self, path, img_path, img_url=""):
+        """把图片设为模型缩略图。img_path 为本地图；本地没有时用 img_url 自动下载到 <名>.images/ 再设置。"""
         try:
             import os as _os
             from PIL import Image
-            if not path or not img_path or not _os.path.exists(path) or not _os.path.exists(img_path):
-                return {"ok": False, "msg": "文件不存在"}
+            if not path or not _os.path.exists(path):
+                return {"ok": False, "msg": "模型文件不存在"}
             base, _ = _os.path.splitext(path)
             mdir = _os.path.dirname(_os.path.abspath(path))
+            if (not img_path or not _os.path.exists(img_path)) and img_url:
+                idir = _os.path.join(mdir, _os.path.basename(base) + ".images")
+                try:
+                    _os.makedirs(idir, exist_ok=True)
+                except Exception:
+                    pass
+                dl = _os.path.join(idir, "image_cover.png")
+                okd = _download_image(img_url, dl,
+                                      proxy=self.cfg.get("proxy_address") if self.cfg.get("proxy_enabled") else None,
+                                      verify=self.cfg.get("ssl_verify", True))
+                if not okd:
+                    return {"ok": False, "msg": "在线获取这张图失败（网络/代理问题），稍后再试"}
+                img_path = dl
+            if not img_path or not _os.path.exists(img_path):
+                return {"ok": False, "msg": "图片文件不存在"}
             idir = _os.path.abspath(img_path)
             bimg = _os.path.abspath(base + ".images")
             same_dir = _os.path.dirname(idir) == mdir
@@ -2832,6 +2847,51 @@ class Api:
 
         threading.Thread(target=work, daemon=True).start()
         return {"started": True}
+
+    def mm_move(self, path, dest_dir):
+        """把模型文件（连同 info/预览图/示例图/.images 目录等附属文件）移动到目标文件夹。
+        仅允许目标位于模型管理目录内；同名冲突拒绝。"""
+        try:
+            if isinstance(dest_dir, (list, tuple)):
+                dest_dir = dest_dir[0] if dest_dir else ""
+            if not path or not os.path.exists(path):
+                return {"ok": False, "msg": "模型文件不存在"}
+            if not dest_dir or not os.path.isdir(dest_dir):
+                return {"ok": False, "msg": "目标文件夹不存在"}
+            dest_abs = os.path.abspath(dest_dir)
+            roots = [os.path.abspath(r) for r in self._models_roots()]
+            _ok_root = any(dest_abs.lower() == r.lower() or dest_abs.lower().startswith(r.lower() + os.sep) for r in roots)
+            if not _ok_root:
+                return {"ok": False, "msg": "目标不在模型管理目录内，已拒绝（可先在设置里添加该目录）"}
+            src = os.path.abspath(path)
+            if os.path.dirname(src) == dest_abs:
+                return {"ok": False, "msg": "文件已经在该文件夹里，无需移动"}
+            dst = os.path.join(dest_abs, os.path.basename(src))
+            if os.path.exists(dst):
+                return {"ok": False, "msg": "目标文件夹已有同名文件，已放弃（请先重命名或处理冲突）"}
+            shutil.move(src, dst)
+            base_src, _ = os.path.splitext(src)
+            base_dst, _ = os.path.splitext(dst)
+            side_n = 0
+            for ext in model_manager._SIDE_EXTS:
+                side = base_src + ext
+                if os.path.exists(side):
+                    try:
+                        shutil.move(side, base_dst + ext)
+                        side_n += 1
+                    except Exception:
+                        pass
+            imgs = base_src + ".images"
+            if os.path.isdir(imgs):
+                try:
+                    shutil.move(imgs, base_dst + ".images")
+                    side_n += 1
+                except Exception:
+                    pass
+            return {"ok": True, "msg": "已移动到 " + dest_abs + ("（附属文件 %d 个）" % side_n if side_n else ""),
+                    "path": dst, "side": side_n}
+        except Exception as e:
+            return {"ok": False, "msg": "移动失败: %s" % str(e)[:140]}
 
     def mm_organize(self, paths=None):
         rows = [r for r in self.model_rows if r["path"] in (paths or [])] or list(self.model_rows)
