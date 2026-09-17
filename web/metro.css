@@ -637,24 +637,25 @@
 [data-theme="metro"] .dt-author { color: var(--metro-text-2); font-size: 12px; }
 [data-theme="metro"] .dt-author:hover { color: var(--metro-accent); }
 [data-theme="metro"] .dt-close { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; }
-/* 图片列宽度收窄到贴合竖版作品图（此前 42% 列里装着 226px 的图，右侧留 ~250px 盒内空白） */
-[data-theme="metro"] .dt-body { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(260px, 34%) minmax(0, 1fr); }
+/* 图片列按"刚好容下竖版作品图"设置（约 24%）：图元素填满列宽、作品完整显示 → 两侧无空白带 */
+[data-theme="metro"] .dt-body { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(230px, 24%) minmax(0, 1fr); }
 [data-theme="metro"] .detail-left {
   border-right: 1px solid var(--metro-border-hair);
   padding: 14px; min-height: 0; overflow: auto;
   display: flex; flex-direction: column; gap: 10px;
   align-items: center;               /* 图片与缩略图条水平居中 */
+  width: auto;                       /* ★ 关键：清掉 classic 的 width:46% —— 它在网格轨道上又乘一次 46%，把图片列压到 186px */
 }
-[data-theme="metro"] .detail-left .detail-main-img { align-self: center; }
-/* ★ 关键：width:auto 让图片盒子贴合作品自身比例（不再拉满列宽产生盒内信箱空白），限高略放宽到 52vh */
-[data-theme="metro"] .detail-main-img { width: auto; max-width: 100%; max-height: 52vh; object-fit: contain; background: #f6f6f6; border-radius: 0; }
+/* ★ 关键：主图吃满左列剩余空间（flex:1 + min-height:0），作品完整显示（contain）、无灰底信箱带。
+   上一版 width:auto 会被 flex 列压缩得更小（错），必须让它作为弹性项吃剩余高度。 */
+[data-theme="metro"] .detail-main-img { width: 100%; flex: 1 1 auto; min-height: 0; max-height: 58vh; object-fit: contain; background: none; border-radius: 0; }
 [data-theme="metro"] .detail-main-img.dt-empty {
   width: 100%; align-self: stretch;   /* 无封面占位仍占满列宽 */
   height: 210px; display: flex; align-items: center; justify-content: center; gap: 8px;
   color: var(--metro-text-3); font-size: 13px;
 }
-[data-theme="metro"] .detail-thumbs { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
-[data-theme="metro"] .detail-thumb { width: 56px; height: 56px; object-fit: cover; border: 1px solid var(--metro-border-input); border-radius: 0; background: #f6f6f6; }
+[data-theme="metro"] .detail-thumbs { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; flex: 0 0 auto; }
+[data-theme="metro"] .detail-thumb { width: 44px; height: 44px; object-fit: cover; border: 1px solid var(--metro-border-input); border-radius: 0; background: #f6f6f6; }
 [data-theme="metro"] .detail-thumb.on { border: 2px solid var(--metro-accent); }
 [data-theme="metro"] .detail-right {
   padding: 14px 16px; min-height: 0; overflow: auto;
