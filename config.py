@@ -42,7 +42,7 @@ DEFAULTS = {
     "window_wait_seconds": 12,           # 窗口模式等几秒没出来就自动换浏览器模式（用户可调）
     "hidden_model_folders": [],         # 模型管理目录中隐藏的子文件夹
     "show_root_models": True,           # 是否显示模型目录根目录下的模型
-    "metadata_format": "sd",            # sd / civitai / both（下载生成的 json 格式）
+    "metadata_format": "sd",            # sd / civitai / both（WebUI 可读 json 的格式；.civitai.info 始终生成）
     "dark_mode": True,                  # 深色/浅色主题（旧字段，兼容）
     "theme": "dark",                    # 主题：dark / light / modern
     "frameless": False,                 # 无边框窗口（自绘标题栏）

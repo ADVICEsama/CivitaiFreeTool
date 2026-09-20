@@ -4144,7 +4144,7 @@ const SETTING_TIPS = {
   "window_wait_seconds": "窗口模式下等几秒没出界面就自动改用浏览器模式（默认 12 秒）。机器慢或 WebView2 正在更新时可调大；想固定用浏览器模式就把「界面模式」改成浏览器模式",
   "update_keep_old": "「更新页面」下载新版完成后的旧版处理：默认【保留旧版文件】（新版和旧版并存，要清理可用「查重 → 删旧留新」）；选【删除旧版】则下载完成后把旧版文件移入回收站（含预览图/元数据，可还原）。只影响「更新下载」，不影响普通批量下载",
   "download_target_dir": "预设下载落地文件夹（在模型目录里选）：下载的模型连 json/封面直接放进它，不再弹窗询问。也可在「批量下载」页临时选择",
-  "metadata_format": "sd = WebUI 能直接识别的扁平 json；civitai = C 站原始 info 结构；both = 两个都生成",
+  "metadata_format": "sd = WebUI 能直接识别的扁平 json；civitai = C 站原始 info 结构；both = 两个都生成（.civitai.info 始终生成）",
   "baidu_appid": "百度翻译开放平台 APP ID（免费申请），用于反向解析自动翻译模型名/简介",
   "baidu_key": "百度翻译开放平台密钥，与 APP ID 配套",
   "auto_translate": "反向解析时自动把模型名/简介翻译成中文",

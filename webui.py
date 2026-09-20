@@ -11,7 +11,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.2.5"
+APP_VERSION = "2.2.6"
 
 import civitai_api
 import config
@@ -102,9 +102,12 @@ class Api:
                 m = meta.get("info")
                 sd = meta.get("sd")
                 try:
-                    if fmt in ("civitai", "both") and m:
+                    # ① 完整 C 站元数据（.civitai.info）：本应用的详情页/图片画廊/名字类型/底模
+                    #    都依赖它，因此**始终写入**（与 metadata_format 无关）
+                    if m:
                         with open(base + ".civitai.info", "w", encoding="utf-8") as f:
                             json.dump(m, f, ensure_ascii=False, indent=2)
+                    # ② WebUI 可读的扁平 json（按设置：sd / civitai / both）
                     if fmt in ("sd", "both") and sd:
                         with open(base + ".json", "w", encoding="utf-8") as f:
                             json.dump(sd, f, ensure_ascii=False, indent=2)
