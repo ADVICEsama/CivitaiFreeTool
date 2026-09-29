@@ -1,4 +1,20 @@
-# CivitaiFreeTool 更新日志（v1.5.1 → v2.2.6）
+# CivitaiFreeTool 更新日志（v1.5.1 → v2.2.7）
+
+> 免费 · 全功能 · 无付费墙
+
+---
+
+## 🔥 v2.2.7：Firefox 扩展「来源被拒绝」（403）修复
+
+### 修复
+- **Firefox 装扩展后一键下载报「下载失败 / 来源被拒绝」**：桥接层的 CORS 来源白名单只认 `chrome-extension://`（Chrome/Edge），不认 Firefox 的 `moz-extension://<uuid>` → 请求被 403 挡掉。
+  - 现在 **Chrome 与 Firefox 的扩展来源都放行**（`^(chrome|moz)-extension://`）。
+- 新增 `tests/test_bridge_origin.py` 来源白名单回归测试（10 项：Chrome / Firefox / 本机 / 各类伪造来源必须被拒）。
+
+### 说明
+- 扩展在 Firefox 需 **121+ 版本**（MV3 支持）。安装方式见扩展目录的 `README.md`。
+
+---
 
 > 免费 · 全功能 · 无付费墙
 

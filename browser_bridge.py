@@ -25,7 +25,8 @@ DEFAULT_PORT = 47531
 # 合法来源（C 站模型页 / API 下载链接）
 _URL_HOST_RE = re.compile(r"^(www\.)?civitai\.(red|com)$", re.I)
 _URL_PATH_RE = re.compile(r"^/(api/download/)?models/", re.I)
-_EXT_ORIGIN_RE = re.compile(r"^chrome-extension://", re.I)
+# 浏览器扩展来源：Chrome/Edge 系用 chrome-extension://，Firefox 用 moz-extension://<uuid>
+_EXT_ORIGIN_RE = re.compile(r"^(chrome|moz)-extension://", re.I)
 _LOCAL_ORIGIN_RE = re.compile(r"^https?://(127\.0\.0\.1|localhost)(:\d+)?$", re.I)
 
 _lock = threading.Lock()
@@ -92,7 +93,7 @@ def is_model_url(url):
 
 
 def origin_allowed(origin):
-    """CORS 来源白名单：无 Origin（curl/本地工具）、chrome-extension、本机页面允许"""
+    """CORS 来源白名单：无 Origin（curl/本地工具）、浏览器扩展（Chrome/Firefox）、本机页面允许"""
     if not origin or origin == "null" or origin.startswith("file:"):
         return True
     if _EXT_ORIGIN_RE.match(origin):
