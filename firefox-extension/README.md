@@ -32,14 +32,13 @@
 - 仅接受 `civitai.red` / `civitai.com` 的模型页（含 `?modelVersionId=` 版本链接和 `/api/download/models/` 下载链接）
 - 桥服务只监听 `127.0.0.1`，且仅响应 Chrome 扩展与本机页面来源，其他网站无法向你的软件提交下载
 
-## Firefox 安装（本兼容版）
+## Firefox 安装
 
 Firefox 需 **121 或更高版本**（MV3 扩展支持）。
 
 1. 打开 `about:debugging#/runtime/this-firefox`
 2. 点 **「临时载入附加组件」**
-3. 选本目录下的 `manifest.json`
+3. 选本目录下的 **`CivitaiFreeTool-FirefoxExtension-v1.1.0.zip`**
 
-> 安装后图标右键菜单和弹窗功能与 Chrome 版完全一致（需 CivitaiFreeTool.exe 已在运行）。
-> 想要永久安装可用 [web-ext](https://extensionworkshop.com/documentation/develop/getting-started-with-web-ext/)：
-> `web-ext run --source-dir dist/extension-firefox`
+> 压缩包里 `manifest.json` 在根目录，可直接被 Firefox 识别。
+> 需要永久安装可上传到 addons.mozilla.org 签名；本地开发用 `web-ext run --source-dir .`。
