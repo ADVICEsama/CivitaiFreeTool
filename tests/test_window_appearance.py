@@ -2,7 +2,8 @@
 import sys
 import unittest
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
+import types
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from window_appearance import appearance_plan, colorref, WindowAppearance
 import webui
@@ -57,6 +58,28 @@ class WindowAppearanceTests(unittest.TestCase):
         controller = WindowAppearance(Mock())
         self.assertFalse(controller.request({'mode': 'bad'})['ok'])
         self.assertFalse(controller.request({'text': '<script>'})['ok'])
+
+    def test_window_control_rejects_unknown_and_browser_mode(self):
+        self.assertFalse(WindowAppearance(Mock()).control('move-anywhere')['ok'])
+        self.assertFalse(WindowAppearance(types.SimpleNamespace(native=None)).control('minimize')['ok'])
+        self.assertFalse(webui.Api.__new__(webui.Api).window_control('close')['ok'])
+
+    def test_window_buttons_queue_on_ui_thread_and_keep_close_handler(self):
+        form=types.SimpleNamespace(WindowState='normal',Close=Mock())
+        form.BeginInvoke=lambda action:action()
+        c=WindowAppearance(types.SimpleNamespace(native=form))
+        system=types.ModuleType('System');system.Action=lambda x:x
+        forms=types.ModuleType('System.Windows.Forms');forms.FormWindowState=types.SimpleNamespace(Normal='normal',Maximized='max',Minimized='min')
+        with patch.dict(sys.modules,{'System':system,'System.Windows.Forms':forms}),patch('sys.platform','win32'):
+            self.assertTrue(c.control('maximize')['queued']);self.assertEqual(form.WindowState,'max')
+            c.control('maximize');self.assertEqual(form.WindowState,'normal')
+            c.control('minimize');self.assertEqual(form.WindowState,'min')
+            c.control('close');form.Close.assert_called_once()
+
+    def test_frameless_start_does_not_enable_whole_window_drag(self):
+        source=(Path(__file__).resolve().parents[1]/'main_web.py').read_text(encoding='utf-8')
+        self.assertIn('easy_drag=False',source)
+        self.assertIn('settings["DRAG_REGION_DIRECT_TARGET_ONLY"] = True',source)
 
 
 if __name__ == '__main__': unittest.main()

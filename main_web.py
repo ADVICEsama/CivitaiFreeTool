@@ -582,6 +582,7 @@ def main():
     import browser_bridge
     browser_bridge.set_api(api, os.path.join(BASE_DIR, "web"))
     api._browser_ui_handler = lambda: _activate_browser_ui(api)
+    webview.settings["DRAG_REGION_DIRECT_TARGET_ONLY"] = True
     window = webview.create_window(
         "CivitaiFreeTool",
         url=INDEX,
@@ -590,6 +591,7 @@ def main():
         height=820,
         min_size=(980, 640),
         background_color="#1c1c1e",
+        easy_drag=False,  # 只允许显式拖动区；全窗 easy_drag 会抢走 select/字体菜单的鼠标。
         frameless=bool(api.cfg.get("integrated_titlebar",True)) and api.cfg.get("window_appearance","theme") not in ("system","external"),
     )
     from window_appearance import WindowAppearance

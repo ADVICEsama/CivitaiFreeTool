@@ -20,7 +20,7 @@ const WORKBENCH_SETTING_HELP = {
   ui_zoom: "统一调整整个界面大小；Ctrl + 滚轮始终用于全局缩放。只放大文字请使用“全局字号”。",
   ui_text_size: "五档文字尺寸，同步调整图标，不改变界面缩放比例和图片宽度；标题、正文保留原有大小层次。立即生效并保存。",
   integrated_titlebar: "默认隐藏整条标题栏，仅在软件右上角保留最小化、最大化/还原、关闭按钮。可拖动侧栏品牌区或页面标题区，支持边缘缩放。关闭恢复系统框，需重启。",
-  window_appearance: "Mica / Mica Alt 扩展到整个窗口背景，半透明面板仍保持文字与图片清晰；需要 Windows 11 22H2 或更新版本，不支持时回退不透明背景。选择外部控制可配合 Mica For Everyone，按进程名 CivitaiFreeToolWeb.exe 添加规则；需要另行安装并配置工具，不等于内置 Mica。外部模式使用系统窗口框，改动需重启。",
+  window_appearance: "Mica / Mica Alt 扩展到整个窗口背景，面板不再盖住材质；Mica 取桌面壁纸色调，不是实时透视毛玻璃，窗口失焦/系统关闭透明时回退纯色；需要 Windows 11 22H2 或更新版本，不支持时回退不透明背景。选择外部控制可配合 Mica For Everyone，按进程名 CivitaiFreeToolWeb.exe 添加规则；需要另行安装并配置工具，不等于内置 Mica。外部模式使用系统窗口框，改动需重启。",
   proxy_enabled: "只有需要通过代理连接外网时才开启。代理软件需要保持运行。",
   ssl_verify: "建议开启。仅排查代理证书问题时暂时关闭，不要长期关闭。",
   target_env: "选择模型最终使用的环境，让自动整理采用对应目录结构。",
@@ -315,7 +315,7 @@ function decorateWorkbenchIcons(root = document) {
 }
 function initializeWorkbench() {
   decorateWorkbenchIcons();
-  document.querySelectorAll(".sidebar-brand,.page-title").forEach(el=>el.classList.add("pywebview-drag-region"));
+  document.querySelectorAll(".sidebar-brand,.sidebar-name,.sidebar-name small,.page-title").forEach(el=>el.classList.add("pywebview-drag-region"));
   $('#mmImageSize').addEventListener('input',e=>setMasonrySize(e.target.value,true));
   $('#mmImageSizeControl').addEventListener('wheel',e=>{
     if(e.ctrlKey || e.altKey)return;

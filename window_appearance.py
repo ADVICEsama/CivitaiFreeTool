@@ -46,6 +46,24 @@ class WindowAppearance:
         self.exception_handler = None
         self.status = {"ok": False, "mode": "pending", "msg": "窗口尚未就绪"}
 
+    def control(self, action):
+        if action not in ("minimize", "maximize", "close"):
+            return {"ok": False, "msg": "未知窗口操作"}
+        form = getattr(self.window, "native", None)
+        if form is None or sys.platform != "win32":
+            return {"ok": False, "msg": "当前无原生窗口"}
+        try:
+            from System import Action
+            from System.Windows.Forms import FormWindowState
+            def apply():
+                if action == "close": form.Close()  # 保留现有关窗保存/最小化设置。
+                elif action == "minimize": form.WindowState = FormWindowState.Minimized
+                else: form.WindowState = FormWindowState.Normal if form.WindowState == FormWindowState.Maximized else FormWindowState.Maximized
+            form.BeginInvoke(Action(apply))
+            return {"ok": True, "queued": True}
+        except Exception:
+            return {"ok": False, "msg": "窗口操作暂不可用"}
+
     def request(self, options):
         try:
             options = dict(options or {})
@@ -126,6 +144,15 @@ class WindowAppearance:
                     if material and frame_hr != 0:
                         material=False
                         form.browser.webview.DefaultBackgroundColor=ColorTranslator.FromHtml(options.get('background','#171221'))
+                    transparency = None
+                    try:
+                        import winreg
+                        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize") as key:
+                            transparency = bool(winreg.QueryValueEx(key,"EnableTransparency")[0])
+                    except OSError: pass
+                    from System.Windows.Forms import SystemInformation
+                    high_contrast = bool(SystemInformation.HighContrast)
+                    active = bool(form.ContainsFocus)
                     if mode == "external":
                         msg = "已交给外部工具。Mica For Everyone 按进程名 CivitaiFreeToolWeb.exe 建规则；规则生效后重新应用外观或重启软件。"
                     elif mode == "system":
@@ -136,10 +163,16 @@ class WindowAppearance:
                         msg = "已使用应用内窗口栏；支持拖动、双击最大化、边缘缩放与窗口按钮。" if self.chrome else "标题栏已跟随软件主题；保留系统窗口操作。"
                     else:
                         msg = "已启用原生 " + ("Mica Alt" if mode == "mica_alt" else "Mica") + (" 窗口背景；面板半透明，图片与文字保持清晰。" if material else " 标题栏；客户端材质不可用，保留不透明背景。")
+                    if material:
+                        if transparency is False or high_contrast:
+                            msg += " 系统关闭透明效果或启用高对比度，Windows 会使用纯色回退；本软件不强改系统设置。"
+                        elif not active:
+                            msg += " 窗口未激活时 Windows 会使用中性色；激活后查看壁纸色调。"
+                        msg += " Mica 是壁纸色调材质，不是实时透视背后窗口的毛玻璃。"
                     if chrome_error:msg += ' '+chrome_error
                     if restart_required:msg += ' 窗口框架改动需重启生效，当前保持单一窗口栏。'
                     if self.runtime_chrome_disabled:msg += ' 原生窗口栏已因异常禁用，本次运行保留系统标题栏。'
-                    self.status = {"ok": not failures, "mode": mode, "integrated":self.chrome is not None,"client_material":material,"webview_alpha":int(form.browser.webview.DefaultBackgroundColor.A),"native_error_count":self.native_error_count,"restart_required":restart_required,"border_style":str(form.FormBorderStyle),"failed_attributes": failures, "msg": msg}
+                    self.status = {"ok": not failures, "mode": mode, "integrated":self.chrome is not None,"client_material":material,"webview_alpha":int(form.browser.webview.DefaultBackgroundColor.A),"native_error_count":self.native_error_count,"restart_required":restart_required,"border_style":str(form.FormBorderStyle),"transparency_enabled":transparency,"high_contrast":high_contrast,"active":active,"failed_attributes": failures, "msg": msg}
                     # 不在 WinForms UI 线程同步 evaluate_js，避免阻塞 WebView2 的回调。
                 except Exception as e:
                     import logging

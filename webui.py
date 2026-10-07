@@ -12,7 +12,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.6.2"
+APP_VERSION = "2.6.3"
 
 import civitai_api
 import config
@@ -419,7 +419,11 @@ class Api:
 
     def get_window_appearance(self):
         controller = getattr(self, "_window_appearance_controller", None)
-        return dict(controller.status) if controller else {"ok": False, "msg": "当前无原生窗口"}
+        return dict(controller.status, maximized=bool(getattr(controller.chrome,"maximized",False))) if controller else {"ok": False, "msg": "当前无原生窗口"}
+
+    def window_control(self, action):
+        controller = getattr(self, "_window_appearance_controller", None)
+        return controller.control(action) if controller else {"ok": False, "msg": "当前无原生窗口"}
 
     def get_local_fonts(self):
         import local_fonts

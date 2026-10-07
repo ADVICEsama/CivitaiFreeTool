@@ -41,6 +41,7 @@ function ok(name) { passed++; console.log('OK ' + name); }
       window.fixtureTasks=[{id:'fixture-1',filename:'example.safetensors',status:'pending',dest_dir:'D:\\AI\\models\\分类 1',total:123456,downloaded:0,progress:0}];
       window.pywebview = {api: new Proxy({}, {get: (_, method) => async (...args) => {
         window.fixtureCalls.push({method, args});
+        if(method === 'get_window_appearance')return window.fixtureAppearance||{};
         if (method === 'get_config') return {...window.fixtureCfg};
         if (method === 'save_config') { Object.assign(window.fixtureCfg, args[0]); localStorage.setItem(key, JSON.stringify(window.fixtureCfg)); return true; }
         if (method === 'get_local_fonts') return {ok:true,fonts:['Segoe UI','Microsoft YaHei UI','微软雅黑']};
@@ -495,10 +496,26 @@ function ok(name) { passed++; console.log('OK ' + name); }
     assert.equal(await page.locator('.history-focus').count(),1);assert((await page.locator('.history-focus').getAttribute('data-path')).includes('focus115'));assert.equal(await page.locator('#mmFilter').inputValue(),'');ok('历史信息跳转自动解除阻挡筛选并定位瀑布流对应卡片');
     const focusBox=await page.locator('.history-focus').boundingBox();assert(focusBox.y<820 && focusBox.y+focusBox.height>0);ok('历史跳转定位后目标卡片实际进入可视区');
     await page.evaluate(()=>{state.mmView='list';renderMm();});await page.evaluate(()=>openHistoryModel(historyItems[0]));assert.equal(await page.locator('#mmTable .history-focus').count(),1,JSON.stringify(await page.evaluate(()=>({view:state.mmView,path:detailRow.path,models:state.models.length,display:state.display.length,status:$('#statusText').textContent,row:$('#mmTable tbody tr')?.outerHTML.slice(0,300),focuses:[...document.querySelectorAll('.history-focus')].map(e=>e.outerHTML.slice(0,100))}))));ok('历史定位同时支持模型列表');
+    await page.evaluate(()=>{state.cfg.theme='dark_blue';state.cfg.ui_corners='theme';state.cfg.ui_text_size='standard';document.documentElement.dataset.theme='dark_blue';applyUiAppearance();window.fixtureAppearance={integrated:true,maximized:false};syncWindowControls(window.fixtureAppearance);switchPage('dlmanager');});
+    const controls=page.locator('#windowControls');assert.equal(await controls.isVisible(),true);
+    assert.equal(await controls.locator('button').count(),3);assert.equal(await controls.locator('img').count(),0);ok('窗口仅有三个网页按钮，不重复 Logo 或添加顶栏');
+    for(const theme of logoThemes){
+      await page.evaluate(t=>document.documentElement.dataset.theme=t,theme);await page.waitForTimeout(200);
+      const style=await page.evaluate(t=>{document.documentElement.dataset.theme=t;const button=document.querySelector('.window-control');return {bg:getComputedStyle(button).backgroundColor,color:getComputedStyle(button).color,theme:getComputedStyle(document.querySelector('.sidebar-name small')).color,panel:getComputedStyle(document.querySelector('#windowControls')).backgroundColor};},theme);
+      assert.equal(style.bg,'rgba(0, 0, 0, 0)');assert.equal(style.panel,'rgba(0, 0, 0, 0)');assert.equal(style.color,style.theme);ok(theme+' 窗口按钮无底色并使用主题次级文字色');
+    }
+    await page.evaluate(()=>document.documentElement.dataset.theme='dark_blue');
+    await page.locator('[data-window-action="maximize"]').click();assert.equal((await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='window_control').at(-1))).args[0],'maximize');ok('窗口按钮通过受限 API 操作，不触发整窗拖动');
+    await page.evaluate(()=>syncWindowControls({integrated:true,maximized:true}));assert.equal(await page.locator('[data-window-action="maximize"]').getAttribute('aria-label'),'还原窗口');ok('最大化状态同步还原图标及名称');
+    await page.locator('[data-window-action="minimize"]').focus();await page.keyboard.press('Tab');assert(await page.locator('[data-window-action="maximize"]').evaluate(e=>e.matches(':focus-visible')));ok('窗口按钮支持键盘焦点');
+    await page.evaluate(()=>{syncWindowControls({integrated:false});});assert.equal(await controls.isVisible(),false);ok('浏览器或系统框架模式不显示重复窗口按钮');
+    await page.evaluate(()=>{syncWindowControls({integrated:true});document.documentElement.dataset.nativeMaterial='true';});
+    const material=await page.evaluate(()=>({body:getComputedStyle(document.body).backgroundColor,shader:getComputedStyle(document.querySelector('#bg')).display,card:getComputedStyle(document.querySelector('#page-dlmanager>.card')).backgroundColor}));assert.equal(material.body,'rgba(0, 0, 0, 0)');assert.equal(material.shader,'none');assert(material.card.includes('0.55'));ok('材质模式实际清空网页底色和氛围画布，内容面板只保留 55% 主题底色');
+    await page.mouse.move(600,450);await page.screenshot({path:path.join(shots,'window-controls-v2.6.3.png')});
+    await page.evaluate(()=>{syncWindowControls({integrated:false});document.documentElement.dataset.nativeMaterial='false';});
     const unresolvedIcons=await page.evaluate(()=>Array.from(document.querySelectorAll('svg.ic use')).map(e=>e.getAttribute('href')).filter(ref=>!document.querySelector(ref)));
     assert.deepEqual(unresolvedIcons,[]); ok('全部可见与动态图标均有 sprite 定义');
     assert.deepEqual(errors,[]);assert.equal(await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='log_ui_error').length),0); ok('无前端异常');
     console.log('PASS '+passed+' checks; mock API only, no real download/move operations');
   } finally {await browser.close();server.close();}
 })().catch(e=>{console.error(e);server.close();process.exitCode=1});
-

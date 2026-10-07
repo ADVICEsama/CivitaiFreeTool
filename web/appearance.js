@@ -145,7 +145,7 @@ function applyTextAndWindowAppearance() {
           if (actual?.mode && actual.mode !== 'pending') {
             if (status?.isConnected) status.textContent = actual.msg || '';
             root.dataset.nativeMaterial=actual.client_material?'true':'false';
-            root.dataset.windowButtons=actual.integrated?'true':'false';
+            syncWindowControls(actual);
             break;
           }
         }
@@ -153,3 +153,32 @@ function applyTextAndWindowAppearance() {
     } catch (_) { /* 普通浏览器不具备原生窗口接口。 */ }
   }, 120);
 }
+
+
+function syncWindowControls(actual) {
+  const controls=document.getElementById('windowControls');
+  if (!controls) return;
+  const integrated=actual?.integrated === true;
+  document.documentElement.dataset.windowButtons=integrated?'true':'false';
+  controls.hidden=!integrated;
+  const max=controls.querySelector('[data-window-action="maximize"]');
+  const text=actual?.maximized?'还原窗口':'最大化';
+  max.title=text;max.setAttribute('aria-label',text);
+  max.querySelector('svg').innerHTML=actual?.maximized?'<path d="M9 5h10v10M5 9h10v10H5Z"/>':'<rect x="5" y="5" width="14" height="14"/>';
+}
+document.getElementById('windowControls')?.addEventListener('click',async e=>{
+  const button=e.target.closest('[data-window-action]');if(!button)return;
+  try {
+    const result=await api.call('window_control',button.dataset.windowAction);
+    if(result?.ok===false){setStatus(result.msg||'窗口操作失败');return;}
+    if(button.dataset.windowAction==='maximize')setTimeout(async()=>{
+      try{syncWindowControls(await api.call('get_window_appearance'));}catch(_){}
+    },150);
+  }catch(_){setStatus('窗口操作暂不可用');}
+});
+let windowControlsResizeTimer;
+window.addEventListener('resize',()=>{
+  if(document.getElementById('windowControls')?.hidden)return;
+  clearTimeout(windowControlsResizeTimer);
+  windowControlsResizeTimer=setTimeout(async()=>{try{syncWindowControls(await api.call('get_window_appearance'));}catch(_){}},120);
+});

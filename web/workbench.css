@@ -235,7 +235,7 @@ html body #dlTable[data-has-errors="false"] .c-err {display:none;}
 html[data-native-material=true],html[data-native-material=true] body {background:transparent !important;}
 html[data-native-material=true] #bg {display:none !important;}
 html[data-native-material=true] body .page,html[data-native-material=true] body .content,html[data-native-material=true] body .masonry {background:transparent !important;}
-html[data-native-material=true] body .nav,html[data-native-material=true] body .card,html[data-native-material=true] body #detailPanel {background:color-mix(in srgb,var(--surface) 78%,transparent) !important;}
+html[data-native-material=true] body .nav,html[data-native-material=true] body .card,html[data-native-material=true] body #detailPanel {background:color-mix(in srgb,var(--surface) 55%,transparent) !important;}
 html[data-native-material=true] body .ms-card {background:color-mix(in srgb,var(--surface) 90%,transparent) !important;}
 /* 图层中的图片与文本始终不透明，不依赖材质保证可读性。 */
 .image-viewer {position:fixed;inset:0;height:var(--app-height);z-index:10040;display:flex;flex-direction:column;background:var(--bg);color:var(--text);}
@@ -275,5 +275,22 @@ html[data-native-material=true] body .ms-card {background:color-mix(in srgb,var(
 
 /* 无顶栏模式：只为右上角三个窗口按钮留出角落，不添加整条空白栏。 */
 html[data-window-buttons=true] #detailPanel {padding-top:44px;}
-html[data-window-buttons=true] #openLogs {margin-right:145px;}
+html[data-window-buttons=true] #openLogs {margin-right:130px;}
 html[data-window-buttons=true] .page-title,html[data-window-buttons=true] .sidebar-brand {cursor:move;}
+
+/* 窗口按钮是真正的网页 UI：默认无底色、无阴影，不再盖一块原生黑面板。 */
+html body #windowControls {position:fixed;top:10px;right:12px;display:flex;gap:4px;z-index:20000;background:transparent;border:0;box-shadow:none;}
+html body #windowControls[hidden] {display:none;}
+html body .window-control {display:grid;place-items:center;width:34px;height:30px;padding:0;border:1px solid transparent;border-radius:var(--radius-sm);background:transparent;color:var(--text-dim);box-shadow:none;cursor:pointer;transition:background .15s,color .15s,border-color .15s;}
+html body .window-control svg {width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
+html body .window-control:hover {background:color-mix(in srgb,var(--primary) 12%,transparent);border-color:color-mix(in srgb,var(--primary) 25%,transparent);color:var(--text);}
+html body .window-control:active {background:color-mix(in srgb,var(--primary) 22%,transparent);}
+html body .window-control:focus-visible {outline:2px solid var(--primary);outline-offset:1px;}
+html body .window-control[data-window-action=close]:hover {background:var(--danger);border-color:transparent;color:white;}
+html[data-window-buttons=true] .iv-actions {margin-right:130px;}
+html[data-native-material=true] body .nav {background:color-mix(in srgb,var(--surface) 65%,transparent) !important;}
+html[data-native-material=true] body table.grid {background:transparent !important;}
+html[data-native-material=true] body table.grid tbody tr {background:color-mix(in srgb,var(--surface) 35%,transparent);}
+html[data-native-material=true] body table.grid tbody tr:nth-child(even) {background:color-mix(in srgb,var(--surface2) 50%,transparent);}
+html[data-native-material=true] body table.grid tbody tr:hover {background:color-mix(in srgb,var(--primary) 15%,var(--surface)) !important;}
+html[data-native-material=true] body table.grid tbody tr:is(.selected,.sel-row) {background:color-mix(in srgb,var(--primary) 26%,var(--surface)) !important;}
