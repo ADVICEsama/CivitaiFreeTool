@@ -35,7 +35,7 @@ namespace CftNative {
       if(m.Msg==0x84){long p=m.LParam.ToInt64();m.Result=(IntPtr)Hit((short)(p&0xffff),(short)((p>>16)&0xffff));return;}
       base.WndProc(ref m);
     }
-    public void RestoreFrame(){IntPtr h=Handle;SetWindowLong(h,-16,oldStyle);ReleaseHandle();SetWindowPos(h,IntPtr.Zero,0,0,0,0,0x27);}
+    public void RestoreFrame(){IntPtr h=Handle;int state=GetWindowLong(h,-16)&0x31000000;SetWindowLong(h,-16,(oldStyle&~0x31000000)|state);ReleaseHandle();SetWindowPos(h,IntPtr.Zero,0,0,0,0,0x27);}
   }
   public class PassCaption : NativeWindow {
     public PassCaption(Control c){AssignHandle(c.Handle);}

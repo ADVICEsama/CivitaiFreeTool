@@ -41,6 +41,9 @@ class WindowAppearance:
         self.previous = None
         self.serial = 0
         self.chrome = None
+        self.runtime_chrome_disabled = False
+        self.native_error_count = 0
+        self.exception_handler = None
         self.status = {"ok": False, "mode": "pending", "msg": "窗口尚未就绪"}
 
     def request(self, options):
@@ -65,8 +68,23 @@ class WindowAppearance:
                 try:
                     import ctypes
                     hwnd = ctypes.c_void_p(form.Handle.ToInt64())
+                    if self.exception_handler is None:
+                        from System.Windows.Forms import Application
+                        def recover(sender,event):
+                            import logging
+                            self.native_error_count += 1
+                            logging.getLogger(__name__).error('Native UI exception; reverting chrome: %s', event.Exception.ToString())
+                            self.runtime_chrome_disabled=True
+                            if self.chrome is not None:
+                                try:self.chrome.close()
+                                except Exception:logging.getLogger(__name__).exception('Native chrome rollback failed')
+                                self.chrome=None
+                            self.status={'ok':False,'mode':options.get('mode','theme'),'integrated':False,'client_material':False,
+                                         'native_error_count':self.native_error_count,'msg':'原生窗口栏发生异常，已回退系统标题栏；下载后台保留。重新启动后再试。'}
+                        self.exception_handler=recover
+                        Application.ThreadException += recover
                     chrome_error = ''
-                    if options.get('integrated', True):
+                    if options.get('integrated', True) and not self.runtime_chrome_disabled:
                         try:
                             if self.chrome is None:
                                 from native_chrome import IntegratedChrome
@@ -115,7 +133,8 @@ class WindowAppearance:
                     else:
                         msg = "已启用原生 " + ("Mica Alt" if mode == "mica_alt" else "Mica") + (" 窗口背景；面板半透明，图片与文字保持清晰。" if material else " 标题栏；客户端材质不可用，保留不透明背景。")
                     if chrome_error:msg += ' '+chrome_error
-                    self.status = {"ok": not failures, "mode": mode, "integrated":self.chrome is not None,"client_material":material,"webview_alpha":int(form.browser.webview.DefaultBackgroundColor.A),"failed_attributes": failures, "msg": msg}
+                    if self.runtime_chrome_disabled:msg += ' 原生窗口栏已因异常禁用，本次运行保留系统标题栏。'
+                    self.status = {"ok": not failures, "mode": mode, "integrated":self.chrome is not None,"client_material":material,"webview_alpha":int(form.browser.webview.DefaultBackgroundColor.A),"native_error_count":self.native_error_count,"failed_attributes": failures, "msg": msg}
                     # 不在 WinForms UI 线程同步 evaluate_js，避免阻塞 WebView2 的回调。
                 except Exception as e:
                     import logging

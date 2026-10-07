@@ -13,6 +13,7 @@ class IntegratedChrome:
         from System.Windows.Forms import Panel, Label, PictureBox, PictureBoxSizeMode, FormWindowState, DockStyle
         self.form = form
         self.current_font = None
+        self.font_signature = None
         self.webview = form.browser.webview
         self.frame = Frame(form.Handle)
         self.bar = Panel(); self.title = Label();self.logo = PictureBox()
@@ -57,13 +58,23 @@ class IntegratedChrome:
             v=options.get(key,fallback);return Color.FromArgb(int(v[1:3],16),int(v[3:5],16),int(v[5:7],16))
         bg=color('background','#171221');text=color('text','#eceaf2')
         self.bar.BackColor=bg;self.title.ForeColor=text
-        old=self.current_font
-        try:self.title.Font=Font(options.get('font') or 'Microsoft YaHei UI',float(options.get('text_scale',1))*13,FontStyle.Regular,GraphicsUnit.Pixel)
-        except Exception:pass
-        self.current_font=self.title.Font
-        if old is not None and self.current_font is not old:
-            try:old.Dispose()
-            except Exception:pass
+        # WinForms 可能因为 Font.Equals 而保留原字体；pythonnet 属性 getter
+        # 又可能返回不同 Python 代理。不能用 Python 的 is 判断托管对象身份，
+        # 否则重复换色/切页时可能 Dispose 掉控件仍在使用的字体，导致 GDI+ 参数无效。
+        signature=(options.get('font') or 'Microsoft YaHei UI',float(options.get('text_scale',1))*13)
+        if signature != self.font_signature:
+            from System import Object
+            old=self.current_font
+            candidate=Font(signature[0],signature[1],FontStyle.Regular,GraphicsUnit.Pixel)
+            self.title.Font=candidate
+            active=self.title.Font
+            if old is not None and not Object.ReferenceEquals(old,active):old.Dispose()
+            if Object.ReferenceEquals(candidate,active):self.current_font=candidate
+            else:
+                candidate.Dispose()
+                # 只拥有自己创建的字体，不取得 SystemFonts/父控件字体的释放权。
+                self.current_font=old if old is not None and Object.ReferenceEquals(old,active) else None
+            self.font_signature=signature
         page=str(options.get('page',''))[:40];self.title.Text='CivitaiFreeTool'+('  ·  '+page if page else '')
         for i,b in enumerate(self.buttons):
             b.Normal=bg;b.Hover=Color.FromArgb(190,40,55) if i==2 else Color.FromArgb(min(255,bg.R+25),min(255,bg.G+25),min(255,bg.B+25))
@@ -74,6 +85,10 @@ class IntegratedChrome:
         from System.Windows.Forms import DockStyle
         self.form.Resize -= self.layout_handler
         for passer in self.passers:passer.ReleaseHandle()
-        self.form.Controls.Remove(self.bar);self.bar.Dispose()
-        self.frame.RestoreFrame();self.webview.Dock=DockStyle.Fill;self.webview.BringToFront()
-
+        # 即便发生 GDI+ 绘制错误，也先移除出错的整条顶栏并恢复系统框架，
+        # 避免让红叉控件继续重绘或让下载后台跟着退出。
+        self.bar.Visible=False
+        self.form.Controls.Remove(self.bar)
+        try:self.bar.Dispose()
+        finally:
+            self.frame.RestoreFrame();self.webview.Dock=DockStyle.Fill;self.webview.BringToFront()
