@@ -59,6 +59,7 @@ function filterFontMenu() {
   fontPicker.rowHeight = 36 * (TEXT_SCALES[state.cfg.ui_text_size] || 1);
   fontPicker.menu.firstElementChild.style.height = fontPicker.fonts.length * fontPicker.rowHeight + 'px';
   positionFontMenu();
+  if (!fontPicker) return; // 窗口重建/隐藏设置页时定位会关闭菜单。
   fontPicker.menu.scrollTop = fontPicker.active * fontPicker.rowHeight;
   renderFontRows();
 }
@@ -144,6 +145,7 @@ function applyTextAndWindowAppearance() {
           if (actual?.mode && actual.mode !== 'pending') {
             if (status?.isConnected) status.textContent = actual.msg || '';
             root.dataset.nativeMaterial=actual.client_material?'true':'false';
+            root.dataset.windowButtons=actual.integrated?'true':'false';
             break;
           }
         }

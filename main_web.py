@@ -590,6 +590,7 @@ def main():
         height=820,
         min_size=(980, 640),
         background_color="#1c1c1e",
+        frameless=bool(api.cfg.get("integrated_titlebar",True)) and api.cfg.get("window_appearance","theme") not in ("system","external"),
     )
     from window_appearance import WindowAppearance
     window_appearance = WindowAppearance(window)

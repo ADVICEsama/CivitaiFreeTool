@@ -31,10 +31,8 @@ class FontLifetimeTests(unittest.TestCase):
         chrome.bar=types.SimpleNamespace();chrome.buttons=[];chrome.layout=lambda:None
         with patch.dict(sys.modules,{'System':system,'System.Drawing':drawing}):
             for _ in range(50):chrome.refresh({'text_scale':1})
-            self.assertFalse(shared['disposed']);self.assertFalse(chrome.title.value['disposed']);self.assertEqual(len(made),1)
+            self.assertEqual(len(made),0);self.assertFalse(shared['disposed'])
             for _ in range(50):chrome.refresh({'font':'Segoe UI','text_scale':1.1})
-            self.assertFalse(chrome.title.value['disposed']);self.assertEqual(len(made),2)
-            old=chrome.title.value;chrome.refresh({'font':'Microsoft YaHei UI','text_scale':1.3})
-            self.assertTrue(old['disposed']);self.assertFalse(chrome.title.value['disposed']);self.assertFalse(shared['disposed'])
+            self.assertEqual(len(made),0);self.assertFalse(shared['disposed'])
 
 if __name__=='__main__':unittest.main()

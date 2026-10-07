@@ -84,7 +84,11 @@ class WindowAppearance:
                         self.exception_handler=recover
                         Application.ThreadException += recover
                     chrome_error = ''
-                    if options.get('integrated', True) and not self.runtime_chrome_disabled:
+                    # 原生框架在 create_window 阶段确定，避免 WinForms 仍按 Sizable 绘制旧系统框。
+                    requested=options.get('integrated', True) and options.get('mode','theme') not in ('external','system')
+                    initialized=bool(getattr(self.window,'frameless',False))
+                    restart_required=requested!=initialized
+                    if initialized and not self.runtime_chrome_disabled:
                         try:
                             if self.chrome is None:
                                 from native_chrome import IntegratedChrome
@@ -133,8 +137,9 @@ class WindowAppearance:
                     else:
                         msg = "已启用原生 " + ("Mica Alt" if mode == "mica_alt" else "Mica") + (" 窗口背景；面板半透明，图片与文字保持清晰。" if material else " 标题栏；客户端材质不可用，保留不透明背景。")
                     if chrome_error:msg += ' '+chrome_error
+                    if restart_required:msg += ' 窗口框架改动需重启生效，当前保持单一窗口栏。'
                     if self.runtime_chrome_disabled:msg += ' 原生窗口栏已因异常禁用，本次运行保留系统标题栏。'
-                    self.status = {"ok": not failures, "mode": mode, "integrated":self.chrome is not None,"client_material":material,"webview_alpha":int(form.browser.webview.DefaultBackgroundColor.A),"native_error_count":self.native_error_count,"failed_attributes": failures, "msg": msg}
+                    self.status = {"ok": not failures, "mode": mode, "integrated":self.chrome is not None,"client_material":material,"webview_alpha":int(form.browser.webview.DefaultBackgroundColor.A),"native_error_count":self.native_error_count,"restart_required":restart_required,"border_style":str(form.FormBorderStyle),"failed_attributes": failures, "msg": msg}
                     # 不在 WinForms UI 线程同步 evaluate_js，避免阻塞 WebView2 的回调。
                 except Exception as e:
                     import logging

@@ -272,3 +272,8 @@ html[data-native-material=true] body .ms-card {background:color-mix(in srgb,var(
 #dMain {cursor:zoom-in;}
 @media(max-width:900px){.iv-body{grid-template-columns:minmax(0,1fr) 290px;}.iv-generation{padding:12px;}}
 @media(max-width:620px){.iv-body{grid-template-columns:1fr;grid-template-rows:minmax(200px,1fr) minmax(160px,.8fr);}.iv-generation{border-left:0;border-top:1px solid var(--border);}.iv-zoom{order:3;}.iv-toolbar{gap:5px;}}
+
+/* 无顶栏模式：只为右上角三个窗口按钮留出角落，不添加整条空白栏。 */
+html[data-window-buttons=true] #detailPanel {padding-top:44px;}
+html[data-window-buttons=true] #openLogs {margin-right:145px;}
+html[data-window-buttons=true] .page-title,html[data-window-buttons=true] .sidebar-brand {cursor:move;}
