@@ -383,3 +383,24 @@ body.models-workspace.model-toolbar-locked #mmMasonry{height:auto;overflow:visib
 #ivImage{flex:0 0 auto;}
 
 .iv-image-scroll{place-items:normal;}
+
+.ob-heading{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:14px;flex-shrink:0;}
+.ob-heading .ob-title{margin:0;}
+.ob-brand-logo{width:50px;height:50px;object-fit:contain;border-radius:50%;background:transparent;border:0;flex-shrink:0;}
+.ob-choice{justify-content:flex-start;text-align:left;align-items:center;}
+.ob-choice span{display:flex;flex-direction:column;gap:5px;}
+.ob-choice small{color:var(--text-dim);font-size:calc(11px * var(--type-scale,1));font-weight:400;}
+.ob-choice:hover{border-color:var(--primary);background:color-mix(in srgb,var(--primary) 12%,var(--surface));}
+.ob-choice-hint{color:var(--text-dim);font-size:calc(11px * var(--type-scale,1));margin-top:10px;}
+.ob-route{display:inline-flex;align-items:center;gap:8px;color:var(--primary);font-size:calc(12px * var(--type-scale,1));margin-bottom:10px;}
+.ob-section-title{font-size:calc(22px * var(--type-scale,1));margin-bottom:14px;}
+#obBody .ob-secondary{margin:22px 0 8px;padding-top:12px;border-top:1px solid var(--border);}
+.ob-secondary summary{color:var(--text-dim);cursor:pointer;font-size:calc(12px * var(--type-scale,1));}
+.ob-quick-guide{display:flex;flex-direction:column;gap:14px;}
+.ob-quick-guide article{display:flex;gap:14px;border-bottom:1px solid var(--border);padding-bottom:14px;}
+.ob-tip-number{display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--primary) 15%,var(--surface));color:var(--primary);width:30px;height:30px;border-radius:9px;flex-shrink:0;font-weight:650;}
+.ob-quick-guide h3{display:flex;gap:7px;align-items:center;font-size:calc(14px * var(--type-scale,1));margin-bottom:5px;}
+.ob-quick-guide p{color:var(--text-dim);font-size:calc(12px * var(--type-scale,1));line-height:1.8;}
+.onboarding-target{outline:2px solid var(--primary);outline-offset:4px;}
+
+.ob-actions #obSkipAll{margin-right:auto;border:0;background:transparent;color:var(--text-dim);font-size:calc(12px * var(--type-scale,1));}

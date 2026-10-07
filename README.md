@@ -2,16 +2,16 @@
 
 > 免费的 Civitai / HuggingFace 模型下载与本地模型管理工作台。
 
-![Version](https://img.shields.io/badge/version-2.6.7-blue) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-orange) ![CI](https://github.com/ADVICEsama/CivitaiFreeTool/workflows/tests/badge.svg)
+![Version](https://img.shields.io/badge/version-2.6.8-blue) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-orange) ![CI](https://github.com/ADVICEsama/CivitaiFreeTool/workflows/tests/badge.svg)
 
 [下载最新版](https://github.com/ADVICEsama/CivitaiFreeTool/releases/latest) · [更新日志](CHANGELOG.md) · [问题反馈](https://github.com/ADVICEsama/CivitaiFreeTool/issues) · [Linux / macOS](LINUX.md)
 
 ## 当前工作台
 
-- **左侧导航 + 常驻模型详情**：列表/瀑布流共用管理能力；打开详情不挤走模型卡片。无可见顶栏，右上角保留窗口按钮，顶部空白和页面标题可拖动。
+- **左侧导航 + 常驻模型详情**：列表/瀑布流共用管理能力；单击仍选中模型，同时更新右侧详情；勾选格独立用于批量选择。打开详情不挤走模型卡片。无可见顶栏，右上角保留窗口按钮，顶部空白和页面标题可拖动。
 - **持久下载任务与历史**：自动保存任务；已结束任务可收进独立历史。历史提供缩略图/信息缓存、保存到文件夹、打开实际文件位置、C站入口，以及模型卡片定位。
 - **更清楚的右键菜单**：常用动作直接展示；复制、改名与整理、元数据与更新按用途折叠。删除进入回收站并确认。
-- **图片与生成数据**：大图可拖动、连续平滑缩放（相对适合窗口 5%–3200%）、翻页、右键复制/保存；半透明背景保留后面的模型页。读取原图 PNG/ComfyUI/EXIF 元数据，并按图片 ID 查询 C站 `withMeta=true` 数据。提示词、资源和采样参数只显示来源实际提供的内容。
+- **图片与生成数据**：大图可拖动、连续跟手缩放（相对适合窗口 5%–3200%），滚轮立即响应、按钮短促快到慢过渡、翻页、右键复制/保存；半透明背景保留后面的模型页。读取原图 PNG/ComfyUI/EXIF 元数据，并按图片 ID 查询 C站 `withMeta=true` 数据。提示词、资源和采样参数只显示来源实际提供的内容。
 - **收藏与固定工具栏**：模型右键或详情星标收藏置顶，改名/移动跟随；标题右侧固定菜单，让滚轮只滚动模型列表。
 - **本地原图缓存**：只保存打开过的原图和来源生成数据，重开优先本地；默认 1 GB，可关闭、调容量或清理，随软件数据迁移。不含任何运行缓存的源码/便携包。
 - **分组设置**：常用、外观、下载、目录、分类整理、网络、翻译、维护；跨分类搜索，分类规则旁直接提供步骤与示例。
@@ -41,9 +41,15 @@
 
 ![分类规则说明](docs/screenshots/settings-classification.png)
 
-### 三步轻量引导
+### 三步引导，两条上手路线
+
+两个入口点击立即进入不同的配置路线；最后只介绍三个真正需要的动作，不自动扫描或下载。
 
 ![开始与模型库](docs/screenshots/onboarding.png)
+
+![本地模型三个动作](docs/screenshots/onboarding-model-guide.png)
+
+![下载三个动作](docs/screenshots/onboarding-download-guide.png)
 
 ## 快速开始（Windows）
 

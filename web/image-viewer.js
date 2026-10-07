@@ -39,7 +39,7 @@ async function openImageViewer(detail,index=0) {
   root.querySelector('#ivMinus').onclick=()=>setViewerZoom(imageViewer.targetZoom/1.2);
   root.querySelector('#ivFit').onclick=()=>setViewerZoom(1);
   root.querySelector('#ivActual').onclick=()=>setViewerZoom(Math.max(.2,(imageViewer.full?.width||root.querySelector('#ivImage').naturalWidth)/viewerFitWidth()));
-  root.querySelector('.iv-image-scroll').addEventListener('wheel',e=>{if(e.ctrlKey)return;e.preventDefault();const delta=e.deltaY*(e.deltaMode===1?16:e.deltaMode===2?imageArea.clientHeight:1);setViewerZoom(imageViewer.targetZoom*Math.exp(-Math.max(-300,Math.min(300,delta))*.002),{x:e.clientX,y:e.clientY});},{passive:false});
+  root.querySelector('.iv-image-scroll').addEventListener('wheel',e=>{if(e.ctrlKey)return;e.preventDefault();const delta=e.deltaY*(e.deltaMode===1?16:e.deltaMode===2?imageArea.clientHeight:1);setViewerZoom(imageViewer.zoom*Math.exp(-Math.max(-300,Math.min(300,delta))*.002),{x:e.clientX,y:e.clientY},true);},{passive:false});
   root.querySelector('#ivShare').onclick=async()=>{
     const c=imageViewer.detail.covers[imageViewer.index],url=c.image_page||c.orig_url||c.url||'';
     root.querySelector('#ivStatus').textContent=url?(await window.__copyText(url)?'图片链接已复制':'复制失败'):'仅有本地图片，没有可分享的公开链接';
@@ -122,6 +122,8 @@ function viewerFitWidth(){
   const w=imageViewer.full?.width||img.naturalWidth||1,h=imageViewer.full?.height||img.naturalHeight||1;
   return Math.max(1,Math.min(area.clientWidth-24,(area.clientHeight-24)*w/h));
 }
+// 按钮短促 ease-out；滚轮立即跟手，不让图片一直追赶累计目标。
+function viewerEaseOut(t){return 1-Math.pow(1-Math.max(0,Math.min(1,t)),3);}
 function setViewerZoom(zoom,anchor=null,immediate=false){
   const v=imageViewer;if(!v)return;
   v.targetZoom=Math.max(.05,Math.min(32,Number(zoom)||1));
@@ -131,12 +133,12 @@ function setViewerZoom(zoom,anchor=null,immediate=false){
   const x=anchor?(anchor.x-ab.left)/z:area.clientWidth/2,y=anchor?(anchor.y-ab.top)/z:area.clientHeight/2;
   const fractionX=(ab.left+x*z-ib.left)/Math.max(1,ib.width),fractionY=(ab.top+y*z-ib.top)/Math.max(1,ib.height);
   if(v.zoomRaf)cancelAnimationFrame(v.zoomRaf);
-  let last=performance.now();
+  const fromZoom=v.zoom,start=performance.now()-8,duration=80;
   const draw=now=>{
     if(imageViewer!==v)return;
-    const dt=Math.min(64,Math.max(1,now-last));last=now;
-    v.zoom=immediate?v.targetZoom:v.zoom+(v.targetZoom-v.zoom)*(1-Math.exp(-dt/55));
-    if(Math.abs(v.targetZoom-v.zoom)<.0005)v.zoom=v.targetZoom;
+    const progress=Math.max(0,Math.min(1,(now-start)/duration));
+    v.zoom=immediate?v.targetZoom:fromZoom+(v.targetZoom-fromZoom)*viewerEaseOut(progress);
+    if(progress===1)v.zoom=v.targetZoom;
     const width=fit*v.zoom,height=width*(v.full?.height||img.naturalHeight||1)/(v.full?.width||img.naturalWidth||1);
     img.style.width=width+'px';
     const canvas=v.root.querySelector('.iv-image-canvas');canvas.style.width=Math.max(area.clientWidth,width+24)+'px';canvas.style.height=Math.max(area.clientHeight,height+24)+'px';
@@ -146,7 +148,7 @@ function setViewerZoom(zoom,anchor=null,immediate=false){
     v.root.querySelector('#ivFit').textContent=Math.abs(v.zoom-1)<.001?'适合窗口':(v.zoom*100).toFixed(1)+'% · 适配';
     v.zoomRaf=v.zoom===v.targetZoom?0:requestAnimationFrame(draw);
   };
-  if(immediate)draw(performance.now());else v.zoomRaf=requestAnimationFrame(draw);
+  draw(performance.now());
 }
 function renderGeneration(c){
   const v=imageViewer,meta=c.meta||{},resources=Array.isArray(c.resources)?c.resources:[];

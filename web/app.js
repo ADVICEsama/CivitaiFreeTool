@@ -1690,6 +1690,7 @@ $("#mmMasonry").addEventListener("click", (e) => {
   }
   const card = e.target.closest(".ms-card");
   if (!card) return;
+  if(e.detail>1)return;
   const p = card.dataset.path;
   const cardChk = card.querySelector(".ms-check");
   if (state.mmChecked.has(p)) state.mmChecked.delete(p);
@@ -1697,17 +1698,20 @@ $("#mmMasonry").addEventListener("click", (e) => {
   card.classList.toggle("checked", state.mmChecked.has(p));
   if (cardChk) cardChk.innerHTML = state.mmChecked.has(p) ? '<span class="cbox on"></span>' : '<span class="cbox"></span>';
   $("#mmCheckLabel").textContent = "已勾选 " + state.mmChecked.size + " 个";
+  showModelDetail(p);
 });
 $("#mmMasonry").addEventListener("contextmenu",e=>{
   const card=e.target.closest('.ms-card');if(!card)return;
   showModelContextMenu(e,state.display.find(r=>r.path===card.dataset.path));
 });
 
-// 列表：单击行 = 勾选（shift 范围多选，ctrl 加选）；双击打开详情
+// 列表：单击主体勾选并更新详情；勾选格 / Ctrl / Shift 保留独立批量选择
 $("#mmTable tbody").addEventListener("click", (e) => {
   const tr = e.target.closest("tr");
   if (!tr) return;
   const path = tr.dataset.path;
+  const checkboxClick=!!e.target.closest(".cell-sel");
+  if(e.detail>1 && !checkboxClick)return;
   const idx = Number(tr.dataset.idx);
   let targets = [path];
   if (e.shiftKey) {
@@ -1740,6 +1744,7 @@ $("#mmTable tbody").addEventListener("click", (e) => {
   });
   state.mmSel = new Set(state.mmChecked);
   $("#mmCheckLabel").textContent = "已勾选 " + state.mmChecked.size + " 个";
+  if(!e.shiftKey && !checkboxClick)showModelDetail(path);
 });
 
 // 筛选
@@ -2880,7 +2885,7 @@ function syncDialogRender(d, st) {
 
 async function showModelDetail(path, historyId = "") {
   const generation = ++detailGeneration;
-  let json;try{json = await api.call(historyId ? "get_history_detail" : "get_model_detail", historyId || path);}catch(_){setStatus('详情读取异常，请检查元数据或刷新后重试');return;}
+  let json;try{json = await api.call(historyId ? "get_history_detail" : "get_model_detail", historyId || path);}catch(_){if(generation===detailGeneration)setStatus('详情读取异常，请检查元数据或刷新后重试');return;}
   let d;
   try { d = typeof json==='object' && json!==null?json:JSON.parse(json || "{}"); } catch (e) { d = {}; }
   if (generation !== detailGeneration || !$("#page-models").classList.contains("active")) return;
@@ -3367,15 +3372,7 @@ function closeDetail() {
 $("#detailMask").addEventListener("click", (e) => {
   if (e.target.id === "detailMask") closeDetail();
 });
-// 打开入口：行双击 / 瀑布流卡片双击（单击统一为选中）
-document.addEventListener("dblclick", (e) => {
-  // 双击只对"模型主体"生效：按钮 / 链接 / 输入 / 下拉 / 自绘勾选 等交互控件上的双击不打开详情（防冒泡误触）
-  if (e.target.closest("button, a, input, select, textarea, .cbox, .ms-check, .ms-upd, .btn, .mm-menu")) return;
-  const tr = e.target.closest("tr[data-path]");
-  if (tr && tr.dataset.path) showModelDetail(tr.dataset.path);
-  const card = e.target.closest(".ms-card");
-  if (card && card.dataset.path) showModelDetail(card.dataset.path);
-});
+// 模型详情在单击选中后更新，不再另发双击请求；下载历史的双击入口保持独立。
 
 // ===== 工作流分析（独立页面：拖入/选择 → 解析 → 节点 + 模型哈希匹配） =====
 function wfSetStatus(t, k) {
@@ -4605,7 +4602,7 @@ async function init() {
 }
 
 // ===== 首次使用引导（主题 / 下载目录 / API key / 模型目录 / 反向解析） =====
-const OB_STEPS = ["开始", "存放位置", "准备就绪"];
+const OB_STEPS = ["选择用途", "存放位置", "三个动作"];
 let obStep = 0;
 let obTheme = "dark";
 let obDirVal = "";   // 跨步骤保存（输入框只在对应步骤渲染）
@@ -4641,24 +4638,37 @@ function showOnboarding() {
   renderOnboarding();
 }
 function renderOnboarding() {
+  const models=obStartPage==='models';
   $('#obSteps').innerHTML=OB_STEPS.map((label,i)=>'<div class="ob-step '+(i===obStep?'active':i<obStep?'done':'')+'"><span>'+('0'+(i+1))+'</span>'+label+'</div>').join('');
-  $('#obPrev').style.display=obStep?'inline-flex':'none';$('#obNext').textContent=obStep===2?'进入工作台':'继续';
+  $('#obPrev').style.display=obStep?'inline-flex':'none';$('#obNext').textContent=obStep===2?(models?'保存并打开模型管理':'保存并打开批量下载'):'继续';
   const body=$('#obBody');
   if(obStep===0){
-    body.innerHTML='<div class="ob-hero"><span class="ob-eyebrow">YOUR MODEL WORKSPACE</span><h2>模型收藏，从这里开始。</h2><p>下载喜欢的模型，整理自己的灵感库。<br>两步准备，其他设置以后再说。</p><div class="ob-preview-stack"><div>'+_icon('image')+'灵感</div><div>'+_icon('star')+'收藏</div><div>'+_icon('layers')+'模型库</div></div></div><div class="ob-start-choices"><button class="btn ob-choice active" data-ob-page="models">'+_icon('layers')+'先逛本地模型库</button><button class="btn ob-choice" data-ob-page="download">'+_icon('download')+'先下载新模型</button></div>';
-    body.querySelectorAll('[data-ob-page]').forEach(b=>b.classList.toggle('active',b.dataset.obPage===obStartPage));
-    body.querySelectorAll('[data-ob-page]').forEach(b=>b.onclick=()=>{obStartPage=b.dataset.obPage;body.querySelectorAll('[data-ob-page]').forEach(x=>x.classList.toggle('active',x===b));});
+    body.innerHTML='<div class="ob-hero"><span class="ob-eyebrow">YOUR MODEL WORKSPACE</span><h2>从你想做的事开始。</h2><p>已有模型？整理自己的收藏。<br>想找新模型？从一条链接开始。</p><div class="ob-preview-stack"><div>'+_icon('image')+'灵感</div><div>'+_icon('star')+'收藏</div><div>'+_icon('layers')+'模型库</div></div></div><div class="ob-start-choices"><button class="btn ob-choice" data-ob-page="models">'+_icon('layers')+'<span><b>管理本地模型 →</b><small>选模型目录 → 扫描 → 单击看详情</small></span></button><button class="btn ob-choice" data-ob-page="download">'+_icon('download')+'<span><b>下载新模型 →</b><small>选保存位置 → 粘贴链接 → 解析下载</small></span></button></div><p class="ob-choice-hint">点击上面的入口，立即进入对应的准备流程。</p>';
+    body.querySelectorAll('[data-ob-page]').forEach(b=>b.onclick=()=>{obStartPage=b.dataset.obPage;obStep=1;renderOnboarding();});
   }else if(obStep===1){
-    body.innerHTML='<h2 class="ob-section-title">给模型一个家</h2><p class="ob-hint">现有文件不移动。可以跳过，稍后在设置中补充。</p><label class="ob-label" for="obModelDirs">我的模型库 · 每行一个目录</label><textarea class="input" id="obModelDirs" rows="2">'+esc(obModelDirs.join('\n'))+'</textarea><button class="btn" id="obBrowseModels">'+_icon('folder')+'添加模型目录</button><label class="ob-label" for="obDir">新下载保存到</label><div class="storage-actions"><input class="input" id="obDir" value="'+esc(obDirVal)+'"/><button class="btn" id="obBrowse">'+_icon('folder')+'选择</button></div>';
+    const modelFields='<label class="ob-label" for="obModelDirs">模型管理目录 · 每行一个</label><textarea class="input" id="obModelDirs" rows="2">'+esc(obModelDirs.join('\n'))+'</textarea><button class="btn" id="obBrowseModels">'+_icon('folder')+'添加模型目录</button><p class="ob-hint">选择已有 .safetensors 等文件所在的目录，支持 WebUI / ComfyUI 多目录。扫描只建立列表，不移动原文件。</p>';
+    const downloadFields='<label class="ob-label" for="obDir">新下载保存到</label><div class="storage-actions"><input class="input" id="obDir" value="'+esc(obDirVal)+'"/><button class="btn" id="obBrowse">'+_icon('folder')+'选择</button></div><p class="ob-hint">未另选分类时使用这里；下载时还能用“保存到…”选择其他目录。</p>';
+    body.innerHTML='<div class="ob-route">'+_icon(models?'layers':'download')+(models?'本地模型路线':'下载路线')+'</div><h2 class="ob-section-title">'+(models?'先找到你的模型库':'先选一个下载位置')+'</h2>'+(models?modelFields:downloadFields)+'<details class="ob-secondary"><summary>'+(models?'顺便设置下载目录（可选）':'已有模型？添加管理目录（可选）')+'</summary>'+(models?downloadFields:modelFields)+'</details>';
     $('#obModelDirs').oninput=()=>{obModelDirs=$('#obModelDirs').value.split('\n').map(s=>s.trim()).filter(Boolean);};
     $('#obDir').oninput=()=>{obDirVal=$('#obDir').value;};
     $('#obBrowseModels').onclick=async()=>{const p=await api.call('pick_dir');if(p && !obModelDirs.includes(p))obModelDirs.push(p);$('#obModelDirs').value=obModelDirs.join('\n');};
     $('#obBrowse').onclick=async()=>{const p=await api.call('pick_dir');if(p){obDirVal=p;$('#obDir').value=p;}};
   }else{
-    body.innerHTML='<div class="ob-ready">'+_icon('sparkles','ic-lg')+'<h2>准备好了，去发现灵感吧。</h2><p>本地管理不需要 Key；下载或在线查询时再配置也可以。</p></div><label class="ob-label" for="obKey">Civitai API Key · 可选</label><input class="input" id="obKey" type="password" autocomplete="off" value="'+esc(obKeyVal)+'" placeholder="已有 Key？在这里粘贴"/><button class="btn" id="obOpenApi">'+_icon('external')+'打开账号页获取 Key</button>';
+    const tips=models?[
+      ['scan','扫描模型','进入模型管理后点“扫描模型”，把刚选目录里的文件列出来。'],
+      ['info','单击看详情','单击模型会选中它，并更新右侧信息；点右侧图片可放大、拖动与查看生成参数。'],
+      ['star','收藏与批量操作','右上角星标收藏置顶；角标勾选用于批量操作。缺少封面或触发词？用“反向解析”识别。']
+    ]:[
+      ['external','粘贴链接并解析','在批量下载页粘贴 C站模型/版本链接，点击“解析”；一行一条，可以添加多条。'],
+      ['folder','选择文件与保存位置','解析后勾选需要的模型文件，确认“保存到…”的目录，再开始下载。'],
+      ['list','查看进度与历史','“下载管理”里暂停、重试、看进度；已结束任务可移入历史，历史能打开文件夹或定位本地模型。']
+    ];
+    body.innerHTML='<div class="ob-route">'+_icon(models?'layers':'download')+(models?'本地模型路线':'下载路线')+'</div><h2 class="ob-section-title">只记住这三个动作</h2><div class="ob-quick-guide">'+tips.map(([icon,title,description],i)=>'<article><span class="ob-tip-number">'+(i+1)+'</span><div><h3>'+_icon(icon)+title+'</h3><p>'+description+'</p></div></article>').join('')+'</div><label class="ob-label" for="obKey">Civitai API Key · 可选</label><input class="input" id="obKey" type="password" autocomplete="off" value="'+esc(obKeyVal)+'" placeholder="已有 Key？在这里粘贴"/><p class="ob-hint">本地管理不用 Key。涉及账号权限的在线查询或下载需要 Key，可稍后在设置填写。</p><button class="btn" id="obOpenApi">'+_icon('external')+'打开账号页获取 Key</button>';
     $('#obKey').oninput=()=>{obKeyVal=$('#obKey').value;};$('#obOpenApi').onclick=()=>api.call('open_url','https://civitai.com/user/account');
   }
-  body.insertAdjacentHTML('beforeend','<div class="ob-skip-row"><button class="btn" id="obSkipAll">暂不设置，直接进入</button></div>');
+  body.scrollTop=0;
+  $('#obSkipAll')?.remove();
+  $('#obNext').insertAdjacentHTML('beforebegin','<button class="btn" id="obSkipAll">暂不设置，直接进入</button>');
   $('#obSkipAll').onclick=finishOnboarding;
 }
 
@@ -4680,7 +4690,9 @@ async function finishOnboarding() {
   document.documentElement.dataset.theme = state.cfg.theme || "modern";
   $("#obMask").style.display = "none";
   switchPage(obStartPage);
-  setStatus("设置完成，欢迎使用！");
+  const target=obStartPage==='models'?$('#mmScan'):document.querySelector('#urlRows textarea,#urlRows input');
+  if(target){target.scrollIntoView({block:'center'});target.focus({preventScroll:true});target.classList.add('onboarding-target');setTimeout(()=>target.classList.remove('onboarding-target'),2200);}
+  setStatus(obStartPage==='models'?'已准备好模型目录，点击“扫描模型”开始；单击模型会选中并更新右侧详情':'已准备好下载目录，粘贴模型链接后点击“解析”开始');
 }
 $("#obNext").addEventListener("click",async()=>{
   if(obStep===OB_STEPS.length-1){await finishOnboarding();return;}

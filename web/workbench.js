@@ -305,7 +305,7 @@ function syncModelInspector(active) {
   document.body.classList.toggle("models-workspace", active);
   const mask = $("#detailMask"), panel = $("#detailPanel");
   mask.style.display = active ? "flex" : "none";
-  if (active && !panel.innerHTML.trim()) panel.innerHTML = '<div class="inspector-placeholder">' + _icon("layers", "ic-lg") + '<h3>模型信息</h3><p>双击模型查看详细信息</p><p>详情栏始终保留，模型位置不会因打开详情而变化。</p></div>';
+  if (active && !panel.innerHTML.trim()) panel.innerHTML = '<div class="inspector-placeholder">' + _icon("layers", "ic-lg") + '<h3>模型信息</h3><p>单击模型：选中并查看详细信息</p><p>详情栏始终保留，模型位置不会因打开详情而变化。</p></div>';
 }
 function isModelFavorite(path){
   const key=normalizedModelPath(path);
