@@ -61,6 +61,7 @@ function ok(name) { passed++; console.log('OK ' + name); }
         if (method === 'get_history_thumbnail') return 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j0x0AAAAASUVORK5CYII=';
         if (method === 'history_move_to') { const row=window.fixtureHistory.find(r=>r.id===args[0]);row.dest_dir=args[1];row.file_path=args[1]+'\\'+row.filename;return {ok:true,msg:'fixture move'}; }
         if ((method === 'get_history_detail' || method === 'get_model_detail') && window.fixtureDetail) return JSON.stringify({...window.fixtureDetail,path:args[0]});
+        if(method==='get_gallery_cached')return typeof window.fixtureWarmGallery==='function'?window.fixtureWarmGallery(...args):(window.fixtureWarmGallery||{});
         if(method==='get_gallery_image')return {ok:true,b64:window.fixtureCoverB64,mime:'image/png',width:600,height:900,original_available:true,...(window.fixtureOriginalMetadata||{})};
         if(method==='get_gallery_metadata')return window.fixtureOnlineMetadata||{};
         if(method==='copy_gallery_image')return {ok:true,msg:'当前图片已复制（fixture）'};
@@ -624,6 +625,26 @@ function ok(name) { passed++; console.log('OK ' + name); }
     await page.locator('#obNext').click();await page.locator('#obDir').fill('D:/Example/newdownloads');await page.locator('#obNext').click();assert.equal(await page.locator('#obKey').getAttribute('type'),'password');ok('恢复下载目录和可选 Key 的独立步骤');
     await page.locator('#obNext').click();await page.locator('#obModelDirs').fill('D:/Example/first\nD:/Example/second');await page.locator('#obNext').click();assert.equal(await page.locator('#obGoRp').isVisible(),true);ok('恢复多目录选择和反向解析介绍');
     await page.locator('#obPrev').click();assert((await page.locator('#obModelDirs').inputValue()).includes('D:/Example/second'));ok('页面式教程回退不丢已填写目录');await page.locator('#obSkipAll').click();await page.waitForFunction(()=>document.querySelector('#obMask').style.display==='none');assert.equal(await page.evaluate(()=>state.cfg.onboarding_done),true);ok('跳过页面式引导仍保存完成标记');
+    await page.evaluate(()=>{
+      state.cfg.cache_original_images=true;clearViewerImageCache();
+      const large=document.createElement('canvas');large.width=1080;large.height=1620;large.getContext('2d').fillRect(0,0,1080,1620);
+      const small=document.createElement('canvas');small.width=40;small.height=60;small.getContext('2d').fillRect(0,0,40,60);
+      window.fixtureWarmGallery={ok:true,full:{ok:true,b64:large.toDataURL('image/png').split(',')[1],mime:'image/png',width:1080,height:1620,original_available:true,cache_hit:true},metadata:{ok:true,online_metadata:true,meta:{prompt:'prepared local high resolution',steps:30},resources:[]}};
+      window.fixtureDetail={ok:true,path:'D:/Example/warm.safetensors',name:'warm.safetensors',info:{name:'Warm local model'},covers:[{b64:small.toDataURL('image/png').split(',')[1],source_revision:'warm-source-revision'}]};switchPage('models');
+    });
+    await page.evaluate(()=>showModelDetail('D:/Example/warm.safetensors'));await page.waitForFunction(()=>viewerDecodedCache.size===1 && document.querySelector('#dMain')?.src.startsWith('blob:'));
+    const warmCalls=await page.evaluate(()=>window.fixtureCalls.filter(c=>['get_gallery_image','get_gallery_metadata'].includes(c.method)).length);
+    await page.locator('#dMain').click();assert.equal(await page.locator('#imageViewer').getAttribute('data-image-source'),'memory');const warmSize=await page.locator('#ivImage').evaluate(e=>[e.naturalWidth,e.naturalHeight]);assert.deepEqual(warmSize,[1080,1620]);assert((await page.locator('.iv-generation').innerText()).includes('prepared local high resolution'));assert.equal(await page.evaluate(()=>window.fixtureCalls.filter(c=>['get_gallery_image','get_gallery_metadata'].includes(c.method)).length),warmCalls);ok('已有本地高清图提前解码，点大图立即显示真实高清尺寸与信息，不经过 40px 缩略图');
+    await page.keyboard.press('Escape');await page.evaluate(()=>{window.fixtureWarmGallery=null;clearViewerImageCache();});
+    await page.evaluate(()=>{
+      const c=document.createElement('canvas');c.width=1080;c.height=1620;c.getContext('2d').fillRect(0,0,1080,1620);
+      const cached={ok:true,full:{ok:true,b64:c.toDataURL('image/png').split(',')[1],mime:'image/png',width:1080,height:1620,original_available:true,cache_hit:true},metadata:{ok:true,online_metadata:true,meta:{prompt:'cached online example',steps:24},resources:[]}};
+      window.fixtureWarmGallery=(_path,index)=>index===1?cached:{};
+      window.fixtureDetail={ok:true,path:'D:/Example/online-examples.safetensors',name:'online-examples.safetensors',info:{name:'Online examples'},covers:[{b64:window.fixtureCoverB64,source_revision:'local-cover-unchanged'},{b64:window.fixtureCoverB64,url:'https://image.civitai.com/demo/width=450/online.png',source_revision:'cached-online-example'}]};
+    });
+    await page.evaluate(()=>showModelDetail('D:/Example/online-examples.safetensors'));await page.waitForFunction(()=>viewerDecodedCache.has('cached-online-example'));await page.locator('.detail-thumb[data-i="1"]').click();await page.waitForFunction(()=>document.querySelector('#dMain').dataset.hdIndex==='1');
+    const onlineCalls=await page.evaluate(()=>window.fixtureCalls.filter(c=>['get_gallery_image','get_gallery_metadata'].includes(c.method)).length);await page.locator('#dMain').click();assert.equal(await page.locator('#imageViewer').getAttribute('data-image-source'),'memory');assert.deepEqual(await page.locator('#ivImage').evaluate(e=>[e.naturalWidth,e.naturalHeight]),[1080,1620]);assert((await page.locator('.iv-generation').innerText()).includes('cached online example'));assert.equal(await page.evaluate(()=>window.fixtureCalls.filter(c=>['get_gallery_image','get_gallery_metadata'].includes(c.method)).length),onlineCalls);ok('其他在线示例图也提前恢复高清缓存与图片信息，切换及放大不重新加载小图');
+    await page.keyboard.press('Escape');await page.evaluate(()=>{window.fixtureWarmGallery=null;clearViewerImageCache();});
     // 同一会话直接复用已解码图片，不重复走大图和元数据 RPC。
     await page.evaluate(()=>{state.cfg.cache_original_images=true;clearViewerImageCache();window.fixtureOnlineMetadata={ok:true,online_metadata:true,meta:{prompt:'cached landscape'},resources:[]};window.fixtureDetail.covers[0].source_revision='fixture-revision-1';switchPage('models');});
     await page.evaluate(()=>openImageViewer(window.fixtureDetail,0));await page.waitForFunction(()=>document.querySelector('#imageViewer')?.dataset.imageSource==='first');await page.waitForFunction(()=>imageViewer.entry?.metadata?.ok);

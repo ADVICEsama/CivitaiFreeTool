@@ -2937,7 +2937,7 @@ async function showModelDetail(path, historyId = "") {
     '<div class="detail-left">' +
     (mainB64
       ? '<img class="detail-main-img" id="dMain" src="data:image/jpeg;base64,' + mainB64.b64 + '"/>'
-      : '<div class="detail-main-img dt-empty" id="dMain">' + _icon("image", "ic-lg") + '<span>暂无封面</span></div>') +
+      : covers.length?'<img class="detail-main-img" id="dMain" data-empty="true" alt="示例图片"/>':'<div class="detail-main-img dt-empty" id="dMain">' + _icon("image", "ic-lg") + '<span>暂无封面</span></div>') +
     '<div class="detail-thumbs">' + covers.map((c, i) =>
       c.b64
         ? '<img class="detail-thumb' + (i === 0 ? " on" : "") + '" data-i="' + i + '" src="data:image/jpeg;base64,' + c.b64 + '"/>'
@@ -3009,9 +3009,9 @@ async function showModelDetail(path, historyId = "") {
         const th = panel.querySelector('.detail-thumb[data-i="' + i + '"]');
         if (th) th.src = "data:image/jpeg;base64," + b64;
         const main = $("#dMain");
-        if (main && main.src.indexOf("data:image/jpeg;base64,") < 0 && main.getAttribute("src") !== undefined && (!mainB64 || main.dataset.empty)) {
+        if (main?.tagName==="IMG" && detailImgIdx===i && main.dataset.hdIndex!==String(i) && (!main.src || main.dataset.empty)) {
           main.src = "data:image/jpeg;base64," + b64;
-          main.style.opacity = "1";
+          main.style.opacity = "1";delete main.dataset.empty;
         }
       });
     }
@@ -3021,23 +3021,22 @@ async function showModelDetail(path, historyId = "") {
   $("#dMain", panel).tabIndex=0;
   $("#dMain", panel).addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openImageViewer(detailRow,detailImgIdx);}});
   // 画廊切换
-  const loadB64 = async (i) => {
-    const c = covers[i];
-    if (!c) return;
-    detailImgIdx = i;
-    detailImgLocalPath = (c.local && d.path) ? d.path : null;
-    const img = $("#dMain");
-    if (c.b64) { img.src = "data:image/jpeg;base64," + c.b64; }
-    else if (c.url) {
-      img.style.opacity = "0.5";
-      const b64 = await api.call("get_cover_b64", c.url);
-      if (generation !== detailGeneration) return;
-      if (b64) { img.src = "data:image/jpeg;base64," + b64; c.b64 = b64; }
-      img.style.opacity = "1";
+  let imageChoiceGeneration=0;
+  const loadB64=async i=>{
+    const c=covers[i];if(!c)return;
+    const choice=++imageChoiceGeneration;detailImgIdx=i;detailImgLocalPath=c.local?d.path:null;
+    const image=panel.querySelector('#dMain');delete image.dataset.hdIndex;
+    panel.querySelectorAll('.detail-thumb').forEach(t=>t.classList.toggle('on',Number(t.dataset.i)===i));
+    const current=()=>generation===detailGeneration && detailImgIdx===i && choice===imageChoiceGeneration;
+    const warm=typeof warmViewedGallery==='function'?await warmViewedGallery(detailRow,i):null;
+    if(!current())return;
+    if(warm){image.src=warm.url;image.dataset.hdIndex=String(i);image.style.opacity='1';delete image.dataset.empty;return;}
+    if(c.b64){image.src='data:image/jpeg;base64,'+c.b64;delete image.dataset.empty;}
+    else if(c.url){
+      image.style.opacity='.5';const b64=await api.call('get_cover_b64',c.url);
+      if(!current())return;
+      if(b64){image.src='data:image/jpeg;base64,'+b64;c.b64=b64;delete image.dataset.empty;}image.style.opacity='1';
     }
-    panel.querySelectorAll(".detail-thumb").forEach((t) => t.classList.remove("on"));
-    const th = panel.querySelector('.detail-thumb[data-i="' + i + '"]');
-    if (th) th.classList.add("on");
   };
   panel.querySelectorAll(".detail-thumb").forEach((t) => {
     t.addEventListener("click", () => loadB64(Number(t.dataset.i)));
@@ -3238,6 +3237,17 @@ async function showModelDetail(path, historyId = "") {
     setStatus(ok ? "简介已复制" : "复制失败（可手动选中复制）");
   });
   $("#dFavorite", panel).addEventListener("click", () => toggleModelFavorite(d.path));
+  // 只准备本地已有缓存的在线图；未知在线图不会后台下载。串行、空闲调度，避免同时解码整组图片。
+  if(typeof warmViewedGallery==='function'){
+    const prepare=async i=>{
+      if(generation!==detailGeneration || detailRow!==d || i>=covers.length)return;
+      const entry=await warmViewedGallery(d,i);
+      if(generation!==detailGeneration || detailRow!==d)return;
+      if(entry && detailImgIdx===i){const image=panel.querySelector('#dMain');if(image?.tagName==='IMG'){image.src=entry.url;image.dataset.hdIndex=String(i);image.style.opacity='1';delete image.dataset.empty;}}
+      const next=()=>prepare(i+1);if(window.requestIdleCallback)requestIdleCallback(next,{timeout:500});else setTimeout(next,40);
+    };
+    prepare(0);
+  }
 }
 // 详情图片右键：复制/打开文件夹/复制提示词/打开原图（document 级委托）
 let detailImgCtx = null;

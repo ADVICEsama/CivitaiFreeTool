@@ -2,9 +2,11 @@
 "use strict";
 let imageViewer = null, imageViewerRequest = 0, historyFocusRequest = 0;
 const viewerDecodedCache=new Map(),VIEWER_CACHE_BYTES=96*1024*1024,VIEWER_CACHE_COUNT=6;
-let viewerCacheAccount=null;
+let viewerCacheAccount=null,viewerCacheEpoch=0;
+const viewerWarmRequests=new Map();
 function disposeViewerEntry(entry){if(!entry)return;entry.image.onload=null;entry.image.remove();entry.image.removeAttribute('src');URL.revokeObjectURL(entry.url);}
 function clearViewerImageCache(){
+  viewerCacheEpoch++;viewerWarmRequests.clear();
   if(imageViewer)closeImageViewer();
   for(const entry of viewerDecodedCache.values())disposeViewerEntry(entry);viewerDecodedCache.clear();
 }
@@ -19,7 +21,8 @@ function rememberViewerEntry(key,entry){
   viewerDecodedCache.delete(key);viewerDecodedCache.set(key,entry);
   const bytes=()=>[...viewerDecodedCache.values()].reduce((n,e)=>n+e.bytes,0);
   while(viewerDecodedCache.size>1 && (viewerDecodedCache.size>VIEWER_CACHE_COUNT || bytes()>VIEWER_CACHE_BYTES)){
-    const oldest=viewerDecodedCache.keys().next().value;disposeViewerEntry(viewerDecodedCache.get(oldest));viewerDecodedCache.delete(oldest);
+    const keys=[...viewerDecodedCache.keys()],main=document.querySelector('#dMain');
+    const oldest=keys.find(k=>{const e=viewerDecodedCache.get(k);return e!==entry && !e.image.isConnected && (imageViewer || main?.src!==e.url);});if(oldest===undefined)break;disposeViewerEntry(viewerDecodedCache.get(oldest));viewerDecodedCache.delete(oldest);
   }
 }
 function viewerImageElement(){const img=new Image();img.id='ivImage';img.draggable=false;img.alt='模型示例图片';return img;}
@@ -29,6 +32,20 @@ async function decodeViewerEntry(full){
   try{await image.decode();}catch(error){URL.revokeObjectURL(url);throw error;}
   const {b64,...info}=full;
   return {full:info,url,image,bytes:image.naturalWidth*image.naturalHeight*4+blob.size,metadata:null,retryAt:0};
+}
+async function warmViewedGallery(detail,index=0){
+  if(state.cfg.cache_original_images===false || !detail?.covers?.[index])return null;
+  const account=String(state.cfg.api_key||''),key=viewerCacheKey(detail,index),epoch=viewerCacheEpoch;
+  if(viewerDecodedCache.has(key))return viewerDecodedCache.get(key);
+  if(viewerWarmRequests.has(key))return viewerWarmRequests.get(key);
+  const task=(async()=>{
+    const cached=await api.call('get_gallery_cached',detail.path,index,detail.history_id||'',index===0 && !!detail.covers[index].local_path);
+    if(!cached?.ok || !cached.full?.b64 || state.cfg.cache_original_images===false || String(state.cfg.api_key||'')!==account || epoch!==viewerCacheEpoch)return null;
+    const entry=await decodeViewerEntry(cached.full);
+    if(state.cfg.cache_original_images===false || String(state.cfg.api_key||'')!==account || epoch!==viewerCacheEpoch){disposeViewerEntry(entry);return null;}
+    entry.metadata=cached.metadata||null;rememberViewerEntry(key,entry);return entry;
+  })().catch(()=>null).finally(()=>{if(viewerWarmRequests.get(key)===task)viewerWarmRequests.delete(key);});
+  viewerWarmRequests.set(key,task);return task;
 }
 function mergeViewerMetadata(c,metadata){
   if(!metadata?.ok)return;
@@ -219,13 +236,17 @@ async function loadViewerImage(index){
   // 账号或开关变化只能在开始前清空，不在 modal 已挂载后把本次查看器关闭。
   const account=String(state.cfg.api_key||'');if(viewerCacheAccount===null)viewerCacheAccount=account;
   if(viewerCacheAccount!==account){for(const e of viewerDecodedCache.values())disposeViewerEntry(e);viewerDecodedCache.clear();viewerCacheAccount=account;}
-  const c=covers[index],key=viewerCacheKey(v.detail,index),cached=state.cfg.cache_original_images!==false?viewerDecodedCache.get(key):null;
+  const c=covers[index],key=viewerCacheKey(v.detail,index);let cached=state.cfg.cache_original_images!==false?viewerDecodedCache.get(key):null;
   const menu=v.root.querySelector('#ivContext');if(menu)menu.style.display='none';
   if(v.zoomRaf)cancelAnimationFrame(v.zoomRaf);v.zoomRaf=0;v.index=index;v.zoom=v.targetZoom=1;v.full=null;
   const area=v.root.querySelector('.iv-image-scroll');area.scrollTop=area.scrollLeft=0;const request=++imageViewerRequest;
   v.root.querySelector('#ivCount').textContent=(index+1)+' / '+covers.length;
   v.root.querySelector('.iv-prev').disabled=index===0;v.root.querySelector('.iv-next').disabled=index===covers.length-1;
   for(const id of ['ivShare','ivSite'])v.root.querySelector('#'+id).disabled=!(c.image_page||c.orig_url||c.url);
+  if(!cached && viewerWarmRequests.has(key)){
+    v.root.querySelector('#ivStatus').textContent='本地高清缓存准备中…';cached=await viewerWarmRequests.get(key);
+    if(imageViewer!==v || request!==imageViewerRequest)return;
+  }
   if(cached){viewerDecodedCache.delete(key);viewerDecodedCache.set(key,cached);displayViewerEntry(v,c,cached,true);}
   else{
     const old=v.entry,placeholder=viewerImageElement();v.root.querySelector('#ivImage').replaceWith(placeholder);v.entry=null;

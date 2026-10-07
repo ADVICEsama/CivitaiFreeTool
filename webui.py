@@ -1266,7 +1266,25 @@ class Api:
             raise ValueError('图片已不存在，请重新打开详情')
         return covers[index]
 
+    def get_gallery_cached(self,path,index,history_id='',allow_local=True):
+        """仅准备用户之前查看过的本地高清缓存，不访问网络或预下载其他图片。"""
+        import image_gallery
+        try:
+            item=self._gallery_item(path,index,history_id)
+            full=image_gallery.cache_load(item,self.cfg,'preview')
+            if not isinstance(full,dict) or not full.get('ok') or not full.get('b64'):
+                # 已有本地原图可以直接准备；没有本地文件时绝不在后台请求 CDN。
+                if not allow_local or self.cfg.get('cache_original_images') is not True or not item.get('local_path') or not os.path.isfile(item['local_path']):return {'ok':False,'cached':False}
+                full=image_gallery.preview(item,self.cfg)
+            metadata=image_gallery.cache_load(item,self.cfg,'metadata')
+            # 源图内嵌参数也在高清预览缓存中；没有数据时不假装已获取在线信息。
+            if not isinstance(metadata,dict) or not metadata.get('ok'):
+                metadata={'ok':True,'meta':full.get('meta') or {},'resources':full.get('resources') or [],'metadata_source':full.get('metadata_source')} if full.get('meta') or full.get('resources') else None
+            return {'ok':True,'full':{**full,'cache_hit':True},'metadata':metadata}
+        except Exception:return {'ok':False,'cached':False}
+
     def get_gallery_image(self, path, index, history_id=''):
+
         import image_gallery
         try:return image_gallery.preview(self._gallery_item(path,index,history_id),self.cfg)
         except Exception:return {'ok':False,'msg':'图片读取失败；在线图片可能无权限或网络不可用，可打开 C站原图页'}

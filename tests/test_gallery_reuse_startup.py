@@ -39,6 +39,27 @@ class GalleryReuseTests(unittest.TestCase):
             for index in [True,-1,99,'0']:
                 with self.assertRaises(ValueError):a._gallery_item(str(p),index)
 
+    def test_warm_local_original_never_calls_network_and_keeps_real_resolution(self):
+        with TemporaryDirectory() as d,patch.object(config,'APP_DIR',d):
+            a,p=self.fixture(d);a.cfg={'cache_original_images':True};Image.new('RGB',(1664,2432),'blue').save(p.with_suffix('.preview.png'));a.get_model_detail(str(p))
+            with patch('civitai_api.build_opener',side_effect=AssertionError('no background download')):r=a.get_gallery_cached(str(p),0)
+            self.assertTrue(r['ok']);self.assertEqual((r['full']['width'],r['full']['height']),(1664,2432))
+    def test_warm_missing_remote_image_never_downloads_unviewed_picture(self):
+        with TemporaryDirectory() as d,patch.object(config,'APP_DIR',d):
+            a=webui.Api.__new__(webui.Api);a.cfg={'cache_original_images':True};a._gallery_item=Mock(return_value={'url':'https://image.civitai.com/not-viewed/original=true/example.png'})
+            with patch('civitai_api.build_opener',side_effect=AssertionError('no background download')):r=a.get_gallery_cached('fixture',0)
+            self.assertFalse(r['ok'])
+    def test_previously_viewed_online_original_restores_hd_and_information_offline(self):
+        import io
+        from PIL import PngImagePlugin
+        with TemporaryDirectory() as d,patch.object(config,'APP_DIR',d):
+            cfg={'cache_original_images':True};item={'url':'https://image.civitai.com/fixture/width=450/online.png'}
+            buf=io.BytesIO();png=PngImagePlugin.PngInfo();png.add_text('parameters','online landscape\nSteps: 24');Image.new('RGB',(1664,2432),'blue').save(buf,format='PNG',pnginfo=png)
+            image_gallery.cache_store(item,cfg,'original',buf.getvalue());full=image_gallery.preview(item,cfg);self.assertEqual(full['width'],1664)
+            a=webui.Api.__new__(webui.Api);a.cfg=cfg;a._gallery_item=Mock(return_value=item)
+            with patch('civitai_api.build_opener',side_effect=AssertionError('online cache must remain offline')):r=a.get_gallery_cached('fixture',1)
+            self.assertTrue(r['ok']);self.assertEqual((r['full']['width'],r['full']['height']),(1664,2432));self.assertEqual(r['metadata']['meta']['prompt'],'online landscape')
+
 class StartupRouteTests(unittest.TestCase):
     def test_default_prefers_window_even_when_fallback_enabled(self):
         self.assertEqual(main_web._launch_ui_mode(['app.exe'],copy.deepcopy(config.DEFAULTS)),'window')
