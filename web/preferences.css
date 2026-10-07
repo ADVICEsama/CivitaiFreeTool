@@ -1,0 +1,92 @@
+/* 可组合外观：保留旧主题，新增中性底色、路径开关和自适应分类窗口。 */
+[data-theme="dark_graphite"] {
+  --bg: #11151b; --surface: #1b212a; --surface2: #252e39; --border: #364353;
+  --text: #edf2f8; --text-dim: #a8b5c5; --primary: #83b8ff; --primary-hover: #a6ccff;
+  --primary-fg: #11151b; --danger: #f87171;
+  --shadow: 0 2px 10px rgba(0,0,0,.25); --shadow-hover: 0 6px 20px rgba(0,0,0,.35);
+  color-scheme: dark;
+}
+[data-theme="dark_pink"] {
+  --bg: #19151b; --surface: #251f29; --surface2: #332b37; --border: #4b3e50;
+  --text: #f6eef5; --text-dim: #c4adbe; --primary: #f0a4c5; --primary-hover: #f8bfd7;
+  --primary-fg: #19151b; --danger: #f87171;
+  --shadow: 0 2px 10px rgba(0,0,0,.25); --shadow-hover: 0 6px 20px rgba(0,0,0,.35);
+  color-scheme: dark;
+}
+.file-subpath { color: var(--text-dim); font-size: calc(11.5px * var(--type-scale, 1)); line-height: 1.5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+[data-show-paths="false"] .file-subpath { display: none !important; }
+.folder-picker.rename-dialog {
+  top: 50%; display: flex; flex-direction: column; gap: 12px;
+  resize: both; overflow: hidden; padding: 18px; border-radius: var(--radius);
+}
+.fp-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-shrink: 0; }
+.folder-picker .rd-title { margin: 0; font-size: calc(16px * var(--type-scale, 1)); }
+.fp-hint { font-size: calc(12px * var(--type-scale, 1)); color: var(--text-dim); flex-shrink: 0; }
+.fp-toolbar { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.fp-toolbar .input { flex: 1; min-width: 0; }
+#fpCount { color: var(--text-dim); font-size: calc(12px * var(--type-scale, 1)); white-space: nowrap; }
+#fpList { flex: 1 1 auto; min-height: 36px; overflow: auto; padding: 6px; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.fp-item { padding: var(--fp-row-padding, 8px) 10px; margin-left: calc(var(--fp-depth) * 14px); margin-bottom: 3px; border-radius: var(--radius-sm); cursor: pointer; border: 1px solid transparent; }
+.fp-item:hover { background: var(--surface2); }
+.fp-item.selected { background: color-mix(in srgb, var(--primary) 15%, var(--surface)); border-color: var(--primary); color: var(--text); }
+.fp-name { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.fp-name .ic { flex-shrink: 0; color: var(--primary); }
+.fp-name span { overflow-wrap: anywhere; }
+.fp-path { margin-left: 24px; margin-top: 3px; }
+.fp-empty { padding: 24px 12px; color: var(--text-dim); text-align: center; }
+.fp-footer { display: flex; align-items: center; gap: 18px; flex-shrink: 0; padding-top: 4px; }
+.fp-selected { flex: 1; min-width: 0; font-size: calc(12px * var(--type-scale, 1)); }
+.fp-selected span { color: var(--text-dim); }
+#fpSelected { overflow-wrap: anywhere; max-height: 3.2em; overflow: auto; margin-top: 4px; }
+.folder-picker .rd-actions { margin: 0; flex-shrink: 0; }
+.folder-picker[data-small="true"] { padding: 12px; gap: 8px; }
+.folder-picker[data-small="true"] .fp-hint { display: none; }
+.folder-picker[data-small="true"] .rd-title { font-size: calc(14px * var(--type-scale, 1)); }
+.folder-picker[data-small="true"] #fpCount { display: none; }
+.folder-picker[data-small="true"] #fpSelected { max-height: 2.5em; }
+.appearance-color { width: 72px; height: 34px; padding: 3px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); cursor: pointer; }
+.appearance-preview { display: flex; align-items: center; gap: 10px; margin-top: 14px; padding: 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: calc(12px * var(--type-scale, 1)); }
+.appearance-preview + .form-grid { margin-top: 12px; }
+html[data-custom-accent="true"] :is(.wf-col-title, .wf-drop-icon, .rd-title) { color: var(--text); }
+html[data-custom-accent="true"][data-theme="metro"] :is(.wf-col-title, .rd-title) { color: var(--primary-fg); }
+.appearance-preview .btn { margin-left: auto; }
+.appearance-swatch { width: 22px; height: 22px; background: var(--primary); border-radius: var(--radius-sm); flex-shrink: 0; }
+/* 自选色覆盖旧主题的硬编码主按钮和选中颜色；危险操作仍使用危险色。 */
+html[data-custom-accent="true"] .btn.btn-primary:not(:disabled),
+html[data-theme="dark_graphite"] .btn.btn-primary:not(:disabled),
+html[data-theme="dark_pink"] .btn.btn-primary:not(:disabled) { background: var(--primary); border-color: var(--primary); color: var(--primary-fg); }
+html[data-custom-accent="true"] .btn.btn-primary:not(:disabled):hover,
+html[data-theme="dark_graphite"] .btn.btn-primary:not(:disabled):hover,
+html[data-theme="dark_pink"] .btn.btn-primary:not(:disabled):hover { background: var(--primary-hover); border-color: var(--primary-hover); }
+html[data-custom-accent="true"] table.grid tbody tr.sel-row,
+html[data-custom-accent="true"] table.grid tbody tr.selected { background: color-mix(in srgb, var(--primary) 16%, var(--surface)) !important; }
+html[data-custom-accent="true"] table.grid tbody tr:hover { background: color-mix(in srgb, var(--primary) 9%, var(--surface)) !important; }
+[data-custom-accent="true"] .nav-logo { background: var(--primary); color: var(--primary-fg); }
+html[data-density="compact"] { --fp-row-padding: 4px; --list-padding-y: 4px; }
+html[data-density="comfortable"] { --fp-row-padding: 12px; --list-padding-y: 13px; }
+html[data-density="compact"] table.grid td, html[data-density="comfortable"] table.grid td { padding-top: var(--list-padding-y); padding-bottom: var(--list-padding-y); }
+html[data-density="compact"] .thumb.ml-thumb { width: 36px; height: 36px; }
+html[data-corners="square"] { --radius: 0px; --radius-sm: 0px; }
+html[data-corners="soft"] { --radius: 8px; --radius-sm: 4px; }
+html[data-corners="rounded"] { --radius: 18px; --radius-sm: 10px; }
+html:not([data-corners="theme"])[data-corners] :is(.card, .ms-card, .rename-dialog, .detail-panel, .ob-card) { border-radius: var(--radius) !important; }
+html:not([data-corners="theme"])[data-corners] :is(.btn, .input, select, .nav-tab, .fp-item, .table-wrap) { border-radius: var(--radius-sm) !important; }
+@media (max-width: 600px) {
+  .folder-picker.rename-dialog { padding: 12px; gap: 8px; }
+  .fp-footer { flex-direction: column; align-items: stretch; gap: 8px; }
+  .fp-heading { gap: 6px; }
+  .folder-picker .rd-title { font-size: calc(14px * var(--type-scale, 1)); }
+  .fp-hint { display: none; }
+  .appearance-preview { flex-wrap: wrap; }
+}
+
+/* 绯夜：深紫黑底与高饱和玫红，区别于灰蓝石墨和低饱和夜樱。 */
+[data-theme="dark_rose"] {
+  --bg:#160b18; --surface:#2b142b; --surface2:#3e1b36; --border:#713451;
+  --text:#ffeaf5; --text-dim:#dfa8c6; --primary:#f04d9b; --primary-hover:#ff77b6;
+  --primary-fg:#160b18; --danger:#ff7d91;
+  --shadow:0 2px 10px rgba(0,0,0,.25); --shadow-hover:0 6px 20px rgba(0,0,0,.35);
+  color-scheme:dark;
+}
+[data-theme="dark_rose"] .page-title {color:#ffb4d4;}
+[data-theme="dark_rose"] .nav {background:linear-gradient(180deg,#32142d,#211021);}

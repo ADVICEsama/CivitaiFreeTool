@@ -2,13 +2,24 @@
 
 > **免费 · 全功能 · 无付费墙** —— Civitai / HuggingFace 模型下载、管理、反向解析工具（Windows / Linux / macOS）
 
-![Version](https://img.shields.io/badge/version-2.2.5-blue) ![License](https://img.shields.io/badge/license-MIT-green) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-orange) ![CI](https://github.com/ADVICEsama/CivitaiFreeTool/workflows/tests/badge.svg)
+![Version](https://img.shields.io/badge/version-2.6.0-blue) ![License](https://img.shields.io/badge/license-MIT-green) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-orange) ![CI](https://github.com/ADVICEsama/CivitaiFreeTool/workflows/tests/badge.svg)
 
 CivitaiFreeTool 是一款开箱即用的 AI 模型管理桌面工具：**批量下载 C 站 / HuggingFace 模型、本地模型管理（缩略图 / 改名 / 整理 / 校验 / 移动）、模型更新检测、反向解析、ComfyUI 工作流分析**，全部功能免费开放。内置**圆角现代（Modern Rounded）与 Metro（Windows 10 扁平）两套完整主题体系**，同一功能两种视觉语言。
 
-配套 **Chrome 扩展**：浏览 C 站模型页时点击图标一键下载，直达软件下载管理（见下方「Chrome 扩展」）。
+配套 **Chrome / Firefox 扩展**：浏览 C 站模型页时点击图标一键下载，直达软件下载管理（见下方「Chrome 扩展」）。
 
 ---
+
+## v2.6.0 工作台更新
+
+- 原生自绘窗口栏与软件主题统一，保留拖动、双击最大化、最小化/还原及边缘缩放；设置中可恢复系统标题栏。
+- Windows 11 22H2+ 的 Mica / Mica Alt 扩展到整个窗口背景；WebView2 透明底、半透明面板，图片与文字不透明。外部控制模式不持续抢写 Mica For Everyone 的 DWM 属性。
+- 模型详情图片点击放大：上一张/下一张、图片缩放、保存来源图片、复制分享链接、C站原图页入口、图片复制与生成数据 JSON 导出。
+- 展示来源已提供的提示词、负面提示词、资源列表、采样器/步数/CFG/种子/尺寸和本地 PNG / ComfyUI 元数据；缺失时明确提示，不猜测、不执行节点。
+- 详情提供“文件名 → C站名称”：先预览，只改当前模型及附属文件，关联更新下载历史路径。
+- 下载历史点击模型信息或双击模型，同步定位并高亮瀑布流卡片/列表行；必要时清除前端筛选，不擅自修改模型管理目录。
+- 字体菜单名字即本地字体预览；五档独立字号与图标大小；Alt + 滚轮调模型图片，Ctrl + 滚轮始终全局缩放。
+- 发布维护流程见 [发布说明](docs/RELEASING.md)：每次修复后提交源码并发布 Release，附 Windows 包、Chrome ZIP、Firefox ZIP 与校验文件。
 
 ## ✨ 功能总览
 

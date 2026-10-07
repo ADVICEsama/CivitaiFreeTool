@@ -19,5 +19,8 @@ QtPy>=2.4; sys_platform != "win32"
 # 窗口图标（仅 Windows，WinForms/pythonnet）
 pythonnet>=3.0; sys_platform == "win32"
 
+# 浏览器兜底的托盘入口（打开界面 / 退出），Windows 发布包必须包含
+pystray>=0.19; sys_platform == "win32"
+
 # 打包（可选，仅发布需要）
 # pyinstaller>=6.0

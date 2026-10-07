@@ -1,0 +1,504 @@
+/* 隔离前端回归测试：只使用虚构数据，不连接正在运行的下载后端。
+ * PLAYWRIGHT_PATH=<playwright 包路径> node tests/test_ui_preferences.cjs
+ */
+const assert = require('node:assert/strict');
+const http = require('node:http');
+const fs = require('node:fs');
+const path = require('node:path');
+const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
+const web = path.resolve(__dirname, '../web');
+const shots = path.resolve(__dirname, '../screens_ui');
+const server = http.createServer((req, res) => {
+  const url = new URL(req.url, 'http://localhost');
+  const file = path.resolve(web, '.' + decodeURIComponent(url.pathname === '/' ? '/index.html' : url.pathname));
+  if (!file.startsWith(web + path.sep)) { res.writeHead(403).end(); return; }
+  fs.readFile(file, (err, data) => {
+    if (err) { res.writeHead(404).end(); return; }
+    res.setHeader('Content-Type', ({'.html':'text/html; charset=utf-8', '.js':'application/javascript; charset=utf-8', '.css':'text/css; charset=utf-8'})[path.extname(file)] || 'application/octet-stream');
+    res.end(data);
+  });
+});
+let passed = 0;
+function ok(name) { passed++; console.log('OK ' + name); }
+(async () => {
+  await new Promise(r => server.listen(0, '127.0.0.1', r));
+  const browser = await chromium.launch({headless: true});
+  try {
+    const page = await browser.newPage({viewport: {width:1280, height:820}});
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    await page.addInitScript(() => {
+      const key = 'cft-test-config';
+      const defaults = { theme:'dark_graphite', ui_zoom:100, ui_scheme:'light', metro_accent:'#0078D4',
+        api_key:'test-fixture-not-a-real-key', default_page:'dlmanager', default_view:'list',
+        show_file_paths:true, custom_accent_enabled:false, custom_accent:'#60A5FA', ui_density:'standard', ui_corners:'theme',
+        models_dir:'D:\\AI\\models', download_dir:'D:\\AI\\downloads', models_dirs:[],
+        ambient_bg:false, ask_move_after_download:false, organize_rules:[],browser_fallback_enabled:true,ui_mode:'window',ui_text_size:'standard',window_appearance:'theme' };
+      window.fixtureCfg = Object.assign({}, defaults, JSON.parse(localStorage.getItem(key) || '{}'));
+      window.fixtureCalls = [];
+      window.fixtureFolderMode = 'normal';
+      window.fixtureHistory = [];
+      window.fixtureTasks=[{id:'fixture-1',filename:'example.safetensors',status:'pending',dest_dir:'D:\\AI\\models\\分类 1',total:123456,downloaded:0,progress:0}];
+      window.pywebview = {api: new Proxy({}, {get: (_, method) => async (...args) => {
+        window.fixtureCalls.push({method, args});
+        if (method === 'get_config') return {...window.fixtureCfg};
+        if (method === 'save_config') { Object.assign(window.fixtureCfg, args[0]); localStorage.setItem(key, JSON.stringify(window.fixtureCfg)); return true; }
+        if (method === 'get_local_fonts') return {ok:true,fonts:['Segoe UI','Microsoft YaHei UI','微软雅黑']};
+        if (method === 'get_data_storage_info') return {current:'D:\\CFT',default:'D:\\CFT',suggested:'D:\\Profile\\CFTData',warning:''};
+        if (method === 'migrate_data_storage') return {ok:true,msg:'fixture migration'};
+        if (method === 'open_in_browser') return {ok:true,msg:'fixture browser'};
+        if (method === 'get_folders') {
+          if (window.fixtureFolderMode === 'error') throw new Error('fixture folder failure');
+          if (window.fixtureFolderMode === 'empty') return JSON.stringify({root:'',tree:[]});
+          const tree = Array.from({length:80}, (_,i) => ({name: '分类 '+i, path:'分类 '+i, children:[{name:'风格 <script> & "中文" '+i, path:'分类 '+i+'/风格 <script> & "中文" '+i, children:[]}]}));
+          return JSON.stringify({root:'D:\\AI\\models',tree});
+        }
+        if (method === 'get_download_history') return {items:window.fixtureHistory,error:''};
+        if (method === 'get_history_thumbnail') return 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j0x0AAAAASUVORK5CYII=';
+        if (method === 'history_move_to') { const row=window.fixtureHistory.find(r=>r.id===args[0]);row.dest_dir=args[1];row.file_path=args[1]+'\\'+row.filename;return {ok:true,msg:'fixture move'}; }
+        if ((method === 'get_history_detail' || method === 'get_model_detail') && window.fixtureDetail) return JSON.stringify({...window.fixtureDetail,path:args[0]});
+        if(method==='get_gallery_image')return {ok:true,b64:window.fixtureCoverB64,mime:'image/png',width:600,height:900,original_available:true};
+        if(method==='save_gallery_image')return {ok:true,msg:'已保存原图片（fixture）'};
+        if (method === 'get_history_detail' || method === 'get_model_detail') return JSON.stringify({ok:true,path:method==='get_history_detail'?(window.fixtureHistory.find(r=>r.id===args[0])?.file_path||args[0]):args[0],name:'示例模型',base:'SDXL',ver:'v1.2',size:1048576,covers:[],info:{name:'示例模型',type:'LoRA',baseModel:'SDXL',trainedWords:['soft light'],description:'这是隔离测试数据，不包含真实模型。',version:{name:'v1.2'}}});
+        if (method === 'get_tasks') return window.fixtureTasks;
+        if (method === 'rp_get_rows') return [{path:'D:\\AI\\models\\example.safetensors',status:'待反查',sha:''}];
+        if (method === 'get_download_target') return JSON.stringify({default:window.fixtureCfg.download_dir});
+        if (method === 'get_version') return JSON.stringify({ok:true,version:'2.3.1'});
+        if (method === 'get_scan_rows') return JSON.stringify(window.fixtureScanRows||[]);
+        if (method === 'get_scan_state') return {running:false};
+        if (method === 'get_covers') return '{}';
+        if (method === 'get_system_accent') return '#107C10';
+        if (method === 'log_ui_error') throw new Error('UI error: ' + args[0]);
+        return {};
+      }})};
+    });
+    const url = 'http://127.0.0.1:' + server.address().port;
+    async function settingControl(key) {
+      await page.evaluate(k => {
+        const row=document.querySelector('[data-key="'+k+'"]');
+        if(row) showSettingsCategory(row.closest('[data-settings-panel]').dataset.settingsPanel);
+      },key);
+      return page.locator('[data-key="'+key+'"]');
+    }
+    await page.goto(url);
+    await page.waitForFunction(() => window.__ready && document.querySelector('#settingsForm [data-key="show_file_paths"]'));
+    const sidebar = await page.locator('.nav-wrap').boundingBox();
+    const content = await page.locator('.content').boundingBox();
+    assert.equal(sidebar.x,0); assert(content.x >= sidebar.width); ok('左侧导航与主内容左右分区');
+    assert.equal(await page.locator('.nav-tab .ic').count(),7); ok('七个页面导航图标完整');
+    assert.equal(await page.locator('#dlPauseSel .ic').isVisible(),true); ok('经典主题不再隐藏已有图标');
+    const logoThemes = ['dark','dark_purple','dark_blue','dark_green','dark_red','dark_graphite','dark_pink','dark_rose','light','light_blue','light_pink','light_green','modern','metro'];
+    for (const theme of logoThemes) {
+      const logo=await page.evaluate(t=>{
+        document.documentElement.dataset.theme=t;
+        state.cfg.theme=t;state.cfg.custom_accent_enabled=true;state.cfg.custom_accent='#ff00aa';state.cfg.ui_corners='square';applyUiAppearance();
+        const cs=getComputedStyle(document.querySelector('.nav-logo'));
+        return {background:cs.backgroundColor,radius:cs.borderRadius,border:cs.borderWidth,shadow:cs.boxShadow,fit:getComputedStyle(document.querySelector('.nav-logo img')).objectFit};
+      },theme);
+      assert.equal(logo.background,'rgba(0, 0, 0, 0)');assert.equal(logo.radius,'50%');assert.equal(logo.border,'0px');assert.equal(logo.shadow,'none');assert.equal(logo.fit,'contain');
+      ok(theme+' 圆形 Logo 无方形底色');
+    }
+    await page.evaluate(()=>{state.cfg.theme='dark_graphite';state.cfg.custom_accent_enabled=false;state.cfg.ui_corners='theme';document.documentElement.dataset.theme='dark_graphite';applyUiAppearance();});
+    await page.locator('#toggleSidebar').click();
+    assert.equal(await page.evaluate(()=>document.documentElement.dataset.sidebar),'collapsed');
+    await page.reload(); await page.waitForFunction(()=>window.__ready);
+    assert.equal(await page.evaluate(()=>document.documentElement.dataset.sidebar),'collapsed');
+    await page.locator('#toggleSidebar').click(); ok('导航收起状态可记忆');
+    await page.locator('.nav-tab[data-page="settings"]').click();
+    assert.equal(await page.locator('.settings-category:visible').count(),1);
+    assert.equal(await page.locator('#settings-general').isVisible(),true); ok('设置默认只显示常用分类');
+    const footerInitial=await page.locator('#settingsActions').boundingBox();
+    await page.evaluate(()=>document.querySelector('.content').scrollTop=2000);
+    const footerScrolled=await page.locator('#settingsActions').boundingBox();
+    assert(Math.abs(footerInitial.y-footerScrolled.y)<1 && Math.abs(footerInitial.y+footerInitial.height-820)<2); ok('四个设置动作始终置底');
+    const actionCenter=await page.locator('#settingsActions').evaluate(el=>{const first=el.firstElementChild.getBoundingClientRect(),last=el.lastElementChild.getBoundingClientRect(),bar=el.getBoundingClientRect();return Math.abs((first.x+last.right)/2-(bar.x+bar.width/2))});
+    assert(actionCenter<3);ok('设置底栏四个动作居中');
+    await page.evaluate(()=>document.querySelector('.content').scrollTop=0);
+
+    await page.locator('#settingsSearch').fill('代理');
+    assert.equal(await page.locator('#settings-network').isVisible(),true);
+    assert((await page.locator('.setting-row:visible').count())>=2); ok('跨分类搜索设置');
+    await page.locator('#settingsSearch').fill('缓存'); assert.equal(await page.locator('#btnCleanImgCache').isVisible(),true); ok('维护功能也可搜索');
+    await page.locator('#settingsSearch').fill('xyz-not-present'); assert.equal(await page.locator('#settingsEmpty').isVisible(),true); ok('设置搜索无结果说明');
+    await page.locator('[data-settings-category="organize"]').click();
+    assert.equal(await page.locator('.organize-guide').isVisible(),true);
+    assert((await page.locator('.organize-guide').innerText()).includes('第一条')); ok('分类规则旁有流程与匹配说明');
+    await page.locator('#organizeRules').fill('test rule original -> 原始规则');
+    await page.locator('[data-settings-category="general"]').click();
+    await page.locator('[data-settings-category="organize"]').click();
+    assert.equal(await page.locator('#organizeRules').inputValue(),'test rule original -> 原始规则'); ok('切换设置分类不丢未保存输入');
+    await page.locator('#insertRuleExample').click();
+    assert((await page.locator('#organizeRules').inputValue()).startsWith('test rule original')); ok('插入示例不覆盖用户规则');
+    await page.locator('#organizeRules').fill('bad rule without arrow');
+    const savesBefore = await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='save_config').length);
+    await page.locator('#btnSaveSettings').click();
+    assert.equal(await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='save_config').length),savesBefore);
+    assert((await page.locator('#ruleValidation').innerText()).includes('第 1 行')); ok('无效规则阻止静默丢失与保存');
+    await page.locator('#organizeRules').fill('水彩， watercolor -> 水彩风格');
+    await (await settingControl('organize_mode')).selectOption('rules');
+    await page.locator('#btnSaveSettings').click();
+    await page.waitForFunction(()=>window.fixtureCfg.organize_rules?.length===1);
+    assert.equal(await page.evaluate(()=>window.fixtureCfg.organize_rules[0].keywords.length),2);
+    assert.equal(await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='mm_organize').length),0); ok('规则支持中文逗号，保存不会移动模型');
+    const keys=await page.evaluate(()=>Array.from(document.querySelectorAll('#settingsForm [data-key]')).map(e=>e.dataset.key));
+    assert.equal(keys.length,new Set(keys).size); ok('所有设置字段唯一，隐藏页不重复提交');
+    await page.locator('.nav-tab[data-page="dlmanager"]').click();
+    await page.evaluate(()=>window.fixtureHistory=Array.from({length:135},(_,i)=>({id:'history-'+i,filename:'history_'+String(i).padStart(3,'0')+'.safetensors',dest_dir:'D:\\AI\\models',status:i%3===0?'error':i%3===1?'done':'canceled',total:1048576,finished_at:i===134?null:1791000000-i,modelName:'示例模型 '+i,error:i%3===0?'fixture failure':''})));
+    await page.locator('#dlHistoryTab').click();
+    await page.waitForFunction(()=>document.querySelector('#dlHistoryTab').dataset.count==='135');
+    assert.equal(await page.locator('#dlHistoryTable tbody tr').count(),100);
+    assert.equal(await page.locator('#dlQueuePanel').isVisible(),false); ok('任务队列与下载历史分离');
+    await page.locator('#historyNext').click(); assert.equal(await page.locator('#dlHistoryTable tbody tr').count(),35);
+    assert((await page.locator('#dlHistoryTable').innerText()).includes('时间未记录')); ok('历史分页与旧记录未知时间');
+    await page.locator('#dlHistorySearch').fill('history_004');
+    assert.equal(await page.locator('#dlHistoryTable tbody tr').count(),1);
+    await page.locator('[data-history-open]').click();
+    const openCall=await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='open_in_folder').at(-1));
+    assert.equal(openCall.args.length,1); ok('历史搜索与打开目录使用现有 API');
+    await page.evaluate(()=>{
+      const row=window.fixtureHistory.find(r=>r.id==='history-4');
+      Object.assign(row,{file_exists:true,file_path:'D:\\AI\\models\\Moved\\history_004.safetensors',dest_dir:'D:\\AI\\models\\Moved',model_url:'https://civitai.com/models/123',cached_thumb:true});
+      renderDownloadHistory();
+    });
+    await page.locator('[data-history-thumb] img').waitFor(); ok('历史封面来自独立缓存 API');
+    await page.locator('[data-history-open]').click();
+    assert.equal((await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='open_in_folder').at(-1))).args[0],'D:\\AI\\models\\Moved\\history_004.safetensors'); ok('历史打开目录使用移动后的实际文件');
+    await page.locator('[data-history-site]').click();
+    assert.equal((await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='open_url').at(-1))).args[0],'https://civitai.com/models/123'); ok('历史可打开 C 站公共主页');
+    await page.locator('[data-history-save]').click(); await page.locator('#fpOk').click();
+    await page.waitForFunction(()=>window.fixtureCalls.some(c=>c.method==='history_move_to')); ok('历史保存到使用独立记录 ID');
+    await page.locator('[data-history-info]').click();
+    await page.locator('#dClose').waitFor();
+    assert.equal((await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='get_history_detail').at(-1))).args[0],'history-4'); ok('历史信息在模型管理右栏显示');
+    await page.locator('.nav-tab[data-page="dlmanager"]').click();
+    await page.locator('#dlHistoryTab').click();
+    await page.locator('#dlHistoryTable tbody .c-file').dblclick();
+    await page.locator('#dClose').waitFor();
+    assert.equal((await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='get_history_detail').at(-1))).args[0],'history-4');ok('双击下载历史直接进入模型信息');
+    await page.locator('.nav-tab[data-page="dlmanager"]').click();await page.locator('#dlHistoryTab').click();
+    await page.locator('#dlHistorySearch').fill('不存在的模型'); assert((await page.locator('#dlHistoryTable').innerText()).includes('没有匹配')); ok('历史空结果提示');
+    await page.locator('#dlHistorySearch').fill('');
+    await page.locator('#dlQueueTab').click();
+    await page.locator('.nav-tab[data-page="models"]').click();
+    assert.equal(await page.locator('#detailMask').isVisible(),true);
+    assert.equal(await page.locator('.inspector-placeholder').isVisible(),true);
+    await page.waitForTimeout(800);
+    await page.evaluate(()=>{
+      state.models=state.display=Array.from({length:8},(_,i)=>({path:'D:\\AI\\models\\fixture'+i+'.safetensors',name:'样例模型 '+i,type:'LoRA',base:'SDXL',ver:'v1',size:1048576}));
+      state.mmView='masonry';renderMm();
+    });
+    await page.locator('.ms-card').first().waitFor();
+    await page.locator('#mmImageSize').fill('320');await page.locator('#mmImageSize').dispatchEvent('input');
+    assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--model-card-width').trim()),'320px');ok('瀑布流图片大小滑杆生效');
+    const zoomBefore=await page.evaluate(()=>state.cfg.ui_zoom);
+    await page.locator('#mmMasonry').hover();await page.keyboard.down('Alt');await page.mouse.wheel(0,100);await page.keyboard.up('Alt');
+    assert.equal(await page.evaluate(()=>state.cfg.masonry_card_width),300);
+    assert.equal(await page.evaluate(()=>state.cfg.ui_zoom),zoomBefore);ok('瀑布流 Alt 滚轮只调整图片，不缩放整个界面');
+    await page.keyboard.down('Control');await page.mouse.wheel(0,100);await page.keyboard.up('Control');
+    assert.equal(await page.evaluate(()=>state.cfg.ui_zoom),zoomBefore-5);assert.equal(await page.evaluate(()=>state.cfg.masonry_card_width),300);ok('瀑布流 Ctrl 滚轮保留全局缩放，不再改变图片');
+    await page.evaluate(()=>applyZoom(100));
+    await page.evaluate(()=>setMasonrySize(220,true));await page.waitForTimeout(450);
+    const beforeCards=await page.locator('.ms-card').evaluateAll(cards=>cards.map(c=>{const b=c.getBoundingClientRect();return [b.x,b.y,b.width,b.height]}));
+    const beforeDetail = await page.locator('.content').boundingBox();
+    await page.evaluate(()=>showModelDetail('D:\\AI\\models\\fixture.safetensors'));
+    assert.equal((await page.locator('.content').boundingBox()).width,beforeDetail.width); ok('详情栏常驻，打开模型不改变浏览区宽度');
+    assert.deepEqual(await page.locator('.ms-card').evaluateAll(cards=>cards.map(c=>{const b=c.getBoundingClientRect();return [b.x,b.y,b.width,b.height]})),beforeCards);ok('打开详情后瀑布流各模型坐标不变');
+    await page.evaluate(()=>closeDetail());
+    assert.equal(await page.locator('.inspector-placeholder').isVisible(),true); ok('关闭模型信息不收起右栏');
+    await page.evaluate(()=>showModelDetail('D:\\AI\\models\\fixture.safetensors'));
+    await page.locator('#detailMask').waitFor({state:'visible'});
+    const drawer=await page.locator('#detailMask').boundingBox();
+    assert(Math.abs(drawer.x+drawer.width-1280)<2 && drawer.width<=420);
+    assert.equal(await page.evaluate(()=>getComputedStyle(document.querySelector('#detailPanel .dt-body')).display),'block'); ok('模型详情在右侧抽屉中显示');
+    await page.locator('.nav-tab[data-page="dlmanager"]').click(); assert.equal(await page.locator('#detailMask').isVisible(),false); ok('换页关闭模型详情，不遮挡其他页面');
+    await page.evaluate(() => { window.fpResult = null; pickFolderModal().then(p => window.fpResult = p); });
+    await page.locator('.folder-picker').waitFor();
+    assert.equal(await page.locator('.fp-item').count(),161); ok('161 个目录显示');
+    await page.locator('[data-fold]').first().click();
+    assert.equal(await page.locator('.fp-item').count(),1); ok('根目录可折叠整个目录树');
+    await page.locator('#fpSearch').fill('分类 1');
+    assert((await page.locator('.fp-item').count())>1); ok('搜索可找到折叠目录中的子项');
+    await page.locator('#fpSearch').fill('');
+    await page.locator('[data-fold]').first().click();
+    assert.equal(await page.locator('.fp-item').count(),161); ok('清空搜索保留折叠状态且可以展开');
+    assert.equal(await page.locator('#fpShowPaths').isChecked(),false);
+    assert.equal(await page.locator('.fp-path').first().isVisible(),false);ok('目录选择器默认只显示名字');
+    await page.locator('#fpShowPaths').check();assert.equal(await page.locator('.fp-path').first().isVisible(),true);ok('详细路径有独立开关');
+    await page.locator('#fpShowPaths').uncheck();
+    await page.locator('[data-favorite]').nth(1).click();
+    assert.equal(await page.locator('.fp-favorite-chip').innerText(),'分类 0');
+    assert.equal(await page.locator('.fp-item').count(),161);ok('收藏胶囊只有文件夹名且原目录不消失');
+    assert.equal(await page.locator('[data-favorite]').nth(1).getAttribute('aria-pressed'),'true');
+    assert.notEqual(await page.locator('[data-favorite]').nth(1).locator('.ic').evaluate(e=>getComputedStyle(e).fill),'none');ok('收藏目录尾部显示实心星标');
+    await page.locator('#fpList').evaluate(e=>e.scrollTop=e.scrollHeight);
+    const pinned=await page.locator('#fpFavorites').boundingBox(),listing=await page.locator('#fpList').boundingBox();assert(pinned.y+pinned.height<=listing.y+1);ok('收藏常驻列表上方，不跟随目录滚走');
+    await page.locator('.fp-favorite-chip').click();assert.equal(await page.locator('#fpSelected').innerText(),'分类 0');ok('收藏胶囊可以选择下载位置');
+    await page.locator('[data-fold]').first().click();await page.locator('#fpCancel').click();
+    await page.reload();await page.waitForFunction(()=>window.__ready);
+    await page.evaluate(()=>{window.fpResult=null;pickFolderModal().then(p=>window.fpResult=p)});await page.locator('.folder-picker').waitFor();
+    assert.equal(await page.locator('.fp-item').count(),1);assert.equal(await page.locator('.fp-favorite-chip').count(),1);ok('重启后仍记住收藏与折叠');
+    await page.locator('[data-fold]').first().click();
+    await page.locator('[data-favorite]').nth(1).click();assert.equal(await page.locator('.fp-favorite-chip').count(),0);ok('取消收藏不删除目录');
+    for (const viewport of [{width:800,height:600},{width:1280,height:820},{width:1920,height:1080}]) {
+      await page.setViewportSize(viewport);
+      for (const zoom of [60,100,150,200]) {
+        await page.evaluate(z => applyZoom(z), zoom);
+        const box = await page.locator('.folder-picker').boundingBox();
+        const button = await page.locator('#fpOk').boundingBox();
+        const list = await page.locator('#fpList').boundingBox();
+        assert(box.x >= 0 && box.y >= 0 && box.x+box.width <= viewport.width+1 && box.y+box.height <= viewport.height+1, JSON.stringify({viewport,zoom,box}));
+        assert(button.y+button.height <= box.y+box.height && button.x+button.width <= box.x+box.width && list.height >= 32, JSON.stringify({viewport,zoom,box,button,list}));
+        const side=await page.locator('.nav-wrap').boundingBox();
+        const main=await page.locator('.content').boundingBox();
+        assert(side.x===0 && side.y===0 && side.height<=viewport.height+1 && main.x>=side.width-1 && main.width>100 && main.x+main.width<=viewport.width+1,JSON.stringify({viewport,zoom,side,main}));
+        ok(`窗口 ${viewport.width}x${viewport.height} 缩放 ${zoom}% 无越界`);
+      }
+    }
+    await page.setViewportSize({width:1280,height:820});
+    await page.evaluate(() => applyZoom(100));
+    await page.locator('#fpSearch').fill('风格 <script> & "中文" 23');
+    assert.equal(await page.locator('.fp-item').count(),1);
+    assert.equal(await page.locator('#fpList script').count(),0); ok('分类搜索与 HTML 转义');
+    await page.locator('.fp-item').click();
+    assert((await page.locator('#fpSelected').innerText()).includes('中文')); ok('完整选中路径常驻');
+    await page.locator('#fpCancel').click();
+    await page.waitForFunction(() => window.fpResult === ''); ok('取消解析 Promise');
+    for (const action of ['Escape','mask','confirm']) {
+      await page.evaluate(() => {window.fpResult=null; pickFolderModal().then(p=>window.fpResult=p)});
+      await page.locator('.folder-picker').waitFor();
+      if (action==='Escape') await page.keyboard.press('Escape');
+      if (action==='mask') await page.mouse.click(4,4);
+      if (action==='confirm') await page.locator('#fpOk').click();
+      await page.waitForFunction(() => window.fpResult !== null);
+      assert.equal(await page.evaluate(()=>window.fpResult), action==='confirm'?'D:\\AI\\models':''); ok(action+' 正常返回');
+    }
+    await page.evaluate(() => {window.fpResult=null; pickFolderModal().then(p=>window.fpResult=p)});
+    await page.locator('.folder-picker').waitFor();
+    await page.locator('#fpList').focus(); await page.keyboard.press('ArrowDown'); await page.keyboard.press('Enter');
+    await page.waitForFunction(() => window.fpResult !== null);
+    assert.equal(await page.evaluate(()=>window.fpResult),'D:\\AI\\models\\分类 0'); ok('键盘选择');
+    await page.evaluate(() => {window.fpResult=null; pickFolderModal().then(p=>window.fpResult=p)});
+    await page.locator('.folder-picker').waitFor();
+    const dragStart=await page.locator('.folder-picker').boundingBox();
+    await page.mouse.move(dragStart.x+dragStart.width-3,dragStart.y+dragStart.height-3);
+    await page.mouse.down(); await page.mouse.move(dragStart.x+dragStart.width-70,dragStart.y+dragStart.height-50,{steps:10}); await page.mouse.up();
+    const dragged=await page.locator('.folder-picker').boundingBox();
+    assert(dragged.width < dragStart.width-30 && dragged.height < dragStart.height-20,JSON.stringify({dragStart,dragged})); ok('真实鼠标拖动右下角调整尺寸');
+    await page.evaluate(() => {const d=document.querySelector('.folder-picker');d.style.width='700px';d.style.height='500px'});
+    await page.locator('#fpCancel').click();
+    await page.reload(); await page.waitForFunction(()=>window.__ready);
+    await page.evaluate(() => {window.fpResult=null; pickFolderModal().then(p=>window.fpResult=p)});
+    await page.locator('.folder-picker').waitFor();
+    const remembered=await page.locator('.folder-picker').boundingBox();
+    assert(Math.abs(remembered.width-700)<2 && Math.abs(remembered.height-500)<2, JSON.stringify(remembered)); ok('重启记忆手动尺寸');
+    await page.locator('#fpReset').click();
+    const reset=await page.locator('.folder-picker').boundingBox(); assert(Math.abs(reset.width-1280*.72)<2); ok('重置分类尺寸');
+    await page.locator('#fpCancel').click();
+    await page.evaluate(() => {state.cfg.unsaved_fixture='do-not-save';});
+    await page.locator('.nav-tab[data-page="settings"]').click();
+    await (await settingControl("show_file_paths")).uncheck();
+    await page.evaluate(()=>{window.fpResult=null;pickFolderModal().then(p=>window.fpResult=p)});
+    await page.locator('.folder-picker').waitFor();
+    assert.equal(await page.locator('.fp-path').first().isVisible(),false);
+    assert.equal(await page.locator('#fpSelected').isVisible(),true); ok('隐藏路径但目标仍可辨认');
+    await page.locator('#fpSearch').fill('AI'); assert.equal(await page.locator('.fp-item').count(),161); ok('隐藏路径仍可搜索路径');
+    await page.locator('#fpCancel').click();
+    await page.reload(); await page.waitForFunction(()=>window.__ready);
+    assert.equal(await page.evaluate(()=>document.documentElement.dataset.showPaths),'false');
+    assert.equal(await page.evaluate(()=>window.fixtureCfg.unsaved_fixture),undefined); ok('外观持久化且不顺带提交未保存设置');
+    await page.locator('.nav-tab[data-page="settings"]').click();
+    await settingControl('ui_font');await page.locator('#fontChoice').click();
+    await page.locator('.font-option').filter({hasText:/^Segoe UI$/}).click();
+    assert((await page.locator('.font-preview').evaluate(e=>getComputedStyle(e).fontFamily)).includes('Segoe UI'));ok('本地字体选择立即应用到预览');
+    assert((await page.locator('#fontChoice span').first().evaluate(e=>getComputedStyle(e).fontFamily)).includes('Segoe UI'));ok('字体选择按钮使用当前字体显示名称');
+    await page.locator('#fontChoice').click();await page.screenshot({path:path.join(shots,'font-name-preview-v2.5.0.png')});await page.locator('#fontChoice').press('Escape');
+    for(const zoom of [80,150]){
+      await page.evaluate(z=>applyZoom(z),zoom);await page.locator('#fontChoice').click();
+      const box=await page.locator('#fontMenu').boundingBox(),choice=await page.locator('#fontChoice').boundingBox();
+      assert(box.x>=0 && box.x+box.width<=1282 && box.y>=0 && box.y+box.height<=822);assert(Math.abs(box.x-choice.x)<2);ok(zoom+'% 缩放下字体菜单与按钮对齐并保持在窗口内');
+      await page.locator('#fontChoice').press('Escape');
+    }
+    await page.evaluate(()=>applyZoom(100));
+    await page.locator('#fontSearch').fill('YaHei');assert.equal(await page.locator('.font-option').count(),2);ok('自绘字体菜单按名称过滤');
+    assert((await page.locator('.font-option').filter({hasText:'Microsoft YaHei UI'}).evaluate(e=>getComputedStyle(e).fontFamily)).startsWith('"Microsoft YaHei UI"'));ok('下拉菜单每个字体名以自身字体预览');
+    await page.locator('#fontSearch').press('End');await page.locator('#fontSearch').press('Enter');
+    assert.equal(await page.evaluate(()=>state.cfg.ui_font),'Microsoft YaHei UI');assert.equal(await page.locator('#fontMenu').count(),0);ok('字体菜单支持键盘选择并关闭');
+    await page.locator('#fontSearch').fill('');await page.locator('#fontChoice').click();await page.locator('#fontChoice').click();
+    await page.locator('.font-option').filter({hasText:/^Segoe UI$/}).click();
+    await page.evaluate(()=>{localFontFamilies=Array.from({length:730},(_,i)=>'Preview Font '+String(i).padStart(3,'0'));openFontMenu();});
+    assert((await page.locator('.font-option').count())<30);ok('730 字体菜单只渲染可见行');
+    await page.locator('#fontChoice').press('End');assert((await page.locator('.font-option.focused').innerText()).includes('729'));ok('虚拟字体菜单键盘可到达最后一项');
+    await page.locator('#fontChoice').press('Escape');assert.equal(await page.locator('#fontMenu').count(),0);ok('Escape 关闭字体菜单');
+    const typeBefore=await page.evaluate(()=>({font:parseFloat(getComputedStyle(document.querySelector('.setting-copy label')).fontSize),icon:parseFloat(getComputedStyle(document.querySelector('.nav-tab .ic')).width),zoom:state.cfg.ui_zoom,image:state.cfg.masonry_card_width,width:document.querySelector('.content').getBoundingClientRect().width}));
+    for(const [preset,scale] of [['small',.9],['standard',1],['large',1.1],['xlarge',1.2],['huge',1.3]]){
+      await (await settingControl('ui_text_size')).selectOption(preset);
+      const actual=await page.evaluate(()=>({font:parseFloat(getComputedStyle(document.querySelector('.setting-copy label')).fontSize),icon:parseFloat(getComputedStyle(document.querySelector('.nav-tab .ic')).width),zoom:state.cfg.ui_zoom,image:state.cfg.masonry_card_width,width:document.querySelector('.content').getBoundingClientRect().width}));
+      assert(Math.abs(actual.font-typeBefore.font*scale)<.05,JSON.stringify({preset,typeBefore,actual,scale}));assert(Math.abs(actual.icon-typeBefore.icon*scale)<.05);assert.equal(actual.zoom,typeBefore.zoom);assert.equal(actual.image,typeBefore.image);assert.equal(actual.width,typeBefore.width);ok(preset+' 字号档只调文字与图标，保持全局 zoom、图片及布局宽度');
+    }
+    await page.screenshot({path:path.join(shots,'typography-large-v2.5.0.png'),fullPage:true});
+    await (await settingControl('window_appearance')).selectOption('mica');
+    await page.waitForFunction(()=>window.fixtureCalls.some(c=>c.method==='set_window_appearance' && c.args[0].mode==='mica'));ok('Mica 外观请求原生 API');
+    await (await settingControl('window_appearance')).selectOption('external');
+    assert((await page.locator('#setting-window_appearance-help').innerText()).includes('CivitaiFreeToolWeb.exe'));ok('外部材质旁提供 Mica For Everyone 进程规则介绍');
+    await (await settingControl('ui_text_size')).selectOption('standard');
+    await page.locator('#fontSearch').fill('');await page.reload();await page.waitForFunction(()=>window.__ready);
+    assert((await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--font'))).includes('Segoe UI'));ok('本地字体跨重启保存');
+    assert.equal(await page.evaluate(()=>state.cfg.masonry_card_width),220);ok('图片大小跨重启保存');
+    assert.equal(await page.evaluate(()=>state.cfg.window_appearance),'external');ok('窗口外观跨重启保存');
+    await page.locator('.nav-tab[data-page="settings"]').click();await (await settingControl('window_appearance')).selectOption('theme');
+    await page.locator('.nav-tab[data-page="settings"]').click();
+    await page.locator('[data-settings-category="general"]').click();
+    assert.equal(await page.locator('#storageCurrent').innerText(),'当前：D:\\CFT');
+    await page.locator('#storageSuggested').click();assert.equal(await page.locator('#storageNewPath').inputValue(),'D:\\Profile\\CFTData');ok('数据目录提供独立个人目录选项');
+    page.once('dialog',d=>d.accept());await page.locator('#storageMigrate').click();
+    await page.waitForFunction(()=>window.fixtureCalls.some(c=>c.method==='migrate_data_storage'));ok('迁移需明确确认且调用专用 API');
+    await page.locator('[data-settings-category="advanced"]').click();
+    await page.locator('#openBrowserPage').click();assert.equal((await page.evaluate(()=>window.fixtureCalls.at(-1))).method,'open_in_browser');ok('可主动用浏览器打开软件页面');
+    assert.equal(await page.locator('[data-key="browser_fallback_enabled"]').isChecked(),true);
+    assert.equal(await page.locator('[data-key="ui_mode"]').inputValue(),'window');ok('原生窗口仍默认，自动浏览器兜底开启');
+    for(const viewport of [{width:980,height:640},{width:1280,height:820}]) {
+      await page.setViewportSize(viewport);
+      for(const zoom of [100,150]) {
+        await page.evaluate(z=>applyZoom(z),zoom);
+        const b=await page.locator('#settingsActions').boundingBox();assert(Math.abs(b.y+b.height-viewport.height)<2 && b.x>=0 && b.x+b.width<=viewport.width+2);
+        ok('设置底栏适配 '+viewport.width+' / '+zoom+'%');
+      }
+    }
+    await page.setViewportSize({width:1280,height:820});await page.evaluate(()=>applyZoom(100));
+    await (await settingControl('theme')).selectOption('dark_rose');
+    const rose=await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--bg').trim());
+    assert.equal(rose,'#160b18');ok('绯夜是独立暗玫红主题');
+    await (await settingControl("show_file_paths")).check();
+    await (await settingControl("custom_accent_enabled")).check();
+    await (await settingControl("custom_accent")).fill('#ffffff');
+    await (await settingControl("custom_accent")).dispatchEvent('change');
+    assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--primary').trim()),'#ffffff');
+    assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--primary-fg').trim()),'#000000'); ok('自选强调色和可读前景');
+    await (await settingControl("custom_accent")).fill('#000000');
+    await (await settingControl("custom_accent")).dispatchEvent('change');
+    assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--primary-fg').trim()),'#ffffff'); ok('暗强调色配白字');
+    await (await settingControl("ui_density")).selectOption('compact');
+    await (await settingControl("ui_corners")).selectOption('square');
+    assert.equal(await page.evaluate(()=>getComputedStyle(document.querySelector('#dlTable td')).paddingTop),'4px');
+    assert.equal(await page.evaluate(()=>getComputedStyle(document.querySelector('#dlStartAll')).borderRadius),'0px'); ok('密度与圆角生效');
+    for (const theme of ['dark','light','modern','metro','dark_pink','dark_graphite']) {
+      await (await settingControl("theme")).selectOption(theme);
+      assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--primary').trim()),'#000000'); ok(theme+' 兼容自选色');
+    }
+    await page.locator('#resetAppearance').click();
+    assert.equal(await page.evaluate(()=>document.documentElement.dataset.customAccent),'false');
+    assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--primary').trim()),'#83b8ff'); ok('恢复当前主题默认外观');
+    await (await settingControl("theme")).selectOption('dark_pink');
+    await page.locator('#btnSaveSettings').click();
+    await page.reload(); await page.waitForFunction(()=>window.__ready);
+    assert.equal(await page.evaluate(()=>document.documentElement.dataset.theme),'dark_pink'); ok('新主题保存后恢复');
+    await page.locator('.nav-tab[data-page="settings"]').click();
+    await (await settingControl("zebra_rows")).check();
+    assert.equal(await page.evaluate(()=>document.documentElement.dataset.zebra),'true'); ok('斑马纹默认状态与实际一致');
+    await (await settingControl("zebra_rows")).uncheck();
+    assert.equal(await page.evaluate(()=>document.documentElement.dataset.zebra),'false'); ok('斑马纹可关闭');
+    await (await settingControl("pointer_effects")).selectOption('trail');
+    await page.mouse.move(430,210); await page.mouse.down(); await page.mouse.up();
+    await page.waitForFunction(()=>document.querySelector('#pointerEffects')?.dataset.running==='true');
+    await page.waitForTimeout(850);
+    assert.equal(await page.locator('#pointerEffects').getAttribute('data-running'),'false'); ok('拖尾点击特效空闲自动停止');
+    await (await settingControl("pointer_effects")).selectOption('off');
+    await page.mouse.click(500,210);
+    assert.equal(await page.locator('#pointerEffects').isVisible(),false); ok('关闭特效没有画布遮挡');
+    await page.evaluate(()=>{state.cfg.custom_accent_enabled=false;});
+    for (const theme of logoThemes) {
+      await (await settingControl("theme")).selectOption(theme);
+      const colors=await page.evaluate(()=>['#dlStartAll','[data-proxy="mmScan"]'].map(selector=>{const c=getComputedStyle(document.querySelector(selector));return [c.color,c.backgroundColor]}));
+      for(const [fg,bg] of colors) {
+        assert.notEqual(fg,bg);
+        const lum=value=>{const c=value.match(/[\d.]+/g).slice(0,3).map(Number).map(n=>n/255).map(n=>n<=.04045?n/12.92:Math.pow((n+.055)/1.055,2.4));return .2126*c[0]+.7152*c[1]+.0722*c[2]};
+        const a=lum(fg),b=lum(bg);assert((Math.max(a,b)+.05)/(Math.min(a,b)+.05)>=4.5,theme+' contrast');
+      }
+      ok(theme+' 关键按钮有强调色和可读文字');
+    }
+    await page.locator('.nav-tab[data-page="dlmanager"]').click();await page.locator('#dlQueueTab').click();
+    await page.evaluate(()=>{window.fixtureTasks[0].status='done';dlRefresh();});
+    await page.locator('[data-archive-task]').waitFor();
+    const statusFit=await page.locator('[data-archive-task]').evaluate(e=>{const b=e.getBoundingClientRect(),td=e.closest('td').getBoundingClientRect();return b.right<=td.right+1 && b.left>=td.left});assert(statusFit);ok('已完成与移入历史操作在状态列中完整显示');
+    assert.equal(await page.locator('.dest-picker .ic').count(),2);ok('保存到使用目录图标和下拉胶囊按钮');
+    await page.evaluate(()=>{window.fixtureTasks[0].status='pending';dlRefresh();});
+    for (const mode of ['empty','error']) {
+      await page.evaluate(m=>window.fixtureFolderMode=m,mode);
+      if(mode==='empty') {
+        await page.evaluate(()=>{window.fpResult=null;pickFolderModal().then(p=>window.fpResult=p)});
+        await page.locator('.folder-picker').waitFor(); assert.equal(await page.locator('#fpOk').isDisabled(),true);
+        await page.locator('#fpCancel').click();
+      } else assert.equal(await page.evaluate(()=>pickFolderModal()),'');
+      ok(mode+' 不允许误选');
+    }
+    await page.evaluate(()=>{window.fixtureFolderMode='normal';state.cfg.theme='dark_graphite';document.documentElement.dataset.theme='dark_graphite';applyUiAppearance();state.cfg.folder_picker_size={};setStatus('就绪 · 示例数据');});
+    await page.locator('.nav-tab[data-page="dlmanager"]').click();
+    await page.evaluate(()=>{window.fpResult=null;pickFolderModal().then(p=>window.fpResult=p)});
+    await page.locator('.folder-picker').waitFor();
+    fs.mkdirSync(shots,{recursive:true});
+    await page.screenshot({path:path.join(shots,'folder-graphite.png')});
+    await page.locator('[data-favorite]').nth(1).click();await page.locator('[data-favorite]').nth(3).click();
+    await page.screenshot({path:path.join(shots,'folder-favorites-v2.4.0.png')});
+    await page.locator('#fpCancel').click();
+    await page.locator('.nav-tab[data-page="settings"]').click();
+    await (await settingControl("theme")).selectOption('dark_pink');
+    await (await settingControl("custom_accent_enabled")).check();
+    await (await settingControl("custom_accent")).fill('#f0a4c5');
+    await page.locator('#appearancePreview').scrollIntoViewIfNeeded();
+    await page.mouse.move(1270,10); await page.waitForTimeout(350);
+    await page.screenshot({path:path.join(shots,'appearance-night-pink.png')});
+    await (await settingControl('theme')).selectOption('dark_rose');
+    await (await settingControl('custom_accent_enabled')).uncheck();
+    await page.locator('#appearancePreview').scrollIntoViewIfNeeded();
+    await page.screenshot({path:path.join(shots,'appearance-rose-v2.4.0.png')});
+    await page.locator('[data-settings-category="organize"]').click();
+    await page.mouse.move(1270,10);
+    await page.screenshot({path:path.join(shots,'settings-organize-workbench.png')});
+    await page.locator('.nav-tab[data-page="dlmanager"]').click();
+    await page.evaluate(()=>window.fixtureHistory=[
+      {id:'preview-1',filename:'SoftPortrait_v1.2.safetensors',modelName:'柔光人像',status:'done',total:150994944,dest_dir:'D:\\AI\\models\\人物',finished_at:1791324000},
+      {id:'preview-2',filename:'Watercolor_Landscape_v1.safetensors',modelName:'水彩风景',status:'done',total:128974848,dest_dir:'D:\\AI\\models\\风景',finished_at:1791323000},
+      {id:'preview-3',filename:'CinematicTexture_v2.safetensors',modelName:'电影质感',status:'error',total:1073741824,dest_dir:'D:\\AI\\models\\风格',finished_at:1791322000,error:'网络连接中断，可在任务列表重试'},
+      {id:'preview-4',filename:'ArchitectureSpace_v1.safetensors',modelName:'建筑空间',status:'canceled',total:335544320,dest_dir:'D:\\AI\\models\\场景',finished_at:1791321000},
+      {id:'preview-5',filename:'Ink_Landscape_v1.safetensors',modelName:'东方水墨',status:'done',total:167772160,dest_dir:'D:\\AI\\models\\风格',finished_at:null}
+    ]);
+    await page.locator('#dlHistoryTab').click();
+    await page.waitForFunction(()=>document.querySelector('#dlHistoryTab').dataset.count==='5');
+    await page.mouse.move(1270,10);
+    await page.waitForTimeout(300);
+    await page.screenshot({path:path.join(shots,'download-history-workbench.png')});
+    await page.evaluate(()=>{
+      const canvas=document.createElement('canvas');canvas.width=600;canvas.height=900;const g=canvas.getContext('2d');const fill=g.createLinearGradient(0,0,600,900);fill.addColorStop(0,'#32485e');fill.addColorStop(1,'#6783a0');g.fillStyle=fill;g.fillRect(0,0,600,900);g.fillStyle='#ffffff';g.font='32px sans-serif';g.fillText('Gallery preview fixture',70,430);window.fixtureCoverB64=canvas.toDataURL('image/png').split(',')[1];
+      window.fixtureDetail={ok:true,name:'gallery.safetensors',info:{name:'画廊模型',type:'LoRA',images:[]},covers:[{b64:window.fixtureCoverB64,meta:{prompt:'watercolor mountains <script>not executed</script>',negativePrompt:'blur',steps:20,cfgScale:7,seed:123,workflow:{nodes:[]}},resources:[{name:'Mountain model',modelId:55,type:'LoRA',version:'v1'}],image_page:'https://civitai.com/images/123',metadata_source:'测试元数据',width:600,height:900},{b64:window.fixtureCoverB64,meta:{},resources:[],metadata_source:'来源未提供'}]};
+      switchPage('models');
+    });
+    await page.evaluate(()=>showModelDetail('D:\\AI\\models\\gallery.safetensors'));
+    assert.equal(await page.locator('#dRenameC').isVisible(),true);ok('模型详情直接提供文件名到 C站名称入口');
+    await page.locator('#dMain').click();await page.locator('#imageViewer').waitFor();
+    assert((await page.locator('.iv-generation').innerText()).includes('watercolor mountains'));assert((await page.locator('.iv-generation').innerText()).includes('steps'));assert.equal(await page.locator('#imageViewer script').count(),0);ok('图片点击放大并显示生成参数，提示词只按文本展示');
+    await page.locator('[data-iv-copy=prompt]').click();assert.equal((await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='copy_text').at(-1))).args[0],'watercolor mountains <script>not executed</script>');ok('生成数据正面提示词可单独复制');
+    await page.locator('[data-iv-copy=all]').click();assert((await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='copy_text').at(-1))).args[0].includes('cfgScale'));ok('复制全部包含采样参数与资源列表');
+    await page.locator('[data-resource-id]').click();assert.equal((await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='open_url').at(-1))).args[0],'https://civitai.com/models/55');ok('使用资源可打开对应 C站模型');
+    await page.locator('#ivShare').click();assert.equal((await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='copy_text').at(-1))).args[0],'https://civitai.com/images/123');ok('图片工具栏支持复制分享链接');
+    await page.locator('#ivReport').click();assert.equal((await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='open_url').at(-1))).args[0],'https://civitai.com/images/123');ok('举报入口打开 C站原图页，不伪造举报');
+    await page.locator('#ivSave').click();assert((await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='save_gallery_image').at(-1))).args[0].includes('gallery.safetensors'));ok('图片保存请求指定当前模型与图片索引');
+    await page.locator('#ivPlus').click();assert((await page.locator('#ivFit').innerText()).includes('120'));ok('图片放大按钮只调整当前图片');
+    await page.screenshot({path:path.join(shots,'image-generation-viewer-v2.6.0.png')});
+    await page.keyboard.press('ArrowRight');assert((await page.locator('.iv-generation').innerText()).includes('来源没有记录资源列表'));ok('没有生成数据时明确说明，不编造使用资源');
+    await page.keyboard.press('Escape');assert.equal(await page.locator('#imageViewer').count(),0);assert.equal(await page.locator('#dClose').isVisible(),true);ok('Escape 仅关闭大图，保留模型详情');
+    await page.evaluate(()=>{
+      window.fixtureDetail=null;state.models=state.display=Array.from({length:130},(_,i)=>({path:'D:\\AI\\models\\focus'+i+'.safetensors',name:'Model '+i,base:'SDXL',type:'LoRA',size:100}));state.mmView='masonry';window.fixtureScanRows=state.models;renderMm();
+      $('#mmFilter').value='不匹配';applyMmFilter();
+      historyItems=[{id:'focus-history',file_path:'D:\\AI\\models\\focus115.safetensors',file_exists:true}];window.fixtureHistory=historyItems;
+    });
+    await page.evaluate(()=>openHistoryModel(historyItems[0]));
+    assert.equal(await page.locator('.history-focus').count(),1);assert((await page.locator('.history-focus').getAttribute('data-path')).includes('focus115'));assert.equal(await page.locator('#mmFilter').inputValue(),'');ok('历史信息跳转自动解除阻挡筛选并定位瀑布流对应卡片');
+    const focusBox=await page.locator('.history-focus').boundingBox();assert(focusBox.y<820 && focusBox.y+focusBox.height>0);ok('历史跳转定位后目标卡片实际进入可视区');
+    await page.evaluate(()=>{state.mmView='list';renderMm();});await page.evaluate(()=>openHistoryModel(historyItems[0]));assert.equal(await page.locator('#mmTable .history-focus').count(),1,JSON.stringify(await page.evaluate(()=>({view:state.mmView,path:detailRow.path,models:state.models.length,display:state.display.length,status:$('#statusText').textContent,row:$('#mmTable tbody tr')?.outerHTML.slice(0,300),focuses:[...document.querySelectorAll('.history-focus')].map(e=>e.outerHTML.slice(0,100))}))));ok('历史定位同时支持模型列表');
+    const unresolvedIcons=await page.evaluate(()=>Array.from(document.querySelectorAll('svg.ic use')).map(e=>e.getAttribute('href')).filter(ref=>!document.querySelector(ref)));
+    assert.deepEqual(unresolvedIcons,[]); ok('全部可见与动态图标均有 sprite 定义');
+    assert.deepEqual(errors,[]);assert.equal(await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='log_ui_error').length),0); ok('无前端异常');
+    console.log('PASS '+passed+' checks; mock API only, no real download/move operations');
+  } finally {await browser.close();server.close();}
+})().catch(e=>{console.error(e);server.close();process.exitCode=1});
+

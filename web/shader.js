@@ -94,7 +94,8 @@
   // 暗色判断：dark 以及全部 dark_* 扩展主题
   function isDark() {
     const t = document.documentElement.dataset.theme || "";
-    return t === "dark" || t.indexOf("dark_") === 0;
+    return t === "dark" || t.indexOf("dark_") === 0 ||
+      (t === "metro" && document.documentElement.dataset.scheme === "dark");
   }
 
   function hexToRgb(hex) {
@@ -137,7 +138,7 @@
   // 主题切换（data-theme 属性变化）时实时更新背景色
   new MutationObserver(applyTheme).observe(document.documentElement, {
     attributes: true,
-    attributeFilter: ["data-theme"],
+    attributeFilter: ["data-theme", "data-scheme", "style"],
   });
 
   function resize() {

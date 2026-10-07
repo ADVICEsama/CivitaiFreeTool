@@ -36,9 +36,15 @@ class DownloadTask:
         self.speed = 0.0
         self.error = ""
         self.id = "%d_%s" % (time.time_ns(), abs(hash(filename)))
+        self.created_at = time.time()
+        self.updated_at = self.created_at
+        self.finished_at = None
+        self._last_notified_status = self.status
 
     def to_dict(self):
         return {
+            "id": self.id, "created_at": self.created_at, "updated_at": self.updated_at,
+            "finished_at": self.finished_at, "error": self.error, "progress": self.progress,
             "url": self.url, "dest_dir": self.dest_dir, "filename": self.filename,
             "expected_sha256": self.expected_sha256, "info": self.info,
             "status": self.status, "downloaded": self.downloaded, "total": self.total,
@@ -49,8 +55,18 @@ class DownloadTask:
         t = cls(d.get("url", ""), d.get("dest_dir", ""), d.get("filename", ""),
                 d.get("expected_sha256", ""), d.get("info", {}))
         t.status = d.get("status", ST_PENDING)
+        # 旧版没有保存 id：稳定生成一次，重启不再产生多份相同历史。
+        t.id = str(d.get("id") or "legacy_" + hashlib.sha256(
+            json.dumps([t.url, t.dest_dir, t.filename], ensure_ascii=False).encode("utf-8")).hexdigest()[:24])
+        t.created_at = d.get("created_at") or None
+        t.updated_at = d.get("updated_at") or t.created_at
+        t.finished_at = d.get("finished_at") or None
+        t.error = str(d.get("error") or "")
         t.downloaded = d.get("downloaded", 0)
         t.total = d.get("total", 0)
+        t.progress = 100.0 if t.status == ST_DONE else float(d.get("progress") or (
+            t.downloaded / t.total * 100 if t.total else 0))
+        t._last_notified_status = t.status
         return t
 
 
@@ -67,6 +83,12 @@ class Downloader:
         self._stop = False
         self._active = 0
         self._active_ids = set()        # 正在下载的任务 id（防止 resume/retry 双写）
+        self._persist_lock = threading.Lock()
+        self._last_persist = 0.0
+        self._loaded = False
+        self.history = {str(row["id"]): row for row in config.load_history()
+                        if isinstance(row, dict) and row.get("id")}
+        self.persistence_error = ""
 
     # ---------- 任务管理 ----------
     def add_task(self, task):
@@ -82,6 +104,8 @@ class Downloader:
         ev = self._cancel_events.get(task.id)
         if ev:
             ev.set()
+        if task.status not in (ST_DONE, ST_ERROR, ST_CANCELED):
+            task.status = ST_CANCELED
         with self._lock:
             if task in self.tasks:
                 self.tasks.remove(task)
@@ -117,6 +141,7 @@ class Downloader:
         task.error = ""
         task.progress = 0.0
         task.downloaded = 0
+        task.finished_at = None
         ev = self._cancel_events.get(task.id)
         if ev:
             ev.clear()
@@ -128,6 +153,8 @@ class Downloader:
         self._notify(task)
 
     def clear_finished(self):
+        # 收起终态任务只清队列，历史独立保留。
+        self.save_tasks()
         with self._lock:
             keep = [t for t in self.tasks if t.status in (ST_PENDING, ST_DOWNLOADING, ST_PAUSED)]
             for t in self.tasks:
@@ -135,24 +162,82 @@ class Downloader:
                     self._pause_events.pop(t.id, None)
                     self._cancel_events.pop(t.id, None)
             self.tasks = keep
+        self.save_tasks()
 
     def save_tasks(self):
-        with self._lock:
-            data = [t.to_dict() for t in self.tasks]
-        config.save_tasks(data)
+        # 先取得写锁再快照，防止较旧的快照晚写覆盖较新任务状态。
+        with self._persist_lock:
+            with self._lock:
+                for task in self.tasks:
+                    self._record_history(task)
+                data = [t.to_dict() for t in self.tasks]
+                history = list(self.history.values())
+            ok_tasks = config.save_tasks(data)
+            ok_history = config.save_history(history)
+            self._last_persist = time.monotonic()
+            self.persistence_error = "" if ok_tasks and ok_history else "下载记录保存失败，请检查程序目录写入权限"
+            return ok_tasks and ok_history
 
-    def load_tasks(self):
+    def load_tasks(self, resume=True):
+        if self._loaded:
+            return
+        self._loaded = True
+        seen = {t.id for t in self.tasks}
         for d in config.load_tasks():
-            t = DownloadTask.from_dict(d)
-            if t.status in (ST_DOWNLOADING,):
-                t.status = ST_PENDING
+            if not isinstance(d, dict) or not d.get("filename"):
+                continue
+            try:
+                t = DownloadTask.from_dict(d)
+            except (ValueError, TypeError):
+                continue
+            if t.id in seen:
+                continue
+            seen.add(t.id)
+            if t.status == ST_DOWNLOADING or (not resume and t.status == ST_PENDING):
+                t.status = ST_PAUSED
             with self._lock:
                 self.tasks.append(t)
                 self._pause_events[t.id] = threading.Event()
                 self._cancel_events[t.id] = threading.Event()
             if t.status == ST_PENDING:
                 self._queue.put(t)
-        self._ensure_workers()
+        self.save_tasks()
+        if resume:
+            self._ensure_workers()
+
+    def _record_history(self, task):
+        """调用时必须持有 _lock；不保存签名下载 URL 或大型元数据。"""
+        if task.status not in (ST_DONE, ST_ERROR, ST_CANCELED):
+            return
+        previous = self.history.get(task.id, {})
+        self.history[task.id] = {
+            **previous,
+            "id": task.id, "filename": task.filename, "dest_dir": task.dest_dir,
+            "file_path": os.path.join(task.dest_dir, task.filename),
+            "status": task.status, "downloaded": task.downloaded, "total": task.total,
+            "error": task.error, "created_at": task.created_at, "updated_at": task.updated_at,
+            "finished_at": task.finished_at,
+            "modelName": (task.info or {}).get("modelName", ""),
+            "versionName": (task.info or {}).get("versionName", ""),
+        }
+
+    def get_history(self):
+        with self._lock:
+            return sorted((dict(row) for row in self.history.values()),
+                          key=lambda row: row.get("finished_at") or row.get("updated_at") or 0, reverse=True)
+
+    def relocate(self, old_path, new_path):
+        """移动/重命名后同步独立历史，即使任务早已移出队列。"""
+        old = os.path.normcase(os.path.abspath(old_path))
+        with self._lock:
+            for task in self.tasks:
+                if os.path.normcase(os.path.abspath(os.path.join(task.dest_dir, task.filename))) == old:
+                    task.dest_dir, task.filename = os.path.dirname(new_path), os.path.basename(new_path)
+            for row in self.history.values():
+                current = row.get("file_path") or os.path.join(row.get("dest_dir", ""), row.get("filename", ""))
+                if os.path.normcase(os.path.abspath(current)) == old:
+                    row.update(file_path=new_path, dest_dir=os.path.dirname(new_path), filename=os.path.basename(new_path))
+        self.save_tasks()
 
     # ---------- 内部 ----------
     def _ensure_workers(self):
@@ -165,6 +250,14 @@ class Downloader:
             self._workers.append(w)
 
     def _notify(self, task):
+        task.updated_at = time.time()
+        if task.status in (ST_DONE, ST_ERROR, ST_CANCELED) and task._last_notified_status != task.status:
+            task.finished_at = task.updated_at
+        task._last_notified_status = task.status
+        with self._lock:
+            self._record_history(task)
+        if task.status != ST_DOWNLOADING or time.monotonic() - self._last_persist >= 5:
+            self.save_tasks()
         if self.on_update:
             try:
                 self.on_update(task)

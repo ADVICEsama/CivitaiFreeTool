@@ -7,9 +7,14 @@
 <link rel="icon" type="image/x-icon" href="favicon.ico"/>
 <link rel="stylesheet" href="style.css"/>
 <link rel="stylesheet" href="metro.css"/>
+<link rel="stylesheet" href="preferences.css"/>
+<link rel="stylesheet" href="workbench.css"/>
 </head>
 <body>
   <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+    <symbol id="i-more-vertical" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></symbol>
+<symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V3m0 1c5-4 9 4 14 0v9c-5 4-9-4-14 0"/></symbol>
+<symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3 2.8 5.8 6.4.9-4.6 4.5 1.1 6.4L12 17.6l-5.7 3 1.1-6.4-4.6-4.5 6.4-.9Z"/></symbol>
     <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20.5 20.5-3.8-3.8"/></symbol>
     <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20.5 12a8.5 8.5 0 1 1-2.6-6.1"/><path d="M20.5 4v5h-5"/></symbol>
     <symbol id="i-scan" viewBox="0 0 24 24"><path d="M3 8V5.5A2.5 2.5 0 0 1 5.5 3H8M16 3h2.5A2.5 2.5 0 0 1 21 5.5V8M21 16v2.5A2.5 2.5 0 0 1 18.5 21H16M8 21H5.5A2.5 2.5 0 0 1 3 18.5V16M3 12h18"/></symbol>
@@ -38,22 +43,29 @@
     <symbol id="i-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v5.5"/><path d="M12 16.2h.01"/></symbol>
     <symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m6 9.5 6 6 6-6"/></symbol>
     <symbol id="i-ruler" viewBox="0 0 24 24"><path d="M3.5 14.5 14.5 3.5l6 6-11 11-6-6Z"/><path d="m7 11 2 2M10 8l2 2M13 5l2 2"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 4 12 8-12 8V4Z"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/></symbol>
+    <symbol id="i-workflow" viewBox="0 0 24 24"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="15" y="15" width="6" height="6" rx="1"/><path d="M6 9v9h9M9 6h9v9"/></symbol>
+    <symbol id="i-sidebar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16m7-12-4 4 4 4"/></symbol>
+    <symbol id="i-sparkles" viewBox="0 0 24 24"><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z"/></symbol>
   </svg>
 <!-- WebGL shader 背景 -->
 <canvas id="bg"></canvas>
 
-<!-- 顶部胶囊导航 -->
-<nav class="nav-wrap">
+<!-- 左侧工作台导航 -->
+<nav class="nav-wrap" aria-label="主导航">
   <div class="nav">
-    <div class="nav-logo"><img src="logo.png" alt=""/></div>
+    <div class="sidebar-brand"><div class="nav-logo" title="关于 CivitaiFreeTool"><img src="logo.png" alt="CFT"/></div><div class="sidebar-name">CivitaiFreeTool<small>模型工作台</small></div></div>
+    <button class="btn sidebar-toggle" id="toggleSidebar" aria-label="收起导航" aria-expanded="true" data-tip="收起或展开左侧导航"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><use href="#i-sidebar"/></svg><span>收起导航</span></button>
     <div class="nav-tabs" id="navTabs">
-      <button class="nav-tab active" data-page="download">批量下载</button>
-      <button class="nav-tab" data-page="dlmanager">下载管理</button>
-      <button class="nav-tab" data-page="models">模型管理</button>
-      <button class="nav-tab" data-page="updates">更新</button>
-      <button class="nav-tab" data-page="reverse">反向解析</button>
-      <button class="nav-tab" data-page="workflow">工作流分析</button>
-      <button class="nav-tab" data-page="settings">设置</button>
+      <button class="nav-tab active" data-page="download" data-nav-icon="download">批量下载</button>
+      <button class="nav-tab" data-page="dlmanager" data-nav-icon="list">下载管理</button>
+      <button class="nav-tab" data-page="models" data-nav-icon="layers">模型管理</button>
+      <button class="nav-tab" data-page="updates" data-nav-icon="refresh">检查更新</button>
+      <button class="nav-tab" data-page="reverse" data-nav-icon="search">反向解析</button>
+      <button class="nav-tab" data-page="workflow" data-nav-icon="workflow">工作流分析</button>
+      <button class="nav-tab" data-page="settings" data-nav-icon="settings">设置</button>
     </div>
     <div class="nav-right">
       <span id="statusText" class="status-pill">就绪</span>
@@ -89,14 +101,20 @@
   <section class="page" id="page-dlmanager">
     <div class="card">
       <h2 class="page-title">下载管理</h2>
-      <div class="btn-row">
+      <div class="download-tabs" role="tablist" aria-label="下载记录视图">
+        <button class="btn active" id="dlQueueTab" role="tab" aria-controls="dlQueuePanel" aria-selected="true">任务列表</button>
+        <button class="btn" id="dlHistoryTab" role="tab" aria-controls="dlHistoryPanel" aria-selected="false">下载历史</button>
+        <span class="download-retention">自动保存记录 · 收起队列不删除历史</span>
+      </div>
+      <div id="dlQueuePanel" role="tabpanel" aria-labelledby="dlQueueTab">
+      <div class="btn-row" id="dlQueueActions">
         <button class="btn btn-primary" id="dlStartAll" data-tip="开始下载所有未完成的任务"><span class="emj">▶️</span> ▶全部开始</button>
         <button class="btn" id="dlPauseSel" data-tip="暂停选中的下载任务"><span class="emj">⏸️</span> 暂停选中</button>
         <button class="btn" id="dlRetrySel" data-tip="重试选中的失败任务"><span class="emj">🔄</span> <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-refresh"/></svg>重试选中</button>
         <button class="btn" id="dlRemoveSel"><span class="emj">🗑️</span> <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-trash"/></svg>移除选中</button>
         <button class="btn" id="dlSetTarget" data-tip="给选中（未勾选=全部）的任务指定保存文件夹；也可以直接点每行「保存到」列单独设置"><span class="emj">📂</span> <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-folder"/></svg>设置保存到</button>
-        <button class="btn" id="dlClearDone"><span class="emj">🧹</span> <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-trash"/></svg>清空已完成</button>
-        <button class="btn" id="dlSave"><span class="emj">💾</span> <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-file"/></svg>保存任务列表</button>
+        <button class="btn" id="dlClearDone" data-tip="从队列收起已完成、失败、取消的任务；不会删除下载历史或模型文件"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><use href="#i-list"/></svg>移入下载历史</button>
+        <button class="btn" id="dlSave" data-tip="任务已自动保存；此按钮立即刷新磁盘副本"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><use href="#i-file"/></svg>立即保存</button>
       </div>
       <div class="table-wrap">
         <table class="grid" id="dlTable">
@@ -105,6 +123,13 @@
         </table>
       </div>
       <div class="detail" id="dlInfo"></div>
+      </div>
+      <div id="dlHistoryPanel" role="tabpanel" aria-labelledby="dlHistoryTab" hidden>
+        <div class="history-toolbar"><input class="input" id="dlHistorySearch" type="search" aria-label="搜索下载历史" placeholder="搜索文件名、模型名、路径或状态"/><span id="dlHistoryCount" aria-live="polite"></span><button class="btn" id="dlHistoryRefresh">刷新记录</button></div>
+        <p class="history-warning" id="dlHistoryError" role="status" hidden></p>
+        <div class="table-wrap"><table class="grid" id="dlHistoryTable"><thead><tr><th class="c-file">文件 / 模型</th><th>结果</th><th>大小</th><th class="c-time">结束时间</th><th>操作</th></tr></thead><tbody></tbody></table></div>
+        <div class="history-pagination"><button class="btn" id="historyPrev">上一页</button><span id="historyPage"></span><button class="btn" id="historyNext">下一页</button></div>
+      </div>
     </div>
   </section>
 
@@ -116,6 +141,9 @@
         <span class="status-pill" id="mmCount">未扫描</span>
       </div>
 
+      <div class="masonry-size-control" id="mmImageSizeControl" hidden>
+        <label for="mmImageSize">图片大小</label><input id="mmImageSize" type="range" min="140" max="420" step="10" value="220" aria-label="瀑布流图片大小"/><output id="mmImageSizeValue">220 px</output><span>Alt + 滚轮调整</span>
+      </div>
       <!-- ===== Metro 工具区（仅 Metro 主题显示；按钮全部是"代理"，点击转给下面老按钮，逻辑零改动） ===== -->
       <div class="mm-metro">
         <!-- 第一行：主操作（Primary / High / Medium） -->
@@ -445,6 +473,10 @@
 </main>
 
 <script src="shader.js"></script>
+<script src="pointer-effects.js"></script>
+<script src="workbench.js"></script>
+<script src="appearance.js"></script>
+<script src="image-viewer.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

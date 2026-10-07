@@ -20,7 +20,7 @@ def _app_dir_log():
 def _write_app_pid():
     """把真实实例 PID 写给外部看门狗（必须在单实例检查通过后调用）。
 
-    看门狗靠它找到宿主进程：窗口超时未出现就杀这棵树并重启。"""
+    看门狗靠它核验宿主身份；优先保留原生实例，允许兜底时才进行恢复。"""
     try:
         d = _app_dir_log()
         os.makedirs(d, exist_ok=True)
@@ -35,7 +35,7 @@ def _spawn_external_watchdog():
 
     为什么必须独立进程：卡死点在 pywebview/WebView2 建窗的 .NET 互操作里，GIL 被永久占住，
     进程内所有 Python 线程（含旧版内置看门狗）都会饿死——连日志都写不出来，自愈必然失效。
-    独立进程有自己的 GIL 与线程，不碰 .NET，才能真正做到「超时即杀 + 重启」。"""
+    独立进程不碰 .NET；窗口等待、身份核验与可选兜底不依赖 UI 线程。"""
     try:
         import watchdog_ext
         if watchdog_ext.watchdog_alive():
@@ -376,6 +376,10 @@ def _tray_icon(api, url):
         def _quit(icon=None, item=None):
             _startup_log("browser mode: tray quit")
             try:
+                api.dl.save_tasks()
+            except Exception:
+                pass
+            try:
                 icon.stop()
             except Exception:
                 pass
@@ -390,8 +394,28 @@ def _tray_icon(api, url):
         icon = pystray.Icon("CivitaiFreeTool", img, "CivitaiFreeTool（浏览器模式运行中）", menu)
         threading.Thread(target=icon.run, daemon=True).start()
         _startup_log("browser mode: tray ok")
+        return True
     except Exception as e:
         _startup_log("browser mode: tray failed %r" % (e,))
+        return False
+
+
+def _activate_browser_ui(api):
+    """原地切换显示器：仅打开浏览器，不杀宿主、不重建 Downloader。"""
+    import browser_bridge
+    import webbrowser
+    browser_bridge.set_api(api, os.path.join(_app_dir(), "web"))
+    browser_bridge.set_ui_state(mode="browser", window=False)
+    url = "http://127.0.0.1:%d/" % (browser_bridge.port() or browser_bridge.DEFAULT_PORT)
+    if api.cfg.get("tray_icon", True) and not getattr(api, "_browser_tray_started", False):
+        api._browser_tray_started = _tray_icon(api, url)
+    if not getattr(api, "_browser_ui_opened", False):
+        if not os.environ.get("CFT_NO_BROWSER_OPEN"):
+            webbrowser.open(url)
+        api._browser_ui_opened = True
+        _watch_page_close(api)
+    _startup_log("browser fallback: switched UI in-place; download backend preserved")
+    return {"ok": True, "pid": os.getpid(), "url": url, "backend_preserved": True}
 
 
 def _watch_page_close(api):
@@ -515,32 +539,6 @@ def main():
     BASE_DIR = _app_dir()
     INDEX = os.path.join(BASE_DIR, "web", "index.html")
 
-    def apply_mica():
-        """给窗口启用 Win11 Mica 背景（失败静默回退）"""
-        try:
-            import ctypes
-            from ctypes import wintypes
-            u = ctypes.windll.user32
-            pid = ctypes.windll.kernel32.GetCurrentProcessId()
-            found = []
-
-            def cb(h, _):
-                p = wintypes.DWORD()
-                u.GetWindowThreadProcessId(h, ctypes.byref(p))
-                if p.value == pid and u.IsWindowVisible(h):
-                    found.append(h)
-                return True
-
-            WNDENUMPROC = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
-            u.EnumWindows(WNDENUMPROC(cb), 0)
-            if found:
-                hwnd = ctypes.c_void_p(found[0])
-                # DWMWA_SYSTEMBACKDROP_TYPE=38, DWMSBT_MAINWINDOW=2 (Mica)
-                ctypes.windll.dwmapi.DwmSetWindowAttribute(
-                    hwnd, 38, ctypes.byref(ctypes.c_int(2)), ctypes.sizeof(ctypes.c_int))
-        except Exception:
-            pass
-
     def set_window_icon():
         """设置窗口标题栏图标（WinForms 原生方式，失败静默）"""
         try:
@@ -555,7 +553,11 @@ def main():
                     continue
                 f = form.FindForm() if hasattr(form, "FindForm") else form
                 if f is not None:
-                    f.Icon = Icon(icon_path)
+                    # 只在窗口显示后向 UI 线程投递，不从启动后台线程直接访问 WinForms。
+                    from System import Action
+                    def apply_icon(form=f):
+                        form.Icon = Icon(icon_path)
+                    f.BeginInvoke(Action(apply_icon))
         except Exception:
             pass
 
@@ -577,6 +579,9 @@ def main():
 
     api = webui.Api()
     _startup_log("Api() ok")
+    import browser_bridge
+    browser_bridge.set_api(api, os.path.join(BASE_DIR, "web"))
+    api._browser_ui_handler = lambda: _activate_browser_ui(api)
     window = webview.create_window(
         "CivitaiFreeTool",
         url=INDEX,
@@ -586,6 +591,10 @@ def main():
         min_size=(980, 640),
         background_color="#1c1c1e",
     )
+    from window_appearance import WindowAppearance
+    window_appearance = WindowAppearance(window)
+    api._window_appearance_handler = window_appearance.request
+    api._window_appearance_controller = window_appearance
     # Linux: force the Qt backend (QWebEngineView + QWebChannel, PySide6/PyQt6
     # bindings via qtpy). Best fit for KDE Plasma; GTK stack not needed.
     # Windows keeps the default EdgeChromium (WebView2) backend.
@@ -594,6 +603,7 @@ def main():
         start_kwargs["gui"] = "qt"
         _check_qt_backend()
     else:
+        start_kwargs["gui"] = "edgechromium"
         # WebView2 GPU 策略：**默认开启 GPU 加速**。
         # 曾（v2.1.12）无条件传 --disable-gpu 规避偶发建窗卡死，但软件渲染会让
         # WebGL 氛围背景（web/shader.js，全屏动画）跑满 CPU —— 用户实测 9950X3D 全核拉高、迅速升温，
@@ -627,6 +637,9 @@ def main():
     # 关窗行为：设置 close_action = exit（默认退出）/ minimize（最小化到任务栏，不退出）
     try:
         def _on_closing():
+            if getattr(api,"_storage_migrating",False):
+                _startup_log("close deferred: data migration running")
+                return False
             try:
                 import config as _cfgmod
                 act = (_cfgmod.load().get("close_action") or "exit").strip()
@@ -647,8 +660,17 @@ def main():
     # 进程内观察者：只记录窗口里程碑（重启已由独立进程看门狗负责——建窗死锁会饿死本线程）
     import threading
     threading.Thread(target=_watchdog_log_only, daemon=True).start()
+    def after_shown():
+        _startup_log("native window shown")
+        browser_bridge.set_ui_state(mode="window", window=True)
+        window_appearance.request({"mode": api.cfg.get("window_appearance", "theme"), "integrated": api.cfg.get("integrated_titlebar", True)})
+        set_window_icon()
+    window.events.shown += after_shown
+    def after_loaded():
+        _startup_log("native page loaded")
+        browser_bridge.set_ui_state(loaded=True)
+    window.events.loaded += after_loaded
     webview.start(
-        lambda: (time.sleep(0.8), apply_mica(), set_window_icon()),
         debug=False,
         **start_kwargs,
     )

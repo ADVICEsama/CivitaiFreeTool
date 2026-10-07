@@ -11,12 +11,11 @@
 
 职责
 ----
-1. 轮询宿主应用（app_pid.txt 里的 PID）是否在 grace 秒内出现**可见顶层窗口**；
-2. 超时 → 杀掉该 PID 的整棵进程树（含 WebView2 子进程，逐个 PID 精确杀，绝不用 /T
-   以免把自己一起带走）→ 重新拉起应用；
-3. 再超时 → 重启 + 弹原生提示框给出处理指引；
-4. 之后保持监控不再自动重启（避免重启风暴），窗口一旦出现即恢复健康态；
-5. 应用正常退出（窗口出现过、进程消失）→ 看门狗自行退出，不留残留。
+1. 校验 app_pid.txt 的 PID 与本应用路径，监测可见窗口和本机健康状态；
+2. 给予冷启动至少 30 秒等待，并对仍有初始化活动的进程延长等待；
+3. 自动浏览器兜底默认开启，可在设置关闭；原生窗口仍是首选；
+4. 仅兜底选项启用时尝试原地切换界面，响应中的后台及未结束下载不得强制重启；
+5. 应用正常退出后看门狗自行退出，不留残留。
 
 与主程序约定
 ------------
@@ -35,12 +34,13 @@ from ctypes import wintypes
 
 IS_WINDOWS = sys.platform.startswith("win")
 
-GRACE_DEFAULT = 12  # 秒：**默认等窗口 12 秒**，没出来就直接换浏览器模式（用户要求：宁可快点看到界面）
+GRACE_DEFAULT = 30  # 正常冷启动至少等待 30 秒，不能在 5–8 秒就结束仍在初始化的窗口
+MIN_WINDOW_GRACE = 30
                     # 可在设置里改「窗口模式等待秒数」（config.window_wait_seconds）
 # 实测（2026-09-13 多轮日志）：本机冷启动出窗口 6.0s / 8.0s / 10s+ 都有过
 # （一个 66MB onefile 解包 + 杀软扫描 + WebView2 初始化），判定太短会把正常启动误杀
 # （日志实锤：no window after 6s/10s -> kill 掉的其实是正在启动的实例）。
-# 策略：20 秒起步 + 只要有进展信号（启动日志或 _MEI 解包目录在变）就继续宽限（最多 6 次），
+# 策略：30 秒起步 + 只要有进展信号（启动日志或 _MEI 解包目录在变）就继续宽限（最多 8 次），
 # 真正的卡死不会有任何进展信号，很快会被杀。
 PROGRESS_GRACE = 5  # 秒：启动日志在这个时间内更新过 = 有进展 → 宽限 MAX_EXTENDS 次
 MAX_EXTENDS = 8     # 有活动最多宽限 8 次（每次 PROGRESS_GRACE 秒，共 +40s）——本机实测：
@@ -204,8 +204,8 @@ def pid_alive(pid):
         _k32.CloseHandle(h)
 
 
-def _proc_name(pid):
-    """进程可执行文件名（小写）"""
+def _proc_path(pid):
+    """进程可执行文件完整路径；用于 PID 复用和同名程序保护。"""
     if not IS_WINDOWS:
         return ""
     h = _k32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, int(pid))
@@ -215,10 +215,26 @@ def _proc_name(pid):
         buf = ctypes.create_unicode_buffer(1024)
         size = wintypes.DWORD(len(buf))
         if _k32.QueryFullProcessImageNameW(h, 0, buf, ctypes.byref(size)):
-            return os.path.basename(buf.value).lower()
+            return buf.value
         return ""
     finally:
         _k32.CloseHandle(h)
+
+
+def _proc_name(pid):
+    return os.path.basename(_proc_path(pid)).lower()
+
+
+def _app_pid_matches(pid, app_name):
+    name = _proc_name(pid)
+    if IS_WINDOWS and not name:
+        return False
+    if name and name != app_name:
+        return False
+    if getattr(sys, "frozen", False) and IS_WINDOWS:
+        path = _proc_path(pid)
+        return bool(path and os.path.normcase(os.path.abspath(path)) == os.path.normcase(os.path.abspath(sys.executable)))
+    return True
 
 
 def _all_processes():
@@ -495,15 +511,66 @@ def _app_health(timeout=2.0):
         return None
 
 
-def _ui_ready():
+_UNSET_HEALTH = object()
+
+
+def _health_matches_pid(health, pid):
+    try:
+        return bool(health and health.get("ok") and health.get("app") == "CivitaiFreeTool"
+                    and int(health.get("pid") or 0) == int(pid))
+    except (ValueError, TypeError):
+        return False
+
+
+def _ui_ready(pid=None, health=_UNSET_HEALTH):
     """应用自己报告「界面已就绪」？（窗口已可见，或浏览器模式下后端常驻）
 
     旧版本（health 里没有 window 字段）只要能应答就认为是活的。
     """
-    h = _app_health()
+    h = _app_health() if health is _UNSET_HEALTH else health
     if not (h and h.get("ok")):
         return False
+    if pid is not None and not _health_matches_pid(h, pid):
+        return False
     return bool(h.get("mode") == "browser" or h.get("window") or ("window" not in h))
+
+
+def _switch_browser_in_place(pid):
+    try:
+        import urllib.request
+        body = json.dumps({"method": "activate_browser_ui", "args": []}).encode("utf-8")
+        req = urllib.request.Request("http://127.0.0.1:47531/api/rpc", data=body,
+                                     headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=5) as response:
+            result = json.loads(response.read().decode("utf-8")).get("result") or {}
+        return bool(result.get("ok") and result.get("backend_preserved") and int(result.get("pid") or 0) == pid)
+    except Exception:
+        return False
+
+
+def _saved_tasks_busy():
+    """无法探测 HTTP 时，宁可不重启有未结束下载记录的后台。"""
+    try:
+        import config
+        return any(isinstance(row, dict) and row.get("status") in ("pending", "downloading")
+                   for row in config.load_tasks())
+    except Exception:
+        return True
+
+
+def _effective_grace(value):
+    try:
+        return max(MIN_WINDOW_GRACE, min(600, int(value)))
+    except (TypeError, ValueError, OverflowError):
+        return GRACE_DEFAULT
+
+
+def _browser_fallback_enabled():
+    try:
+        import config
+        return config.load().get("browser_fallback_enabled") is True
+    except Exception:
+        return False
 
 
 def _cfg_window_wait():
@@ -517,11 +584,12 @@ def _cfg_window_wait():
 
 
 def run(grace=None, exe_name=None):
-    """看门狗主循环。grace 秒内没窗口就杀掉换浏览器模式（用户要求：宁可快点看到界面）。"""
+    """启动观察：慢启动宽限；后台能响应就原地换显示器，避免中断下载。"""
     try:
         grace = int(grace or os.environ.get("CFT_WD_GRACE") or _cfg_window_wait() or GRACE_DEFAULT)
     except Exception:
         grace = GRACE_DEFAULT
+    grace = _effective_grace(grace)
     own = os.getpid()
     started = time.time()
     app_name = (exe_name or (os.path.basename(sys.executable) if getattr(sys, "frozen", False) else "python.exe")).lower()
@@ -556,9 +624,11 @@ def run(grace=None, exe_name=None):
         pid = read_app_pid()
         if pid and pid != own and pid_alive(pid):
             # PID 复用防护：名字必须对得上
-            nm = _proc_name(pid)
-            if nm and nm != app_name and not nm.startswith(app_name.split(".")[0].lower()):
-                _log("pid %s is %s (not our app), ignore" % (pid, nm))
+            if not _app_pid_matches(pid, app_name):
+                _log("pid %s is not a confirmed instance of our app; no restart" % pid)
+                continue
+
+            health = _app_health()
 
             if browser_fallback:
                 # 已切浏览器模式：没有窗口是正常的，只确认后端还活着
@@ -567,7 +637,7 @@ def run(grace=None, exe_name=None):
                     healthy = True
                 continue
 
-            if has_visible_window([pid]) or has_visible_window(_descendants(pid)) or _ui_ready():
+            if has_visible_window([pid]) or has_visible_window(_descendants(pid)) or _ui_ready(pid, health):
                 if not healthy:
                     _log("window visible, healthy (took %.1fs)" % (time.time() - started))
                 healthy, stage, msg_shown, progresses = True, 0, False, 0
@@ -583,14 +653,39 @@ def run(grace=None, exe_name=None):
             if time.time() < deadline:
                 continue
 
-            # 宽限保护：**只对浏览器模式那一轮**生效（stage>0）。
-            # 窗口模式（stage 0）是硬时限：等满 grace 秒没窗口就直接换浏览器（用户明确要求，
-            # 不再因为"进程树还在动"而拖到一分多钟）。真卡死时浏览器那一轮也不会有活动，照常被杀。
+            # 首轮窗口初始化也必须享受宽限，不能把慢启动当卡死。
             tree = [pid] + _descendants(pid)
-            if stage > 0 and progresses < MAX_EXTENDS and (_app_progressing() or _tree_active(tree)):
+            if progresses < MAX_EXTENDS and (_app_progressing() or _tree_active(tree)):
                 progresses += 1
                 deadline = time.time() + PROGRESS_GRACE
                 _log("still starting (activity detected), extend deadline #%d/%d" % (progresses, MAX_EXTENDS))
+                continue
+
+            if not _browser_fallback_enabled():
+                if not msg_shown:
+                    _log("window still starting; automatic browser fallback disabled; preserving native instance")
+                    msg_shown = True
+                deadline = time.time() + max(30, grace)
+                continue
+
+            if _health_matches_pid(health, pid):
+                if _switch_browser_in_place(pid):
+                    _log("window not ready; browser UI activated in-place (pid %s), backend preserved" % pid)
+                    browser_fallback, healthy = True, True
+                    continue
+                # 活着的下载后台绝不因为窗口尚未出现而被强制杀掉。
+                _log("backend responsive but UI switch not ready; preserving pid %s" % pid)
+                deadline = time.time() + PROGRESS_GRACE
+                continue
+
+            if _saved_tasks_busy():
+                if not msg_shown:
+                    _log("startup recovery deferred: unfinished download records; preserving pid %s" % pid)
+                    _message("CivitaiFreeTool：未强制重启下载后台",
+                             "窗口暂未显示，且检测到未结束的下载记录。为避免中断下载，本次没有强制重启。\n"
+                             "请先确认或暂停下载，再退出软件重试。日志在 %LOCALAPPDATA%\\CivitaiFreeToolWeb。")
+                    msg_shown = True
+                deadline = time.time() + max(30, grace)
                 continue
 
             # 超时无窗口 = 卡死（或 WebView2 起不来）
@@ -602,11 +697,11 @@ def run(grace=None, exe_name=None):
                 time.sleep(1.0)
                 _relaunch(app_name, browser=True)
                 _message("CivitaiFreeTool：窗口没出来，已切到浏览器模式",
-                         "等了 %s 秒没等到窗口（常见原因：WebView2 运行时正在自动更新，或系统忙）。\n\n"
-                         "已改用「浏览器模式」：软件在后台照常运行（下载不受影响），界面在系统浏览器里打开。\n"
-                         "任务栏托盘图标可随时打开界面 / 退出软件。\n\n"
-                         "想调长等待：设置 → 界面 → 「窗口模式等待秒数」\n"
-                         "想固定用浏览器模式：设置 → 界面 → 「界面模式」。" % elapsed)
+                         "等待 %s 秒后，窗口仍未显示且后台未响应，正在尝试浏览器兜底。\n\n"
+                         "任务记录已保留。重启可能暂停未完成任务，请在下载管理中检查并继续。\n"
+                         "托盘图标可打开界面或退出软件。\n\n"
+                         "调整等待：设置 → 高级与启动 → 窗口模式等待秒数\n"
+                         "固定用浏览器：设置 → 高级与启动 → 界面模式。" % elapsed)
                 stage, healthy = 1, False
                 progresses = 0
                 relaunch_until = time.time() + 300
@@ -619,14 +714,14 @@ def run(grace=None, exe_name=None):
                 time.sleep(1.0)
                 _relaunch(app_name, browser=True)
                 _message("CivitaiFreeTool 窗口启动失败，已切换浏览器模式",
-                         "窗口连续两次启动超时（WebView2 初始化卡住）。\n\n"
-                         "已自动改用「浏览器模式」重启：软件在后台照常运行（下载不受影响），"
+                         "浏览器兜底也未及时就绪，已再次尝试启动。\n\n"
+                         "正在以「浏览器模式」重启；任务记录已保留，"
                          "界面稍后会在系统浏览器里打开。\n\n"
                          "任务栏托盘图标可随时打开界面或退出软件；\n"
-                         "想切回窗口模式：设置 → 界面 → 界面模式。\n\n"
+                         "想切回窗口模式：设置 → 高级与启动 → 界面模式。\n\n"
                          "日志：%LOCALAPPDATA%\\CivitaiFreeToolWeb\\（startup.log / watchdog.log）")
                 stage, healthy, msg_shown = 2, False, True
-                browser_fallback = True
+                browser_fallback = False
                 progresses = 0
                 relaunch_until = time.time() + 120
                 deadline = time.time() + 120

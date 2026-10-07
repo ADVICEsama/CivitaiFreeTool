@@ -34,11 +34,11 @@
 
 // 前端错误也写进后端日志（error.log），出问题时可以查
 window.addEventListener("error", (e) => {
-  try { api.call("log_ui_error", String(e.message || e.error || "?"), String(e.filename || ""), String(e.lineno || ""), String((e.error && e.error.stack) || "")); } catch (err) { /* 忽略 */ }
+  try { api.call("log_ui_error", String(e.message || e.error || "?"), String(e.filename || ""), String(e.lineno || ""), String((e.error && e.error.stack) || "")).catch(() => {}); } catch (err) { /* 忽略 */ }
 });
 window.addEventListener("unhandledrejection", (e) => {
   const r = e.reason || {};
-  try { api.call("log_ui_error", "未处理的 Promise 拒绝: " + String(r.message || r), "", "", String(r.stack || "")); } catch (err) { /* 忽略 */ }
+  try { api.call("log_ui_error", "未处理的 Promise 拒绝: " + String(r.message || r), "", "", String(r.stack || "")).catch(() => {}); } catch (err) { /* 忽略 */ }
 });
 
 const api = {
@@ -93,11 +93,18 @@ function applyZoom(v) {
     if (content) content.style.height = "";
   } else {
     document.documentElement.style.zoom = z;
-    if (content) content.style.height = "calc((100vh - 76px) / " + z + ")";
+    if (content) content.style.height = "calc(100vh / " + z + ")";
   }
+  document.documentElement.style.setProperty("--app-height", "calc(100vh / " + z + ")");
+  document.documentElement.dataset.compactLayout = window.innerWidth / z < 1080 ? "true" : "false";
+  document.documentElement.dataset.narrowLayout = window.innerWidth / z < 760 ? "true" : "false";
   if (state && state.cfg) state.cfg.ui_zoom = v;
+  window.dispatchEvent(new Event("cft:zoom"));
 }
 document.addEventListener("wheel", (e) => {
+  if (e.altKey && !e.ctrlKey && e.target.closest && e.target.closest("#mmMasonry, #mmImageSizeControl")) {
+    e.preventDefault(); setMasonrySize(Number(state.cfg.masonry_card_width || 220) + (e.deltaY < 0 ? 20 : -20), true); return;
+  }
   if (!e.ctrlKey) return;
   e.preventDefault();
   const cur = Number((state && state.cfg && state.cfg.ui_zoom) || 100);
@@ -139,7 +146,7 @@ function confirmBox(msg) {
     dlg.style.width = "420px";
     dlg.innerHTML =
       '<div class="rd-title">确认操作</div>' +
-      '<div style="font-size:13px;color:var(--text);line-height:1.7;word-break:break-all">' + esc(msg) + "</div>" +
+      '<div style="font-size:calc(13px * var(--type-scale, 1));color:var(--text);line-height:1.7;word-break:break-all">' + esc(msg) + "</div>" +
       '<div class="rd-actions">' +
       ((state.cfg && state.cfg.confirm_buttons_flip)
         ? '<button class="btn" id="cfCancel">取消</button><button class="btn btn-danger" id="cfOk">确定</button>'
@@ -164,7 +171,7 @@ function confirmBoxRaw(html, title) {
     dlg.style.width = "560px";
     dlg.innerHTML =
       '<div class="rd-title">' + (title || "确认操作") + "</div>" +
-      '<div style="font-size:13px;color:var(--text);line-height:1.7">' + html + "</div>" +
+      '<div style="font-size:calc(13px * var(--type-scale, 1));color:var(--text);line-height:1.7">' + html + "</div>" +
       '<div class="rd-actions">' +
       ((state.cfg && state.cfg.confirm_buttons_flip)
         ? '<button class="btn" id="cfCancel">取消</button><button class="btn btn-danger" id="cfOk">确定</button>'
@@ -246,11 +253,15 @@ const state = {
 
 // ---------- 页面切换 ----------
 function switchPage(name) {
+  if (name !== "models" && $("#detailMask").style.display === "flex") closeDetail();
   $$(".nav-tab").forEach((t) => t.classList.toggle("active", t.dataset.page === name));
   $$(".page").forEach((p) => p.classList.toggle("active", p.id === "page-" + name));
+  if (typeof syncModelInspector === "function") syncModelInspector(name === "models");
+  if (typeof applyTextAndWindowAppearance === "function") applyTextAndWindowAppearance();
   if (name === "models") mmScanIfNeeded();
   if (name === "download") refreshDlTarget();
   if (name === "updates") renderUpdatesPage();
+  if (name === "dlmanager" && typeof refreshDownloadHistory === "function") refreshDownloadHistory();
 }
 $("#navTabs").addEventListener("click", (e) => {
   const b = e.target.closest(".nav-tab");
@@ -311,10 +322,10 @@ function openTodoDialog() {
     '<div class="form-grid" style="grid-template-columns:90px 1fr">' +
     '<label>链接</label><input class="input" id="tdUrl" placeholder="https://civitai.red/models/..." />' +
     "</div>" +
-    '<div style="font-size:12px;color:var(--text-dim);margin:4px 0 6px 90px">时间自动选择：Early Access 模型按其免费到期时间提醒；其他模型默认 7 天后提醒</div>' +
+    '<div style="font-size:calc(12px * var(--type-scale, 1));color:var(--text-dim);margin:4px 0 6px 90px">时间自动选择：Early Access 模型按其免费到期时间提醒；其他模型默认 7 天后提醒</div>' +
     '<div class="rd-actions"><button class="btn btn-primary" id="tdAdd">添加</button></div>' +
-    '<div style="font-size:13px;font-weight:600;margin:10px 0 6px">清单：</div>' +
-    '<div id="tdList" style="max-height:200px;overflow:auto;font-size:12px;line-height:1.9"></div>' +
+    '<div style="font-size:calc(13px * var(--type-scale, 1));font-weight:600;margin:10px 0 6px">清单：</div>' +
+    '<div id="tdList" style="max-height:200px;overflow:auto;font-size:calc(12px * var(--type-scale, 1));line-height:1.9"></div>' +
     '<div class="rd-actions"><button class="btn" id="tdClose">关闭</button></div>';
   document.body.appendChild(mask);
   document.body.appendChild(dlg);
@@ -365,11 +376,11 @@ function openTodoDialog() {
     dlg.style.width = "470px";
     const rows = r.due.map((t) =>
       '<div style="display:flex;gap:8px;align-items:center;margin:5px 0">' +
-      '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px" title="' + esc(t.url) + '">' + esc(t.label || t.url) + "</span>" +
+      '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:calc(13px * var(--type-scale, 1))" title="' + esc(t.url) + '">' + esc(t.label || t.url) + "</span>" +
       '<button class="btn btn-tiny td-dl" data-url="' + esc(t.url) + '">一键下载</button></div>').join("");
     dlg.innerHTML =
-      '<div style="font-size:15px;font-weight:600;margin-bottom:6px">到期待办：可以下载了</div>' +
-      '<div style="font-size:12px;color:var(--text-dim);margin-bottom:8px">这些模型已到免费/可下载时间（下载成功后会自动从清单里移除）：</div>' +
+      '<div style="font-size:calc(15px * var(--type-scale, 1));font-weight:600;margin-bottom:6px">到期待办：可以下载了</div>' +
+      '<div style="font-size:calc(12px * var(--type-scale, 1));color:var(--text-dim);margin-bottom:8px">这些模型已到免费/可下载时间（下载成功后会自动从清单里移除）：</div>' +
       '<div style="max-height:240px;overflow:auto">' + rows + "</div>" +
       '<div class="rd-actions"><button class="btn btn-primary" id="tdAll">全部下载</button><button class="btn" id="tdGoDl">去下载页</button><button class="btn" id="tdLater">稍后再说</button></div>';
     document.body.appendChild(mask);
@@ -408,7 +419,7 @@ function showDlNotice() {
   dlg.style.width = "380px";
   dlg.innerHTML =
     '<div class="rd-title">已在下载队列中</div>' +
-    '<div style="font-size:13px;color:var(--text-dim);line-height:1.8">任务已开始解析并入队，请在本页等待，无需重复点击「解析」。</div>' +
+    '<div style="font-size:calc(13px * var(--type-scale, 1));color:var(--text-dim);line-height:1.8">任务已开始解析并入队，请在本页等待，无需重复点击「解析」。</div>' +
     '<div class="rd-actions"><button class="btn btn-primary" id="dnOk">知道了</button></div>';
   document.body.appendChild(mask);
   document.body.appendChild(dlg);
@@ -569,12 +580,12 @@ function showPaidDialog(items) {
     const remain = it.deadline ? Math.max(1, Math.ceil((it.deadline - Date.now() / 1000) / 86400)) : 7;
     return '<div class="paid-row" data-url="' + esc(it.url) + '" data-deadline="' + (it.deadline || 0) + '">' +
       '<div style="font-weight:600">需付费（Early Access）</div>' +
-      '<div style="font-size:12px;color:var(--text-dim);word-break:break-all">' + esc(it.url) + "</div>" +
-      '<div style="font-size:12px;margin:4px 0 8px">约 ' + remain + ' 天后免费 —— <button class="btn btn-tiny paid-todo">加入待办（自动到期提醒）</button> <button class="btn btn-tiny paid-dl">仍要下载</button></div></div>';
+      '<div style="font-size:calc(12px * var(--type-scale, 1));color:var(--text-dim);word-break:break-all">' + esc(it.url) + "</div>" +
+      '<div style="font-size:calc(12px * var(--type-scale, 1));margin:4px 0 8px">约 ' + remain + ' 天后免费 —— <button class="btn btn-tiny paid-todo">加入待办（自动到期提醒）</button> <button class="btn btn-tiny paid-dl">仍要下载</button></div></div>';
   }).join("");
   dlg.innerHTML =
     '<div class="rd-title">以下模型需要付费或尚未公开</div>' +
-    '<div style="max-height:260px;overflow:auto;font-size:13px;line-height:1.8">' + rows + "</div>" +
+    '<div style="max-height:260px;overflow:auto;font-size:calc(13px * var(--type-scale, 1));line-height:1.8">' + rows + "</div>" +
     '<div class="rd-actions"><button class="btn" id="paidClose">知道了</button></div>';
   document.body.appendChild(mask);
   document.body.appendChild(dlg);
@@ -617,12 +628,14 @@ async function refreshDlTarget() {
 // 从模型目录树里选文件夹（数据源与模型管理页同源：get_folders）
 async function pickFolderModal() {
   let data = {};
-  try { data = JSON.parse((await api.call("get_folders")) || "{}"); } catch (e) { data = {}; }
-  const root = (data.root || "").replace(/\/$/, "");
-  const rows = [{ path: root, label: "模型目录根目录（直接放根下）", depth: 0 }];
+  try { data = JSON.parse((await api.call("get_folders")) || "{}"); }
+  catch (e) { setStatus("读取分类目录失败，请检查模型目录设置后重试"); return ""; }
+  const root = String(data.root || "");
+  const sep = root.includes("\\") || /^[a-z]:/i.test(root) ? "\\" : "/";
+  const rows = root ? [{ path: root, label: "模型目录根目录（直接放根下）", depth: 0 }] : [];
   (function walk(nodes, depth) {
     (nodes || []).forEach((n) => {
-      rows.push({ path: root + "\\" + String(n.path || "").replace(/\//g, "\\"), label: n.name, depth: depth + 1 });
+      if (root) rows.push({ path: root.replace(/[\\/]$/, "") + sep + String(n.path || "").replace(/[\\/]/g, sep), label: n.name, depth: depth + 1 });
       walk(n.children, depth + 1);
     });
   })(data.tree || [], 0);
@@ -630,40 +643,167 @@ async function pickFolderModal() {
   const mask = document.createElement("div");
   mask.className = "rd-mask";
   const dlg = document.createElement("div");
-  dlg.className = "rename-dialog";
-  dlg.style.width = "560px";
+  dlg.className = "rename-dialog folder-picker";
+  dlg.setAttribute("role", "dialog");
+  dlg.setAttribute("aria-modal", "true");
+  dlg.setAttribute("aria-labelledby", "fpTitle");
   dlg.innerHTML =
-    '<div class="rd-title">选择下载落地的文件夹</div>' +
-    '<div style="font-size:12px;color:var(--text-dim);margin-bottom:8px">下载的模型（连 json/封面一起）直接放进这个文件夹；选中后不再弹「移动分类」询问</div>' +
-    '<div id="fpList" style="max-height:330px;overflow:auto;border:1px solid var(--border);border-radius:10px;padding:6px"></div>' +
-    '<div class="rd-actions"><button class="btn" id="fpCancel">取消</button><button class="btn btn-primary" id="fpOk">确定</button></div>';
+    '<div class="fp-heading"><div class="rd-title" id="fpTitle">选择下载落地的文件夹</div><button class="btn btn-tiny" id="fpReset">重置尺寸</button></div>' +
+    '<p class="fp-hint">模型与 json / 封面一起保存。窗口大小自动适配，也可拖动右下角调整。</p>' +
+    '<div class="fp-toolbar"><input class="input" type="search" id="fpSearch" aria-label="搜索分类名称或路径" placeholder="搜索分类名称或路径…"/><span id="fpCount" aria-live="polite"></span></div>' +
+    '<div class="fp-view-options"><label><input type="checkbox" id="fpShowPaths"/>显示详细路径</label><span>星标目录会固定在顶部</span></div>' +
+    '<div id="fpFavorites" class="fp-favorites" aria-label="收藏文件夹"></div>' +
+    '<div id="fpList" role="listbox" aria-label="分类文件夹" tabindex="0"></div>' +
+    '<div class="fp-footer"><div class="fp-selected"><span>保存到</span><div id="fpSelected"></div></div>' +
+    '<div class="rd-actions"><button class="btn" id="fpCancel">取消</button><button class="btn btn-primary" id="fpOk">确定</button></div></div>';
   document.body.appendChild(mask);
   document.body.appendChild(dlg);
-  let sel = rows[0] ? rows[0].path : "";
+  const previousFocus = document.activeElement;
+  const currentTarget = state.cfg && state.cfg.download_target_dir;
+  let sel = (rows.find((r) => r.path === currentTarget) || rows[0] || {}).path || "";
   const list = $("#fpList", dlg);
-  list.innerHTML = rows.map((r) =>
-    '<div class="fp-item" data-path="' + esc(r.path) + '" style="padding:6px 8px;border-radius:8px;cursor:pointer;margin-left:' + (r.depth * 16) + 'px">' +
-    (r.depth ? _icon("folder") : _icon("folder")) + esc(r.label) +
-    '<div style="font-size:11px;color:var(--text-dim);word-break:break-all">' + esc(r.path) + "</div></div>").join("");
+  const folded = new Set(Array.isArray(state.cfg.folder_picker_folded) ? state.cfg.folder_picker_folded : []);
+  const favorites = new Set(Array.isArray(state.cfg.folder_picker_favorites) ? state.cfg.folder_picker_favorites : []);
+  let showPaths = state.cfg.folder_picker_show_paths === true;
+  dlg.dataset.showPaths = String(showPaths);
+  const savePicker = values => {
+    Object.assign(state.cfg, values);
+    if('folder_picker_show_paths' in values){const input=$('[data-key="folder_picker_show_paths"]');if(input)input.checked=values.folder_picker_show_paths;}
+    api.call("save_config",values).then(ok => { if(!ok)setStatus("文件夹偏好保存失败"); }).catch(()=>setStatus("文件夹偏好保存失败"));
+  };
+  const folderName = path => String(path).replace(/[\\/]$/,"").split(/[\\/]/).pop() || "模型目录";
+  const favoritesBar = $("#fpFavorites",dlg);
+  const renderFavorites = () => {
+    favoritesBar.innerHTML = Array.from(favorites).map(path => '<button type="button" class="fp-favorite-chip' + (path===sel?' selected':'') + '" data-favorite-pick="' + esc(path) + '" title="' + esc(path) + '"' + (rows.some(r=>r.path===path) ? '' : ' disabled') + '>' + esc(folderName(path)) + '</button>').join('') || '<span class="fp-favorites-empty">点击目录后的星标，收藏常用角色文件夹</span>';
+  };
+  const parents = new Map(), branches = new Set(), stack = [];
+  rows.forEach(row => {
+    while (stack.length && stack[stack.length-1].depth >= row.depth) stack.pop();
+    if (stack.length) { parents.set(row.path, stack[stack.length-1].path); branches.add(stack[stack.length-1].path); }
+    stack.push(row);
+  });
+  let visible = rows;
   const mark = () => {
     list.querySelectorAll(".fp-item").forEach((d) => {
       const on = d.dataset.path === sel;
-      d.style.background = on ? "var(--accent, #4da3ff)" : "";
-      d.style.color = on ? "#fff" : "";
+      d.classList.toggle("selected", on);
+      d.setAttribute("aria-selected", String(on));
     });
+    $("#fpSelected", dlg).textContent = (showPaths ? sel : folderName(sel)) || "请先在设置中配置模型目录";
+    $("#fpSelected", dlg).title = sel;
+    renderFavorites();
+    $("#fpOk", dlg).disabled = !sel;
   };
+  const render = () => {
+    const q = $("#fpSearch", dlg).value.trim().toLocaleLowerCase();
+    visible = rows.filter((r) => {
+      if (q) return (r.label + " " + r.path).toLocaleLowerCase().includes(q);
+      let parent = parents.get(r.path);
+      while (parent) { if (folded.has(parent)) return false; parent = parents.get(parent); }
+      return true;
+    });
+    list.innerHTML = visible.map((r) =>
+      '<div class="fp-item" role="option" data-path="' + esc(r.path) + '" title="' + esc(r.path) + '" style="--fp-depth:' + (q ? 0 : Math.min(r.depth, 10)) + '">' +
+      '<div class="fp-name">' + (branches.has(r.path) ? '<button type="button" class="fp-fold" data-fold="' + esc(r.path) + '" aria-label="折叠或展开 ' + esc(r.label) + '" aria-expanded="' + (!folded.has(r.path)) + '">' + _icon('chevron-down') + '</button>' : '<span class="fp-fold-space"></span>') + _icon("folder") + '<span class="fp-folder-label">' + esc(r.label) + '</span><button type="button" class="fp-star" data-favorite="' + esc(r.path) + '" aria-label="' + (favorites.has(r.path)?'取消收藏':'收藏') + ' ' + esc(r.label) + '" aria-pressed="' + favorites.has(r.path) + '">' + _icon('star') + '</button></div>' +
+      '<div class="fp-path" title="' + esc(r.path) + '">' + esc(r.path) + "</div></div>").join("") ||
+      '<div class="fp-empty">' + (rows.length ? "没有匹配的分类；清空搜索可查看全部" : "尚未配置模型目录，请前往设置添加") + "</div>";
+    $("#fpCount", dlg).textContent = visible.length + " / " + rows.length + " 个目录";
+    // 搜索仅过滤显示，保留已选目标，并在底部完整展示，防止误改保存位置。
+    mark();
+  };
+  $("#fpShowPaths",dlg).checked = showPaths;
+  $("#fpShowPaths",dlg).addEventListener("change",e=>{
+    showPaths=e.target.checked;dlg.dataset.showPaths=String(showPaths);savePicker({folder_picker_show_paths:showPaths});mark();
+  });
+  favoritesBar.addEventListener("click",e=>{
+    const chip=e.target.closest("[data-favorite-pick]");if(!chip || chip.disabled)return;
+    sel=chip.dataset.favoritePick;mark();
+    list.querySelector('[data-path="'+CSS.escape(sel)+'"]')?.scrollIntoView({block:'nearest'});
+  });
   list.addEventListener("click", (e) => {
+    const star=e.target.closest("[data-favorite]");
+    if(star){
+      const path=star.dataset.favorite;favorites.has(path)?favorites.delete(path):favorites.add(path);
+      savePicker({folder_picker_favorites:Array.from(favorites)});
+      const scroll=list.scrollTop;render();list.scrollTop=scroll;
+      list.querySelector('[data-favorite="'+CSS.escape(path)+'"]')?.focus();return;
+    }
+    const toggle = e.target.closest("[data-fold]");
+    if (toggle) {
+      const path = toggle.dataset.fold;
+      folded.has(path) ? folded.delete(path) : folded.add(path);
+      savePicker({folder_picker_folded:Array.from(folded)});
+      render(); list.querySelector('[data-fold="' + CSS.escape(path) + '"]')?.focus();
+      return;
+    }
     const it = e.target.closest(".fp-item");
     if (!it) return;
     sel = it.dataset.path;
     mark();
   });
-  mark();
-  const close = () => { mask.remove(); dlg.remove(); };
-  mask.addEventListener("click", close);
-  $("#fpCancel", dlg).addEventListener("click", close);
+  $("#fpSearch", dlg).addEventListener("input", render);
+  render();
+  const clampRatio = (v, fallback) => Number.isFinite(Number(v)) ? Math.max(0.2, Math.min(0.96, Number(v))) : fallback;
+  const savedSize = (state.cfg && state.cfg.folder_picker_size) || {};
+  let preferred = { width: clampRatio(savedSize.width, 0.72), height: clampRatio(savedSize.height, 0.78) };
+  const fit = () => {
+    const z = Number(document.documentElement.style.zoom) || 1;
+    const maxW = Math.max(1, (window.innerWidth - 24) / z);
+    const maxH = Math.max(1, (window.innerHeight - 24) / z);
+    dlg.style.minWidth = Math.min(420, maxW) + "px";
+    dlg.style.minHeight = Math.min(300, maxH) + "px";
+    dlg.style.maxWidth = maxW + "px";
+    dlg.style.maxHeight = maxH + "px";
+    dlg.style.width = Math.min(maxW, Math.max(420, window.innerWidth * preferred.width / z)) + "px";
+    dlg.style.height = Math.min(maxH, Math.max(300, window.innerHeight * preferred.height / z)) + "px";
+    dlg.dataset.small = maxH < 390 || maxW < 540 ? "true" : "false";
+  };
+  const remember = () => {
+    const rect = dlg.getBoundingClientRect();
+    preferred = { width: rect.width / window.innerWidth, height: rect.height / window.innerHeight };
+  };
+  dlg.addEventListener("pointerup", remember);
+  $("#fpReset", dlg).addEventListener("click", () => { preferred = { width: 0.72, height: 0.78 }; fit(); });
+  window.addEventListener("resize", fit);
+  window.addEventListener("cft:zoom", fit);
+  fit();
+  $("#fpSearch", dlg).focus();
   return new Promise((resolve) => {
-    $("#fpOk", dlg).addEventListener("click", () => { close(); resolve(sel); });
+    let closed = false;
+    const close = (value = "") => {
+      if (closed) return;
+      closed = true;
+      remember();
+      if (state.cfg) state.cfg.folder_picker_size = preferred;
+      // 只保存尺寸字段，不顺带提交设置页尚未保存的改动。
+      api.call("save_config", { folder_picker_size: preferred }).catch(() => {});
+      window.removeEventListener("resize", fit);
+      window.removeEventListener("cft:zoom", fit);
+      document.removeEventListener("keydown", keydown, true);
+      mask.remove(); dlg.remove();
+      if (previousFocus && previousFocus.isConnected) previousFocus.focus();
+      resolve(value);
+    };
+    const keydown = (e) => {
+      if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(); }
+      else if (e.key === "Tab") {
+        const buttons = Array.from(dlg.querySelectorAll("button:not(:disabled), input, [tabindex='0']"));
+        const first = buttons[0], last = buttons[buttons.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      } else if ((e.key === "ArrowDown" || e.key === "ArrowUp") && document.activeElement === list && visible.length) {
+        e.preventDefault();
+        const i = visible.findIndex((r) => r.path === sel);
+        sel = visible[Math.max(0, Math.min(visible.length - 1, i + (e.key === "ArrowDown" ? 1 : -1)))].path;
+        mark();
+        const selected = list.querySelector(".selected");
+        if (selected) selected.scrollIntoView({ block: "nearest" });
+      } else if (e.key === "Enter" && document.activeElement === list && sel) { e.preventDefault(); close(sel); }
+    };
+    document.addEventListener("keydown", keydown, true);
+    mask.addEventListener("click", () => close());
+    $("#fpCancel", dlg).addEventListener("click", () => close());
+    $("#fpOk", dlg).addEventListener("click", () => { if (sel) close(sel); });
   });
 }
 
@@ -825,7 +965,7 @@ async function showDedupeDialog(groups, modelGroups) {
       "<b>" + esc(d.name) + "</b>" + (d.ver ? ' <span style="color:var(--warn,#d29922)">旧版 ' + esc(d.ver) + "</span>" : " <span style='color:var(--text-dim)'>重复副本</span>") +
       '<div class="dedup-dir">' + esc(d.dir) + (d.size ? " · " + fmtBytes(d.size) : "") + "</div></div></div>").join("");
     const ok = await confirmBoxRaw(
-      '<div style="font-size:12px;color:var(--text-dim);margin-bottom:6px">以下 <b>' + picked.length +
+      '<div style="font-size:calc(12px * var(--type-scale, 1));color:var(--text-dim);margin-bottom:6px">以下 <b>' + picked.length +
       "</b> 个文件将移入回收站（可还原，不会真正删除）：</div>" +
       '<div style="max-height:300px;overflow:auto">' + rows + "</div>",
       "清理重复 / 旧版模型（" + picked.length + " 个" + (totalSize ? " · 约 " + fmtBytes(totalSize) : "") + "）");
@@ -843,7 +983,7 @@ async function showDedupeDialog(groups, modelGroups) {
       clearInterval(timer);
       setStatus(p.msg || "清理完成");
       if (Array.isArray(p.result) && p.result.length) {
-        infoBox('<div style="font-size:12px;line-height:1.8">' +
+        infoBox('<div style="font-size:calc(12px * var(--type-scale, 1));line-height:1.8">' +
           p.result.map((f) => "· <b>" + esc(f.file) + "</b>：" + esc(f.msg)).join("<br/>") +
           "</div>", "这些没能清理（可在资源管理器里手动删除）");
       }
@@ -860,6 +1000,7 @@ async function dlRefresh() {
   try {
     const tasks = await api.call("get_tasks");
     state.dlTasks = tasks || [];
+    $("#dlTable").dataset.hasErrors=state.dlTasks.some(t=>t.error)?"true":"false";
     const tbody = $("#dlTable tbody");
     const selPaths = new Set(Array.from(tbody.querySelectorAll("tr.sel-row")).map((tr) => tr.dataset.fn));
     tbody.innerHTML = state.dlTasks.map((t) => {
@@ -880,12 +1021,17 @@ async function dlRefresh() {
         destShow = effFull.slice(md.length).replace(/^[\\/]+/, "");
       }
       const destTip = (destFull ? destFull : (effFull + "\n（全局目标）")) + "\n点击选择该文件的保存文件夹";
-      const destCell = "<td class='c-dest cell-dest' data-task='" + esc(t.id) + "' title='" + esc(destTip) + "'>" + esc(destShow || effFull || "未设置") + (destFull ? "" : " <span class='dest-def'>默认</span>") + "</td>";
+      const destLeaf = String(destShow || effFull || "未设置").replace(/[\\/]$/, "").split(/[\\/]/).pop();
+      const destCell = "<td class='c-dest cell-dest' data-task='" + esc(t.id) + "' title='" + esc(destTip) + "'><button type='button' class='dest-picker' aria-label='保存到 " + esc(destLeaf) + "'>" + _icon("folder") + "<span>" + esc(destLeaf) + "</span>" + _icon("chevron-down") + "</button>" + (destFull ? "" : " <span class='dest-def'>默认</span>") + "</td>";
       return '<tr data-fn="' + esc(t.filename) + '" class="' + (selPaths.has(t.filename) ? "sel-row" : "") + '">' +
-        "<td class='c-thumb'>" + thumb + "</td><td class='c-file'>" + esc(t.filename) + "</td>" + destCell + "<td>" + esc(st) + "</td><td>" + esc(prog) + "</td>" +
+        "<td class='c-thumb'>" + thumb + "</td><td class='c-file'><div>" + esc(t.filename) + "</div>" +
+        (effFull ? '<div class="file-subpath" title="' + esc(effFull + (/[/\\]$/.test(effFull) ? "" : (effFull.includes("\\") || /^[a-z]:/i.test(effFull) ? "\\" : "/")) + t.filename) + '">' +
+          esc(effFull + (/[/\\]$/.test(effFull) ? "" : (effFull.includes("\\") || /^[a-z]:/i.test(effFull) ? "\\" : "/")) + t.filename) + "</div>" : "") +
+        "</td>" + destCell + "<td class='dl-task-status'>" + esc(st) + (["done", "error", "canceled"].includes(t.status) ? '<button class="btn btn-tiny task-archive" data-archive-task="' + esc(t.id) + '">' + _icon("clock") + '移入历史</button>' : "") + "</td><td>" + esc(prog) + "</td>" +
         "<td>" + esc(speed) + "</td><td>" + esc(size) + "</td>" + errCell + "</tr>";
     }).join("");
     loadDlThumbs(state.dlTasks || []);
+    if (typeof updateDownloadQueueCount === "function") updateDownloadQueueCount();
     // 下载受限（Early Access/付费）→ 弹窗选择
     maybeAskRestricted(tasks || []);
     // 下载完成 → 询问移动分类（ask_move_after_download 开启且本次会话未询问过）
@@ -932,8 +1078,8 @@ function maybeAskRestricted(tasks) {
   dlg.style.width = "480px";
   dlg.innerHTML =
     '<div class="rd-title">模型下载受限（Early Access / 付费）</div>' +
-    '<div style="font-size:12px;color:var(--text-dim);word-break:break-all">' + esc(t.filename || "") + "</div>" +
-    '<div style="font-size:12px;color:var(--text-dim);margin:4px 0 10px">该模型在 C 站暂不可直接下载。若有积分可先在浏览器购买解锁，或加入待办等免费开放。</div>' +
+    '<div style="font-size:calc(12px * var(--type-scale, 1));color:var(--text-dim);word-break:break-all">' + esc(t.filename || "") + "</div>" +
+    '<div style="font-size:calc(12px * var(--type-scale, 1));color:var(--text-dim);margin:4px 0 10px">该模型在 C 站暂不可直接下载。若有积分可先在浏览器购买解锁，或加入待办等免费开放。</div>' +
     '<div class="rd-actions">' +
     '<button class="btn btn-primary" id="rkRetry">花费积分/重试下载</button>' +
     '<button class="btn" id="rkTodo">加入待办并移除</button>' +
@@ -979,9 +1125,9 @@ function maybeAskMove(tasks) {
   dlg.innerHTML =
     '<div class="rd-title">下载完成：' + esc(done.filename) + "</div>" +
     '<div style="display:flex;gap:14px;align-items:flex-start">' +
-    '<div id="mvThumb" style="width:112px;height:112px;border-radius:12px;background:var(--surface2);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;border:1px solid var(--border)"><span style="font-size:30px"></span></div>' +
+    '<div id="mvThumb" style="width:112px;height:112px;border-radius:12px;background:var(--surface2);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;border:1px solid var(--border)"><span style="font-size:calc(30px * var(--type-scale, 1))"></span></div>' +
     '<div style="flex:1;min-width:0">' +
-    '<div style="font-size:13px;color:var(--text-dim);line-height:1.8">是否移动到分类文件夹？（主文件与 json/封面等附属一起移动）</div>' +
+    '<div style="font-size:calc(13px * var(--type-scale, 1));color:var(--text-dim);line-height:1.8">是否移动到分类文件夹？（主文件与 json/封面等附属一起移动）</div>' +
     '<div class="rd-actions" style="margin-top:10px">' +
     '<button class="btn" id="mvNo">不移动</button>' +
     '<button class="btn btn-primary" id="mvYes">选择文件夹</button></div>' +
@@ -1022,6 +1168,13 @@ function maybeAskMove(tasks) {
 }
 
 $("#dlTable tbody").addEventListener("click", async (e) => {
+  const archive = e.target.closest("[data-archive-task]");
+  if (archive) {
+    e.stopPropagation();
+    const result = await api.call("archive_download_task", archive.dataset.archiveTask);
+    setStatus(result?.msg || "已移入历史");
+    await dlRefresh(); await refreshDownloadHistory(); return;
+  }
   // 「保存到」列：给这一个任务单独选文件夹（应用内文件夹树，不用系统弹窗）
   const destCell = e.target.closest(".cell-dest");
   if (destCell) {
@@ -1048,7 +1201,8 @@ function dlSel() {
 }
 
 async function dlAct(action) {
-  await api.call("dl_action", action, action === "start_all" || action === "clear_done" || action === "save" ? null : dlSel());
+  const result = await api.call("dl_action", action, action === "start_all" || action === "clear_done" || action === "save" ? null : dlSel());
+  if (action === "save") setStatus(result ? "任务及历史已保存" : "记录保存失败，请检查目录写入权限");
   dlRefresh();
 }
 $("#dlStartAll").addEventListener("click", () => dlAct("start_all"));
@@ -1155,6 +1309,7 @@ function pollMmScan() {
 }
 
 function renderMm() {
+  setMasonrySize((state.cfg || {}).masonry_card_width, false);
   const _scM = ($("#mmMasonry") || {}).scrollTop || 0;
   const _scT = ($("#mmTableWrap") || {}).scrollTop || 0;
   const rows = state.display.slice();
@@ -1184,7 +1339,7 @@ function renderMm() {
   const tbody = $("#mmTable tbody");
   tbody.innerHTML = rows.map((r, i) => {
     const rel = root ? r.path.replace(root.replace(/\\/g, "/"), "").replace(/^\//, "") : r.path;
-    return '<tr data-idx="' + i + '" data-path="' + esc(r.path) + '" class="' + (state.mmSel.has(r.path) ? "sel-row" : "") + '">' +
+    return '<tr data-idx="' + i + '" data-path="' + esc(r.path) + '" class="' + (state.mmSel.has(r.path) ? "sel-row" : "") + (normalizedModelPath(state.historyFocusPath)===normalizedModelPath(r.path)?" history-focus":"") + '">' +
       '<td class="cell-sel" data-col="sel">' + (state.mmChecked.has(r.path) ? '<span class="cbox on"></span>' : '<span class="cbox"></span>') + "</td>" +
       "<td class='c-name' data-col='name'><div class='ml-wrap'>" +
         '<img data-idx="' + i + '" data-path="' + esc(r.path) + '" class="thumb ml-thumb" alt=""/>' +
@@ -1450,7 +1605,7 @@ function renderMasonry(rows) {
     const _sub = (_cn && _cn !== r.name) ? String(r.name || "") : "";
     const _meta = [r.base, r.type].filter(Boolean).map((x) => short(String(x), 16)).join(" · ");
     const _meta2 = [r.ver ? short(String(r.ver), 16) : "", fmtSize(r.size)].filter(Boolean).join(" · ");
-    return '<div class="ms-card' + (checked ? " checked" : "") + '" data-idx="' + i + '" data-path="' + esc(r.path) + '" title="' + esc(String(r.name || "") + " · " + String(r.path || "")) + '">' +
+    return '<div class="ms-card' + (checked ? " checked" : "") + (normalizedModelPath(state.historyFocusPath)===normalizedModelPath(r.path)?' history-focus':'') + '" data-idx="' + i + '" data-path="' + esc(r.path) + '" title="' + esc(String(r.name || "") + " · " + String(r.path || "")) + '">' +
       '<span class="ms-check">' + (checked ? '<span class="cbox on"></span>' : '<span class="cbox"></span>') + "</span>" +
       _msTag(r) +
       (r.upd && r.upd.has_update ? '<a href="#" class="ms-upd" data-url="' + esc(r.upd.url || "") + '" title="' + esc(updTip(r.upd)) + '">' + _icon("alert") + '</a>' : "") +
@@ -1864,7 +2019,7 @@ function _updRowHtml(x) {
       '<div class="upd-meta">' +
         '<div class="upd-nm" data-tip="' + esc(it.model_name || _updBase(x.path)) + '">' + esc(it.model_name || _updBase(x.path)) + "</div>" +
         '<div class="upd-sub2">' + (it.author ? "作者：" + esc(it.author) + " ｜ " : "") + (it.local_base ? "底模：" + esc(it.local_base) : "") + (it.model_type ? " ｜ " + esc(it.model_type) : "") + "</div>" +
-        '<div class="upd-sub2 upd-dim" data-tip="' + esc(x.path) + '">' + esc(_updBase(x.path)) + " ｜ " + esc(_updDir(x.path)) + "</div>" +
+        '<div class="upd-sub2 upd-dim file-subpath" data-tip="' + esc(x.path) + '">' + esc(_updBase(x.path)) + " ｜ " + esc(_updDir(x.path)) + "</div>" +
       "</div></div></td>" +
     '<td class="c-cur"><span class="ver-badge" data-tip="' + esc(it.local_name || "") + '">' + esc(curName || "未知") + "</span>" +
       (!curName && it.local_version ? '<div class="upd-dim upd-id">ID ' + esc(it.local_version) + "</div>" : "") + "</td>" +
@@ -2349,7 +2504,7 @@ function infoBox(html, title) {
   dlg.style.width = "560px";
   dlg.innerHTML =
     '<div class="rd-title">' + (title || "提示") + '<span class="dlg-x" id="ibX" title="关闭（Esc）">' + _icon("x") + "</span></div>" +
-    '<div class="ib-body" style="font-size:13px;color:var(--text);line-height:1.7">' + html + "</div>" +
+    '<div class="ib-body" style="font-size:calc(13px * var(--type-scale, 1));color:var(--text);line-height:1.7">' + html + "</div>" +
     '<div class="rd-actions"><button class="btn btn-primary" id="ibOk">知道了</button></div>';
   const onKey = (e) => { if (e.key === "Escape") close(); };
   const close = () => { document.removeEventListener("keydown", onKey); mask.remove(); dlg.remove(); };
@@ -2474,7 +2629,7 @@ async function mmUpdateFlow(paths) {
     clearInterval(timer);
     setStatus(p.msg || "更新完成");
     if (Array.isArray(p.result) && p.result.length) {
-      infoBox("<div style='font-size:12px;line-height:1.9'>" +
+      infoBox("<div style='font-size:calc(12px * var(--type-scale, 1));line-height:1.9'>" +
         p.result.map((f) => "· <b>" + esc(f.file) + "</b>：" + esc(f.msg)).join("<br/>") +
         "</div>", "这些没能加入下载队列");
     }
@@ -2488,10 +2643,10 @@ async function mmUpdateSelectedFlow() {
     return;
   }
   const ok = await confirmBoxRaw(
-    "<div style='font-size:13px;line-height:1.8'>将下载以下 <b>" + paths.length + "</b> 个模型的<b>新版</b>：" +
+    "<div style='font-size:calc(13px * var(--type-scale, 1));line-height:1.8'>将下载以下 <b>" + paths.length + "</b> 个模型的<b>新版</b>：" +
     "<div style='max-height:200px;overflow:auto;margin-top:6px'>" +
     paths.map((p) => "· " + esc(p.replace(/\\/g, "/").split("/").pop())).join("<br/>") + "</div>" +
-    "<div style='font-size:12px;color:var(--text-dim);margin-top:6px'>新版会下到旧版所在文件夹；<b>旧版文件不会被动</b>（要清理可用「查重」的删旧留新）。</div></div>",
+    "<div style='font-size:calc(12px * var(--type-scale, 1));color:var(--text-dim);margin-top:6px'>新版会下到旧版所在文件夹；<b>旧版文件不会被动</b>（要清理可用「查重」的删旧留新）。</div></div>",
     "更新选中的 " + paths.length + " 个模型");
   if (!ok) return;
   if (ok.root) ok.root.remove();
@@ -2652,6 +2807,7 @@ $("#mmFoldersPanel").addEventListener("click", async (e) => {
 
 // 模型详情二级界面（C 站风格）
 let detailRow = null;
+let detailGeneration = 0;
 // 详情面板全局状态（document 级图片右键委托需要访问）
 let detailImgIdx = 0;
 let detailImgLocalPath = null;
@@ -2769,12 +2925,16 @@ function syncDialogRender(d, st) {
   const okb = dlg.querySelector("#sdOk"); if (okb) okb.addEventListener("click", () => syncDialogClose(d));
 }
 
-async function showModelDetail(path) {
-  const json = await api.call("get_model_detail", path);
+async function showModelDetail(path, historyId = "") {
+  const generation = ++detailGeneration;
+  const json = await api.call(historyId ? "get_history_detail" : "get_model_detail", historyId || path);
   let d;
   try { d = JSON.parse(json || "{}"); } catch (e) { d = {}; }
+  if (generation !== detailGeneration || !$("#page-models").classList.contains("active")) return;
   if (!d.ok) { setStatus("详情获取失败"); return; }
   detailRow = d;
+  detailRow.history_id = historyId;
+  document.body.classList.add("models-workspace");
   const info = d.info || {};
   const v = info.version || {};
   const creator = (info.creator && info.creator.username) || info.creator || "";
@@ -2843,6 +3003,7 @@ async function showModelDetail(path) {
       "</div></div>" +
       '<div class="dt-ag"><div class="dt-ag-h">文件</div><div class="dt-ag-b">' +
         '<button class="btn" id="dRename" data-tip="自定义改名（保留扩展名）">' + _icon("pencil") + '改名</button>' +
+        '<button class="btn" id="dRenameC" data-tip="先预览，确认后仅改这个模型及附属文件">' + _icon('file') + '文件名 → C站名称</button>' +
         '<button class="btn" id="dCover" data-tip="用本地图片替换封面">' + _icon("image") + '设置封面</button>' +
       "</div></div>" +
       '<div class="dt-ag"><div class="dt-ag-h">信息处理</div><div class="dt-ag-b">' +
@@ -2858,10 +3019,15 @@ async function showModelDetail(path) {
     "</div>" +
     "</div></div>";
   $("#detailMask").style.display = "flex";
+  if (d.cached_history) {
+    panel.querySelector('.detail-title').insertAdjacentHTML('afterend', '<p class="history-model">历史信息缓存 · 本地文件已移走或不存在，仅供查看</p>');
+    panel.querySelectorAll('#dEditInfo,#dRename,#dRenameC,#dCover,#dRp,#dSync,#dTranslate,#dLocalize,#dJson,#dAllImgs').forEach(button => button.disabled = true);
+  }
   // 自动加载所有 URL 缩略图（避免空占位）
   covers.forEach((c, i) => {
     if (!c.b64 && c.url) {
       api.call("get_cover_b64", c.url).then((b64) => {
+        if (generation !== detailGeneration) return;
         if (!b64) {
           // 加载失败：移除该占位缩略图
           const th = panel.querySelector('.detail-thumb[data-i="' + i + '"]');
@@ -2879,6 +3045,10 @@ async function showModelDetail(path) {
       });
     }
   });
+  $("#dMain", panel).addEventListener("click", () => openImageViewer(detailRow, detailImgIdx));
+  $("#dMain", panel).setAttribute("title", "点击放大图片并查看生成数据");
+  $("#dMain", panel).tabIndex=0;
+  $("#dMain", panel).addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openImageViewer(detailRow,detailImgIdx);}});
   // 画廊切换
   const loadB64 = async (i) => {
     const c = covers[i];
@@ -2890,6 +3060,7 @@ async function showModelDetail(path) {
     else if (c.url) {
       img.style.opacity = "0.5";
       const b64 = await api.call("get_cover_b64", c.url);
+      if (generation !== detailGeneration) return;
       if (b64) { img.src = "data:image/jpeg;base64," + b64; c.b64 = b64; }
       img.style.opacity = "1";
     }
@@ -3007,6 +3178,7 @@ async function showModelDetail(path) {
     setStatus(r.ok ? "已下载 " + r.downloaded + " 张图片" : "失败: " + (r.msg || ""));
     if (r.ok) { closeDetail(); showModelDetail(d.path); }
   });
+  $("#dRenameC", panel).addEventListener("click", () => renameDetailToCivitai(d));
   $("#dRename", panel).addEventListener("click", () => { closeDetail(); showRenameDialog(d.path, d.name); });
   $("#dRp", panel).addEventListener("click", async () => {
     await api.call("rp_add_paths", [d.path]);
@@ -3231,9 +3403,11 @@ document.addEventListener("keydown", (e) => {
   }
 });
 function closeDetail() {
+  detailGeneration++;
   $("#detailMask").style.display = "none";
   $("#detailPanel").innerHTML = "";
   detailRow = null;
+  if (typeof syncModelInspector === "function") syncModelInspector($("#page-models").classList.contains("active"));
 }
 $("#detailMask").addEventListener("click", (e) => {
   if (e.target.id === "detailMask") closeDetail();
@@ -3413,14 +3587,14 @@ async function showAbout() {
     '<div class="about-head">' +
     '<img class="about-logo" src="bili_face.png" alt=""/>' +
     '<div><div class="about-name">CivitaiFreeTool <span class="about-ver">' + esc(ver) + '</span></div>' +
-    '<div style="font-size:12px;color:var(--text-dim)">Civitai / HuggingFace 模型下载、管理、反向解析工具（免费全功能）</div></div></div>' +
+    '<div style="font-size:calc(12px * var(--type-scale, 1));color:var(--text-dim)">Civitai / HuggingFace 模型下载、管理、反向解析工具（免费全功能）</div></div></div>' +
     '<div class="about-updates">' +
-    '<div class="about-up-title">🆕 最近更新（' + esc(ver) + '）</div>' +
+    '<div class="about-up-title">最近更新（' + esc(ver) + '）</div>' +
     '<div class="about-up-body">' +
-    '<div class="about-up-item"><b>修复「翻译成中文」不生效</b>：简介+触发词一起翻，写回 info 与 json，英文原文保留，复制触发词仍为英文原文（WebUI 用）</div>' +
-    '<div class="about-up-item"><b>下载体验</b>：批量下载跳转弹窗提示；移动分类弹窗显示模型缩略图；下载列表新增缩略图列+行右键菜单（打开文件夹/复制文件名/打开C站）</div>' +
-    '<div class="about-up-item"><b>新手引导大修</b>：点击功能卡片/主题切换即刻生效；引导缩小为右下角小窗不中断；保存设置不再白屏刷新</div>' +
-    '<div class="about-up-item">10 套主题 + 氛围背景跟随主题；设置页「保存设置」红色显眼</div>' +
+    '<div class="about-up-item"><b>左右工作台</b>：左侧导航可收起，模型详情改为右侧抽屉，统一线性图标。</div>' +
+    '<div class="about-up-item"><b>设置重构</b>：八个分类、跨分类搜索、常用与高级分开，功能说明直接展示。</div>' +
+    '<div class="about-up-item"><b>分类规则</b>：使用流程与示例放在旁边，格式错误明确提示，插入示例不覆盖已有内容。</div>' +
+    '<div class="about-up-item"><b>下载历史</b>：自动保存并恢复任务，收起队列不删除历史。旧版未保存的记录无法补回。</div>' +
     '</div></div>' +
     '<div class="about-thanks">' +
     '<div class="about-up-title">感谢 Contributors</div>' +
@@ -3759,7 +3933,7 @@ $("#mmRestore").addEventListener("click", async () => {
     "· " + esc(it.src.split(/[\\/]/).pop()) + " → " + esc(it.dest.replace(/\\/g, "/").replace(root, "")) + "（" + esc(it.why) + "）").join("<br/>");
   const more = prev.count > 30 ? "<br/>… 共 " + prev.count + " 个" : "";
   const ok = await confirmBox(
-    "<div style='font-size:12px;color:var(--text-dim);line-height:1.8'>以下模型将被移回标准目录（只移动不删除，json/封面随行）：</div><div style='font-size:12px;line-height:1.9;max-height:240px;overflow:auto;margin-top:6px'>" + lines + more + "</div>",
+    "<div style='font-size:calc(12px * var(--type-scale, 1));color:var(--text-dim);line-height:1.8'>以下模型将被移回标准目录（只移动不删除，json/封面随行）：</div><div style='font-size:calc(12px * var(--type-scale, 1));line-height:1.9;max-height:240px;overflow:auto;margin-top:6px'>" + lines + more + "</div>",
     "恢复误整理");
   if (!ok) return;
   setStatus("正在恢复 …");
@@ -3947,7 +4121,7 @@ async function rpRefresh() {
     const st = rpStatusCls(r.status);
     const sha = String(r.sha || "");
     return '<tr data-path="' + esc(p) + '">' +
-      '<td class="c-file" title="' + esc(p) + '"><div class="rp-fname">' + esc(base) + '</div><div class="rp-fdir">' + esc(dir) + '</div></td>' +
+      '<td class="c-file" title="' + esc(p) + '"><div class="rp-fname">' + esc(base) + '</div><div class="rp-fdir file-subpath">' + esc(dir) + '</div></td>' +
       '<td class="c-sha"><span class="rp-sha" title="' + esc(sha) + '">' + esc(sha.length > 18 ? sha.slice(0, 18) + "\u2026" : sha) + '</span></td>' +
       '<td><span class="rp-st ' + st + '">' + rpStatusGlyph(st) + esc(r.status || "") + '</span></td>' +
       '<td class="c-name"><div class="rp-model" title="' + esc(r.model || "") + '">' + esc(r.model || "") + '</div></td>' +
@@ -4064,6 +4238,9 @@ const SETTING_FIELDS = [
     ["dark_blue", "深海（暗）"],
     ["dark_green", "森林（暗）"],
     ["dark_red", "熔岩（暗）"],
+    ["dark_graphite", "石墨（暗 · 中性灰蓝）"],
+    ["dark_pink", "夜樱（暗 · 柔和粉色）"],
+    ["dark_rose", "绯夜（暗 · 浓郁玫红）"],
     ["light", "浅色"],
     ["light_blue", "晴空（亮）"],
     ["light_pink", "樱粉（亮）"],
@@ -4074,6 +4251,17 @@ const SETTING_FIELDS = [
   ["界面", "ui_zoom", "界面缩放", "select", ["80", "90", "100", "110", "125", "150"]],
   ["界面", "ui_scheme", "Metro 亮暗", "select", [["light", "亮色"], ["dark", "暗色"], ["auto", "跟随系统"]]],
   ["界面", "metro_accent", "Metro 主题色", "select", [["#0078D4", "Windows 蓝（默认）"], ["#107C10", "翡翠绿"], ["#7A3FF2", "紫罗兰"], ["#B26A00", "琥珀橙"], ["#C42B1C", "绛红"], ["#006E8C", "青碧"], ["system", "跟随系统主题色"]]],
+  ["界面", "show_file_paths", "名称下显示完整路径", "bool"],
+  ["界面", "folder_picker_show_paths", "分类选择器显示详细路径", "bool"],
+  ["界面", "ui_font", "默认字体（本机已安装）", "font"],
+  ["界面", "ui_text_size", "全局字号（不缩放界面）", "select", [["small", "小 · 90%"], ["standard", "标准 · 100%"], ["large", "大 · 110%"], ["xlarge", "较大 · 120%"], ["huge", "最大 · 130%"]]],
+  ["界面", "integrated_titlebar", "应用内窗口栏", "bool"],
+  ["界面", "window_appearance", "原生标题栏与材质", "select", [["theme", "跟随软件主题（推荐）"], ["mica", "Mica 标题栏 · Windows 11"], ["mica_alt", "Mica Alt 标题栏 · Windows 11"], ["system", "Windows 系统外观"], ["external", "交给 Mica For Everyone / 外部工具"]]],
+  ["界面", "masonry_card_width", "瀑布流图片大小", "range", [140,420,10]],
+  ["界面", "custom_accent_enabled", "自定义强调色（所有主题）", "bool"],
+  ["界面", "custom_accent", "自定义强调色", "color"],
+  ["界面", "ui_density", "列表信息密度", "select", [["compact", "紧凑"], ["standard", "标准"], ["comfortable", "宽松"]]],
+  ["界面", "ui_corners", "控件圆角", "select", [["theme", "跟随主题"], ["square", "直角"], ["soft", "轻圆角"], ["rounded", "柔和圆角"]]],
   ["界面", "rename_menu_default", "改名默认动作", "select", [["custom", "自定义改名"], ["rename_c", "文件名改成C站名"], ["localize", "文件名翻中文"]]],
   ["界面", "confirm_buttons_flip", "确认弹窗按钮翻转", "bool"],
   ["界面", "default_page", "启动默认页", "select", [["models", "模型管理"], ["download", "批量下载"], ["dlmanager", "下载管理"], ["reverse", "反向解析"], ["workflow", "工作流分析"], ["settings", "设置"]]],
@@ -4082,6 +4270,10 @@ const SETTING_FIELDS = [
   ["界面", "ambient_bg", "顶部氛围动态背景", "bool"],
   ["界面", "ui_mode", "界面模式", "select", [["window", "原生窗口（默认）"], ["browser", "浏览器模式（可托盘 / 关页面退）"]]],
   ["界面", "window_wait_seconds", "窗口模式等待秒数", "number"],
+  ["界面", "browser_fallback_enabled", "窗口失败时用浏览器打开软件页面", "bool"],
+  ["界面", "cache_detail_images", "缓存详情在线缩略图", "bool"],
+  ["界面", "pointer_effects", "鼠标交互特效", "select", [["off", "关闭"], ["click", "仅点击波纹"], ["trail", "拖尾 + 点击"]]],
+  ["界面", "pointer_effect_quality", "交互特效性能档", "select", [["low", "轻量 · 30 FPS"], ["high", "流畅 · 60 FPS"]]],
   ["界面", "close_action", "点窗口关闭按钮时", "select", [["exit", "退出软件（默认）"], ["minimize", "最小化到任务栏（不退出）"]]],
   ["下载", "update_keep_old", "更新后如何处理旧版本", "select", [["keep", "保留旧版文件（默认）"], ["delete", "删除旧版（移入回收站，可还原）"]]],
   ["界面", "webview_disable_gpu", "禁用 GPU 加速（软件渲染）", "bool"],
@@ -4091,6 +4283,53 @@ const SETTING_FIELDS = [
 
 // ===== Metro 外观：亮暗（可跟随系统）+ 主题色（可跟随系统主题色）=====
 let _schemeMQ = null;
+// 以 WCAG 相对亮度选择黑/白前景，亮色强调色不再出现白字看不清的问题。
+function accentForeground(hex) {
+  const channels = hex.slice(1).match(/../g).map((s) => parseInt(s, 16) / 255);
+  const linear = channels.map((v) => v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
+  const luminance = linear[0] * 0.2126 + linear[1] * 0.7152 + linear[2] * 0.0722;
+  return (luminance + 0.05) / 0.05 >= 1.05 / (luminance + 0.05) ? "#000000" : "#ffffff";
+}
+function applyCustomUi() {
+  const cfg = state.cfg || {};
+  const root = document.documentElement;
+  const custom = cfg.custom_accent_enabled && /^#[0-9a-f]{6}$/i.test(cfg.custom_accent || "");
+  root.dataset.customAccent = custom ? "true" : "false";
+  if (custom) {
+    root.style.setProperty("--primary", cfg.custom_accent);
+    root.style.setProperty("--primary-hover", cfg.custom_accent);
+    root.style.setProperty("--primary-fg", accentForeground(cfg.custom_accent));
+    root.style.setProperty("--metro-accent", cfg.custom_accent);
+  } else {
+    root.style.removeProperty("--primary-hover");
+    root.style.removeProperty("--primary-fg");
+    if (root.dataset.theme !== "metro") root.style.removeProperty("--primary");
+  }
+  const primary = getComputedStyle(root).getPropertyValue("--primary").trim();
+  if (/^#[0-9a-f]{6}$/i.test(primary)) {
+    const values = [1,3,5].map(i => parseInt(primary.slice(i,i+2),16)/255).map(v => v <= .04045 ? v/12.92 : Math.pow((v+.055)/1.055,2.4));
+    const lum = .2126*values[0]+.7152*values[1]+.0722*values[2];
+    root.style.setProperty("--primary-fg", lum > .179 ? "#000000" : "#ffffff");
+  }
+  const font = String(cfg.ui_font || "").trim();
+  if (font) root.style.setProperty("--font", JSON.stringify(font) + ', "Microsoft YaHei UI", system-ui, sans-serif');
+  else root.style.removeProperty("--font");
+  const fontCaption = $("#fontPreviewName"); if(fontCaption)fontCaption.textContent = font || "软件默认字体";
+  applyTextAndWindowAppearance();
+  setMasonrySize(cfg.masonry_card_width,false);
+  root.dataset.showPaths = cfg.show_file_paths === false ? "false" : "true";
+  root.dataset.density = ["compact", "comfortable"].includes(cfg.ui_density) ? cfg.ui_density : "standard";
+  root.dataset.corners = ["square", "soft", "rounded"].includes(cfg.ui_corners) ? cfg.ui_corners : "theme";
+  root.dataset.sidebar = cfg.sidebar_collapsed ? "collapsed" : "expanded";
+  root.dataset.zebra = cfg.zebra_rows !== false ? "true" : "false";
+  if (typeof applyPointerEffects === "function") applyPointerEffects(cfg);
+  const sidebarButton = $("#toggleSidebar");
+  if (sidebarButton) sidebarButton.setAttribute("aria-expanded", String(!cfg.sidebar_collapsed));
+  const preview = $("#appearancePreview");
+  if (preview) preview.textContent = "实时预览 · " + (custom ? cfg.custom_accent.toUpperCase() : "主题默认强调色");
+  const bg = $("#bg");
+  if (bg) bg.style.display = cfg.ambient_bg === false ? "none" : "";
+}
 function applyUiAppearance() {
   const scheme = String((state.cfg && state.cfg.ui_scheme) || "light");
   const acc = String((state.cfg && state.cfg.metro_accent) || "#0078D4");
@@ -4111,14 +4350,17 @@ function applyUiAppearance() {
     // --primary 只在 Metro 主题下跟随主题色；经典主题必须保持自己的主题主色（否则主按钮变黑底黑字）
     if (root.dataset.theme === "metro") root.style.setProperty("--primary", c);
     else root.style.removeProperty("--primary");
+    applyCustomUi();
   };
   if (/^#([0-9a-f]{6})$/i.test(acc)) {
     _setAcc(acc);
   } else if (acc === "system") {
+    _setAcc("#0078D4");  // 读取系统色期间也清除前一个主题的内联覆盖。
     api.call("get_system_accent").then((c) => {
-      if (c && /^#([0-9a-fA-F]{6})$/.test(c)) _setAcc(c);
+      if (state.cfg && state.cfg.metro_accent === "system" && c && /^#([0-9a-fA-F]{6})$/.test(c)) _setAcc(c);
     }).catch(() => { });
-  }
+  } else _setAcc("#0078D4");
+  applyCustomUi();
   // 主题切换后：代理按钮标签需要按主题重刷（经典带 emoji / Metro 不带）
   try { (window._mmLabelSync || []).forEach((f) => f()); } catch (e) { }
   try { _applyMetroOpts(); } catch (e) { }
@@ -4126,6 +4368,11 @@ function applyUiAppearance() {
 
 // 设置项 hover 说明（鼠标移到标签上显示功能作用）
 const SETTING_TIPS = {
+  "show_file_paths": "显示/隐藏下载文件、分类文件夹、反向解析和更新列表名称下的路径；不影响搜索、保存位置列、底部选中目标、详情及右键复制路径",
+  "custom_accent_enabled": "启用后覆盖当前主题的强调色，按钮/选中项/进度条跟随颜色；关闭恢复当前主题默认配色",
+  "custom_accent": "点击色块自由选色，实时预览。黑白文字自动适配；需先开启自定义强调色",
+  "ui_density": "调整下载、模型、更新等列表以及分类窗口的行间距，紧凑模式显示更多内容",
+  "ui_corners": "统一面板、弹窗、输入框和按钮的圆角；跟随主题可恢复原样式",
   "api_key": "Civitai 账号免费生成的 API Key，用于查询模型信息、下载与反向解析。在 civitai.com/user/account 登录后点「New API Key」生成",
   "download_dir": "模型下载后存放的位置，可填任意文件夹（如 D:\\models）",
   "models_dirs": "本地模型管理目录：软件从这里扫描模型并显示封面/触发词。WebUI 与 ComfyUI 分开存放时每行填一个（如 D:\\sd-webui-forge-neo\\webui\\models 和 D:\\ComfyUI\\models），扫描会合并显示",
@@ -4141,7 +4388,7 @@ const SETTING_TIPS = {
   "gen_metadata": "下载完成后自动生成 <模型名>.civitai.info / .json 元数据；没有它，模型管理里看不到名称/触发词",
   "download_cover": "下载完成后自动把 C 站预览图保存到模型目录（模型管理显示缩略图用）",
   "ask_move_after_download": "下载完成后询问是否把文件移动到指定文件夹（适合按类型归档；设了「下载目标文件夹」后本项自动不弹）",
-  "window_wait_seconds": "窗口模式下等几秒没出界面就自动改用浏览器模式（默认 12 秒）。机器慢或 WebView2 正在更新时可调大；想固定用浏览器模式就把「界面模式」改成浏览器模式",
+  "window_wait_seconds": "窗口启动默认至少等待 30 秒（范围 30–600 秒），仍有启动活动时继续宽限。旧版过短设置自动按 30 秒处理；真正无法显示时使用浏览器兜底。想直接用浏览器可修改运行方式",
   "update_keep_old": "「更新页面」下载新版完成后的旧版处理：默认【保留旧版文件】（新版和旧版并存，要清理可用「查重 → 删旧留新」）；选【删除旧版】则下载完成后把旧版文件移入回收站（含预览图/元数据，可还原）。只影响「更新下载」，不影响普通批量下载",
   "download_target_dir": "预设下载落地文件夹（在模型目录里选）：下载的模型连 json/封面直接放进它，不再弹窗询问。也可在「批量下载」页临时选择",
   "metadata_format": "sd = WebUI 能直接识别的扁平 json；civitai = C 站原始 info 结构；both = 两个都生成（.civitai.info 始终生成）",
@@ -4196,106 +4443,13 @@ const BAIDU_LINKS = [
 ];
 
 function buildSettingsForm() {
-  const form = $("#settingsForm");
-  const groups = {};
-  for (const f of SETTING_FIELDS) {
-    const g = f[0];
-    if (!groups[g]) groups[g] = [];
-    groups[g].push(f.slice(1));
-  }
-  form.innerHTML = Object.entries(groups).map(([g, fields]) => {
-    const body = fields.map(([key, label, type, opts]) => {
-      const v = state.cfg[key];
-      let input = "";
-      const tip = SETTING_TIPS[key] || "";
-      if (type === "bool") {
-        input = '<label class="check"' + (tip ? ' data-tip="' + esc(tip) + '"' : "") + '><input type="checkbox" data-key="' + key + '" ' + (v ? "checked" : "") + "/> " + esc(label) + "</label>";
-      } else if (type === "select") {
-        input = '<select data-key="' + key + '">' + opts.map((o) => {
-          const val = Array.isArray(o) ? o[0] : o;
-          const label = Array.isArray(o) ? o[1] : o;
-          return '<option value="' + esc(val) + '" ' + (String(v) === val ? "selected" : "") + ">" + esc(label) + "</option>";
-        }).join("") + "</select>";
-      } else if (type === "number") {
-        input = '<input class="input" type="number" data-key="' + key + '" value="' + esc(v) + '"/>';
-      } else if (type === "password") {
-        input = '<div class="pwd-wrap"><input class="input" type="password" data-key="' + key + '" value="' + esc(v || "") + '"/>' +
-          '<span class="pwd-eye" data-eye="' + key + '"></span></div>';
-      } else if (type === "dirs") {
-        const list = (Array.isArray(v) && v.length) ? v : (state.cfg.models_dir ? [state.cfg.models_dir] : []);
-        input = '<textarea class="input" rows="3" data-key="' + key + '" placeholder="D:\\sd-webui-forge-neo\\webui\\models">' + esc(list.join("\n")) + '</textarea>' +
-          '<div class="tip-inline">每行一个文件夹；WebUI 与 ComfyUI 分开存放时都填进来，扫描会合并显示（推荐填你实际的 webui\\models 和 comfyui\\models 目录）</div>';
-      } else if (type === "dir") {
-        input = '<div class="dir-pick"><input class="input" data-key="' + key + '" value="' + esc(v || "") + '" readonly placeholder="（未设置：用默认下载目录，完成后弹窗询问）"/>' +
-          '<button type="button" class="btn btn-tiny" data-dirpick="' + key + '">选择</button>' +
-          '<button type="button" class="btn btn-tiny" data-dirclear="' + key + '">清除</button></div>';
-      } else {
-        input = '<input class="input" data-key="' + key + '" value="' + esc(v || "") + '"/>';
-      }
-      if (type === "bool") return '<div class="form-item">' + input + "</div>";
-      return '<label' + (tip ? ' data-tip="' + esc(tip) + '"' : "") + ">" + esc(label) + "</label><div>" + input + "</div>";
-    }).join("");
-    // 翻译组追加百度申请链接
-    let extra = "";
-    if (g.indexOf("翻译") >= 0) {
-      extra = '<div class="bd-links"><div class="bd-links-title">百度翻译 API 申请指南：</div>' +
-        BAIDU_LINKS.map((l) =>
-          '<div class="bd-link" data-url="' + esc(l.url) + '"><span class="bd-link-label">' + esc(l.label) + "</span><span class=\"bd-link-desc\">" + esc(l.desc) + "</span></div>"
-        ).join("") + "</div>";
-    }
-    return '<fieldset class="form-section"><legend><span class="fold-btn">▾</span> ' + esc(g) + "</legend><div class=\"form-grid\">" + body + "</div>" + extra + "</fieldset>";
-  }).join("");
-  // 分类规则组（目标环境 + 整理模式 + 自定义规则）
-  form.innerHTML += '<fieldset class="form-section"><legend>分类规则</legend><div class="form-grid">' +
-    '<label>目标环境</label><div><select data-key="target_env">' +
-    [["", "未选择（必须选择才能整理）"], ["webui", "WebUI / Forge（Lora、Stable-diffusion）"], ["comfyui", "ComfyUI（loras、checkpoints）"]]
-      .map((o) => '<option value="' + o[0] + '"' + (String(state.cfg.target_env) === o[0] ? " selected" : "") + ">" + o[1] + "</option>").join("") +
-    "</select></div>" +
-    '<label>整理模式</label><div><select data-key="organize_mode">' +
-    [["manual", "手动分类（逐个选择文件夹）"], ["civitai", "C 站 tags 自动分类（需 info）"], ["rules", "自定义规则分类"]]
-      .map((o) => '<option value="' + o[0] + '"' + (String(state.cfg.organize_mode) === o[0] ? " selected" : "") + ">" + o[1] + "</option>").join("") +
-    "</select></div>" +
-    '<label>整理分类规则</label><div><textarea class="rules" id="organizeRules">' + esc((state.cfg.organize_rules || []).map((r) => (r.keywords || []).join(", ") + " -> " + r.folder).join("\n")) + "</textarea></div>" +
-    "</div></fieldset>";
-  // 维护区块：清理伪 C 站图片缓存
-  form.innerHTML += '<fieldset class="form-section"><legend>维护</legend><div class="form-grid">' +
-    '<label data-tip="删除模型目录下所有「模型名.images」图片缓存文件夹（详情面板里下载的示例图），释放磁盘空间；封面缩略图不受影响">图片缓存清理</label>' +
-    '<div><button class="btn" id="btnCleanImgCache">删除下载的图片文件夹</button></div>' +
-    "</div></fieldset>";
-  // Metro 专属项（亮暗 / 主题色）仅在 Metro 主题下显示；斑马纹在 Metro 下自动关闭（样式不生效，用户要求直接关掉）
-  _applyMetroOpts();
-
+  buildWorkbenchSettings();
 }
 
 
 // Metro 主题的选项联动：亮暗/主题色仅 Metro 显示；斑马纹仅 Metro 下强制关闭
 function _applyMetroOpts() {
-  try {
-    const isMetro = document.documentElement.dataset.theme === "metro";
-    ["ui_scheme", "metro_accent"].forEach((k) => {
-      const el = document.querySelector('#settingsForm [data-key="' + k + '"]');
-      if (!el) return;
-      const cell = el.parentElement; if (cell) cell.classList.add("metro-opt");
-      const lab = cell && cell.previousElementSibling; if (lab) lab.classList.add("metro-opt");
-    });
-    const zb = document.querySelector('#settingsForm [data-key="zebra_rows"]');
-    if (zb) {
-      const zw = zb.closest("div");
-      const zl = zw && zw.previousElementSibling;
-      if (zw) zw.classList.toggle("classic-opt", isMetro);
-      if (zl) zl.classList.toggle("classic-opt", isMetro);
-      const mode = isMetro ? "metro" : "normal";
-      if (zb._lastMode !== mode) {
-        zb._lastMode = mode;
-        zb.disabled = isMetro;
-        if (isMetro) zb.checked = false;
-        else zb.checked = !!(state.cfg && state.cfg.zebra_rows);
-      }
-      const wrap = zb.closest("div");
-      const lab = wrap && wrap.previousElementSibling;
-      if (lab) lab.dataset.tip = isMetro ? "Metro 主题不使用斑马纹：该选项在 Metro 下自动关闭" : "模型列表行间斑马纹，便于横向对齐查看";
-    }
-  } catch (e) { }
+  applyWorkbenchThemeOptions();
 }
 
 // 密码框小眼睛（切换明文显示）
@@ -4333,13 +4487,20 @@ $("#btnSaveSettings").addEventListener("click", async () => {
     else cfg[k] = el.value;
   });
   updateOrganizeBtns();
-  cfg.organize_rules = $("#organizeRules").value.split("\n").map((l) => {
-    const m = l.match(/^\s*(.+?)\s*(?:->|=>|→)\s*(.+?)\s*$/);
-    return m ? { keywords: m[1].split(",").map((s) => s.trim()).filter(Boolean), folder: m[2].trim() } : null;
-  }).filter(Boolean);
-  await api.call("save_config", cfg);
+  const parsedRules = parseOrganizeRules($("#organizeRules").value);
+  if (parsedRules.errors.length || (cfg.organize_mode === "rules" && !parsedRules.rules.length)) {
+    showSettingsCategory("organize");
+    const msg = parsedRules.errors.length ? parsedRules.errors.join("；") : "自定义规则模式至少需要一条规则";
+    $("#ruleValidation").textContent = msg;
+    setStatus("未保存：" + msg);
+    $("#organizeRules").focus();
+    return;
+  }
+  cfg.organize_rules = parsedRules.rules;
+  if (!(await api.call("save_config", cfg))) { setStatus("设置保存失败，请检查目录写入权限"); return; }
   state.cfg = await api.call("get_config");
   setStatus("设置已保存");
+  updateOrganizeBtns();
   // 不刷新页面：直接应用主题/缩放/表单（避免白屏闪烁）
   applyZoom(Number(state.cfg.ui_zoom) || 100);
   document.documentElement.dataset.theme = state.cfg.theme || "modern";
@@ -4349,6 +4510,18 @@ $("#btnSaveSettings").addEventListener("click", async () => {
 
 // 设置里「下载目标文件夹」的选择/清除（点击即时保存，不依赖底部「保存设置」）
 $("#settingsForm").addEventListener("click", async (e) => {
+  if (e.target.closest("#resetAppearance")) {
+    const defaults = { custom_accent_enabled: false, custom_accent: "#60A5FA", ui_density: "standard", ui_corners: "theme", ui_font: "", ui_text_size: "standard", window_appearance: "theme", masonry_card_width:220 };
+    Object.assign(state.cfg, defaults);
+    for (const [key, value] of Object.entries(defaults)) {
+      const input = $('#settingsForm [data-key="' + key + '"]');
+      if (input) { if (input.type === "checkbox") input.checked = value; else input.value = value; }
+    }
+    applyUiAppearance();
+    try { const ok = await api.call("save_config", defaults); setStatus(ok ? "已恢复当前主题默认外观" : "恢复已预览，保存失败，请重试"); }
+    catch (err) { setStatus("恢复已预览，保存失败，请重试"); }
+    return;
+  }
   const pick = e.target.closest("[data-dirpick]");
   if (pick) {
     const p = await pickFolderModal();
@@ -4377,11 +4550,30 @@ $("#settingsForm").addEventListener("change", (e) => {
     state.cfg.theme = val;
     document.documentElement.dataset.theme = val || "modern";
     applyUiAppearance();   // 主题切换：重算 --primary/主题色 + 重刷代理按钮标签（经典 emoji / Metro 无）
+  } else if (["show_file_paths", "custom_accent_enabled", "custom_accent", "ui_density", "ui_corners", "ambient_bg"].includes(key)) {
+    if (state.cfg) state.cfg[key] = val;
+    applyUiAppearance();
+    api.call("save_config", { [key]: val }).then((ok) => {
+      if (!ok) setStatus("外观已预览，保存失败，请重试");
+    }).catch(() => setStatus("外观已预览，保存失败，请重试"));
+  } else if (["zebra_rows", "pointer_effects", "pointer_effect_quality", "cache_detail_images", "ui_font", "ui_text_size", "window_appearance", "integrated_titlebar", "folder_picker_show_paths"].includes(key)) {
+    state.cfg[key] = val;
+    applyUiAppearance();
+    api.call("save_config", { [key]: val }).catch(() => setStatus("设置保存失败"));
+  } else if (key === "masonry_card_width") {
+    setMasonrySize(val,true);
   } else if (key === "ui_scheme" || key === "metro_accent") {
     if (state.cfg) state.cfg[key] = val;
     applyUiAppearance();
   } else if (key === "ui_zoom") {
     applyZoom(Number(val) || 100);
+  }
+});
+$("#settingsForm").addEventListener("input", (e) => {
+  if(e.target.dataset.key === "masonry_card_width") {setMasonrySize(e.target.value,true);return;}
+  if (e.target.dataset.key === "custom_accent") {
+    state.cfg.custom_accent = e.target.value;
+    applyUiAppearance();
   }
 });
 
@@ -4517,7 +4709,7 @@ function renderOnboarding() {
       "</div>" +
       '<div style="margin-top:10px;text-align:center">' +
       '<a class="ob-github" id="obGithub">GitHub 仓库（源码 / 更新 / 反馈）</a></div>' +
-      '<div style="color:var(--text-dim);font-size:12px;margin-top:8px;text-align:center">免费 · 全功能 · 无付费墙</div>';
+      '<div style="color:var(--text-dim);font-size:calc(12px * var(--type-scale, 1));margin-top:8px;text-align:center">免费 · 全功能 · 无付费墙</div>';
     document.querySelectorAll(".ob-feat-btn").forEach((el) => {
       el.addEventListener("click", async () => {
         const page = el.dataset.page;
@@ -4537,6 +4729,8 @@ function renderOnboarding() {
       '<div class="ob-theme" data-t="dark_blue"><div class="sw" style="background:#0d1524;border:2px solid #38bdf8"></div>深海</div>' +
       '<div class="ob-theme" data-t="dark_green"><div class="sw" style="background:#0e1a14;border:2px solid #34d399"></div>森林</div>' +
       '<div class="ob-theme" data-t="dark_red"><div class="sw" style="background:#1d1010;border:2px solid #ff7a59"></div>熔岩</div>' +
+      '<div class="ob-theme" data-t="dark_graphite"><div class="sw" style="background:#11151b;border:2px solid #83b8ff"></div>石墨</div>' +
+      '<div class="ob-theme" data-t="dark_pink"><div class="sw" style="background:#19151b;border:2px solid #f0a4c5"></div>夜樱</div>' +
       '<div class="ob-theme" data-t="light"><div class="sw" style="background:#f2f2f2;border:1px solid #ddd"></div>浅色</div>' +
       '<div class="ob-theme" data-t="light_blue"><div class="sw" style="background:#eef4fb;border:1px solid #2f7cf6"></div>晴空</div>' +
       '<div class="ob-theme" data-t="light_pink"><div class="sw" style="background:#fdf2f4;border:1px solid #ec5d7a"></div>樱粉</div>' +
@@ -4560,7 +4754,7 @@ function renderOnboarding() {
       '<div class="ob-label">下载目录（模型下载后存放位置，可修改）</div>' +
       '<div style="display:flex;gap:8px"><input class="input" id="obDir" style="flex:1" value="' + esc(obDirVal) + '"/>' +
       '<button class="btn" id="obBrowse">浏览</button></div>' +
-      '<div style="color:var(--text-dim);font-size:12px;margin-top:6px">默认：软件根目录下的 downloads/models 文件夹</div>';
+      '<div style="color:var(--text-dim);font-size:calc(12px * var(--type-scale, 1));margin-top:6px">默认：软件根目录下的 downloads/models 文件夹</div>';
     $("#obDir").addEventListener("input", () => { obDirVal = $("#obDir").value; });
     $("#obBrowse").addEventListener("click", async () => {
       const picked = await api.call("pick_dir");
@@ -4578,7 +4772,7 @@ function renderOnboarding() {
       '<div>3. 复制生成的 Key 粘贴到上方输入框即可</div></div>' +
       '<div class="ob-actions2"><button class="btn" id="obToggleGuide">如何注册 API？</button>' +
       '<button class="btn" id="obOpenApi">打开注册页</button></div>' +
-      '<div style="color:var(--text-dim);font-size:12px;margin-top:6px">不填也能用，但模型查询与部分下载功能受限。</div>';
+      '<div style="color:var(--text-dim);font-size:calc(12px * var(--type-scale, 1));margin-top:6px">不填也能用，但模型查询与部分下载功能受限。</div>';
     $("#obKey").addEventListener("input", () => { obKeyVal = $("#obKey").value; });
     $("#obToggleGuide").addEventListener("click", () => {
       const g = $("#obGuide");
@@ -4594,7 +4788,7 @@ function renderOnboarding() {
       '<textarea class="input" id="obModelDirs" rows="3" style="width:100%;box-sizing:border-box">' + esc(obModelDirs.join("\n")) + '</textarea>' +
       '<div class="ob-actions2"><button class="btn" id="obBrowseModels">选择文件夹</button>' +
       '<button class="btn" id="obBrowseModels2">再添加一个</button></div>' +
-      '<div style="color:var(--text-dim);font-size:12px;margin-top:6px">常见路径：D:\\sd-webui-forge-neo\\webui\\models（WebUI）、D:\\ComfyUI\\models（ComfyUI）</div>';
+      '<div style="color:var(--text-dim);font-size:calc(12px * var(--type-scale, 1));margin-top:6px">常见路径：D:\\sd-webui-forge-neo\\webui\\models（WebUI）、D:\\ComfyUI\\models（ComfyUI）</div>';
     const sync = () => { obModelDirs = $("#obModelDirs").value.split("\n").map((s) => s.trim()).filter(Boolean); };
     $("#obModelDirs").addEventListener("input", sync);
     const addDir = async () => {
@@ -4807,7 +5001,7 @@ function _mmOpenMenu(grp, menu, btn) {
 }
 
 function bindMmMetro() {
-  const _sec = (name, fn) => { try { fn(); } catch (e) { console.error("[bindMmMetro]", name, e); try { api.call("log_ui_error", "bindMmMetro/" + name + ": " + (e && e.message || e)); } catch (e2) { } } };
+  const _sec = (name, fn) => { try { fn(); } catch (e) { console.error("[bindMmMetro]", name, e); try { api.call("log_ui_error", "bindMmMetro/" + name + ": " + (e && e.message || e)).catch(() => {}); } catch (e2) { } } };
   // 1) 代理按钮：点击 → 原按钮 click()
   document.querySelectorAll(".mm-metro [data-proxy]").forEach((el) => {
     if (el._px) return; el._px = 1;
@@ -4905,8 +5099,8 @@ function bindMmMetro() {
     const _isMetro = () => document.documentElement.dataset.theme === "metro";
     const sync = () => {
       const raw = String(src.textContent || "");
-      const lbl = _isMetro() ? _clean(raw) : raw.trim();       // 经典主题：保留 emoji（原样）
-      const ic = (_isMetro() && el.dataset.icon) ? _icon(el.dataset.icon) : "";
+      const lbl = _clean(raw);       // 经典主题：保留 emoji（原样）
+      const ic = el.dataset.icon ? _icon(el.dataset.icon) : "";
       if (el.innerHTML !== (ic + lbl)) el.innerHTML = ic + lbl;
       el.disabled = !!src.disabled;
       el.style.display = (src.style.display === "none") ? "none" : "";

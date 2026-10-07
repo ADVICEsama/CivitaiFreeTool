@@ -1,6 +1,10 @@
 # ===== 敏感文件（含你的 API Key，绝不能上传！）=====
 user_config.json
 download_tasks.json
+download_history.json
+user_config.json.bak
+download_tasks.json.bak
+download_history.json.bak
 
 # ===== 构建产物 =====
 build/
@@ -45,3 +49,25 @@ shots/
 
 # uv 虚拟环境
 .venv/
+.build-venv/
+screens_ui/
+
+# 长期回归测试应纳入版本控制，根目录临时测试脚本仍忽略
+!tests/test_*.py
+
+# 图文历史与详情缩略图运行缓存
+history_assets/
+detail_thumb_cache/
+
+# 数据目录定位属于本机运行设置
+data_location.json
+cft-data-stage-*/
+CFT-data-backup-*/
+
+# 本机诊断与构建/发布回执
+.test_tmp/
+release-v*/
+source-backup-*/
+source-sync*.json
+package-validation*.json
+deployment*.json

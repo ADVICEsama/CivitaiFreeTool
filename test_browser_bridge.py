@@ -138,6 +138,17 @@ class SyncEnqueueTest(unittest.TestCase):
 
     def setUp(self):
         import webui
+        import config, downloader, tempfile
+        from unittest.mock import patch
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        root = self.temp.name
+        cfg = dict(config.DEFAULTS, download_dir=root, models_dir=root, models_dirs=[root],
+                   download_target_dir="", download_cover=False, metadata_format="both")
+        for item in (patch.object(config,"APP_DIR",root),patch.object(config,"TASKS_PATH",os.path.join(root,"tasks.json")),
+                     patch.object(config,"HISTORY_PATH",os.path.join(root,"history.json")),patch.object(config,"load",return_value=cfg),
+                     patch.object(downloader.Downloader,"_ensure_workers"),patch.object(browser_bridge,"start")):
+            item.start();self.addCleanup(item.stop)
         self.app = webui.Api()
         self.app.api = FakeAPI()
 
@@ -165,9 +176,10 @@ class SyncEnqueueTest(unittest.TestCase):
         self.assertTrue(r["ok"])
         task = next(t for t in self.app.dl.tasks if t.id == r["task_id"])
         # 把任务指向工作区内临时目录并放置占位文件，模拟下载完成
-        d = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".test_tmp", "dl_done")
+        d = self.temp.name
         os.makedirs(d, exist_ok=True)
         task.dest_dir = d
+        task.info["dest_explicit"] = True
         dest = os.path.join(d, task.filename)
         with open(dest, "w") as f:
             f.write("placeholder")

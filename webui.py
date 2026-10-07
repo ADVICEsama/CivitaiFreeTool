@@ -6,12 +6,13 @@ import json
 import os
 import re
 import shutil
+import sys
 import threading
 import time
 
 import webview
 
-APP_VERSION = "2.2.7"
+APP_VERSION = "2.6.0"
 
 import civitai_api
 import config
@@ -75,6 +76,8 @@ class Api:
         self._rp_state = {"running": False, "paused": False, "done": 0, "total": 0}
         self._rp_pause_ev = threading.Event()
         self._rp_stop_ev = threading.Event()
+        # 所有回调依赖都初始化后再恢复。重启只恢复记录，不擅自开始网络下载。
+        self.dl.load_tasks(resume=False)
 
     def _new_api(self):
         return civitai_api.CivitaiAPI(
@@ -85,8 +88,14 @@ class Api:
     # ---------------- 下载完成回调 ----------------
     def _on_dl_update(self, task):
         """Downloader 状态回调：任务完成时后台生成 metadata + 下载封面"""
-        if task.status != downloader.ST_DONE:
+        if task.status in (downloader.ST_ERROR, downloader.ST_CANCELED):
+            if getattr(task, "_history_status_cached", None) != task.status:
+                task._history_status_cached = task.status
+                threading.Thread(target=self._cache_history_task, args=(task,), daemon=True).start()
             return
+        if task.status != downloader.ST_DONE or getattr(task, "_metadata_started", False):
+            return
+        task._metadata_started = True
         threading.Thread(target=self._handle_dl_done, args=(task,), daemon=True).start()
 
     def _handle_dl_done(self, task):
@@ -130,7 +139,10 @@ class Api:
                 want = self._task_intended_dir(task)
                 if want and os.path.abspath(os.path.dirname(dest)) != os.path.abspath(want):
                     os.makedirs(want, exist_ok=True)
-                    self.move_file_to(dest, want)
+                    moved = self.move_file_to(dest, want)
+                    if moved.get("ok"):
+                        task.dest_dir = want
+                        dest = os.path.join(want, task.filename)
             except Exception:
                 pass
             # 4) 「更新下载」完成：按设置处理旧版本（默认保留；删除走回收站，可还原）
@@ -167,6 +179,8 @@ class Api:
 
         except Exception:
             pass
+        finally:
+            self._cache_history_task(task)
 
     def move_file_to(self, path, dest_dir):
         """把模型（含 json/预览图等附属）移动到目标文件夹，并更新任务持久化"""
@@ -180,16 +194,21 @@ class Api:
             return {"ok": True, "msg": "文件已在目标目录"}
         base = os.path.splitext(os.path.basename(path))[0]
         src_dir = os.path.dirname(path)
+        candidates = [path] + [os.path.join(src_dir, base + suffix) for suffix in
+            (".preview.png", ".preview.jpg", ".preview.webp", ".preview.gif", ".txt", ".json", ".civitai.info", ".images")]
+        if any(os.path.exists(os.path.join(dest_dir, os.path.basename(f))) for f in candidates if os.path.exists(f)):
+            return {"ok": False, "msg": "目标存在同名模型或附属文件，请先处理冲突"}
         moved = []
         try:
             for f in [path] + [os.path.join(src_dir, base + s) for s in
                                (".preview.png", ".preview.jpg", ".preview.webp", ".preview.gif",
-                                ".txt", ".json", ".civitai.info")]:
+                                ".txt", ".json", ".civitai.info", ".images")]:
                 if os.path.exists(f):
                     shutil.move(f, os.path.join(dest_dir, os.path.basename(f)))
                     moved.append(os.path.basename(f))
         except Exception as e:
             return {"ok": False, "msg": "移动失败: %s" % e}
+        self.dl.relocate(path, os.path.join(dest_dir, os.path.basename(path)))
         # 更新任务持久化路径
         try:
             for t in self.dl.tasks:
@@ -199,7 +218,7 @@ class Api:
             self.dl.save_tasks()
         except Exception:
             pass
-        return {"ok": True, "msg": "已移动 %d 个文件到 %s" % (len(moved), dest_dir)}
+        return {"ok": True, "msg": "已移动 %d 个文件到 %s" % (len(moved), dest_dir), "path": os.path.join(dest_dir, os.path.basename(path))}
 
     # ---------------- 下载目标文件夹（下载页选择 / 设置里预设） ----------------
     def _dest_dir(self):
@@ -392,6 +411,51 @@ class Api:
     def get_config(self):
         return self.cfg
 
+    def set_window_appearance(self, options=None):
+        handler = getattr(self, "_window_appearance_handler", None)
+        if handler is None:
+            return {"ok": False, "msg": "当前为浏览器模式，标题栏由浏览器管理"}
+        return handler(options)
+
+    def get_window_appearance(self):
+        controller = getattr(self, "_window_appearance_controller", None)
+        return dict(controller.status) if controller else {"ok": False, "msg": "当前无原生窗口"}
+
+    def get_local_fonts(self):
+        import local_fonts
+        try:
+            cached=getattr(self,"_local_font_families",None)
+            if cached is None: cached=local_fonts.enumerate_fonts();self._local_font_families=cached
+            return {"ok":bool(cached),"fonts":cached,"msg":"" if cached else "未能枚举本地字体，使用默认字体"}
+        except Exception:
+            return {"ok":False,"fonts":[],"msg":"字体列表读取失败，使用默认字体"}
+
+    def get_data_storage_info(self):
+        import data_storage
+        return {"current":config.APP_DIR,"default":config.INSTALL_DIR,"suggested":str(data_storage.suggested_directory()),
+                "warning":config.STORAGE_WARNING,"migrating":getattr(self,"_storage_migrating",False)}
+
+    def pick_data_directory(self):
+        return self.pick_dir()
+
+    def migrate_data_storage(self, directory, replace_existing=False):
+        import data_storage
+        if getattr(self,"_storage_migrating",False): return {"ok":False,"msg":"数据正在迁移，请稍候"}
+        if any(t.status in (downloader.ST_PENDING,downloader.ST_DOWNLOADING) for t in self.dl.tasks) or self.dl._active_ids \
+           or self.mm_progress.get("running") or self.mm_scan_state.get("running") or self._rp_state.get("running") \
+           or getattr(self,"_history_migration_running",False):
+            return {"ok":False,"msg":"请先结束下载、扫描、整理和缓存处理；可重启后在未开始任务时迁移"}
+        self._storage_migrating=True
+        try:
+            with self.dl._lock:
+                snapshot={"user_config.json":dict(self.cfg),"download_tasks.json":[t.to_dict() for t in self.dl.tasks],
+                          "download_history.json":[dict(row) for row in self.dl.history.values()]}
+            with data_storage.LOCK:
+                result=data_storage.migrate(config.APP_DIR,directory,config.INSTALL_DIR,bool(replace_existing),use_global=bool(getattr(sys,"frozen",False)),snapshot=snapshot)
+                if result.get("ok") and result.get("changed"):config.use_data_directory(result["directory"])
+            return result
+        finally:self._storage_migrating=False
+
     def save_config(self, new_cfg):
         # 真 merge：只更新传入字段，绝不回退未传入的已保存设置
         for k, v in (new_cfg or {}).items():
@@ -537,7 +601,7 @@ class Api:
     # ---------------- 下载管理 ----------------
     def get_tasks(self):
         """精简任务列表（不含 meta/info 大对象）"""
-        with self.lock:
+        with self.dl._lock:
             out = []
             for t in self.dl.tasks:
                 out.append({
@@ -548,8 +612,189 @@ class Api:
                     "url": (t.info or {}).get("url", ""),
                     "modelName": (t.info or {}).get("modelName", ""),
                     "versionName": (t.info or {}).get("versionName", ""),
+                    "created_at": t.created_at, "finished_at": t.finished_at,
                 })
             return out
+
+    def _history_asset(self, task_id, suffix):
+        import hashlib
+        return os.path.join(config.APP_DIR, "history_assets", hashlib.sha256(str(task_id).encode()).hexdigest() + suffix)
+
+    def _cache_history_task(self, task):
+        """历史图文独立于模型文件存储；不保留临时签名下载地址。"""
+        try:
+            info = (task.info or {}).get("meta", {}).get("info") or {}
+            path = os.path.join(task.dest_dir, task.filename)
+            if not info:
+                source = model_manager.find_info_file(path)
+                if source:
+                    with open(source, encoding="utf-8") as f: info = json.load(f)
+            def clean(value):
+                if isinstance(value, dict):
+                    return {k: clean(v) for k,v in value.items() if k.lower() not in ("downloadurl", "apikey", "token", "authorization")}
+                if isinstance(value, list): return [clean(v) for v in value]
+                if isinstance(value, str) and value.startswith(("http://", "https://")):
+                    from urllib.parse import urlsplit, urlunsplit, parse_qsl, urlencode
+                    u = urlsplit(value)
+                    q = [(k,v) for k,v in parse_qsl(u.query) if not any(x in k.lower() for x in ("token", "signature", "credential", "key", "auth"))]
+                    return urlunsplit((u.scheme,u.netloc,u.path,urlencode(q),""))
+                return value
+            info = clean(info)
+            with config._json_write_lock:
+                snapshot = self._history_asset(task.id, ".json")
+                os.makedirs(os.path.dirname(snapshot), exist_ok=True)
+                if info: config._save_json_atomic(snapshot, info)
+            import base64, io
+            cover = model_manager.find_cover(path)
+            thumb = ""
+            if cover:
+                from PIL import Image
+                with Image.open(cover) as im:
+                    im = im.convert("RGB"); im.thumbnail((256,256))
+                    buf = io.BytesIO(); im.save(buf, "JPEG", quality=80)
+                    thumb = base64.b64encode(buf.getvalue()).decode()
+            elif info.get("images"):
+                thumb = self.get_cover_b64(info["images"][0].get("url", ""), 256)
+            if thumb:
+                with config._json_write_lock:
+                    import tempfile
+                    target = self._history_asset(task.id, ".jpg")
+                    os.makedirs(os.path.dirname(target),exist_ok=True)
+                    fd, temp = tempfile.mkstemp(dir=os.path.dirname(target),suffix=".tmp")
+                    try:
+                        with os.fdopen(fd,"wb") as f: f.write(base64.b64decode(thumb))
+                        os.replace(temp,target)
+                    finally:
+                        if os.path.exists(temp): os.unlink(temp)
+            mid = info.get("modelId") or info.get("model_id") or info.get("id")
+            url = "https://civitai.com/models/%s" % mid if str(mid or "").isdigit() else ""
+            if not url:
+                import urllib.parse
+                candidate = (task.info or {}).get("url", "")
+                u = urllib.parse.urlsplit(candidate)
+                if u.hostname in ("civitai.com", "civitai.red") and u.path.startswith("/models/"):
+                    url = urllib.parse.urlunsplit(("https", u.hostname, u.path, "", ""))
+            with self.dl._lock:
+                row = self.dl.history.get(task.id)
+                if row is not None:
+                    row.update(model_url=url, cached_info=os.path.isfile(self._history_asset(task.id, ".json")), cached_thumb=os.path.isfile(self._history_asset(task.id, ".jpg")))
+            self.dl.save_tasks()
+        except Exception:
+            pass
+
+    def _run_history_migration(self):
+        self._history_migration_running=True
+        try:self._migrate_history_cache()
+        finally:self._history_migration_running=False
+
+    def _migrate_history_cache(self):
+        """旧记录按唯一文件名，或模型/版本/大小身份恢复；绝不改动模型文件。"""
+        from types import SimpleNamespace
+        items = self.dl.get_history()
+        with self.dl._lock:
+            saved = {t.id: dict(t.info or {}) for t in self.dl.tasks}
+        metadata = {}
+        missing = []
+        for row in items:
+            info = saved.get(row["id"], {}).get("meta", {}).get("info") or {}
+            if not info:
+                try:
+                    with open(self._history_asset(row["id"], ".json"), encoding="utf-8") as f: info = json.load(f)
+                except (OSError, ValueError): pass
+            metadata[row["id"]] = info
+            path = row.get("file_path") or os.path.join(row.get("dest_dir", ""), row.get("filename", ""))
+            if row.get("status") == downloader.ST_DONE and not os.path.isfile(path): missing.append((row,path))
+        def identity(info, size):
+            if not isinstance(info,dict): return None
+            version_info = info.get("version") or {}
+            version = info.get("versionId") or info.get("version_id") or (version_info.get("id") if isinstance(version_info,dict) else None)
+            model = info.get("modelId") or info.get("model_id") or info.get("id")
+            try: return (str(model),str(version),int(size)) if model and version and size else None
+            except (ValueError,TypeError): return None
+        filenames, identities = {}, {}
+        if missing:
+            for root in self._models_roots():
+                for candidate in model_manager.scan_models(root):
+                    path = candidate["path"]
+                    filenames.setdefault(candidate["name"].lower(), set()).add(path)
+                    source = model_manager.find_info_file(path)
+                    if source:
+                        try:
+                            with open(source,encoding="utf-8") as f: info = json.load(f)
+                            key = identity(info,candidate["size"])
+                            if key: identities.setdefault(key,set()).add(path)
+                        except (OSError,ValueError,TypeError,AttributeError): pass
+            for row,old_path in missing:
+                matches = filenames.get(row["filename"].lower(),set())
+                # 改名后文件名不可匹配时，用完整版本身份和实际大小；多个候选时保持原记录。
+                if not matches:
+                    key = identity(metadata.get(row["id"],{}),row.get("total") or row.get("downloaded"))
+                    matches = identities.get(key,set()) if key else set()
+                if len(matches) == 1: self.dl.relocate(old_path,next(iter(matches)))
+        for row in self.dl.get_history():
+            path = row.get("file_path") or os.path.join(row.get("dest_dir", ""),row.get("filename", ""))
+            info = saved.get(row["id"]) or {"meta":{"info":metadata.get(row["id"],{})}}
+            if not row.get("cached_info") or not row.get("cached_thumb") or not row.get("model_url"):
+                if info.get("meta",{}).get("info") or model_manager.find_info_file(path):
+                    self._cache_history_task(SimpleNamespace(id=row["id"],filename=row["filename"],dest_dir=os.path.dirname(path),info=info))
+
+    def get_download_history(self):
+        items = self.dl.get_history()
+        if not getattr(self, "_history_migration_started", False) and not getattr(self,"_storage_migrating",False):
+            self._history_migration_started = True
+            self._history_migration_running = True
+            threading.Thread(target=self._run_history_migration, daemon=True).start()
+        for row in items:
+            path = row.get("file_path") or os.path.join(row.get("dest_dir", ""), row.get("filename", ""))
+            row["file_path"], row["file_exists"] = path, os.path.isfile(path)
+            row["cached_thumb"] = os.path.isfile(self._history_asset(row["id"], ".jpg"))
+        return {"items": items, "error": self.dl.persistence_error}
+
+    def get_history_thumbnail(self, task_id):
+        import base64
+        if not any(row["id"] == task_id for row in self.dl.get_history()): return ""
+        try:
+            with open(self._history_asset(task_id, ".jpg"), "rb") as f: return base64.b64encode(f.read()).decode()
+        except OSError: return ""
+
+    def get_history_detail(self, task_id):
+        row = next((r for r in self.dl.get_history() if r["id"] == task_id), None)
+        if not row: return json.dumps({"ok":False})
+        path = row.get("file_path") or os.path.join(row.get("dest_dir", ""), row.get("filename", ""))
+        live = json.loads(self.get_model_detail(path)) if os.path.isfile(path) else None
+        if live and live.get("info") and live.get("covers"): return json.dumps(live,ensure_ascii=False)
+        try:
+            with open(self._history_asset(task_id, ".json"), encoding="utf-8") as f: info = json.load(f)
+        except (OSError, ValueError): info = {}
+        thumb = self.get_history_thumbnail(task_id)
+        if live:
+            if not live.get("info"): live["info"] = info
+            if not live.get("covers") and thumb: live["covers"] = [{"b64":thumb,"local":False}]
+            return json.dumps(live,ensure_ascii=False)
+        return json.dumps({"ok":True,"path":path,"name":row["filename"],"info":info,"cached_history":True,
+                           "covers":[{"b64":thumb,"local":False}] if thumb else []},ensure_ascii=False)
+
+    def history_move_to(self, task_id, dest_dir):
+        row = next((r for r in self.dl.get_history() if r["id"] == task_id), None)
+        if not row: return {"ok":False,"msg":"历史记录不存在"}
+        if row.get("status") != downloader.ST_DONE: return {"ok":False,"msg":"仅已完成且仍存在的文件可移动"}
+        path = row.get("file_path") or os.path.join(row.get("dest_dir", ""), row.get("filename", ""))
+        return self.move_file_to(path, dest_dir)
+
+    def archive_download_task(self, task_id):
+        task = next((t for t in list(self.dl.tasks) if t.id == task_id),None)
+        if not task: return {"ok":False,"msg":"任务不存在"}
+        if task.status not in (downloader.ST_DONE,downloader.ST_ERROR,downloader.ST_CANCELED):
+            return {"ok":False,"msg":"仅结束任务可以移入历史"}
+        self.dl.remove_task(task)
+        return {"ok":True,"msg":"已移入下载历史，模型文件保留"}
+
+    def activate_browser_ui(self):
+        """启动器绑定的原地浏览器兜底：复用本实例，不重启下载后台。"""
+        handler = getattr(self, "_browser_ui_handler", None)
+        if not callable(handler):
+            return {"ok": False, "msg": "当前实例未注册浏览器兜底入口"}
+        return handler()
 
     def copy_text(self, text):
         """写入系统剪贴板（Windows: Win32，64 位安全 argtypes；其他: wl-copy/xclip）"""
@@ -707,7 +952,7 @@ class Api:
         elif action == "clear_done":
             self.dl.clear_finished()
         elif action == "save":
-            self.dl.save_tasks()
+            return self.dl.save_tasks()
         return True
 
     # ---------------- 模型管理 ----------------
@@ -822,8 +1067,8 @@ class Api:
             返回 (正面, 负面)，无元数据返回 (None, None)"""
             try:
                 from PIL import Image
-                im = Image.open(fp)
-                params = (im.info or {}).get("parameters") or (im.info or {}).get("prompt") or ""
+                with Image.open(fp) as im:
+                    params = (im.info or {}).get("parameters") or (im.info or {}).get("prompt") or ""
                 if not params:
                     return None, None
                 neg = ""
@@ -899,6 +1144,18 @@ class Api:
                                "prompt": _p, "negative": _n})
             except Exception:
                 pass
+        import image_gallery
+        for c in covers:
+            idx = 0
+            if c.get('local_path'):
+                match = re.search(r'image_(\d+)', os.path.basename(c['local_path']), re.I)
+                if match:idx = int(match.group(1))-1
+            else:
+                idx = next((i for i,image in enumerate(images) if image.get('url')==c.get('url')), -1)
+            image = images[idx] if 0<=idx<len(images) else {}
+            c.update(image_gallery.generation(image,c.get('local_path')))
+            if c.get('local_path') and not re.search(r'image_\d+',os.path.basename(c['local_path']),re.I) and c.get('metadata_source')=='C站模型信息缓存':
+                c['metadata_source']='模型缓存首图参数；自定义封面可能不对应'
         return json.dumps({
             "ok": True,
             "path": path,
@@ -906,6 +1163,54 @@ class Api:
             "info": info,
             "covers": covers,
         }, ensure_ascii=False)
+
+    def _gallery_item(self, path, index, history_id=''):
+        detail = json.loads(self.get_history_detail(history_id) if history_id else self.get_model_detail(path))
+        covers=detail.get('covers') or []
+        if not detail.get('ok') or not isinstance(index,int) or isinstance(index,bool) or index<0 or index>=len(covers):
+            raise ValueError('图片已不存在，请重新打开详情')
+        return covers[index]
+
+    def get_gallery_image(self, path, index, history_id=''):
+        import image_gallery
+        try:return image_gallery.preview(self._gallery_item(path,index,history_id),self.cfg)
+        except Exception:return {'ok':False,'msg':'图片读取失败；在线图片可能无权限或网络不可用，可打开 C站原图页'}
+
+    def save_gallery_image(self, path, index, history_id=''):
+        import image_gallery
+        try:
+            item=self._gallery_item(path,index,history_id)
+            data,fmt,w,h,original=image_gallery.read_bytes(item,self.cfg)
+            if not webview.windows:return {'ok':False,'msg':'浏览器模式请使用“保存当前预览”或 C站原图页下载'}
+            ext={'JPEG':'jpg','PNG':'png','WEBP':'webp','GIF':'gif'}[fmt]
+            name=os.path.splitext(os.path.basename(path or 'image'))[0]+'_image_'+str(index+1)+'.'+ext
+            result=webview.windows[0].create_file_dialog(webview.SAVE_DIALOG,save_filename=name,file_types=('图片 (*.'+ext+')',))
+            if not result:return {'ok':False,'canceled':True,'msg':'已取消保存'}
+            target=result[0] if isinstance(result,(list,tuple)) else result
+            # 显式选择覆盖由系统保存对话框确认，先写临时文件避免中途留下损坏图片。
+            import tempfile
+            fd,tmp=tempfile.mkstemp(dir=os.path.dirname(os.path.abspath(target)),prefix='.cft-image-',suffix='.tmp')
+            try:
+                with os.fdopen(fd,'wb') as f:f.write(data)
+                os.replace(tmp,target)
+            finally:
+                if os.path.exists(tmp):os.unlink(tmp)
+            return {'ok':True,'msg':'已保存原图片' if original else '已保存历史预览图（原图不可用）'}
+        except Exception:return {'ok':False,'msg':'图片保存失败，请检查网络、文件权限或打开原图页下载'}
+
+    def rename_detail_to_civitai(self, path, preview=True):
+        try:
+            if not os.path.isfile(path):return {'ok':False,'msg':'模型文件不存在'}
+            info_path=model_manager.find_info_file(path)
+            if not info_path:return {'ok':False,'msg':'缺少 C站信息，请先识别模型信息'}
+            with open(info_path,encoding='utf-8') as f:info=json.load(f)
+            new,msgs=model_manager.rename_to_civitai(path,info,dry_run=bool(preview),clean_rules=self.cfg.get('rename_clean_rules') or '')
+            if not preview and new!=path:
+                self.dl.relocate(path,new)
+                for row in self.model_rows:
+                    if row.get('path')==path:row['path']=new;row['name']=os.path.basename(new)
+            return {'ok':True,'old_path':path,'path':new,'same':new==path,'msg':'；'.join(msgs)}
+        except Exception:return {'ok':False,'msg':'改名失败，请检查名称冲突或文件权限；不会改动其他模型'}
 
     def set_model_cover(self, path, img_path, img_url=""):
         """把图片设为模型缩略图。img_path 为本地图；本地没有时用 img_url 自动下载到 <名>.images/ 再设置。"""
@@ -1354,10 +1659,11 @@ class Api:
             return {"ok": False, "msg": "目标文件已存在"}
         try:
             os.rename(path, new_path)
+            self.dl.relocate(path, new_path)
         except Exception as e:
             return {"ok": False, "msg": "重命名失败: %s" % e}
         for side in (".preview.png", ".preview.jpg", ".preview.webp", ".preview.gif",
-                     ".txt", ".json", ".civitai.info"):
+                     ".txt", ".json", ".civitai.info", ".images"):
             old_side = os.path.join(d, old_base + side)
             if os.path.exists(old_side):
                 try:
@@ -1397,25 +1703,60 @@ class Api:
             pass
         return {"ok": True, "msg": "已移入回收站"}
 
+    def _detail_cache_path(self, url, size=512):
+        import hashlib
+        key = hashlib.sha256((str(size) + ":" + url).encode()).hexdigest()
+        return os.path.join(config.APP_DIR, "detail_thumb_cache", key + ".jpg")
+
     def get_cover_b64(self, url, size=512):
-        """按 URL 下载图片返回 base64（详情画廊多图用）"""
+        """详情只缓存缩略图，关闭选项后不读写缓存，不自动保存原图。"""
         import io
-        import base64 as _b64
+        import base64
         import urllib.request
+        from urllib.parse import urlsplit, urlunsplit
+        size = max(64, min(1024, int(size)))
         try:
-            req = urllib.request.Request(url, headers={
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) CivitaiFreeTool/1.4",
-                "Referer": "https://civitai.com/",
-                "Accept": "image/webp,image/*,*/*;q=0.8",
-            })
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                data = resp.read()
+            parsed = urlsplit(str(url))
+            if parsed.scheme not in ("http", "https"):
+                return ""
+            cache = self._detail_cache_path(url, size)
+            enabled = self.cfg.get("cache_detail_images", True)
+            if enabled and os.path.isfile(cache):
+                with open(cache, "rb") as f:
+                    return base64.b64encode(f.read()).decode()
+            # C 站 CDN 直接请求缩略版本，其他图片也只落盘压缩后的 512px 图。
+            request_url = url
+            if parsed.hostname == "image.civitai.com":
+                request_url = re.sub(r"/(?:width|original=true)[^/]*/", "/width=%d/" % size, url)
+            req = urllib.request.Request(request_url, headers={"User-Agent": "Mozilla/5.0", "Referer": "https://civitai.com/"})
+            handlers = []
+            if self.cfg.get("proxy_enabled") and self.cfg.get("proxy_address"):
+                proxy = self.cfg["proxy_address"]
+                handlers.append(urllib.request.ProxyHandler({"http": proxy, "https": proxy}))
+            with urllib.request.build_opener(*handlers).open(req, timeout=15) as resp:
+                data = resp.read(25 * 1024 * 1024 + 1)
+            if len(data) > 25 * 1024 * 1024:
+                return ""
             from PIL import Image
-            im = Image.open(io.BytesIO(data)).convert("RGB")
-            im.thumbnail((size, size))
-            buf = io.BytesIO()
-            im.save(buf, "JPEG", quality=85)
-            return _b64.b64encode(buf.getvalue()).decode()
+            with Image.open(io.BytesIO(data)) as image:
+                image = image.convert("RGB")
+                image.thumbnail((size, size))
+                buf = io.BytesIO()
+                image.save(buf, "JPEG", quality=82)
+            data = buf.getvalue()
+            if enabled:
+                with config._json_write_lock:
+                    cache = self._detail_cache_path(url, size)
+                    os.makedirs(os.path.dirname(cache), exist_ok=True)
+                    import tempfile
+                    fd, tmp = tempfile.mkstemp(dir=os.path.dirname(cache), suffix=".tmp")
+                    try:
+                        with os.fdopen(fd, "wb") as f:
+                            f.write(data)
+                        os.replace(tmp, cache)
+                    finally:
+                        if os.path.exists(tmp): os.unlink(tmp)
+            return base64.b64encode(data).decode()
         except Exception:
             return ""
 
@@ -2620,8 +2961,9 @@ class Api:
         def work():
             for r in rows:
                 try:
-                    _, msgs = model_manager.rename_to_civitai(
+                    renamed, msgs = model_manager.rename_to_civitai(
                         r["path"], r.get("info") or {}, clean_rules=_clean)
+                    if renamed != r["path"]: self.dl.relocate(r["path"], renamed)
                     self.mm_progress["result"].append({"path": r["path"], "msgs": msgs})
                 except Exception as e:
                     self.mm_progress["result"].append({"path": r["path"], "msgs": [str(e)]})
@@ -2650,8 +2992,9 @@ class Api:
                     if zh and zh != name:
                         meta2 = dict(info)
                         meta2["name"] = zh
-                        model_manager.rename_to_civitai(
+                        renamed, _ = model_manager.rename_to_civitai(
                             r["path"], meta2, clean_rules=self.cfg.get("rename_clean_rules") or "")
+                        if renamed != r["path"]: self.dl.relocate(r["path"], renamed)
                         self.mm_progress["result"].append({"path": r["path"], "ok": True})
                 except Exception:
                     pass
@@ -2880,6 +3223,7 @@ class Api:
             if os.path.exists(dst):
                 return {"ok": False, "msg": "目标文件夹已有同名文件，已放弃（请先重命名或处理冲突）"}
             shutil.move(src, dst)
+            self.dl.relocate(src, dst)
             base_src, _ = os.path.splitext(src)
             base_dst, _ = os.path.splitext(dst)
             side_n = 0
@@ -2916,8 +3260,10 @@ class Api:
             for r in rows:
                 try:
                     root = self._root_of(r["path"])
-                    _, msgs = model_manager.organize_model(
+                    new_path, msgs = model_manager.organize_model(
                         r["path"], root, dry_run=False, rules=rules, env=env, mode=mode)
+                    if new_path != r["path"]:
+                        self.dl.relocate(r["path"], new_path)
                     self.mm_progress["result"].append(msgs)
                 except Exception as e:
                     self.mm_progress["result"].append([str(e)])
@@ -3232,6 +3578,7 @@ class Api:
                 if os.path.exists(it["dest"]):
                     continue
                 shutil.move(it["src"], it["dest"])
+                self.dl.relocate(it["src"], it["dest"])
                 base_src, _ = os.path.splitext(it["src"])
                 base_dst, _ = os.path.splitext(it["dest"])
                 for ext in mm._SIDE_EXTS:
