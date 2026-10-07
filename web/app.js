@@ -1693,61 +1693,9 @@ $("#mmMasonry").addEventListener("click", (e) => {
   if (cardChk) cardChk.innerHTML = state.mmChecked.has(p) ? '<span class="cbox on"></span>' : '<span class="cbox"></span>';
   $("#mmCheckLabel").textContent = "已勾选 " + state.mmChecked.size + " 个";
 });
-$("#mmMasonry").addEventListener("contextmenu", (e) => {
-  const card = e.target.closest(".ms-card");
-  if (!card) return;
-  e.preventDefault();
-  ctxRow = state.display.find((r2) => r2.path === card.dataset.path) || null;
-  if (!ctxRow) return;
-  const menu = $("#ctxMenu");
-  const r = ctxRow;
-  menu.innerHTML =
-    '<div class="ctx-item" data-act="copy_name" data-tip="复制当前本地文件名">复制文件名</div>' +
-    '<div class="ctx-item" data-act="copy_cname" data-tip="复制 C 站上的模型名（不改本地文件）">🀄 复制C站模型名</div>' +
-    '<div class="ctx-item" data-act="folder" data-tip="打开资源管理器并选中该文件">打开所在文件夹</div>' +
-    '<div class="ctx-item" data-act="site" data-tip="在浏览器打开该模型在 C 站的主页">打开C站</div>' +
-    '<div class="ctx-item" data-act="rename" data-tip="自定义改名（保留扩展名）">改名</div>' +
-    '<div class="ctx-item" data-act="rename_c" data-tip="把本地文件名改成 C 站上的模型名（只改本地文件）">文件名改成C站名</div>' +
-    '<div class="ctx-item" data-act="sdjson" data-tip="生成 WebUI 能识别的「模型名.json」元数据文件">生成SD可读json</div>' +
-    '<div class="ctx-item" data-act="localize" data-tip="把本地文件名翻译成中文">🀄 文件名翻中文</div>' +
-    '<div class="ctx-item" data-act="rp" data-tip="从 C 站匹配该模型的名字/触发词/封面">识别模型信息</div>' +
-    '<div class="ctx-item" data-act="wl" data-tip="以后不再提示这个模型的更新（按模型记入白名单）">不再提醒更新（加入白名单）</div>' +
-    '<div class="ctx-item" data-act="organize" data-tip="把该模型移动到分类文件夹（需先在设置选 目标环境）">整理模型</div>' +
-    '<div class="ctx-item" data-act="move" data-tip="把该模型文件（连同 info/预览图/示例图等附属文件）移动到指定文件夹">移动文件…</div>' +
-    '<hr class="ctx-sep"/>' +
-    '<div class="ctx-item danger" data-act="del" data-tip="把该模型文件移入回收站（可还原）">移入回收站</div>';
-  menu.style.display = "block";
-  const zf = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
-  const mw = 200, mh = 280;
-  // 迭代校正：反复对比实际渲染位置与鼠标位置，最多 4 次收敛
-  menu.style.left = (e.clientX / zf) + "px";
-  menu.style.top = (e.clientY / zf) + "px";
-  for (let k = 0; k < 4; k++) {
-    const got = menu.getBoundingClientRect();
-    const dx = e.clientX - got.left;
-    const dy = e.clientY - got.top;
-    if (Math.abs(dx) < 2 && Math.abs(dy) < 2) break;
-    menu.style.left = (parseFloat(menu.style.left) + dx) + "px";
-    menu.style.top = (parseFloat(menu.style.top) + dy) + "px";
-  }
-  // 边缘限制
-  const mr = menu.getBoundingClientRect();
-  if (mr.right > window.innerWidth) menu.style.left = Math.max(0, window.innerWidth - mr.width) + "px";
-  if (mr.bottom > window.innerHeight) menu.style.top = Math.max(0, window.innerHeight - mr.height) + "px";
-  // rAF 后再校正一次（布局稳定，防显示瞬间读到旧位置）
-  requestAnimationFrame(() => {
-    for (let k = 0; k < 3; k++) {
-      const got = menu.getBoundingClientRect();
-      const dx = e.clientX - got.left;
-      const dy = e.clientY - got.top;
-      if (Math.abs(dx) < 2 && Math.abs(dy) < 2) break;
-      menu.style.left = (parseFloat(menu.style.left) + dx) + "px";
-      menu.style.top = (parseFloat(menu.style.top) + dy) + "px";
-    }
-    const mr2 = menu.getBoundingClientRect();
-    if (mr2.right > window.innerWidth) menu.style.left = Math.max(0, window.innerWidth - mr2.width) + "px";
-    if (mr2.bottom > window.innerHeight) menu.style.top = Math.max(0, window.innerHeight - mr2.height) + "px";
-  });
+$("#mmMasonry").addEventListener("contextmenu",e=>{
+  const card=e.target.closest('.ms-card');if(!card)return;
+  showModelContextMenu(e,state.display.find(r=>r.path===card.dataset.path));
 });
 
 // 列表：单击行 = 勾选（shift 范围多选，ctrl 加选）；双击打开详情
@@ -3313,6 +3261,8 @@ $("#ctxMenu").addEventListener("click", async (e) => {
     // 本地图文件路径：优先图自身 local_path（右键哪张就用哪张），本地图无路径时用模型文件兜底
     const localImgPath = c.local_path || (c.local ? detailRow.path : null);
     if (act === "img_copy") {
+      try {const result=await api.call('copy_gallery_image',detailRow.path,idx,detailRow.history_id||'');if(result?.ok){showToast(result.msg);return;}} catch(_){}
+
       // 复制图片本身到剪贴板（本地图读原图；远程图用已加载的 b64；都没有才复制路径/链接）
       let b64 = null;
       if (c.local_path) {
@@ -3670,44 +3620,37 @@ if (_logoEl) _logoEl.addEventListener("click", showAbout);
 
 // ===== 模型管理右键菜单 =====
 let ctxRow = null;
-$("#mmTable tbody").addEventListener("contextmenu", (e) => {
-  const tr = e.target.closest("tr[data-path]");
-  if (!tr) return;
-  e.preventDefault();
-  ctxRow = state.display.find((r2) => r2.path === tr.dataset.path) || null;
-  if (!ctxRow) return;
-  const menu = $("#ctxMenu");
-  const r = ctxRow;
-  menu.innerHTML =
-    '<div class="ctx-item" data-act="copy_name" data-tip="复制当前本地文件名">复制文件名</div>' +
-    '<div class="ctx-item" data-act="copy_cname" data-tip="复制 C 站上的模型名（不改本地文件）">🀄 复制C站模型名</div>' +
-    '<div class="ctx-item" data-act="folder" data-tip="打开资源管理器并选中该文件">打开所在文件夹</div>' +
-    '<div class="ctx-item" data-act="site" data-tip="在浏览器打开该模型在 C 站的主页">打开C站</div>' +
-    '<div class="ctx-item" data-act="rename" data-tip="自定义改名（保留扩展名）">改名</div>' +
-    '<div class="ctx-item" data-act="rename_c" data-tip="把本地文件名改成 C 站上的模型名（只改本地文件）">文件名改成C站名</div>' +
-    '<div class="ctx-item" data-act="sdjson" data-tip="生成 WebUI 能识别的「模型名.json」元数据文件">生成SD可读json</div>' +
-    '<div class="ctx-item" data-act="localize" data-tip="把本地文件名翻译成中文">🀄 文件名翻中文</div>' +
-    '<div class="ctx-item" data-act="rp" data-tip="从 C 站匹配该模型的名字/触发词/封面">识别模型信息</div>' +
-    '<div class="ctx-item" data-act="wl" data-tip="以后不再提示这个模型的更新（按模型记入白名单）">不再提醒更新（加入白名单）</div>' +
-    '<div class="ctx-item" data-act="organize" data-tip="把该模型移动到分类文件夹（需先在设置选 目标环境）">整理模型</div>' +
-    '<div class="ctx-item" data-act="move" data-tip="把该模型文件（连同 info/预览图/示例图等附属文件）移动到指定文件夹">移动文件…</div>' +
-    '<hr class="ctx-sep"/>' +
-    '<div class="ctx-item danger" data-act="del" data-tip="把该模型文件移入回收站（可还原）">移入回收站</div>';
-  menu.style.display = "block";
-  const zf = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
-  menu.style.left = (e.clientX / zf) + "px";
-  menu.style.top = (e.clientY / zf) + "px";
-  for (let k = 0; k < 4; k++) {
-    const got = menu.getBoundingClientRect();
-    const dx = e.clientX - got.left;
-    const dy = e.clientY - got.top;
-    if (Math.abs(dx) < 2 && Math.abs(dy) < 2) break;
-    menu.style.left = (parseFloat(menu.style.left) + dx) + "px";
-    menu.style.top = (parseFloat(menu.style.top) + dy) + "px";
-  }
-  const mr = menu.getBoundingClientRect();
-  if (mr.right > window.innerWidth) menu.style.left = Math.max(0, window.innerWidth - mr.width) + "px";
-  if (mr.bottom > window.innerHeight) menu.style.top = Math.max(0, window.innerHeight - mr.height) + "px";
+function placeContextMenu(menu,x,y){
+  const z=Number(document.documentElement.style.zoom)||1;
+  menu.style.display='block';menu.style.maxHeight=Math.max(100,(innerHeight-16)/z)+'px';
+  const rect=menu.getBoundingClientRect();
+  menu.style.left=Math.max(8,Math.min(x,innerWidth-rect.width-8))/z+'px';
+  menu.style.top=Math.max(8,Math.min(y,innerHeight-rect.height-8))/z+'px';
+}
+function contextAction(act,label,icon,tip=''){
+  return '<button type="button" class="ctx-item'+(act==='del'?' danger':'')+'" data-act="'+esc(act)+'" title="'+esc(tip)+'">'+_icon(icon)+'<span>'+esc(label)+'</span></button>';
+}
+function showModelContextMenu(e,row){
+  if(!row)return;e.preventDefault();ctxRow=row;detailImgCtx=null;
+  const menu=$('#ctxMenu');
+  const action=(act,label,icon,tip)=>contextAction(act,label,icon,tip);
+  const group=(label,icon,items)=>'<details class="ctx-group"><summary class="ctx-group-label">'+_icon(icon)+label+_icon('chevron-down','ic ctx-chevron')+'</summary><div>'+items+'</div></details>';
+  menu.innerHTML='<div class="ctx-caption">'+esc(row.civitai_name||row.name||'模型操作')+'</div>'+
+    action('detail','查看模型信息','info')+action('folder','打开所在文件夹','folder')+action('site','打开 C站','external')+
+    '<hr class="ctx-sep"/>'+group('复制','copy',action('copy_name','复制文件名','copy')+action('copy_cname','复制 C站模型名','copy'))+
+    group('改名与整理','pencil',action('rename','自定义改名','pencil')+action('rename_c','文件名 → C站名称','pencil')+action('localize','文件名翻译为中文','file')+action('organize','按分类规则整理','folder')+action('move','移动到文件夹…','folder'))+
+    group('元数据与更新','settings',action('rp','识别模型信息','search')+action('sdjson','生成 SD 元数据 JSON','file')+action('wl','不再提醒此模型更新','refresh'))+
+    '<hr class="ctx-sep"/>'+action('del','移入回收站','trash','可从系统回收站恢复');
+  menu.querySelectorAll('.ctx-group').forEach(group=>{
+    group.querySelector('summary').addEventListener('click',()=>{if(!group.open)menu.querySelectorAll('.ctx-group').forEach(other=>{if(other!==group)other.open=false;});});
+    group.addEventListener('toggle',()=>{
+    if(group.open)menu.querySelectorAll('.ctx-group').forEach(other=>{if(other!==group)other.open=false;});
+    const box=menu.getBoundingClientRect();placeContextMenu(menu,box.left,box.top);
+  });});
+  placeContextMenu(menu,e.clientX,e.clientY);
+}
+$("#mmTable tbody").addEventListener("contextmenu",e=>{
+  const tr=e.target.closest('tr[data-path]');if(tr)showModelContextMenu(e,state.display.find(r=>r.path===tr.dataset.path));
 });
 document.addEventListener("click", (e) => {
   const menu = $("#ctxMenu");
@@ -3716,12 +3659,13 @@ document.addEventListener("click", (e) => {
   }
 });
 $("#ctxMenu").addEventListener("click", async (e) => {
-  const item = e.target.closest(".ctx-item");
-  if (!item || !ctxRow) return;
+  const item = e.target.closest(".ctx-item[data-act]");
+  if (!item || /^(img_|dl_)/.test(item.dataset.act) || !ctxRow) return;
   const act = item.dataset.act;
   $("#ctxMenu").style.display = "none";
   const path = ctxRow.path;
   try {
+    if (act === "detail") {await showModelDetail(path);return;}
     if (act === "folder") { api.call("open_in_folder", path); return; }
     if (act === "copy_name") {
       try { await window.__copyText(ctxRow.name || ""); setStatus("已复制文件名: " + ctxRow.name); }
@@ -5147,3 +5091,7 @@ document.addEventListener("click", (e) => {
 }, true);
 
 // 门户菜单挂在 body 后仍可点（portal 出去的菜单也走上面的委托）
+
+// Escape 先关闭右键菜单，不同时关闭背后的模型详情。
+document.addEventListener('keydown',e=>{const menu=$('#ctxMenu');if(e.key==='Escape' && menu.style.display==='block'){menu.style.display='none';e.preventDefault();e.stopImmediatePropagation();}},true);
+window.addEventListener('resize',()=>{const menu=$('#ctxMenu');if(menu)menu.style.display='none';});

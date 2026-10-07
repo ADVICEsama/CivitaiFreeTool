@@ -294,7 +294,7 @@ function decorateWorkbenchIcons(root = document) {
     button.innerHTML = _icon(button.dataset.navIcon) + '<span class="nav-label">' + esc(label) + '</span>';
   });
   root.querySelectorAll("button").forEach(button => {
-    if (button.matches(".font-choice")) return;
+    if (button.matches(".font-choice,.window-control")) return;
     Array.from(button.childNodes).filter(node => node.nodeType === Node.TEXT_NODE).forEach(node => {
       const clean = node.data.replace(/^[\s\p{Extended_Pictographic}\uFE0F\u200D▶►]+/u, " ");
       if (node.data !== clean) node.data = clean;
@@ -315,7 +315,7 @@ function decorateWorkbenchIcons(root = document) {
 }
 function initializeWorkbench() {
   decorateWorkbenchIcons();
-  document.querySelectorAll(".sidebar-brand,.sidebar-name,.sidebar-name small,.page-title").forEach(el=>el.classList.add("pywebview-drag-region"));
+  document.querySelectorAll(".sidebar-brand,.sidebar-name,.sidebar-name small,.page-title,.card > h2,.iv-toolbar").forEach(el=>el.classList.add("pywebview-drag-region"));
   $('#mmImageSize').addEventListener('input',e=>setMasonrySize(e.target.value,true));
   $('#mmImageSizeControl').addEventListener('wheel',e=>{
     if(e.ctrlKey || e.altKey)return;

@@ -26,10 +26,14 @@ class IntegratedChrome:
             dpi=ctypes.windll.user32.GetDpiForWindow(ctypes.c_void_p(self.form.Handle.ToInt64())) or 96
         except Exception:dpi=96
         self.maximized = self.form.WindowState == FormWindowState.Maximized
-        # 保留窄缩放边缘，避免 WebView 子 HWND 抢走边缘命中；底色由 DWM 材质提供。
+        # 自定义 NC 框架后 WinForms 的 ClientSize 可能滞后；按真实 GetClientRect 铺满。
         self.frame.Edge=max(4,round(6*dpi/96));self.frame.TitleHeight=0;self.frame.ControlsWidth=0
-        p=0 if self.maximized else max(4,round(4*dpi/96))
-        self.webview.SetBounds(p,p,max(0,self.form.ClientSize.Width-2*p),max(0,self.form.ClientSize.Height-2*p))
+        import ctypes
+        from ctypes import wintypes
+        rect=wintypes.RECT()
+        if ctypes.windll.user32.GetClientRect(ctypes.c_void_p(self.form.Handle.ToInt64()),ctypes.byref(rect)):
+            self.webview.SetBounds(0,0,max(0,rect.right-rect.left),max(0,rect.bottom-rect.top))
+        else:self.webview.SetBounds(0,0,self.form.ClientSize.Width,self.form.ClientSize.Height)
 
     def refresh(self, options):
         self.layout()  # 不创建字体、图像或原生按钮；主题/圆角全部由现有 CSS 控制。

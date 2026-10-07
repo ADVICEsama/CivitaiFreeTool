@@ -15,10 +15,10 @@ async function openImageViewer(detail,index=0) {
   const focus=document.activeElement,root=document.createElement('div');
   root.id='imageViewer';root.className='image-viewer';root.setAttribute('role','dialog');
   root.setAttribute('aria-modal','true');root.setAttribute('aria-label','图片与生成数据');
-  root.innerHTML='<header class="iv-toolbar"><button class="icon-btn" id="ivClose" aria-label="关闭图片预览">'+_icon('x')+'</button><span id="ivCount"></span><div class="iv-zoom"><button class="btn" id="ivMinus" aria-label="缩小">−</button><button class="btn" id="ivFit">适合窗口</button><button class="btn" id="ivActual">100%</button><button class="btn" id="ivPlus" aria-label="放大">'+_icon('plus')+'</button></div><div class="iv-actions"><button class="btn" id="ivSave" title="选择保存位置，保存来源图片而非列表缩略图">'+_icon('download')+'保存图片</button><button class="btn" id="ivShare" title="复制图片页面链接">'+_icon('copy')+'分享</button><button class="btn" id="ivReport" title="到 C站图片原页举报，不在本地伪造举报结果">'+_icon('flag')+'</button><details class="iv-more"><summary class="icon-btn" aria-label="更多图片操作">'+_icon('more-vertical')+'</summary><div><button class="btn" id="ivSite">'+_icon('external')+'打开 C站原图页</button><button class="btn" id="ivCopyImage">'+_icon('copy')+'复制当前图片</button><button class="btn" id="ivPreviewSave">'+_icon('download')+'保存当前预览</button><button class="btn" id="ivExport">'+_icon('file')+'导出生成数据 JSON</button></div></details></div></header><div class="iv-body"><main class="iv-stage" title="滚轮缩放图片；Ctrl + 滚轮仍缩放软件界面"><button class="icon-btn iv-prev" aria-label="上一张">‹</button><div class="iv-image-scroll"><img id="ivImage" alt="模型示例图片"/></div><button class="icon-btn iv-next" aria-label="下一张">›</button><p id="ivStatus" role="status"></p></main><aside class="iv-generation" aria-label="图片生成数据"></aside></div>';
+  root.innerHTML='<header class="iv-toolbar pywebview-drag-region"><button class="icon-btn" id="ivClose" aria-label="关闭图片预览">'+_icon('x')+'</button><span id="ivCount"></span><div class="iv-zoom"><button class="btn" id="ivMinus" aria-label="缩小">−</button><button class="btn" id="ivFit">适合窗口</button><button class="btn" id="ivActual">100%</button><button class="btn" id="ivPlus" aria-label="放大">'+_icon('plus')+'</button></div><div class="iv-actions"><button class="btn" id="ivSave" title="选择保存位置，保存来源图片而非列表缩略图">'+_icon('download')+'保存图片</button><button class="btn" id="ivShare" title="复制图片页面链接">'+_icon('copy')+'分享</button><details class="iv-more"><summary class="icon-btn" aria-label="更多图片操作">'+_icon('more-vertical')+'</summary><div><button class="btn" id="ivSite">'+_icon('external')+'打开 C站原图页</button><button class="btn" id="ivCopyImage">'+_icon('copy')+'复制当前图片</button><button class="btn" id="ivPreviewSave">'+_icon('download')+'保存当前预览</button><button class="btn" id="ivExport">'+_icon('file')+'导出生成数据 JSON</button></div></details></div></header><div class="iv-body"><main class="iv-stage" title="滚轮缩放图片；Ctrl + 滚轮仍缩放软件界面"><button class="icon-btn iv-prev" aria-label="上一张">‹</button><div class="iv-image-scroll"><img id="ivImage" alt="模型示例图片"/></div><button class="icon-btn iv-next" aria-label="下一张">›</button><p id="ivStatus" role="status"></p></main><aside class="iv-generation" aria-label="图片生成数据"></aside></div>';
   document.body.append(root);
   const keyHandler=e=>{
-    if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();closeImageViewer();return;}
+    if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();const menu=root.querySelector('#ivContext');if(menu?.style.display==='block')menu.style.display='none';else closeImageViewer();return;}
     if(e.target.closest('input,textarea'))return;
     if(e.key==='ArrowLeft'){e.preventDefault();loadViewerImage(imageViewer.index-1);}
     if(e.key==='ArrowRight'){e.preventDefault();loadViewerImage(imageViewer.index+1);}
@@ -44,7 +44,7 @@ async function openImageViewer(detail,index=0) {
     root.querySelector('#ivStatus').textContent=url?(await window.__copyText(url)?'图片链接已复制':'复制失败'):'仅有本地图片，没有可分享的公开链接';
   };
   const site=()=>{const c=imageViewer.detail.covers[imageViewer.index];const u=c.image_page||c.orig_url||c.url;if(u)api.call('open_url',u);};
-  root.querySelector('#ivSite').onclick=site;root.querySelector('#ivReport').onclick=site;
+  root.querySelector('#ivSite').onclick=site;
   root.querySelector('#ivSave').onclick=async()=>{
     const v=imageViewer,button=root.querySelector('#ivSave');button.disabled=true;
     try{const r=await api.call('save_gallery_image',v.detail.path,v.index,v.detail.history_id||'');if(root.isConnected)root.querySelector('#ivStatus').textContent=r?.msg||'保存没有返回结果';}
@@ -52,7 +52,10 @@ async function openImageViewer(detail,index=0) {
     finally{if(root.isConnected)button.disabled=false;}
   };
   root.querySelector('#ivCopyImage').onclick=async()=>{
+    const v=imageViewer;
     try{
+      const result=await api.call('copy_gallery_image',v.detail.path,v.index,v.detail.history_id||'');
+      if(result?.ok){if(root.isConnected)root.querySelector('#ivStatus').textContent=result.msg||'当前图片已复制';return;}
       const img=root.querySelector('#ivImage'),canvas=document.createElement('canvas');canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;
       canvas.getContext('2d').drawImage(img,0,0);const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
       await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);root.querySelector('#ivStatus').textContent='当前图片已复制';
@@ -66,6 +69,25 @@ async function openImageViewer(detail,index=0) {
     const c=imageViewer.detail.covers[imageViewer.index];const blob=new Blob([JSON.stringify({source:c.metadata_source,meta:c.meta||{},resources:c.resources||[]},null,2)],{type:'application/json'});
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='image-generation-data.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
   };
+  const imageArea=root.querySelector('.iv-image-scroll');
+  imageArea.addEventListener('click',e=>{if(e.target===imageArea)closeImageViewer();});
+  const menu=document.createElement('div');menu.id='ivContext';menu.className='ctx-menu';menu.style.display='none';menu.setAttribute('aria-label','图片右键操作');root.append(menu);
+  root.addEventListener('contextmenu',e=>{
+    if(!e.target.closest('#ivImage'))return;e.preventDefault();
+    const c=imageViewer.detail.covers[imageViewer.index],meta=c.meta||{};
+    menu.innerHTML=contextAction('iv_copy','复制图片','copy')+contextAction('iv_save','保存图片…','download')+contextAction('iv_site','打开 C站原图页','external')+'<hr class="ctx-sep"/>'+contextAction('iv_prompt','复制正面提示词','file')+contextAction('iv_negative','复制负面提示词','file')+contextAction('iv_data','复制全部生成数据','copy');
+    menu.querySelector('[data-act=iv_site]').disabled=!(c.image_page||c.orig_url||c.url);
+    menu.querySelector('[data-act=iv_prompt]').disabled=!(meta.prompt||c.prompt);
+    menu.querySelector('[data-act=iv_negative]').disabled=!(meta.negativePrompt||meta['Negative prompt']||c.negative);
+    placeContextMenu(menu,e.clientX,e.clientY);
+  });
+  menu.addEventListener('click',e=>{
+    const button=e.target.closest('[data-act]');if(!button||button.disabled)return;menu.style.display='none';
+    const ids={iv_copy:'ivCopyImage',iv_save:'ivSave',iv_site:'ivSite'};
+    if(ids[button.dataset.act])root.querySelector('#'+ids[button.dataset.act]).click();
+    else root.querySelector('[data-iv-copy='+({iv_prompt:'prompt',iv_negative:'negative',iv_data:'all'}[button.dataset.act])+']')?.click();
+  });
+  root.addEventListener('pointerdown',e=>{if(!e.target.closest('#ivContext'))menu.style.display='none';});
   root.querySelector('#ivClose').focus();await loadViewerImage(index);
 }
 function viewerFitWidth(){
@@ -99,11 +121,12 @@ function renderGeneration(c){
 async function loadViewerImage(index){
   if(!imageViewer)return;
   const v=imageViewer,covers=v.detail.covers;index=Math.max(0,Math.min(covers.length-1,index));
+  const menu=v.root.querySelector('#ivContext');if(menu)menu.style.display='none';
   v.index=index;v.zoom=1;v.full=null;const request=++imageViewerRequest,c=covers[index],img=v.root.querySelector('#ivImage');
   img.removeAttribute('src');if(c.b64)img.src='data:image/jpeg;base64,'+c.b64;
   v.root.querySelector('#ivCount').textContent=(index+1)+' / '+covers.length;
   v.root.querySelector('.iv-prev').disabled=index===0;v.root.querySelector('.iv-next').disabled=index===covers.length-1;
-  for(const id of ['ivShare','ivSite','ivReport'])v.root.querySelector('#'+id).disabled=!(c.image_page||c.orig_url||c.url);
+  for(const id of ['ivShare','ivSite'])v.root.querySelector('#'+id).disabled=!(c.image_page||c.orig_url||c.url);
   renderGeneration(c);v.root.querySelector('#ivStatus').textContent='正在读取大图…';
   img.onload=()=>{if(imageViewer===v)setViewerZoom(v.zoom);};
   try{

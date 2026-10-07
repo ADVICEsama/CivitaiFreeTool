@@ -24,6 +24,19 @@ class WindowAppearanceTests(unittest.TestCase):
         self.assertEqual(plan[20], 1)
         self.assertEqual(plan[38], 1)
 
+    def test_integrated_modes_suppress_dwm_border(self):
+        for mode in ['theme','mica','mica_alt']:
+            self.assertEqual(dict(appearance_plan({'mode':mode}))[34],0xfffffffe)
+        self.assertEqual(dict(appearance_plan({'mode':'system'}))[34],0xffffffff)
+
+    def test_resize_validation_and_dispatch(self):
+        c=WindowAppearance(types.SimpleNamespace(native=None));self.assertFalse(c.resize('bottom-right')['ok'])
+        c.chrome=types.SimpleNamespace(frame=types.SimpleNamespace(BeginResize=Mock()))
+        c.window.native=types.SimpleNamespace(BeginInvoke=lambda action:action())
+        system=types.ModuleType('System');system.Action=lambda action:action
+        with patch.dict(sys.modules,{'System':system}):
+            self.assertFalse(c.resize('unsafe')['ok']);self.assertTrue(c.resize('bottom-right')['queued']);c.chrome.frame.BeginResize.assert_called_once_with(8)
+
     def test_light_theme(self):
         self.assertEqual(dict(appearance_plan({'background': '#ffffff'}))[20], 0)
 

@@ -160,7 +160,7 @@ function syncWindowControls(actual) {
   if (!controls) return;
   const integrated=actual?.integrated === true;
   document.documentElement.dataset.windowButtons=integrated?'true':'false';
-  controls.hidden=!integrated;
+  controls.hidden=!integrated;document.documentElement.dataset.windowMaximized=actual?.maximized?'true':'false';
   const max=controls.querySelector('[data-window-action="maximize"]');
   const text=actual?.maximized?'还原窗口':'最大化';
   max.title=text;max.setAttribute('aria-label',text);
@@ -181,4 +181,14 @@ window.addEventListener('resize',()=>{
   if(document.getElementById('windowControls')?.hidden)return;
   clearTimeout(windowControlsResizeTimer);
   windowControlsResizeTimer=setTimeout(async()=>{try{syncWindowControls(await api.call('get_window_appearance'));}catch(_){}},120);
+});
+
+document.getElementById('windowResizeEdges')?.addEventListener('pointerdown',e=>{
+  const edge=e.target.closest('[data-resize-edge]');if(!edge || e.button!==0)return;
+  e.preventDefault();e.stopPropagation();api.call('window_resize',edge.dataset.resizeEdge).catch(()=>{});
+});
+// 页面标题只选空白处拖动，输入/按钮不在拖动范围；双击空白标题可以最大化。
+document.addEventListener('dblclick',e=>{
+  if(document.documentElement.dataset.windowButtons!=='true' || !e.target.matches('.pywebview-drag-region') || e.target.closest('button,a,input,select,textarea,summary'))return;
+  api.call('window_control','maximize').catch(()=>{});
 });

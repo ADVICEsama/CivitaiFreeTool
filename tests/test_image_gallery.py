@@ -61,4 +61,22 @@ class GalleryTests(unittest.TestCase):
                 result=api.rename_detail_to_civitai(str(p),False);self.assertTrue(result['ok']);api.dl.relocate.assert_called_once_with(str(p),target)
                 self.assertEqual(rename.call_count,2);self.assertEqual(api.model_rows[0]['path'],'unrelated.safetensors')
 
+class ClipboardDibTests(unittest.TestCase):
+    def test_jpeg_converts_to_real_dib(self):
+        import io,struct
+        from PIL import Image
+        data=io.BytesIO();Image.new('RGB',(7,9),'blue').save(data,format='JPEG')
+        dib=image_gallery.clipboard_dib(data.getvalue());self.assertNotEqual(dib[:2],b'BM');self.assertEqual(struct.unpack('<Iii',dib[:12]),(40,7,9))
+    def test_native_copy_uses_owned_window_handle(self):
+        import types
+        api=webui.Api.__new__(webui.Api)
+        api._window_appearance_controller=types.SimpleNamespace(window=types.SimpleNamespace(native=types.SimpleNamespace(Handle=types.SimpleNamespace(ToInt64=lambda:123))))
+        api.get_gallery_image=Mock(return_value={'ok':True,'b64':base64.b64encode(b'fixture image bytes').decode()})
+        with patch.object(image_gallery,'copy_clipboard_image',return_value=True) as copy:
+            self.assertTrue(api.copy_gallery_image('fixture.model',0)['ok']);copy.assert_called_once_with(b'fixture image bytes',123)
+
+    def test_invalid_or_oversized_input_rejected(self):
+        with self.assertRaises(Exception):image_gallery.clipboard_dib(b'not an image')
+        with self.assertRaises(ValueError):image_gallery.clipboard_dib(b'x'*(image_gallery.LIMIT+1))
+
 if __name__=='__main__':unittest.main()

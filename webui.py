@@ -12,7 +12,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.6.3"
+APP_VERSION = "2.6.4"
 
 import civitai_api
 import config
@@ -424,6 +424,10 @@ class Api:
     def window_control(self, action):
         controller = getattr(self, "_window_appearance_controller", None)
         return controller.control(action) if controller else {"ok": False, "msg": "当前无原生窗口"}
+
+    def window_resize(self, direction):
+        controller=getattr(self,"_window_appearance_controller",None)
+        return controller.resize(direction) if controller else {"ok":False,"msg":"当前无原生窗口"}
 
     def get_local_fonts(self):
         import local_fonts
@@ -1179,6 +1183,19 @@ class Api:
         import image_gallery
         try:return image_gallery.preview(self._gallery_item(path,index,history_id),self.cfg)
         except Exception:return {'ok':False,'msg':'图片读取失败；在线图片可能无权限或网络不可用，可打开 C站原图页'}
+
+    def copy_gallery_image(self, path, index, history_id=''):
+        import image_gallery,base64
+        try:
+            controller=getattr(self,'_window_appearance_controller',None)
+            form=getattr(getattr(controller,'window',None),'native',None)
+            if form is None:return {'ok':False,'msg':'当前模式请使用网页图片复制'}
+            owner=form.Handle.ToInt64()
+            preview=self.get_gallery_image(path,index,history_id)
+            if not preview.get('ok') or not preview.get('b64'):return {"ok":False,"msg":"图片未加载，无法复制"}
+            result=image_gallery.copy_clipboard_image(base64.b64decode(preview['b64'],validate=True),owner)
+            return {"ok":bool(result),"msg":"当前图片已复制，可直接粘贴" if result else "系统剪贴板不可用，可改用保存图片"}
+        except Exception:return {"ok":False,"msg":"图片复制失败，可改用保存图片"}
 
     def save_gallery_image(self, path, index, history_id=''):
         import image_gallery

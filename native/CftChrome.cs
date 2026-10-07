@@ -14,6 +14,9 @@ namespace CftNative {
     [DllImport("user32.dll")] static extern bool IsZoomed(IntPtr h);
     [DllImport("user32.dll")] static extern IntPtr MonitorFromWindow(IntPtr h,int f);
     [DllImport("user32.dll")] static extern bool GetMonitorInfo(IntPtr h,ref MONITOR m);
+    [DllImport("user32.dll")] static extern bool ReleaseCapture();
+    [DllImport("user32.dll")] static extern IntPtr SendMessage(IntPtr h,int m,IntPtr w,IntPtr l);
+    public void BeginResize(int edge){if(edge<1||edge>8||IsZoomed(Handle))return;ReleaseCapture();SendMessage(Handle,0x112,(IntPtr)(0xf000|edge),IntPtr.Zero);}
     public int TitleHeight=48, Edge=6, ControlsWidth=138;
     int oldStyle;
     public Frame(IntPtr hwnd) { AssignHandle(hwnd);oldStyle=GetWindowLong(hwnd,-16);SetWindowLong(hwnd,-16,(oldStyle & ~0x00c00000)|0x00040000|0x00010000|0x00020000|0x00080000);Refresh(); }

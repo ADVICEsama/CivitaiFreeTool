@@ -279,9 +279,9 @@ html[data-window-buttons=true] #openLogs {margin-right:130px;}
 html[data-window-buttons=true] .page-title,html[data-window-buttons=true] .sidebar-brand {cursor:move;}
 
 /* 窗口按钮是真正的网页 UI：默认无底色、无阴影，不再盖一块原生黑面板。 */
-html body #windowControls {position:fixed;top:10px;right:12px;display:flex;gap:4px;z-index:20000;background:transparent;border:0;box-shadow:none;}
+html body #windowControls {position:fixed;top:0;right:0;display:flex;gap:0;z-index:20000;background:transparent;border:0;box-shadow:none;}
 html body #windowControls[hidden] {display:none;}
-html body .window-control {display:grid;place-items:center;width:34px;height:30px;padding:0;border:1px solid transparent;border-radius:var(--radius-sm);background:transparent;color:var(--text-dim);box-shadow:none;cursor:pointer;transition:background .15s,color .15s,border-color .15s;}
+html body .window-control {display:grid;place-items:center;width:40px;height:32px;padding:0;border:1px solid transparent;border-radius:0 0 var(--radius-sm) var(--radius-sm);background:transparent;color:var(--text-dim);box-shadow:none;cursor:pointer;transition:background .15s,color .15s,border-color .15s;}
 html body .window-control svg {width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
 html body .window-control:hover {background:color-mix(in srgb,var(--primary) 12%,transparent);border-color:color-mix(in srgb,var(--primary) 25%,transparent);color:var(--text);}
 html body .window-control:active {background:color-mix(in srgb,var(--primary) 22%,transparent);}
@@ -294,3 +294,35 @@ html[data-native-material=true] body table.grid tbody tr {background:color-mix(i
 html[data-native-material=true] body table.grid tbody tr:nth-child(even) {background:color-mix(in srgb,var(--surface2) 50%,transparent);}
 html[data-native-material=true] body table.grid tbody tr:hover {background:color-mix(in srgb,var(--primary) 15%,var(--surface)) !important;}
 html[data-native-material=true] body table.grid tbody tr:is(.selected,.sel-row) {background:color-mix(in srgb,var(--primary) 26%,var(--surface)) !important;}
+
+/* 无可见顶栏；宽拖动带覆盖顶端空白，窗口内容真实铺满原生客户端。 */
+#windowDragSurface {display:none;position:fixed;left:var(--sidebar-width);right:120px;top:0;height:18px;z-index:9990;background:transparent;cursor:move;}
+html[data-window-buttons=true] #windowDragSurface {display:block;}
+html[data-window-buttons=true] :is(.card>h2,.iv-toolbar) {cursor:move;}
+#windowResizeEdges {display:none;}
+html[data-window-buttons=true]:not([data-window-maximized=true]) #windowResizeEdges {display:block;}
+#windowResizeEdges [data-resize-edge] {position:fixed;z-index:20001;background:transparent;}
+[data-resize-edge=left] {left:0;top:8px;bottom:8px;width:4px;cursor:ew-resize;}
+[data-resize-edge=right] {right:0;top:8px;bottom:8px;width:4px;cursor:ew-resize;}
+[data-resize-edge=top] {left:8px;right:8px;top:0;height:4px;cursor:ns-resize;}
+[data-resize-edge=bottom] {left:8px;right:8px;bottom:0;height:4px;cursor:ns-resize;}
+[data-resize-edge=top-left] {left:0;top:0;width:8px;height:8px;cursor:nwse-resize;}
+[data-resize-edge=top-right] {right:0;top:0;width:8px;height:8px;cursor:nesw-resize;}
+[data-resize-edge=bottom-left] {left:0;bottom:0;width:8px;height:8px;cursor:nesw-resize;}
+[data-resize-edge=bottom-right] {right:0;bottom:0;width:8px;height:8px;cursor:nwse-resize;}
+.iv-more summary.icon-btn {display:grid;place-items:center;padding:0;line-height:1;}
+.iv-more summary::-webkit-details-marker {display:none;}
+.iv-more summary .ic {display:block;margin:0;}
+.iv-image-scroll {cursor:zoom-out;}
+#ivImage {cursor:default;}
+html body .ctx-menu {z-index:10060;min-width:220px;max-width:min(320px,calc(100vw - 16px));overflow-y:auto;overscroll-behavior:contain;}
+.ctx-caption {padding:6px 12px 9px;font-size:calc(11px * var(--type-scale,1));color:var(--text-dim);border-bottom:1px solid var(--border);margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ctx-menu button.ctx-item {font:inherit;font-size:calc(13px * var(--type-scale,1));color:var(--text);background:none;border:0;width:100%;text-align:left;cursor:pointer;}
+.ctx-menu button.ctx-item.danger {color:var(--danger);}
+.ctx-group-label {display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;cursor:pointer;list-style:none;font-size:calc(13px * var(--type-scale,1));}
+.ctx-group-label::-webkit-details-marker {display:none;}
+.ctx-group-label:hover {background:var(--surface2);}
+.ctx-group-label .ctx-chevron {margin-left:auto;transition:transform .15s;}
+.ctx-group[open] .ctx-chevron {transform:rotate(180deg);}
+.ctx-group>div {border-left:2px solid var(--border);margin:0 6px 5px 20px;padding-left:4px;}
+.ctx-menu .ctx-item:focus-visible,.ctx-group-label:focus-visible {outline:2px solid var(--primary);outline-offset:-2px;}

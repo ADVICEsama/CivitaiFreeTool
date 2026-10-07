@@ -8,6 +8,7 @@ import sys
 
 MODES = {"theme", "mica", "mica_alt", "system", "external"}
 DEFAULT_COLOR = 0xFFFFFFFF
+NO_BORDER = 0xFFFFFFFE
 
 
 def colorref(value):
@@ -31,8 +32,8 @@ def appearance_plan(options, previous=None):
     if mode in ("system", "external"):
         return [(20, 0), (34, DEFAULT_COLOR), (35, DEFAULT_COLOR), (36, DEFAULT_COLOR), (38, 0)]
     if mode == "theme":
-        return [(20, dark), (38, 1), (34, DEFAULT_COLOR), (35, bg), (36, fg)]
-    return [(20, dark), (34, DEFAULT_COLOR), (35, DEFAULT_COLOR), (36, DEFAULT_COLOR), (38, 2 if mode == "mica" else 4)]
+        return [(20, dark), (38, 1), (34, NO_BORDER), (35, bg), (36, fg)]
+    return [(20, dark), (34, NO_BORDER), (35, DEFAULT_COLOR), (36, DEFAULT_COLOR), (38, 2 if mode == "mica" else 4)]
 
 
 class WindowAppearance:
@@ -63,6 +64,17 @@ class WindowAppearance:
             return {"ok": True, "queued": True}
         except Exception:
             return {"ok": False, "msg": "窗口操作暂不可用"}
+
+    def resize(self, direction):
+        edge={"left":1,"right":2,"top":3,"top-left":4,"top-right":5,"bottom":6,"bottom-left":7,"bottom-right":8}.get(direction)
+        form=getattr(self.window,"native",None)
+        if edge is None or self.chrome is None or form is None:
+            return {"ok":False,"msg":"当前无法调整窗口边缘"}
+        try:
+            from System import Action
+            form.BeginInvoke(Action(lambda:self.chrome.frame.BeginResize(edge) if self.chrome is not None else None))
+            return {"ok":True,"queued":True}
+        except Exception:return {"ok":False,"msg":"窗口缩放暂不可用"}
 
     def request(self, options):
         try:

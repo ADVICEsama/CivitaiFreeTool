@@ -78,3 +78,47 @@ def preview(item,cfg):
         mime='image/png' if im.mode=='RGBA' else 'image/jpeg'
     return {'ok':True,'b64':base64.b64encode(buf.getvalue()).decode(),'mime':mime,'width':w,'height':h,
             'original_available':original,'preview_limited':max(w,h)>4096}
+
+
+def clipboard_dib(data):
+    """将受限图片转换成真正的 CF_DIB，不能把 JPEG blob 标成 image/png。"""
+    from PIL import Image
+    if not isinstance(data,bytes) or len(data)>LIMIT:raise ValueError('图片数据无效或过大')
+    with Image.open(io.BytesIO(data)) as im:
+        if im.width*im.height>4096*4096:raise ValueError('复制预览尺寸过大')
+        image=im.convert('RGB');out=io.BytesIO();image.save(out,format='BMP');image.close()
+    return out.getvalue()[14:]  # CF_DIB 不包含 BITMAPFILEHEADER。
+
+
+def copy_clipboard_image(data, owner=0):
+    import sys
+    if sys.platform!='win32' or not owner:return False  # 其他平台由网页 PNG ClipboardItem 兜底。
+    dib=clipboard_dib(data)
+    import ctypes,time
+    u,k=ctypes.WinDLL('user32',use_last_error=True),ctypes.WinDLL('kernel32',use_last_error=True)
+    u.OpenClipboard.argtypes=[ctypes.c_void_p];u.OpenClipboard.restype=ctypes.c_bool
+    u.EmptyClipboard.restype=ctypes.c_bool
+    u.SetClipboardData.argtypes=[ctypes.c_uint,ctypes.c_void_p];u.SetClipboardData.restype=ctypes.c_void_p
+    u.CloseClipboard.restype=ctypes.c_bool
+    k.GlobalAlloc.argtypes=[ctypes.c_uint,ctypes.c_size_t];k.GlobalAlloc.restype=ctypes.c_void_p
+    k.GlobalLock.argtypes=[ctypes.c_void_p];k.GlobalLock.restype=ctypes.c_void_p
+    k.GlobalUnlock.argtypes=[ctypes.c_void_p];k.GlobalFree.argtypes=[ctypes.c_void_p]
+    k.GlobalFree.restype=ctypes.c_void_p
+    handle=k.GlobalAlloc(0x42,len(dib))
+    if not handle:return False
+    try:
+        pointer=k.GlobalLock(handle)
+        if not pointer:return False
+        try:ctypes.memmove(pointer,dib,len(dib))
+        finally:k.GlobalUnlock(handle)
+        for attempt in range(5):
+            if u.OpenClipboard(ctypes.c_void_p(owner)):break
+            time.sleep(.04)
+        else:return False
+        try:
+            if not u.EmptyClipboard():return False
+            if not u.SetClipboardData(8,handle):return False  # CF_DIB，所有权交给系统。
+            handle=None;return True
+        finally:u.CloseClipboard()
+    finally:
+        if handle:k.GlobalFree(handle)
