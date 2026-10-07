@@ -14,6 +14,17 @@ import threading
 from pathlib import Path
 _cache_lock = threading.RLock()
 
+def source_revision(item):
+    """仅用于检测来源变化，不暴露路径、链接参数或账号值。"""
+    source=str(item.get('url') or item.get('orig_url') or '')
+    if item.get('local_path'):
+        try:
+            st=os.stat(item['local_path']);source=str(Path(item['local_path']).resolve())+':'+str(st.st_mtime_ns)+':'+str(st.st_size)
+        except OSError:source=str(item['local_path'])+':missing'
+    if not source:source=hashlib.sha256(str(item.get('b64','')).encode()).hexdigest()
+    return hashlib.sha256(source.encode()).hexdigest()
+
+
 def cache_key(item, cfg, metadata=False):
     if not cfg.get('cache_original_images', False):return None
     source=item.get('url') or item.get('orig_url')

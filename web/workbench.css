@@ -404,3 +404,13 @@ body.models-workspace.model-toolbar-locked #mmMasonry{height:auto;overflow:visib
 .onboarding-target{outline:2px solid var(--primary);outline-offset:4px;}
 
 .ob-actions #obSkipAll{margin-right:auto;border:0;background:transparent;color:var(--text-dim);font-size:calc(12px * var(--type-scale,1));}
+
+.ob-page-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;}
+.ob-page-card{display:flex;align-items:flex-start;gap:12px;padding:14px;border:1px solid var(--border);border-radius:10px;background:var(--surface2);color:var(--text);font:inherit;text-align:left;cursor:pointer;}
+.ob-page-card>.ic{color:var(--primary);margin-top:3px;}
+.ob-page-card span{display:flex;flex-direction:column;gap:6px;}
+.ob-page-card small{font-size:calc(11px * var(--type-scale,1));line-height:1.65;color:var(--text-dim);}
+.ob-page-card:hover,.ob-page-card:focus-visible{border-color:var(--primary);background:color-mix(in srgb,var(--primary) 10%,var(--surface));}
+.ob-themes .ob-theme{width:auto;min-height:42px;}
+.ob-themes .ob-theme.sel{border-color:var(--primary);color:var(--primary);}
+@media(max-width:600px){.ob-page-grid{grid-template-columns:1fr;}}

@@ -13,7 +13,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.6.8"
+APP_VERSION = "2.6.9"
 
 import civitai_api
 import config
@@ -518,7 +518,9 @@ class Api:
 
     def clear_gallery_cache(self):
         import image_gallery
-        try:return {'ok':True,'msg':'已清理 '+str(image_gallery.clear_cache())+' 个缓存文件'}
+        try:
+            count=image_gallery.clear_cache();self._gallery_metadata_cache={};self._gallery_detail_cache.clear() if hasattr(self,'_gallery_detail_cache') else None
+            return {'ok':True,'msg':'已清理 '+str(count)+' 个缓存文件'}
         except Exception:return {'ok':False,'msg':'清理失败，请检查目录权限'}
 
     def open_gallery_resource(self, resource):
@@ -1226,11 +1228,38 @@ class Api:
                 c['prompt']=c['meta'].get('prompt') or '';c['negative']=c['meta'].get('negativePrompt') or ''
             if c.get('local_path') and not re.search(r'image_\d+',os.path.basename(c['local_path']),re.I) and c.get('metadata_source')=='C站模型信息缓存':
                 c['metadata_source']='模型缓存首图参数；自定义封面可能不对应'
+        covers=self._remember_gallery_detail(path,covers)
         return json.dumps(_json_safe({
             "ok": True,"path": path,"name": os.path.basename(path),"info": info,"covers": covers,
         }),ensure_ascii=False,allow_nan=False)
 
+    def _gallery_detail_stamp(self,path,covers):
+        import image_gallery
+        info=model_manager.find_info_file(path)
+        try:
+            st=os.stat(info);info_stamp=(st.st_mtime_ns,st.st_size)
+        except (OSError,TypeError):info_stamp=None
+        return (getattr(self,'cfg',{}).get('api_key',''),info_stamp,tuple(image_gallery.source_revision(c) for c in covers))
+
+    def _remember_gallery_detail(self,path,covers):
+        from collections import OrderedDict
+        import hashlib
+        covers=_json_safe(covers);stamp=self._gallery_detail_stamp(path,covers)
+        for c,revision in zip(covers,stamp[2]):
+            c['source_revision']=hashlib.sha256((revision+repr(stamp[1])).encode()).hexdigest()
+        cache=getattr(self,'_gallery_detail_cache',None)
+        if cache is None:cache=OrderedDict();self._gallery_detail_cache=cache
+        key=os.path.normcase(os.path.abspath(path));cache[key]={'covers':covers,'stamp':stamp};cache.move_to_end(key)
+        while len(cache)>32:cache.popitem(last=False)
+        return covers
+
     def _gallery_item(self, path, index, history_id=''):
+        if not isinstance(index,int) or isinstance(index,bool) or index<0:raise ValueError('图片索引无效')
+        cache=getattr(self,'_gallery_detail_cache',{});key=os.path.normcase(os.path.abspath(path))
+        cached=cache.get(key) if not history_id else None
+        if cached and cached['stamp']==self._gallery_detail_stamp(path,cached['covers']):
+            if index>=len(cached['covers']):raise ValueError('图片已不存在')
+            return cached['covers'][index]
         detail = json.loads(self.get_history_detail(history_id) if history_id else self.get_model_detail(path))
         covers=detail.get('covers') or []
         if not detail.get('ok') or not isinstance(index,int) or isinstance(index,bool) or index<0 or index>=len(covers):
@@ -1246,9 +1275,9 @@ class Api:
         import image_gallery
         try:
             item=self._gallery_item(path,index,history_id)
-            result=image_gallery.generation(item,item.get('local_path'));result['online_metadata']=False
             persisted=image_gallery.cache_load(item,self.cfg,'metadata')
-            if isinstance(persisted,dict) and persisted.get('ok') and (persisted.get('meta') or persisted.get('resources')):return persisted
+            if isinstance(persisted,dict) and persisted.get('ok') and (persisted.get('meta') or persisted.get('resources')):return {**persisted,'metadata_cache_hit':True}
+            result=image_gallery.generation(item,item.get('local_path'));result['online_metadata']=False
             image_id=item.get('image_id')
             if str(image_id or '').isdigit() and '自定义封面' not in item.get('metadata_source',''):
                 cache=getattr(self,'_gallery_metadata_cache',None)

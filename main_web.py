@@ -498,6 +498,13 @@ def _browser_mode():
         _startup_log("browser mode: interrupted, exit")
 
 
+def _launch_ui_mode(argv, cfg):
+    """正常启动遵循保存的偏好；显式 CLI 参数仅用于用户主动强制模式。"""
+    if '--browser' in argv:return 'browser'
+    if '--window' in argv:return 'window'
+    return 'browser' if cfg.get('ui_mode')=='browser' else 'window'
+
+
 def main():
     # 外部看门狗模式：必须在**任何重量级导入（pywebview/clr/pythonnet）之前**分流，
     # 保证看门狗进程完全不碰 .NET（那些东西正是会把 GIL 弄死的元凶）。
@@ -511,7 +518,7 @@ def main():
         _cfg = config.load()
     except Exception:
         _cfg = {}
-    if ("--browser" in sys.argv) or (_cfg.get("ui_mode") == "browser" and "--window" not in sys.argv):
+    if _launch_ui_mode(sys.argv,_cfg)=='browser':
         return _browser_mode()
 
     _startup_log("start: begin")

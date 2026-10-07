@@ -1,11 +1,58 @@
 /* 图片大图层与来源生成数据。不执行 ComfyUI 节点，不猜测缺失参数。 */
 "use strict";
 let imageViewer = null, imageViewerRequest = 0, historyFocusRequest = 0;
+const viewerDecodedCache=new Map(),VIEWER_CACHE_BYTES=96*1024*1024,VIEWER_CACHE_COUNT=6;
+let viewerCacheAccount=null;
+function disposeViewerEntry(entry){if(!entry)return;entry.image.onload=null;entry.image.remove();entry.image.removeAttribute('src');URL.revokeObjectURL(entry.url);}
+function clearViewerImageCache(){
+  if(imageViewer)closeImageViewer();
+  for(const entry of viewerDecodedCache.values())disposeViewerEntry(entry);viewerDecodedCache.clear();
+}
+function viewerCacheKey(detail,index){
+  const account=String(state.cfg.api_key||'');
+  if(viewerCacheAccount!==account){clearViewerImageCache();viewerCacheAccount=account;}
+  const c=detail.covers[index];return String(c.source_revision||c.local_path||c.url||c.orig_url||detail.path+'|'+(detail.history_id||'')+'|'+index);
+}
+function rememberViewerEntry(key,entry){
+  if(state.cfg.cache_original_images===false)return;
+  const old=viewerDecodedCache.get(key);if(old && old!==entry)disposeViewerEntry(old);
+  viewerDecodedCache.delete(key);viewerDecodedCache.set(key,entry);
+  const bytes=()=>[...viewerDecodedCache.values()].reduce((n,e)=>n+e.bytes,0);
+  while(viewerDecodedCache.size>1 && (viewerDecodedCache.size>VIEWER_CACHE_COUNT || bytes()>VIEWER_CACHE_BYTES)){
+    const oldest=viewerDecodedCache.keys().next().value;disposeViewerEntry(viewerDecodedCache.get(oldest));viewerDecodedCache.delete(oldest);
+  }
+}
+function viewerImageElement(){const img=new Image();img.id='ivImage';img.draggable=false;img.alt='模型示例图片';return img;}
+async function decodeViewerEntry(full){
+  const raw=atob(full.b64),data=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)data[i]=raw.charCodeAt(i);
+  const blob=new Blob([data],{type:full.mime||'image/jpeg'}),url=URL.createObjectURL(blob),image=viewerImageElement();image.src=url;
+  try{await image.decode();}catch(error){URL.revokeObjectURL(url);throw error;}
+  const {b64,...info}=full;
+  return {full:info,url,image,bytes:image.naturalWidth*image.naturalHeight*4+blob.size,metadata:null,retryAt:0};
+}
+function mergeViewerMetadata(c,metadata){
+  if(!metadata?.ok)return;
+  c.metadata_note=metadata.metadata_note||'';
+  c.meta=metadata.online_metadata?{...(c.meta||{}),...(metadata.meta||{})}:{...(metadata.meta||{}),...(c.meta||{})};
+  if(metadata.resources?.length)c.resources=metadata.resources;
+  if(metadata.online_metadata || ((!c.metadata_source || c.metadata_source==='未提供生成数据') && Object.keys(metadata.meta||{}).length))c.metadata_source=metadata.metadata_source;
+}
+function displayViewerEntry(v,c,entry,memory){
+  const current=v.root.querySelector('#ivImage');if(current!==entry.image)current.replaceWith(entry.image);
+  v.entry=entry;v.full=entry.full;
+  Object.assign(c,{meta:{...(c.meta||{}),...(entry.full.meta||{})},resources:entry.full.resources?.length?entry.full.resources:(c.resources||[]),metadata_source:entry.full.metadata_source||c.metadata_source,width:entry.full.width,height:entry.full.height});
+  mergeViewerMetadata(c,entry.metadata);renderGeneration(c);setViewerZoom(1,null,true);
+  const source=memory?'内存缓存：直接复用已解码图片':entry.full.cache_hit?'本地缓存：读取与解码完成':'首次加载完成';
+  v.root.querySelector('#ivStatus').textContent=source+(entry.full.original_available===false?'；仅有预览，来源原图不可用':entry.full.preview_limited?'；预览限制 4096 px，保存仍使用来源文件':'；滚轮直接缩放图片');
+  v.root.dataset.imageSource=memory?'memory':entry.full.cache_hit?'disk':'first';
+}
+
 const imageText = value => value == null ? '' : typeof value === 'string' ? value : JSON.stringify(value,null,2);
 function closeImageViewer() {
   imageViewerRequest++;
   if (!imageViewer) return;
-  const {root,keyHandler,focus} = imageViewer;
+  const {root,keyHandler,focus,entry} = imageViewer;
+  if(entry){entry.image.onload=null;entry.image.remove();if(![...viewerDecodedCache.values()].includes(entry))disposeViewerEntry(entry);}
   if(imageViewer.zoomRaf)cancelAnimationFrame(imageViewer.zoomRaf);
   document.removeEventListener('keydown',keyHandler,true);root.remove();imageViewer=null;
   if (focus?.isConnected) focus.focus({preventScroll:true});
@@ -63,22 +110,22 @@ async function openImageViewer(detail,index=0) {
     }catch(_){root.querySelector('#ivStatus').textContent='系统不允许复制图片，可改用保存图片';}
   };
   root.querySelector('#ivPreviewSave').onclick=()=>{
-    const img=root.querySelector('#ivImage');if(!img.src.startsWith('data:image/'))return;
-    const a=document.createElement('a');a.href=img.src;a.download='image-preview.'+(img.src.startsWith('data:image/png')?'png':'jpg');a.click();
+    const img=root.querySelector('#ivImage');if(!/^(data:image\/|blob:)/.test(img.src))return;
+    const a=document.createElement('a');a.href=img.src;a.download='image-preview.'+(imageViewer.full?.mime==='image/png'?'png':'jpg');a.click();
   };
   root.querySelector('#ivExport').onclick=()=>{
     const c=imageViewer.detail.covers[imageViewer.index];const blob=new Blob([JSON.stringify({source:c.metadata_source,meta:c.meta||{},resources:c.resources||[]},null,2)],{type:'application/json'});
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='image-generation-data.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
   };
   const imageArea=root.querySelector('.iv-image-scroll');
-  const image=root.querySelector('#ivImage');let pan=null,blockClickUntil=0;
-  image.addEventListener('dragstart',e=>e.preventDefault());
-  image.addEventListener('pointerdown',e=>{
-    if(e.button!==0)return;e.preventDefault();
+  const viewerImage=()=>root.querySelector('#ivImage');let pan=null,blockClickUntil=0;
+  imageArea.addEventListener('dragstart',e=>e.preventDefault());
+  imageArea.addEventListener('pointerdown',e=>{
+    if(e.button!==0 || !e.target.closest('#ivImage'))return;e.preventDefault();const image=viewerImage();
     pan={id:e.pointerId,x:e.clientX,y:e.clientY,left:imageArea.scrollLeft,top:imageArea.scrollTop,moved:false};
     image.setPointerCapture(e.pointerId);imageArea.classList.add('is-panning');
   });
-  image.addEventListener('pointermove',e=>{
+  imageArea.addEventListener('pointermove',e=>{
     if(!pan || pan.id!==e.pointerId)return;
     const z=Number(document.documentElement.style.zoom)||1,dx=(e.clientX-pan.x)/z,dy=(e.clientY-pan.y)/z;
     if(Math.abs(dx)+Math.abs(dy)>3)pan.moved=true;
@@ -88,9 +135,9 @@ async function openImageViewer(detail,index=0) {
     if(!pan || pan.id!==e.pointerId)return;
     if(pan.moved)blockClickUntil=performance.now()+250;
     pan=null;imageArea.classList.remove('is-panning');
-    if(image.hasPointerCapture(e.pointerId))image.releasePointerCapture(e.pointerId);
+    const image=viewerImage();if(image.hasPointerCapture(e.pointerId))image.releasePointerCapture(e.pointerId);
   };
-  for(const type of ['pointerup','pointercancel','lostpointercapture'])image.addEventListener(type,endPan);
+  for(const type of ['pointerup','pointercancel','lostpointercapture'])imageArea.addEventListener(type,endPan);
   imageArea.addEventListener('click',e=>{
     if(performance.now()<blockClickUntil || !e.target.matches('.iv-image-scroll,.iv-image-canvas'))return;
     const box=imageArea.getBoundingClientRect(),z=Number(document.documentElement.style.zoom)||1;
@@ -169,32 +216,40 @@ function renderGeneration(c){
 async function loadViewerImage(index){
   if(!imageViewer)return;
   const v=imageViewer,covers=v.detail.covers;index=Math.max(0,Math.min(covers.length-1,index));
+  // 账号或开关变化只能在开始前清空，不在 modal 已挂载后把本次查看器关闭。
+  const account=String(state.cfg.api_key||'');if(viewerCacheAccount===null)viewerCacheAccount=account;
+  if(viewerCacheAccount!==account){for(const e of viewerDecodedCache.values())disposeViewerEntry(e);viewerDecodedCache.clear();viewerCacheAccount=account;}
+  const c=covers[index],key=viewerCacheKey(v.detail,index),cached=state.cfg.cache_original_images!==false?viewerDecodedCache.get(key):null;
   const menu=v.root.querySelector('#ivContext');if(menu)menu.style.display='none';
-  if(v.zoomRaf)cancelAnimationFrame(v.zoomRaf);v.zoomRaf=0;v.index=index;v.zoom=v.targetZoom=1;v.full=null;const area=v.root.querySelector('.iv-image-scroll');area.scrollTop=area.scrollLeft=0;const request=++imageViewerRequest,c=covers[index],img=v.root.querySelector('#ivImage');
-  img.removeAttribute('src');if(c.b64)img.src='data:image/jpeg;base64,'+c.b64;
+  if(v.zoomRaf)cancelAnimationFrame(v.zoomRaf);v.zoomRaf=0;v.index=index;v.zoom=v.targetZoom=1;v.full=null;
+  const area=v.root.querySelector('.iv-image-scroll');area.scrollTop=area.scrollLeft=0;const request=++imageViewerRequest;
   v.root.querySelector('#ivCount').textContent=(index+1)+' / '+covers.length;
   v.root.querySelector('.iv-prev').disabled=index===0;v.root.querySelector('.iv-next').disabled=index===covers.length-1;
   for(const id of ['ivShare','ivSite'])v.root.querySelector('#'+id).disabled=!(c.image_page||c.orig_url||c.url);
-  renderGeneration(c);v.root.querySelector('#ivStatus').textContent='正在读取大图…';
-  img.onload=()=>{if(imageViewer===v)setViewerZoom(v.targetZoom,null,true);};
+  if(cached){viewerDecodedCache.delete(key);viewerDecodedCache.set(key,cached);displayViewerEntry(v,c,cached,true);}
+  else{
+    const old=v.entry,placeholder=viewerImageElement();v.root.querySelector('#ivImage').replaceWith(placeholder);v.entry=null;
+    if(old && ![...viewerDecodedCache.values()].includes(old))disposeViewerEntry(old);
+    if(c.b64)placeholder.src='data:image/jpeg;base64,'+c.b64;
+    placeholder.onload=()=>{if(imageViewer===v && request===imageViewerRequest)setViewerZoom(v.targetZoom,null,true);};
+    renderGeneration(c);v.root.querySelector('#ivStatus').textContent='读取图片来源（优先本地缓存）…';
+    try{
+      const full=await api.call('get_gallery_image',v.detail.path,index,v.detail.history_id||'');
+      if(imageViewer!==v || request!==imageViewerRequest)return;
+      if(full?.ok && full.b64){
+        const entry=await decodeViewerEntry(full);
+        if(imageViewer!==v || request!==imageViewerRequest){disposeViewerEntry(entry);return;}
+        rememberViewerEntry(key,entry);displayViewerEntry(v,c,entry,false);
+      }else v.root.querySelector('#ivStatus').textContent=full?.msg||'图片读取失败，保留现有预览';
+    }catch(_){if(imageViewer===v && request===imageViewerRequest)v.root.querySelector('#ivStatus').textContent='图片读取失败，保留现有预览';}
+  }
+  if(imageViewer!==v || request!==imageViewerRequest || v.entry?.metadata || performance.now()<(v.entry?.retryAt||0))return;
   try{
-    const full=await api.call('get_gallery_image',v.detail.path,index,v.detail.history_id||'');
-    if(imageViewer!==v || request!==imageViewerRequest)return;
-    if(full?.ok && full.b64){Object.assign(c,{meta:{...(c.meta||{}),...(full.meta||{})},resources:full.resources?.length?full.resources:(c.resources||[]),metadata_source:full.metadata_source||c.metadata_source,width:full.width,height:full.height});renderGeneration(c);v.full=full;img.src='data:'+(full.mime||'image/jpeg')+';base64,'+full.b64;setViewerZoom(1,null,true);
-      v.root.querySelector('#ivStatus').textContent=full.original_available?(full.preview_limited?'大图预览限制 4096 px，保存图片仍使用来源文件':(full.cache_hit?'已读取本地原图缓存；连续滚轮缩放':'大图已加载；连续滚轮缩放')):'仅有缓存预览，来源原图不可用';
-    }else v.root.querySelector('#ivStatus').textContent=full?.msg||'大图加载失败，保留现有预览';
-  }catch(_){if(imageViewer===v && request===imageViewerRequest)v.root.querySelector('#ivStatus').textContent='大图加载失败，保留现有预览';}
-  if(imageViewer!==v || request!==imageViewerRequest)return;
-  try {
     const metadata=await api.call('get_gallery_metadata',v.detail.path,index,v.detail.history_id||'');
     if(imageViewer!==v || request!==imageViewerRequest)return;
-    if(metadata?.ok){
-      c.metadata_note=metadata.metadata_note||'';
-      c.meta=metadata.online_metadata?{...(c.meta||{}),...(metadata.meta||{})}:{...(metadata.meta||{}),...(c.meta||{})};if(metadata.resources?.length)c.resources=metadata.resources;
-      if(metadata.online_metadata || ((!c.metadata_source || c.metadata_source==='未提供生成数据') && Object.keys(metadata.meta||{}).length))c.metadata_source=metadata.metadata_source;
-      renderGeneration(c);
-    }
-  }catch(_){ /* 保留原图已读取的元数据，不让网络失败清空面板。 */ }
+    if(metadata?.ok){if(v.entry)v.entry.metadata=metadata;mergeViewerMetadata(c,metadata);renderGeneration(c);}
+    else if(v.entry)v.entry.retryAt=performance.now()+30000;
+  }catch(_){if(imageViewer===v && request===imageViewerRequest && v.entry)v.entry.retryAt=performance.now()+30000;}
 }
 window.addEventListener('resize',()=>{if(imageViewer)setViewerZoom(imageViewer.targetZoom,null,true);});
 const normalizedModelPath=p=>String(p||'').replace(/\\/g,'/').toLowerCase();

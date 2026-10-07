@@ -2,7 +2,7 @@
 
 > 免费的 Civitai / HuggingFace 模型下载与本地模型管理工作台。
 
-![Version](https://img.shields.io/badge/version-2.6.8-blue) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-orange) ![CI](https://github.com/ADVICEsama/CivitaiFreeTool/workflows/tests/badge.svg)
+![Version](https://img.shields.io/badge/version-2.6.9-blue) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-orange) ![CI](https://github.com/ADVICEsama/CivitaiFreeTool/workflows/tests/badge.svg)
 
 [下载最新版](https://github.com/ADVICEsama/CivitaiFreeTool/releases/latest) · [更新日志](CHANGELOG.md) · [问题反馈](https://github.com/ADVICEsama/CivitaiFreeTool/issues) · [Linux / macOS](LINUX.md)
 
@@ -13,7 +13,8 @@
 - **更清楚的右键菜单**：常用动作直接展示；复制、改名与整理、元数据与更新按用途折叠。删除进入回收站并确认。
 - **图片与生成数据**：大图可拖动、连续跟手缩放（相对适合窗口 5%–3200%），滚轮立即响应、按钮短促快到慢过渡、翻页、右键复制/保存；半透明背景保留后面的模型页。读取原图 PNG/ComfyUI/EXIF 元数据，并按图片 ID 查询 C站 `withMeta=true` 数据。提示词、资源和采样参数只显示来源实际提供的内容。
 - **收藏与固定工具栏**：模型右键或详情星标收藏置顶，改名/移动跟随；标题右侧固定菜单，让滚轮只滚动模型列表。
-- **本地原图缓存**：只保存打开过的原图和来源生成数据，重开优先本地；默认 1 GB，可关闭、调容量或清理，随软件数据迁移。不含任何运行缓存的源码/便携包。
+- **本地原图缓存**：只保存打开过的原图和来源生成数据，同一会话重开直接复用已解码图片，重启后首次查看仍需读磁盘与解码；默认 1 GB，可关闭、调容量或清理，随软件数据迁移。不含任何运行缓存的源码/便携包。
+- **滚轮导航**：鼠标停在左侧菜单，滚轮上下切换页面；Ctrl + 滚轮仍用于全局缩放，首尾不循环。
 - **分组设置**：常用、外观、下载、目录、分类整理、网络、翻译、维护；跨分类搜索，分类规则旁直接提供步骤与示例。
 - **自由外观**：14 套配色、本地字体名称即预览、五档独立字号与图标尺寸、强调色、密度、圆角和局部画布交互特效；动画上限可输入 15–360，0 跟随屏幕（不保证达到指定帧率）。瀑布流按钮悬停展开竖向图片大小滑条。
 
@@ -41,20 +42,16 @@
 
 ![分类规则说明](docs/screenshots/settings-classification.png)
 
-### 三步引导，两条上手路线
+### 页面式引导
 
-两个入口点击立即进入不同的配置路线；最后只介绍三个真正需要的动作，不自动扫描或下载。
+恢复六步引导，七个页面都给出说明。点击页面卡片直接体验，引导缩到右下角，可随时继续。不会自动下载。
 
 ![开始与模型库](docs/screenshots/onboarding.png)
-
-![本地模型三个动作](docs/screenshots/onboarding-model-guide.png)
-
-![下载三个动作](docs/screenshots/onboarding-download-guide.png)
 
 ## 快速开始（Windows）
 
 1. 在 [Releases](https://github.com/ADVICEsama/CivitaiFreeTool/releases/latest) 下载 Windows 便携 ZIP 或版本号 EXE。
-2. 解压到个人可写目录，运行 `CivitaiFreeToolWeb.exe`。默认启动软件窗口；原生窗口真正无法显示时可用浏览器兜底，设置里可关闭或手动打开浏览器界面。
+2. 解压到个人可写目录，运行 `CivitaiFreeToolWeb.exe`。默认启动软件窗口，失败才按兜底开关打开浏览器。设置“启动界面”为浏览器后，以后直接启动浏览器，不创建软件窗口；选择即保存、重启生效。临时打开浏览器不会改长期模式。
 3. 设置下载目录、模型管理目录；如需要，在 C站账户中申请 API Key 后填写。它不是使用本地模型管理的前提。
 4. 粘贴 Civitai / HuggingFace 链接进行下载，或扫描已有模型。
 

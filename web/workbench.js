@@ -26,6 +26,7 @@ const WORKBENCH_SETTING_HELP = {
   target_env: "选择模型最终使用的环境，让自动整理采用对应目录结构。",
   organize_mode: "先用手动分类熟悉流程，再根据右侧介绍选择自动分类。",
   window_wait_seconds: "30–600 秒，默认 30 秒。正在初始化时会继续宽限，避免 5–8 秒就打断正常启动。改动重启后生效。",
+  ui_mode: "默认先打开软件窗口，只有失败才按兜底开关用浏览器。选择浏览器启动后，以后直接打开浏览器，不创建软件窗口。选择即保存，重启生效。",
   browser_fallback_enabled: "默认开启；仍先启动软件窗口，确认初始化失败后才用浏览器兜底。想一直使用浏览器，请选择“界面模式”；也可点下方按钮主动打开。",
   ui_font: "从本机已安装字体中选择；立即预览并保存。不下载网络字体。不包含中文的字体会回退到系统中文字体。",
   masonry_card_width: "140–420 px；模型页滑杆或 Alt + 滚轮都可调整，普通滚轮仍用于浏览模型。",
@@ -104,7 +105,7 @@ function buildWorkbenchSettings() {
   }
   grouped.general.push('<div class="setting-row storage-row" data-setting-search="数据 储存 存储 配置 历史 缓存 exe 位置 directory"><div class="setting-copy"><label for="storageNewPath">软件信息储存位置</label><p>默认在 EXE 旁。可迁移配置、任务、历史、图文缓存等软件数据；模型文件不会移动。原数据保留。目录含账号配置，请使用个人专用目录。</p><p id="storageCurrent">正在读取…</p><p id="storageWarning" role="status"></p></div><div class="setting-control"><input class="input" id="storageNewPath" placeholder="输入完整的专用目录路径" aria-label="软件数据新目录"/><div class="storage-actions"><button type="button" class="btn" id="storagePick">'+_icon('folder')+'选择目录</button><button type="button" class="btn" id="storageSuggested">个人数据目录</button><button type="button" class="btn" id="storageDefault">EXE 旁</button><button type="button" class="btn btn-primary" id="storageMigrate">'+_icon('check')+'迁移并使用</button></div><p id="storageResult" role="status"></p></div></div>');
   grouped.appearance.push('<div class="setting-row"><div class="setting-copy"><label>已查看原图缓存</label><p>仅删除软件原图与生成信息缓存，不删除模型或已保存图片。</p></div><div class="setting-control"><button class="btn" id="clearGalleryCache" type="button">清理原图缓存</button></div></div>');
-  grouped.advanced.push('<div class="setting-row" data-setting-search="浏览器 打开 软件页面 手动"><div class="setting-copy"><label>主动打开浏览器界面</label><p>在系统浏览器显示同一软件页面，不重启下载后台，也不更改默认启动方式。</p></div><div class="setting-control"><button type="button" class="btn" id="openBrowserPage">'+_icon('external')+'用浏览器打开软件页面</button></div></div>');
+  grouped.advanced.push('<div class="setting-row" data-setting-search="浏览器 打开 软件页面 手动"><div class="setting-copy"><label>临时打开浏览器页面</label><p>只在本次另开同一后台的网页，不改长期启动方式。以后都用浏览器，请选择“启动界面 → 浏览器启动”。</p></div><div class="setting-control"><button type="button" class="btn" id="openBrowserPage">'+_icon('external')+'仅本次打开浏览器</button></div></div>');
   grouped.organize.push(settingRow("target_env", "目标部署环境", "select", [["", "请先选择环境"], ["webui", "WebUI / Forge"], ["comfyui", "ComfyUI"]], WORKBENCH_SETTING_HELP.target_env));
   grouped.organize.push(settingRow("organize_mode", "整理方式", "select", [["manual", "手动选文件夹（推荐新手）"], ["civitai", "按 C 站标签自动分类"], ["rules", "按关键词规则分类"]], WORKBENCH_SETTING_HELP.organize_mode));
   grouped.organize.push('<div class="setting-row rules-row" id="organizeRulesRow" data-setting-search="分类规则 关键词 文件夹 organize_rules"><div class="setting-copy"><label for="organizeRules">关键词规则</label><p>每行一条，英文或中文逗号分隔多个关键词。越具体的规则放在越前面。</p><button class="btn" type="button" id="insertRuleExample">' + _icon("plus") + '插入示例</button></div><div class="setting-control"><textarea class="input rules" id="organizeRules" rows="6" placeholder="写实, realistic -> 写实模型&#10;水彩, watercolor -> 水彩风格">' + esc((state.cfg.organize_rules || []).map(r => (r.keywords || []).join(", ") + " -> " + r.folder).join("\n")) + '</textarea><p id="ruleValidation" role="status"></p></div></div>');
@@ -334,7 +335,7 @@ document.addEventListener('click',async e=>{
   }
   if(e.target.closest('#clearGalleryCache')){
     if(!await confirmBox('清理已查看原图和生成数据缓存？模型和手动保存图片不会删除。'))return;
-    try{const r=await api.call('clear_gallery_cache');showToast(r?.msg||'清理失败');}catch(_){showToast('清理失败');}
+    try{const r=await api.call('clear_gallery_cache');if(r?.ok && typeof clearViewerImageCache==='function')clearViewerImageCache();showToast(r?.msg||'清理失败');}catch(_){showToast('清理失败');}
   }
 });
 function decorateWorkbenchIcons(root = document) {
@@ -416,11 +417,11 @@ function initializeWorkbench() {
   });
   syncModelInspector($("#page-models").classList.contains("active"));
   $("#settingsForm").addEventListener("input", e => {
-    if (e.target.matches("[data-key], #organizeRules") && !["show_file_paths", "custom_accent_enabled", "custom_accent", "ui_density", "ui_corners", "ambient_bg"].includes(e.target.dataset.key)) markSettingsDirty();
+    if (e.target.matches("[data-key], #organizeRules") && !["ui_mode", "browser_fallback_enabled", "show_file_paths", "custom_accent_enabled", "custom_accent", "ui_density", "ui_corners", "ambient_bg"].includes(e.target.dataset.key)) markSettingsDirty();
     if (e.target.id === "organizeRules") updateRulesGuide();
   });
   $("#settingsForm").addEventListener("change", e => {
-    if (e.target.matches("[data-key]") && !["show_file_paths", "custom_accent_enabled", "custom_accent", "ui_density", "ui_corners", "ambient_bg"].includes(e.target.dataset.key)) markSettingsDirty();
+    if (e.target.matches("[data-key]") && !["ui_mode", "browser_fallback_enabled", "show_file_paths", "custom_accent_enabled", "custom_accent", "ui_density", "ui_corners", "ambient_bg"].includes(e.target.dataset.key)) markSettingsDirty();
   });
   $("#settingsForm").addEventListener("click", async e => {
     if(e.target.closest('#openBrowserPage')){const result=await api.call('open_in_browser');setStatus(result?.msg || '已请求打开浏览器界面');return;}
