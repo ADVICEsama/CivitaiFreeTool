@@ -71,3 +71,6 @@ source-backup-*/
 source-sync*.json
 package-validation*.json
 deployment*.json
+
+# 已查看的原图与生成信息私有运行缓存
+gallery_cache/

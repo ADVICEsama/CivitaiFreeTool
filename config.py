@@ -44,7 +44,13 @@ DEFAULTS = {
     "browser_fallback_enabled": True,   # 原生窗口仍是默认；失败时允许浏览器兜底
     "cache_detail_images": True,        # 详情在线缩略图本地缓存；不下载原图
     "pointer_effects": "off",           # off / click / trail
-    "pointer_effect_quality": "low",   # low=30fps / high=60fps；静止时休眠
+    "pointer_effect_quality": "low",   # 粒子/像素预算；帧率独立设置
+    "effects_fps_limit": 60,            # 0 跟随屏幕刷新；15–360 自定义上限
+    "cache_original_images": True,      # 已查看原图与生成数据保存到软件数据目录
+    "gallery_cache_mb": 1024,           # 自动淘汰最旧缓存，不移动模型文件
+    "model_favorites": [],             # 收藏置顶的本地模型路径
+    "model_toolbar_locked": False,
+    "onboarding_done": False,
     "hidden_model_folders": [],         # 模型管理目录中隐藏的子文件夹
     "show_root_models": True,           # 是否显示模型目录根目录下的模型
     "metadata_format": "sd",            # sd / civitai / both（WebUI 可读 json 的格式；.civitai.info 始终生成）
@@ -176,7 +182,16 @@ def load():
         cfg["window_wait_seconds"] = max(30, min(600, int(cfg.get("window_wait_seconds") or 30)))
     except (TypeError, ValueError, OverflowError):
         cfg["window_wait_seconds"] = 30
+    normalize_ui_preferences(cfg)
     return cfg
+
+
+def normalize_ui_preferences(cfg):
+    for key,default,lo,hi in [("effects_fps_limit",60,15,360),("gallery_cache_mb",1024,64,8192)]:
+        try:value=int(cfg.get(key,default));cfg[key]=0 if key=="effects_fps_limit" and value==0 else max(lo,min(hi,value))
+        except (TypeError,ValueError,OverflowError):cfg[key]=default
+    values=cfg.get("model_favorites")
+    cfg["model_favorites"]=list(dict.fromkeys(p for p in values if isinstance(p,str) and p.strip()))[:10000] if isinstance(values,list) else []
 
 
 def _save_json_atomic(path, value):

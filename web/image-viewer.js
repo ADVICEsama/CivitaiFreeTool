@@ -6,6 +6,7 @@ function closeImageViewer() {
   imageViewerRequest++;
   if (!imageViewer) return;
   const {root,keyHandler,focus} = imageViewer;
+  if(imageViewer.zoomRaf)cancelAnimationFrame(imageViewer.zoomRaf);
   document.removeEventListener('keydown',keyHandler,true);root.remove();imageViewer=null;
   if (focus?.isConnected) focus.focus({preventScroll:true});
 }
@@ -29,16 +30,16 @@ async function openImageViewer(detail,index=0) {
       else if(!e.shiftKey && document.activeElement===last){e.preventDefault();first.focus();}
     }
   };
-  imageViewer={root,detail,index,zoom:1,focus,keyHandler,full:null};
+  imageViewer={root,detail,index,zoom:1,targetZoom:1,zoomRaf:0,focus,keyHandler,full:null};
   document.addEventListener('keydown',keyHandler,true);
   root.querySelector('#ivClose').onclick=closeImageViewer;
   root.querySelector('.iv-prev').onclick=()=>loadViewerImage(imageViewer.index-1);
   root.querySelector('.iv-next').onclick=()=>loadViewerImage(imageViewer.index+1);
-  root.querySelector('#ivPlus').onclick=()=>setViewerZoom(imageViewer.zoom*1.2);
-  root.querySelector('#ivMinus').onclick=()=>setViewerZoom(imageViewer.zoom/1.2);
+  root.querySelector('#ivPlus').onclick=()=>setViewerZoom(imageViewer.targetZoom*1.2);
+  root.querySelector('#ivMinus').onclick=()=>setViewerZoom(imageViewer.targetZoom/1.2);
   root.querySelector('#ivFit').onclick=()=>setViewerZoom(1);
   root.querySelector('#ivActual').onclick=()=>setViewerZoom(Math.max(.2,(imageViewer.full?.width||root.querySelector('#ivImage').naturalWidth)/viewerFitWidth()));
-  root.querySelector('.iv-image-scroll').addEventListener('wheel',e=>{if(e.ctrlKey)return;e.preventDefault();setViewerZoom(imageViewer.zoom*(e.deltaY<0?1.1:1/1.1));},{passive:false});
+  root.querySelector('.iv-image-scroll').addEventListener('wheel',e=>{if(e.ctrlKey)return;e.preventDefault();const delta=e.deltaY*(e.deltaMode===1?16:e.deltaMode===2?imageArea.clientHeight:1);setViewerZoom(imageViewer.targetZoom*Math.exp(-Math.max(-300,Math.min(300,delta))*.002),{x:e.clientX,y:e.clientY});},{passive:false});
   root.querySelector('#ivShare').onclick=async()=>{
     const c=imageViewer.detail.covers[imageViewer.index],url=c.image_page||c.orig_url||c.url||'';
     root.querySelector('#ivStatus').textContent=url?(await window.__copyText(url)?'图片链接已复制':'复制失败'):'仅有本地图片，没有可分享的公开链接';
@@ -121,16 +122,31 @@ function viewerFitWidth(){
   const w=imageViewer.full?.width||img.naturalWidth||1,h=imageViewer.full?.height||img.naturalHeight||1;
   return Math.max(1,Math.min(area.clientWidth-24,(area.clientHeight-24)*w/h));
 }
-function setViewerZoom(zoom){
-  if(!imageViewer)return;
-  imageViewer.zoom=Math.max(.2,Math.min(8,zoom));
-  const img=imageViewer.root.querySelector('#ivImage'),area=imageViewer.root.querySelector('.iv-image-scroll');
-  const ratio=(area.scrollLeft+area.clientWidth/2)/(area.scrollWidth||1),vertical=(area.scrollTop+area.clientHeight/2)/(area.scrollHeight||1);
-  img.style.width=viewerFitWidth()*imageViewer.zoom+'px';
-  // 保持缩放中心，避免每次缩放都跳到角落；超大图放在可滚动画布而非居中负溢出。
-  area.scrollLeft=ratio*area.scrollWidth-area.clientWidth/2;area.scrollTop=vertical*area.scrollHeight-area.clientHeight/2;
-  area.dataset.pannable=(area.scrollWidth>area.clientWidth+1 || area.scrollHeight>area.clientHeight+1)?'true':'false';
-  imageViewer.root.querySelector('#ivFit').textContent=imageViewer.zoom===1?'适合窗口':Math.round(imageViewer.zoom*100)+'% · 适配';
+function setViewerZoom(zoom,anchor=null,immediate=false){
+  const v=imageViewer;if(!v)return;
+  v.targetZoom=Math.max(.05,Math.min(32,Number(zoom)||1));
+  const img=v.root.querySelector('#ivImage'),area=v.root.querySelector('.iv-image-scroll');
+  const fit=viewerFitWidth(),z=Number(document.documentElement.style.zoom)||1;
+  const ab=area.getBoundingClientRect(),ib=img.getBoundingClientRect();
+  const x=anchor?(anchor.x-ab.left)/z:area.clientWidth/2,y=anchor?(anchor.y-ab.top)/z:area.clientHeight/2;
+  const fractionX=(ab.left+x*z-ib.left)/Math.max(1,ib.width),fractionY=(ab.top+y*z-ib.top)/Math.max(1,ib.height);
+  if(v.zoomRaf)cancelAnimationFrame(v.zoomRaf);
+  let last=performance.now();
+  const draw=now=>{
+    if(imageViewer!==v)return;
+    const dt=Math.min(64,Math.max(1,now-last));last=now;
+    v.zoom=immediate?v.targetZoom:v.zoom+(v.targetZoom-v.zoom)*(1-Math.exp(-dt/55));
+    if(Math.abs(v.targetZoom-v.zoom)<.0005)v.zoom=v.targetZoom;
+    const width=fit*v.zoom,height=width*(v.full?.height||img.naturalHeight||1)/(v.full?.width||img.naturalWidth||1);
+    img.style.width=width+'px';
+    const canvas=v.root.querySelector('.iv-image-canvas');canvas.style.width=Math.max(area.clientWidth,width+24)+'px';canvas.style.height=Math.max(area.clientHeight,height+24)+'px';
+    area.scrollLeft=12+Math.max(0,(area.clientWidth-24-width)/2)+fractionX*width-x;
+    area.scrollTop=12+Math.max(0,(area.clientHeight-24-height)/2)+fractionY*height-y;
+    area.dataset.pannable=(width>area.clientWidth-24 || height>area.clientHeight-24)?'true':'false';
+    v.root.querySelector('#ivFit').textContent=Math.abs(v.zoom-1)<.001?'适合窗口':(v.zoom*100).toFixed(1)+'% · 适配';
+    v.zoomRaf=v.zoom===v.targetZoom?0:requestAnimationFrame(draw);
+  };
+  if(immediate)draw(performance.now());else v.zoomRaf=requestAnimationFrame(draw);
 }
 function renderGeneration(c){
   const v=imageViewer,meta=c.meta||{},resources=Array.isArray(c.resources)?c.resources:[];
@@ -139,31 +155,31 @@ function renderGeneration(c){
   const fields=Object.entries(meta).filter(([key])=>!['prompt','negativePrompt','Negative prompt','resources','civitaiResources','workflow','comfyPrompt'].includes(key));
   v.root.querySelector('.iv-generation').innerHTML='<header class="iv-data-head"><h2>'+_icon('settings')+'生成数据</h2><button class="btn btn-tiny" data-iv-copy="all">'+_icon('copy')+'复制全部</button></header><p class="iv-source">'+esc(c.metadata_source||'来源未提供生成数据')+'</p>'+(c.metadata_note?'<p class="iv-source">'+esc(c.metadata_note)+'</p>':'')+'<section class="iv-data"><h3>使用资源</h3>'+(resources.length?resources.map(r=>{
     const name=imageText(r.modelName||r.name||r.modelVersionName||'未命名资源'),id=r.modelId||r.model?.id;
-    return '<div class="iv-resource">'+(/^\d+$/.test(String(id))?'<button class="iv-resource-link" data-resource-id="'+esc(id)+'">'+esc(name)+'</button>':'<b>'+esc(name)+'</b>')+'<small>'+esc(imageText(r.type||''))+' · '+esc(imageText(r.versionName||r.version||r.modelVersionId||''))+'</small></div>';
+    return '<div class="iv-resource">'+'<button class="iv-resource-link" data-resource-index="'+resources.indexOf(r)+'" title="'+(id||r.modelVersionId?'打开 C站模型页':'尝试匹配本地模型；缺少 ID 时搜索 C站')+'">'+esc(name)+_icon('external')+'</button>'+'<small>'+esc(imageText(r.type||''))+' · '+esc(imageText(r.versionName||r.version||r.modelVersionId||''))+'</small></div>';
   }).join(''):'<p class="iv-missing">图片来源没有记录资源列表，不根据提示词猜测。</p>')+'</section>'+textBlock('prompt','正面提示词',prompt)+textBlock('negative','负面提示词',negative)+'<section class="iv-data"><h3>其他参数</h3><div class="iv-badges">'+fields.map(([k,value])=>'<span><b>'+esc(k)+'</b>: '+esc(imageText(value))+'</span>').join('')+(c.width&&c.height?'<span>尺寸: '+esc(c.width)+' × '+esc(c.height)+'</span>':'')+'</div>'+(!fields.length?'<p class="iv-missing">来源未提供其他参数</p>':'')+'</section>'+
     (meta.workflow||meta.comfyPrompt?'<details class="iv-data"><summary>ComfyUI 节点 / 工作流（只读）</summary><pre>'+esc(imageText(meta.workflow||meta.comfyPrompt))+'</pre></details>':'');
   v.root.querySelector('.iv-generation').onclick=async e=>{
     const b=e.target.closest('[data-iv-copy]');
     if(b){const key=b.dataset.ivCopy;const value=key==='prompt'?prompt:key==='negative'?negative:JSON.stringify({meta,resources},null,2);v.root.querySelector('#ivStatus').textContent=(await window.__copyText(value))?'生成数据已复制':'复制失败';}
-    const link=e.target.closest('[data-resource-id]');if(link)api.call('open_url','https://civitai.com/models/'+link.dataset.resourceId);
+    const link=e.target.closest('[data-resource-index]');if(link){link.disabled=true;try{const r=await api.call('open_gallery_resource',resources[Number(link.dataset.resourceIndex)]);if(imageViewer===v)v.root.querySelector('#ivStatus').textContent=r?.msg||'资源跳转没有返回结果';}catch(_){if(imageViewer===v)v.root.querySelector('#ivStatus').textContent='资源跳转失败';}finally{link.disabled=false;}}
   };
 }
 async function loadViewerImage(index){
   if(!imageViewer)return;
   const v=imageViewer,covers=v.detail.covers;index=Math.max(0,Math.min(covers.length-1,index));
   const menu=v.root.querySelector('#ivContext');if(menu)menu.style.display='none';
-  v.index=index;v.zoom=1;v.full=null;const area=v.root.querySelector('.iv-image-scroll');area.scrollTop=area.scrollLeft=0;const request=++imageViewerRequest,c=covers[index],img=v.root.querySelector('#ivImage');
+  if(v.zoomRaf)cancelAnimationFrame(v.zoomRaf);v.zoomRaf=0;v.index=index;v.zoom=v.targetZoom=1;v.full=null;const area=v.root.querySelector('.iv-image-scroll');area.scrollTop=area.scrollLeft=0;const request=++imageViewerRequest,c=covers[index],img=v.root.querySelector('#ivImage');
   img.removeAttribute('src');if(c.b64)img.src='data:image/jpeg;base64,'+c.b64;
   v.root.querySelector('#ivCount').textContent=(index+1)+' / '+covers.length;
   v.root.querySelector('.iv-prev').disabled=index===0;v.root.querySelector('.iv-next').disabled=index===covers.length-1;
   for(const id of ['ivShare','ivSite'])v.root.querySelector('#'+id).disabled=!(c.image_page||c.orig_url||c.url);
   renderGeneration(c);v.root.querySelector('#ivStatus').textContent='正在读取大图…';
-  img.onload=()=>{if(imageViewer===v)setViewerZoom(v.zoom);};
+  img.onload=()=>{if(imageViewer===v)setViewerZoom(v.targetZoom,null,true);};
   try{
     const full=await api.call('get_gallery_image',v.detail.path,index,v.detail.history_id||'');
     if(imageViewer!==v || request!==imageViewerRequest)return;
-    if(full?.ok && full.b64){Object.assign(c,{meta:{...(c.meta||{}),...(full.meta||{})},resources:full.resources?.length?full.resources:(c.resources||[]),metadata_source:full.metadata_source||c.metadata_source,width:full.width,height:full.height});renderGeneration(c);v.full=full;img.src='data:'+(full.mime||'image/jpeg')+';base64,'+full.b64;setViewerZoom(1);
-      v.root.querySelector('#ivStatus').textContent=full.original_available?(full.preview_limited?'大图预览限制 4096 px，保存图片仍使用来源文件':'大图已加载；滚轮缩放图片'):'仅有缓存预览，来源原图不可用';
+    if(full?.ok && full.b64){Object.assign(c,{meta:{...(c.meta||{}),...(full.meta||{})},resources:full.resources?.length?full.resources:(c.resources||[]),metadata_source:full.metadata_source||c.metadata_source,width:full.width,height:full.height});renderGeneration(c);v.full=full;img.src='data:'+(full.mime||'image/jpeg')+';base64,'+full.b64;setViewerZoom(1,null,true);
+      v.root.querySelector('#ivStatus').textContent=full.original_available?(full.preview_limited?'大图预览限制 4096 px，保存图片仍使用来源文件':(full.cache_hit?'已读取本地原图缓存；连续滚轮缩放':'大图已加载；连续滚轮缩放')):'仅有缓存预览，来源原图不可用';
     }else v.root.querySelector('#ivStatus').textContent=full?.msg||'大图加载失败，保留现有预览';
   }catch(_){if(imageViewer===v && request===imageViewerRequest)v.root.querySelector('#ivStatus').textContent='大图加载失败，保留现有预览';}
   if(imageViewer!==v || request!==imageViewerRequest)return;
@@ -178,7 +194,7 @@ async function loadViewerImage(index){
     }
   }catch(_){ /* 保留原图已读取的元数据，不让网络失败清空面板。 */ }
 }
-window.addEventListener('resize',()=>{if(imageViewer)setViewerZoom(imageViewer.zoom);});
+window.addEventListener('resize',()=>{if(imageViewer)setViewerZoom(imageViewer.targetZoom,null,true);});
 const normalizedModelPath=p=>String(p||'').replace(/\\/g,'/').toLowerCase();
 async function openHistoryModel(item){
   const request=++historyFocusRequest;switchPage('models');await showModelDetail(item.file_path||'',item.id);
@@ -218,6 +234,7 @@ async function renameDetailToCivitai(detail){
     const result=await api.call('rename_detail_to_civitai',detail.path,false);showToast(result?.msg||'改名完成');
     if(!result?.ok)return;
     for(const set of [state.mmSel,state.mmChecked])if(set.delete(detail.path))set.add(result.path);
+    if(state.cfg.model_favorites)state.cfg.model_favorites=state.cfg.model_favorites.map(p=>normalizedModelPath(p)===normalizedModelPath(detail.path)?result.path:p);
     state.coverCache.delete(detail.path);for(const row of state.models)if(row.path===detail.path){row.path=result.path;row.name=result.path.split(/[\\/]/).pop();}
     applyMmFilter();await showModelDetail(result.path,detail.history_id||'');
   }catch(_){showToast('改名失败，请重试');}

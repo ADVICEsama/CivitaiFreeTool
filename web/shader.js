@@ -154,13 +154,15 @@
   window.addEventListener("resize", resize);
   resize();
 
-  let rafId = 0;
+  let rafId = 0, lastDraw = 0;
   function draw(ts) {
     // Metro 主题：保持背景纯色（不做 GPU 绘制，但保留循环以便切回时恢复）
     if ((document.documentElement.dataset.theme || "") === "metro") { rafId = requestAnimationFrame(draw); return; }
     // 窗口最小化/切后台、或氛围背景被关掉时，跳过绘制（软渲染下全屏动画很吃 CPU，跳过立刻凉）
     const hidden = document.hidden || canvas.style.display === "none" || canvas.offsetParent === null;
-    if (!hidden) {
+    const cap=Number(window.cftEffectsFpsLimit ?? 60);
+    if (!hidden && !document.getElementById("imageViewer") && (!cap || ts-lastDraw >= 1000/cap-.5)) {
+      lastDraw=ts;
       gl.uniform1f(uTime, ts * 0.001);
       gl.uniform2f(uRes, canvas.width, canvas.height);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);

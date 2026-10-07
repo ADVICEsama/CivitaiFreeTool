@@ -11,7 +11,7 @@ LOCK = threading.RLock()
 RECORD_NAME = 'data_location.json'
 JSON_NAMES = ('user_config.json','download_tasks.json','download_history.json','model_updates.json',
               'update_whitelist.json','todo_downloads.json','organize_log.json','browser_queue.json')
-DATA_NAMES = tuple(name+suffix for name in JSON_NAMES for suffix in ('','.bak')) + ('history_assets','detail_thumb_cache','error.log')
+DATA_NAMES = tuple(name+suffix for name in JSON_NAMES for suffix in ('','.bak')) + ('history_assets','detail_thumb_cache','gallery_cache','error.log')
 
 def global_record_path():
     return Path(os.environ.get('LOCALAPPDATA') or (Path.home()/'.local/share'))/'CivitaiFreeToolWeb'/RECORD_NAME

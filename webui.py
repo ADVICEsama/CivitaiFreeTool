@@ -13,7 +13,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.6.6"
+APP_VERSION = "2.6.7"
 
 import civitai_api
 import config
@@ -217,7 +217,7 @@ class Api:
                     moved.append(os.path.basename(f))
         except Exception as e:
             return {"ok": False, "msg": "移动失败: %s" % e}
-        self.dl.relocate(path, os.path.join(dest_dir, os.path.basename(path)))
+        self._relocate_model(path, os.path.join(dest_dir, os.path.basename(path)))
         # 更新任务持久化路径
         try:
             for t in self.dl.tasks:
@@ -493,10 +493,54 @@ class Api:
         elif self.cfg.get("models_dir") not in out:
             self.cfg["models_dir"] = out[0]
         self.cfg["api_key"] = str(self.cfg.get("api_key") or "").strip()
+        config.normalize_ui_preferences(self.cfg)
         ok = config.save(self.cfg)
         self.api = self._new_api()
         self.dl.cfg = self.cfg
         return ok
+
+    def _relocate_model(self, old, new):
+        self.dl.relocate(old,new)
+        favorites=getattr(self,'cfg',{}).get('model_favorites') or []
+        norm=lambda p:os.path.normcase(os.path.abspath(p))
+        updated=[new if norm(p)==norm(old) else p for p in favorites if isinstance(p,str)]
+        if updated!=favorites:self.cfg['model_favorites']=updated;config.save(self.cfg)
+
+    def toggle_model_favorite(self, path):
+        if not isinstance(path,str) or not path:return {'ok':False,'msg':'模型路径无效'}
+        favorites=list(self.cfg.get('model_favorites') or [])
+        norm=lambda p:os.path.normcase(os.path.abspath(p))
+        found=any(norm(p)==norm(path) for p in favorites)
+        updated=[p for p in favorites if norm(p)!=norm(path)] if found else favorites+[path]
+        old=self.cfg.get('model_favorites',[]);self.cfg['model_favorites']=updated
+        if not config.save(self.cfg):self.cfg['model_favorites']=old;return {'ok':False,'msg':'收藏保存失败'}
+        return {'ok':True,'favorites':updated,'favorite':not found}
+
+    def clear_gallery_cache(self):
+        import image_gallery
+        try:return {'ok':True,'msg':'已清理 '+str(image_gallery.clear_cache())+' 个缓存文件'}
+        except Exception:return {'ok':False,'msg':'清理失败，请检查目录权限'}
+
+    def open_gallery_resource(self, resource):
+        if not isinstance(resource,dict):return {'ok':False,'msg':'资源信息无效'}
+        model=resource.get('model');mid=resource.get('modelId') or (model.get('id') if isinstance(model,dict) else None)
+        vid=resource.get('modelVersionId') or resource.get('versionId')
+        if not str(mid or '').isdigit() and str(vid or '').isdigit():
+            try:mid=self.api.get_model_version(int(vid)).get('modelId')
+            except Exception:pass
+        name=str(resource.get('modelName') or resource.get('name') or resource.get('modelVersionName') or '')[:300]
+        if not str(mid or '').isdigit() and name:
+            target=os.path.splitext(os.path.basename(name))[0].casefold()
+            matches=[r for r in self.model_rows if os.path.splitext(os.path.basename(r.get('name','')))[0].casefold()==target]
+            ids={str(r.get('modelId') or (r.get('info') or {}).get('modelId') or '') for r in matches};ids={v for v in ids if v.isdigit()}
+            if len(ids)==1:mid=ids.pop()
+        from urllib.parse import urlencode
+        direct=str(mid or '').isdigit()
+        url='https://civitai.com/models/'+str(mid) if direct else 'https://civitai.com/search/models?'+urlencode({'query':name})
+        if direct and str(vid or '').isdigit():url+='?modelVersionId='+str(vid)
+        if not direct and not name:return {'ok':False,'msg':'资源没有模型 ID 或名称'}
+        self.open_url(url)
+        return {'ok':True,'direct':direct,'msg':'已打开 C站模型页' if direct else '来源没有模型 ID，已按资源名称打开 C站搜索'}
 
     # ---------------- 对话框 ----------------
     def pick_dir(self):
@@ -747,7 +791,7 @@ class Api:
                 if not matches:
                     key = identity(metadata.get(row["id"],{}),row.get("total") or row.get("downloaded"))
                     matches = identities.get(key,set()) if key else set()
-                if len(matches) == 1: self.dl.relocate(old_path,next(iter(matches)))
+                if len(matches) == 1: self._relocate_model(old_path,next(iter(matches)))
         for row in self.dl.get_history():
             path = row.get("file_path") or os.path.join(row.get("dest_dir", ""),row.get("filename", ""))
             info = saved.get(row["id"]) or {"meta":{"info":metadata.get(row["id"],{})}}
@@ -1203,11 +1247,15 @@ class Api:
         try:
             item=self._gallery_item(path,index,history_id)
             result=image_gallery.generation(item,item.get('local_path'));result['online_metadata']=False
+            persisted=image_gallery.cache_load(item,self.cfg,'metadata')
+            if isinstance(persisted,dict) and persisted.get('ok') and (persisted.get('meta') or persisted.get('resources')):return persisted
             image_id=item.get('image_id')
             if str(image_id or '').isdigit() and '自定义封面' not in item.get('metadata_source',''):
                 cache=getattr(self,'_gallery_metadata_cache',None)
                 if cache is None:cache={};self._gallery_metadata_cache=cache
-                cached=cache.get(str(image_id));now=time.monotonic()
+                import hashlib
+                cache_id=(str(image_id),hashlib.sha256(str(self.cfg.get('api_key','')).encode()).hexdigest())
+                cached=cache.get(cache_id);now=time.monotonic()
                 if cached and now-cached[0]<600:online=cached[1]
                 else:
                     proxy=self.cfg.get('proxy_address') if self.cfg.get('proxy_enabled') else None
@@ -1215,7 +1263,7 @@ class Api:
                     try:online=client.get_image_metadata(image_id)
                     except Exception:online={}
                     if len(cache)>=256:cache.pop(next(iter(cache)))
-                    cache[str(image_id)]=(now,online)
+                    cache[cache_id]=(now,online)
                 if online:
                     fresh=image_gallery.generation(online)
                     result['meta']={**result['meta'],**fresh['meta']}
@@ -1223,7 +1271,9 @@ class Api:
                     if fresh['meta'] or fresh['resources']:result['metadata_source']='C站图片接口（withMeta=true）';result['online_metadata']=True
             if not result.get('meta') and not result.get('resources'):
                 result['metadata_note']='缓存没有图片 ID，无法按图查询 C站；原图或本地缓存也未记录生成参数。可同步模型信息或打开 C站原图页查看。' if not image_id else 'C站未返回可读取的生成参数：可能未保存、当前账户不可见或在线查询失败。'
-            return _json_safe({'ok':True,**result})
+            result=_json_safe({'ok':True,**result})
+            if result.get('meta') or result.get('resources'):image_gallery.cache_store(item,self.cfg,'metadata',result)
+            return result
         except Exception:return {'ok':False,'msg':'生成数据不可用，保留原图参数；可打开 C站原图页查看'}
 
     def copy_gallery_image(self, path, index, history_id=''):
@@ -1269,7 +1319,7 @@ class Api:
             with open(info_path,encoding='utf-8') as f:info=json.load(f)
             new,msgs=model_manager.rename_to_civitai(path,info,dry_run=bool(preview),clean_rules=self.cfg.get('rename_clean_rules') or '')
             if not preview and new!=path:
-                self.dl.relocate(path,new)
+                self._relocate_model(path,new)
                 for row in self.model_rows:
                     if row.get('path')==path:row['path']=new;row['name']=os.path.basename(new)
             return {'ok':True,'old_path':path,'path':new,'same':new==path,'msg':'；'.join(msgs)}
@@ -1726,7 +1776,7 @@ class Api:
             return {"ok": False, "msg": "目标文件已存在"}
         try:
             os.rename(path, new_path)
-            self.dl.relocate(path, new_path)
+            self._relocate_model(path, new_path)
         except Exception as e:
             return {"ok": False, "msg": "重命名失败: %s" % e}
         for side in (".preview.png", ".preview.jpg", ".preview.webp", ".preview.gif",
@@ -3030,7 +3080,7 @@ class Api:
                 try:
                     renamed, msgs = model_manager.rename_to_civitai(
                         r["path"], r.get("info") or {}, clean_rules=_clean)
-                    if renamed != r["path"]: self.dl.relocate(r["path"], renamed)
+                    if renamed != r["path"]: self._relocate_model(r["path"], renamed)
                     self.mm_progress["result"].append({"path": r["path"], "msgs": msgs})
                 except Exception as e:
                     self.mm_progress["result"].append({"path": r["path"], "msgs": [str(e)]})
@@ -3061,7 +3111,7 @@ class Api:
                         meta2["name"] = zh
                         renamed, _ = model_manager.rename_to_civitai(
                             r["path"], meta2, clean_rules=self.cfg.get("rename_clean_rules") or "")
-                        if renamed != r["path"]: self.dl.relocate(r["path"], renamed)
+                        if renamed != r["path"]: self._relocate_model(r["path"], renamed)
                         self.mm_progress["result"].append({"path": r["path"], "ok": True})
                 except Exception:
                     pass
@@ -3290,7 +3340,7 @@ class Api:
             if os.path.exists(dst):
                 return {"ok": False, "msg": "目标文件夹已有同名文件，已放弃（请先重命名或处理冲突）"}
             shutil.move(src, dst)
-            self.dl.relocate(src, dst)
+            self._relocate_model(src, dst)
             base_src, _ = os.path.splitext(src)
             base_dst, _ = os.path.splitext(dst)
             side_n = 0
@@ -3330,7 +3380,7 @@ class Api:
                     new_path, msgs = model_manager.organize_model(
                         r["path"], root, dry_run=False, rules=rules, env=env, mode=mode)
                     if new_path != r["path"]:
-                        self.dl.relocate(r["path"], new_path)
+                        self._relocate_model(r["path"], new_path)
                     self.mm_progress["result"].append(msgs)
                 except Exception as e:
                     self.mm_progress["result"].append([str(e)])
@@ -3645,7 +3695,7 @@ class Api:
                 if os.path.exists(it["dest"]):
                     continue
                 shutil.move(it["src"], it["dest"])
-                self.dl.relocate(it["src"], it["dest"])
+                self._relocate_model(it["src"], it["dest"])
                 base_src, _ = os.path.splitext(it["src"])
                 base_dst, _ = os.path.splitext(it["dest"])
                 for ext in mm._SIDE_EXTS:

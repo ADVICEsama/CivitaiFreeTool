@@ -31,6 +31,9 @@ const WORKBENCH_SETTING_HELP = {
   masonry_card_width: "140–420 px；模型页滑杆或 Alt + 滚轮都可调整，普通滚轮仍用于浏览模型。",
   folder_picker_show_paths: "仅控制分类选择窗口。默认只显示文件夹名字，也可在该窗口顶部临时切换并记住。",
   cache_detail_images: "把详情中已加载的在线缩略图缓存在本机，重复打开优先读取缓存。不下载原图；关闭后不写新缓存。",
+  effects_fps_limit: "仅控制拖尾/点击和氛围动画，不改变视频或 WebView 刷新率。0 跟随屏幕；可输入 15–360，上限不保证实际帧率。",
+  cache_original_images: "只缓存你打开过的原图和来源已提供的生成数据，下次优先本地读取；不会批量下载未查看的图片。关闭后不读写缓存。",
+  gallery_cache_mb: "64–8192 MB，超过上限按最旧访问自动淘汰。缓存随软件数据目录迁移；清理不删除模型或你保存的图片。",
   pointer_effects: "仅在本软件内绘制波纹与几何拖尾，不安装全局鼠标钩子。静止、切后台或关闭时停止绘制。",
   pointer_effect_quality: "轻量档限制 30 FPS、粒子数和像素比例；软件渲染或较慢机器优先选择轻量档。",
 };
@@ -71,7 +74,7 @@ function settingRow(key, label, type, opts, tip) {
   } else if (type === "color") {
     input = '<input class="appearance-color" type="color"' + attrs + ' value="' + esc(/^#[0-9a-f]{6}$/i.test(value || "") ? value : "#60a5fa") + '"/>';
   } else {
-    input = '<input class="input" type="' + (type === "number" ? "number" : "text") + '"' + attrs + (key === "window_wait_seconds" ? ' min="30" max="600" step="1"' : "") + ' value="' + esc(value == null ? "" : value) + '"/>';
+    input = '<input class="input" type="' + (type === "number" ? "number" : "text") + '"' + attrs + (key === "window_wait_seconds" ? ' min="30" max="600" step="1"' : key === "effects_fps_limit" ? ' min="0" max="360" step="1"' : key === "gallery_cache_mb" ? ' min="64" max="8192" step="1"' : "") + ' value="' + esc(value == null ? "" : value) + '"/>';
   }
   if(key === "window_appearance") input += '<p id="windowAppearanceStatus" role="status"></p>';
   const help = tip || "保持默认即可，按需要调整。";
@@ -100,6 +103,7 @@ function buildWorkbenchSettings() {
     grouped[settingCategory(key, oldGroup)].push(settingRow(key, label, type, opts, WORKBENCH_SETTING_HELP[key] || SETTING_TIPS[key]));
   }
   grouped.general.push('<div class="setting-row storage-row" data-setting-search="数据 储存 存储 配置 历史 缓存 exe 位置 directory"><div class="setting-copy"><label for="storageNewPath">软件信息储存位置</label><p>默认在 EXE 旁。可迁移配置、任务、历史、图文缓存等软件数据；模型文件不会移动。原数据保留。目录含账号配置，请使用个人专用目录。</p><p id="storageCurrent">正在读取…</p><p id="storageWarning" role="status"></p></div><div class="setting-control"><input class="input" id="storageNewPath" placeholder="输入完整的专用目录路径" aria-label="软件数据新目录"/><div class="storage-actions"><button type="button" class="btn" id="storagePick">'+_icon('folder')+'选择目录</button><button type="button" class="btn" id="storageSuggested">个人数据目录</button><button type="button" class="btn" id="storageDefault">EXE 旁</button><button type="button" class="btn btn-primary" id="storageMigrate">'+_icon('check')+'迁移并使用</button></div><p id="storageResult" role="status"></p></div></div>');
+  grouped.appearance.push('<div class="setting-row"><div class="setting-copy"><label>已查看原图缓存</label><p>仅删除软件原图与生成信息缓存，不删除模型或已保存图片。</p></div><div class="setting-control"><button class="btn" id="clearGalleryCache" type="button">清理原图缓存</button></div></div>');
   grouped.advanced.push('<div class="setting-row" data-setting-search="浏览器 打开 软件页面 手动"><div class="setting-copy"><label>主动打开浏览器界面</label><p>在系统浏览器显示同一软件页面，不重启下载后台，也不更改默认启动方式。</p></div><div class="setting-control"><button type="button" class="btn" id="openBrowserPage">'+_icon('external')+'用浏览器打开软件页面</button></div></div>');
   grouped.organize.push(settingRow("target_env", "目标部署环境", "select", [["", "请先选择环境"], ["webui", "WebUI / Forge"], ["comfyui", "ComfyUI"]], WORKBENCH_SETTING_HELP.target_env));
   grouped.organize.push(settingRow("organize_mode", "整理方式", "select", [["manual", "手动选文件夹（推荐新手）"], ["civitai", "按 C 站标签自动分类"], ["rules", "按关键词规则分类"]], WORKBENCH_SETTING_HELP.organize_mode));
@@ -297,11 +301,42 @@ const WORKBENCH_ICON_IDS = {
   dlStartAll:"play", dlPauseSel:"pause", dlRetrySel:"refresh", dlRemoveSel:"x", dlSave:"file", mmViewToggle:"layers", mmUpdOnly:"refresh", mmScan:"scan", mmRefresh:"refresh", mmVerify:"shield", mmCheckUpd:"refresh", mmUpdate:"refresh", mmUpdDl:"download", mmRename:"pencil", mmLocalize:"file", mmJson:"file", mmSite:"external", mmCovers:"image", mmTranslate:"file", mmSendRp:"search", mmOrganize:"folder", mmCleanup:"trash", mmDedupe:"layers", mmFolders:"folder", mmRecover:"refresh", mmRestore:"refresh", mmFilterClear:"x", mmSelAll:"check", mmSelNone:"x", mmSelInv:"refresh", rpAddFiles:"file", rpAddDir:"folder", rpRemoveSel:"x", rpStart:"play", rpPause:"pause", rpStop:"x", btnSaveSettings:"check", btnTestApi:"globe", btnTestBaidu:"file", btnOnboarding:"info", openLogs:"folder", wfAddFiles:"file", wfAddFile:"file", wfChoose:"folder"
 };
 function syncModelInspector(active) {
+  applyModelToolbarLock();
   document.body.classList.toggle("models-workspace", active);
   const mask = $("#detailMask"), panel = $("#detailPanel");
   mask.style.display = active ? "flex" : "none";
   if (active && !panel.innerHTML.trim()) panel.innerHTML = '<div class="inspector-placeholder">' + _icon("layers", "ic-lg") + '<h3>模型信息</h3><p>双击模型查看详细信息</p><p>详情栏始终保留，模型位置不会因打开详情而变化。</p></div>';
 }
+function isModelFavorite(path){
+  const key=normalizedModelPath(path);
+  return !!key && (state.cfg.model_favorites||[]).some(p=>normalizedModelPath(p)===key);
+}
+async function toggleModelFavorite(path){
+  try{
+    const result=await api.call('toggle_model_favorite',path);
+    if(!result?.ok){showToast(result?.msg||'收藏保存失败');return;}
+    state.cfg.model_favorites=result.favorites;renderMm();
+    const button=$('#dFavorite');if(button && normalizedModelPath(detailRow?.path)===normalizedModelPath(path))button.setAttribute('aria-pressed',String(isModelFavorite(path)));
+    showToast(result.favorite?'已收藏并置顶':'已取消收藏置顶');
+  }catch(_){showToast('收藏保存失败');}
+}
+function applyModelToolbarLock(){
+  const locked=state.cfg?.model_toolbar_locked===true;
+  document.body.classList.toggle('model-toolbar-locked',locked);
+  const viewport=$('#mmMasonryViewport');if(viewport)viewport.hidden=state.mmView!=='masonry';
+  const button=$('#mmToolbarLock');if(button){button.setAttribute('aria-pressed',String(locked));button.innerHTML=_icon('pin')+(locked?'取消固定':'固定菜单');}
+}
+document.addEventListener('click',async e=>{
+  if(e.target.closest('#mmToolbarLock')){
+    const previous=state.cfg.model_toolbar_locked===true;state.cfg.model_toolbar_locked=!previous;applyModelToolbarLock();
+    try{if(!await api.call('save_config',{model_toolbar_locked:!previous}))throw Error('save');}
+    catch(_){state.cfg.model_toolbar_locked=previous;applyModelToolbarLock();showToast('菜单状态保存失败');}
+  }
+  if(e.target.closest('#clearGalleryCache')){
+    if(!await confirmBox('清理已查看原图和生成数据缓存？模型和手动保存图片不会删除。'))return;
+    try{const r=await api.call('clear_gallery_cache');showToast(r?.msg||'清理失败');}catch(_){showToast('清理失败');}
+  }
+});
 function decorateWorkbenchIcons(root = document) {
   root.querySelectorAll(".nav-tab[data-nav-icon]").forEach(button => {
     if (button.querySelector(".ic")) return;

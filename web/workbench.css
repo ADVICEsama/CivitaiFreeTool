@@ -342,6 +342,44 @@ html body .ctx-menu {z-index:10060;min-width:220px;max-width:min(320px,calc(100v
 #mmImageSizeControl small {font-size:calc(10px * var(--type-scale,1));white-space:nowrap;}
 
 /* 大图的留白为半透明遮罩，模型页保留在其后；图片、工具和参数仍清晰。 */
-.image-viewer {background:color-mix(in srgb,var(--bg) 58%,transparent);backdrop-filter:blur(2px);}
+.image-viewer {background:color-mix(in srgb,var(--bg) 58%,transparent);backdrop-filter:none;}
 .iv-stage {background:rgba(0,0,0,.22);}
 .iv-generation {background:color-mix(in srgb,var(--surface) 94%,transparent);}
+.iv-resource-link {display:inline-flex;align-items:center;gap:6px;text-align:left;overflow-wrap:anywhere;}
+.model-star,#dFavorite[aria-pressed=true] .ic {color:var(--primary);fill:var(--primary);}
+#mmToolbarLock {margin-left:auto;flex-shrink:0;}
+#mmToolbarLock[aria-pressed=true] {color:var(--primary);border-color:var(--primary);}
+body.models-workspace.model-toolbar-locked .content {overflow:hidden;}
+body.models-workspace.model-toolbar-locked #page-models {height:100%;min-height:0;}
+body.models-workspace.model-toolbar-locked #page-models>.card {height:100%;min-height:0;display:flex;flex-direction:column;}
+body.models-workspace.model-toolbar-locked #mmToolbar {flex:0 0 auto;max-height:65%;overflow:auto;}
+body.models-workspace.model-toolbar-locked #mmMasonryViewport,body.models-workspace.model-toolbar-locked #mmTableWrap {flex:1 1 0;min-height:0;overflow:auto;overscroll-behavior:contain;}
+body.models-workspace.model-toolbar-locked #mmMasonry {align-content:start;}
+#obMask .ob-card {width:min(760px,94vw);overflow:hidden;background:var(--surface);border:1px solid var(--border);box-shadow:0 24px 80px #0005;}
+#obBody {min-height:320px;padding:24px 34px;}
+.ob-step span {opacity:.6;margin-right:8px;font-size:.85em;}
+.ob-hero {position:relative;overflow:hidden;padding:18px 0 100px;}
+.ob-hero h2,.ob-ready h2 {font-size:calc(27px * var(--type-scale,1));line-height:1.35;margin:14px 0;}
+.ob-eyebrow {letter-spacing:.2em;font-size:11px;color:var(--primary);}
+.ob-hero p,.ob-ready p {color:var(--text-dim);line-height:1.85;}
+.ob-preview-stack {position:absolute;right:14px;bottom:12px;display:flex;gap:10px;}
+.ob-preview-stack>div {display:flex;flex-direction:column;gap:12px;justify-content:center;align-items:center;width:84px;height:98px;border:1px solid var(--border);border-radius:14px;background:linear-gradient(145deg,color-mix(in srgb,var(--primary) 22%,var(--surface)),var(--surface));transform:rotate(-8deg);}
+.ob-preview-stack>div:nth-child(2) {transform:translateY(-12px) rotate(3deg);color:var(--primary);}
+.ob-preview-stack>div:nth-child(3) {transform:rotate(10deg);}
+.ob-start-choices {display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.ob-choice {padding:16px;white-space:normal;}
+.ob-choice.active {color:var(--primary);border-color:var(--primary);background:color-mix(in srgb,var(--primary) 10%,var(--surface));}
+.ob-ready {padding:12px 0 20px;}.ob-ready>.ic {width:40px;height:40px;color:var(--primary);}
+#obBody .ob-label {display:block;margin:18px 0 8px;}
+#obBody>.input {width:100%;margin-bottom:10px;}
+.ob-skip-row .btn {border:0;background:none;color:var(--text-dim);font-size:12px;}
+@media(max-width:600px){#obBody{padding:16px;}.ob-hero h2,.ob-ready h2{font-size:22px;}.ob-start-choices{grid-template-columns:1fr;}.ob-preview-stack>div{width:65px;height:78px;}}
+
+#mmMasonryViewport{display:contents;}
+#mmMasonryViewport[hidden]{display:none!important;}
+body.models-workspace.model-toolbar-locked #mmMasonryViewport{display:block;}
+body.models-workspace.model-toolbar-locked #mmMasonry{height:auto;overflow:visible;min-height:0;flex:none;}
+
+#ivImage{flex:0 0 auto;}
+
+.iv-image-scroll{place-items:normal;}

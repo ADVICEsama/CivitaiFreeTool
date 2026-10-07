@@ -6,6 +6,78 @@ from urllib.parse import urlsplit
 
 LIMIT = 25 * 1024 * 1024
 
+# 原图和生成数据为私有运行数据；不进入源码/发行包。缓存失败不得影响查看。
+import hashlib
+import os
+import tempfile
+import threading
+from pathlib import Path
+_cache_lock = threading.RLock()
+
+def cache_key(item, cfg, metadata=False):
+    if not cfg.get('cache_original_images', False):return None
+    source=item.get('url') or item.get('orig_url')
+    if item.get('local_path'):
+        try:
+            st=os.stat(item['local_path']);source=str(Path(item['local_path']).resolve())+':'+str(st.st_mtime_ns)+':'+str(st.st_size)
+        except OSError:return None
+    if not source:return None
+    if metadata:source += ':meta:'+hashlib.sha256(str(cfg.get('api_key','')).encode()).hexdigest()
+    import config
+    return Path(config.APP_DIR)/'gallery_cache'/hashlib.sha256(source.encode()).hexdigest()
+
+def cache_load(item, cfg, kind):
+    key=cache_key(item,cfg,kind!='original')
+    if key is None:return None
+    p=key.with_suffix('.'+kind)
+    if key.parent.is_symlink() or p.is_symlink():return None
+    try:
+        with _cache_lock:
+            if p.stat().st_size>40*1024*1024:return None
+            data=p.read_bytes();os.utime(p,None)
+            if kind=='preview':
+                original=cache_key(item,cfg).with_suffix('.original')
+                if original.is_file() and not original.is_symlink():os.utime(original,None)
+        return data if kind=='original' else json.loads(data.decode(),parse_constant=lambda _:None)
+    except (OSError,ValueError,UnicodeError):return None
+
+def cache_store(item, cfg, kind, value):
+    key=cache_key(item,cfg,kind!='original')
+    if key is None:return
+    tmp=None
+    try:
+        data=value if isinstance(value,bytes) else json.dumps(value,ensure_ascii=False,allow_nan=False).encode()
+        if len(data)>40*1024*1024:return
+        with _cache_lock:
+            if key.parent.is_symlink():return
+            key.parent.mkdir(parents=True,exist_ok=True)
+            fd,tmp=tempfile.mkstemp(dir=key.parent,prefix='.gallery-',suffix='.tmp')
+            with os.fdopen(fd,'wb') as f:f.write(data)
+            os.replace(tmp,key.with_suffix('.'+kind));tmp=None
+            try:budget=max(64,min(8192,int(cfg.get('gallery_cache_mb') or 1024)))*1024*1024
+            except (ValueError,TypeError,OverflowError):budget=1024*1024*1024
+            files=[(p,p.stat()) for p in key.parent.iterdir() if p.suffix in ('.original','.preview','.metadata') and not p.is_symlink()]
+            total=sum(st.st_size for _,st in files)
+            for p,st in sorted(files,key=lambda v:v[1].st_mtime):
+                if total<=budget:break
+                p.unlink(missing_ok=True);total-=st.st_size
+    except (OSError,ValueError,TypeError):pass
+    finally:
+        if tmp:
+            try:os.unlink(tmp)
+            except OSError:pass
+
+def clear_cache():
+    import config
+    folder=Path(config.APP_DIR)/'gallery_cache';count=0
+    if folder.is_symlink():raise ValueError('缓存目录不能是符号链接')
+    with _cache_lock:
+        if folder.exists():
+            for p in folder.iterdir():
+                if p.is_file() and not p.is_symlink() and len(p.stem)==64 and p.suffix in ('.original','.preview','.metadata'):
+                    p.unlink();count+=1
+    return count
+
 def comfy_generation(graph):
     """只读解析标准 ComfyUI API 图中实际连接的节点，不执行或猜测未知节点。"""
     if not isinstance(graph,dict) or len(graph)>10000:return {}
@@ -105,6 +177,14 @@ def original_url(url):
     return re.sub(r'/(?:width=[^/]+|original=true[^/]*)/', '/original=true/',url)
 
 def read_bytes(item, cfg):
+    cached=cache_load(item,cfg,'original')
+    if cached:
+        try:
+            from PIL import Image
+            with Image.open(io.BytesIO(cached)) as im:
+                fmt=im.format;w,h=im.size;im.verify()
+            if fmt in ('PNG','JPEG','WEBP','GIF') and len(cached)<=LIMIT:return cached,fmt,w,h,True
+        except Exception:pass
     if item.get('local_path'):
         with open(item['local_path'],'rb') as f:data=f.read(LIMIT+1)
         original=True
@@ -126,11 +206,19 @@ def read_bytes(item, cfg):
         if im.format not in ('PNG','JPEG','WEBP','GIF'):raise ValueError('不支持的图片格式')
         width,height=im.size;fmt=im.format
         im.verify()
+    if original:cache_store(item,cfg,'original',data)
     return data,fmt,width,height,original
 
 def preview(item,cfg):
     from PIL import Image
     import base64
+    cached=cache_load(item,cfg,'preview')
+    if isinstance(cached,dict) and cached.get('ok') and cached.get('b64'):
+        try:
+            raw=base64.b64decode(cached['b64'],validate=True)
+            with Image.open(io.BytesIO(raw)) as im:im.verify()
+            return {**cached,'cache_hit':True}
+        except Exception:pass
     data,fmt,w,h,original=read_bytes(item,cfg)
     with Image.open(io.BytesIO(data)) as im:
         saved=dict(im.info)
@@ -140,9 +228,11 @@ def preview(item,cfg):
         im=im.convert('RGBA' if 'A' in im.getbands() else 'RGB');im.thumbnail((4096,4096))
         buf=io.BytesIO();im.save(buf,'PNG' if im.mode=='RGBA' else 'JPEG',**({} if im.mode=='RGBA' else {'quality':94}))
         mime='image/png' if im.mode=='RGBA' else 'image/jpeg'
-    return {'ok':True,'b64':base64.b64encode(buf.getvalue()).decode(),'mime':mime,'width':w,'height':h,
+    result={'ok':True,'b64':base64.b64encode(buf.getvalue()).decode(),'mime':mime,'width':w,'height':h,
             'original_available':original,'preview_limited':max(w,h)>4096,
             'meta':fields['meta'],'resources':fields['resources'],'metadata_source':fields['metadata_source']}
+    if original:cache_store(item,cfg,'preview',result)
+    return result
 
 
 def clipboard_dib(data):

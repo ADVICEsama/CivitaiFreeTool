@@ -41,6 +41,8 @@ function ok(name) { passed++; console.log('OK ' + name); }
       window.fixtureTasks=[{id:'fixture-1',filename:'example.safetensors',status:'pending',dest_dir:'D:\\AI\\models\\分类 1',total:123456,downloaded:0,progress:0}];
       window.pywebview = {api: new Proxy({}, {get: (_, method) => async (...args) => {
         window.fixtureCalls.push({method, args});
+        if(method === 'toggle_model_favorite'){const path=args[0],favorites=window.fixtureCfg.model_favorites||[];const has=favorites.includes(path);window.fixtureCfg.model_favorites=has?favorites.filter(p=>p!==path):favorites.concat(path);return {ok:true,favorites:window.fixtureCfg.model_favorites,favorite:!has};}
+        if(method === 'open_gallery_resource')return {ok:true,direct:!!args[0].modelId,msg:'fixture resource'};
         if(method === 'get_window_appearance')return window.fixtureAppearance||{};
         if (method === 'get_config') return {...window.fixtureCfg};
         if (method === 'save_config') { Object.assign(window.fixtureCfg, args[0]); localStorage.setItem(key, JSON.stringify(window.fixtureCfg)); return true; }
@@ -172,12 +174,12 @@ function ok(name) { passed++; console.log('OK ' + name); }
     await page.locator('[data-history-save]').click(); await page.locator('#fpOk').click();
     await page.waitForFunction(()=>window.fixtureCalls.some(c=>c.method==='history_move_to')); ok('历史保存到使用独立记录 ID');
     await page.locator('[data-history-info]').click();
-    await page.locator('#dClose').waitFor();
+    await page.locator('#dFavorite').waitFor();
     assert.equal((await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='get_history_detail').at(-1))).args[0],'history-4'); ok('历史信息在模型管理右栏显示');
     await page.locator('.nav-tab[data-page="dlmanager"]').click();
     await page.locator('#dlHistoryTab').click();
     await page.locator('#dlHistoryTable tbody .c-file').dblclick();
-    await page.locator('#dClose').waitFor();
+    await page.locator('#dFavorite').waitFor();
     assert.equal((await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='get_history_detail').at(-1))).args[0],'history-4');ok('双击下载历史直接进入模型信息');
     await page.locator('.nav-tab[data-page="dlmanager"]').click();await page.locator('#dlHistoryTab').click();
     await page.locator('#dlHistorySearch').fill('不存在的模型'); assert((await page.locator('#dlHistoryTable').innerText()).includes('没有匹配')); ok('历史空结果提示');
@@ -486,7 +488,7 @@ function ok(name) { passed++; console.log('OK ' + name); }
     assert((await page.locator('.iv-generation').innerText()).includes('watercolor mountains'));assert((await page.locator('.iv-generation').innerText()).includes('steps'));assert.equal(await page.locator('#imageViewer script').count(),0);ok('图片点击放大并显示生成参数，提示词只按文本展示');
     await page.locator('[data-iv-copy=prompt]').click();assert.equal((await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='copy_text').at(-1))).args[0],'watercolor mountains <script>not executed</script>');ok('生成数据正面提示词可单独复制');
     await page.locator('[data-iv-copy=all]').click();assert((await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='copy_text').at(-1))).args[0].includes('cfgScale'));ok('复制全部包含采样参数与资源列表');
-    await page.locator('[data-resource-id]').click();assert.equal((await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='open_url').at(-1))).args[0],'https://civitai.com/models/55');ok('使用资源可打开对应 C站模型');
+    await page.locator('[data-resource-index]').click();assert.equal((await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='open_gallery_resource').at(-1))).args[0].modelId,55);ok('使用资源可打开对应 C站模型');
     await page.locator('#ivShare').click();assert.equal((await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='copy_text').at(-1))).args[0],'https://civitai.com/images/123');ok('图片工具栏支持复制分享链接');
     assert.equal(await page.locator('#ivReport').count(),0);ok('图片查看器已移除举报功能');
     const centered=await page.locator('.iv-more summary').evaluate(e=>{const a=e.getBoundingClientRect(),b=e.querySelector('svg').getBoundingClientRect();return Math.abs((a.left+a.right-b.left-b.right)/2)<1 && Math.abs((a.top+a.bottom-b.top-b.bottom)/2)<1;});assert(centered);ok('更多图片操作图标水平和垂直居中');
@@ -496,16 +498,16 @@ function ok(name) { passed++; console.log('OK ' + name); }
     await page.locator('#ivImage').click();assert.equal(await page.locator('#imageViewer').isVisible(),true);ok('点击图片本身不关闭图片查看器');
     await page.locator('#ivImage').click({button:'right'});await page.keyboard.press('Escape');assert.equal(await page.locator('#ivContext').isVisible(),false);assert.equal(await page.locator('#imageViewer').isVisible(),true);ok('Escape 先关闭图片右键菜单');
     await page.locator('#ivSave').click();assert((await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='save_gallery_image').at(-1))).args[0].includes('gallery.safetensors'));ok('图片保存请求指定当前模型与图片索引');
-    await page.locator('#ivPlus').click();assert((await page.locator('#ivFit').innerText()).includes('120'));ok('图片放大按钮只调整当前图片');
-    await page.evaluate(()=>setViewerZoom(3));
+    await page.locator('#ivPlus').click();await page.waitForFunction(()=>imageViewer.zoom===imageViewer.targetZoom);assert((await page.locator('#ivFit').innerText()).includes('120'));ok('图片放大按钮只调整当前图片');
+    await page.evaluate(()=>setViewerZoom(3,null,true));
     const panBefore=await page.locator('.iv-image-scroll').evaluate(e=>({x:e.scrollLeft,y:e.scrollTop,w:e.clientWidth,h:e.clientHeight,sw:e.scrollWidth,sh:e.scrollHeight}));assert(panBefore.sw>panBefore.w && panBefore.sh>panBefore.h);ok('超大图片有可访问的横向和纵向画布，不负溢出截掉边缘');
     const stage=await page.locator('.iv-image-scroll').boundingBox();await page.mouse.move(stage.x+stage.width/2,stage.y+stage.height/2);await page.mouse.down();await page.mouse.move(stage.x+stage.width/2-80,stage.y+stage.height/2-65,{steps:10});await page.mouse.up();
-    const panAfter=await page.locator('.iv-image-scroll').evaluate(e=>({x:e.scrollLeft,y:e.scrollTop}));assert(panAfter.x>panBefore.x+60 && panAfter.y>panBefore.y+45);assert.equal(await page.locator('#imageViewer').isVisible(),true);ok('按住图片可同时拖动横纵显示位置，拖完不误关');
+    const panAfter=await page.locator('.iv-image-scroll').evaluate(e=>({x:e.scrollLeft,y:e.scrollTop}));assert(panAfter.x>panBefore.x+60 && panAfter.y>panBefore.y+45,JSON.stringify({panBefore,panAfter,stage,img:await page.locator('#ivImage').boundingBox(),canvas:await page.locator('.iv-image-canvas').evaluate(e=>({w:e.style.width,h:e.style.height,cs:getComputedStyle(e).width,display:getComputedStyle(e).display,box:e.getBoundingClientRect().toJSON(),z:document.documentElement.style.zoom}))}));assert.equal(await page.locator('#imageViewer').isVisible(),true);ok('按住图片可同时拖动横纵显示位置，拖完不误关');
     const frame=await page.locator('.iv-image-scroll').evaluate(e=>{const r=e.getBoundingClientRect(),stage=e.closest('.iv-stage').getBoundingClientRect(),status=document.querySelector('#ivStatus').getBoundingClientRect();return {height:r.height,stage:stage.height,status:status.height,bottom:r.bottom,statusTop:status.top};});assert(frame.height<frame.stage && Math.abs(frame.bottom-frame.statusTop)<2);ok('滚动条固定在图片视口边缘而非跟到大图下面');
-    await page.evaluate(()=>setViewerZoom(1));assert.equal(await page.locator('.iv-image-scroll').evaluate(e=>e.scrollTop),0);ok('适合窗口恢复完整图片并解除拖动偏移');
+    await page.evaluate(()=>setViewerZoom(1,null,true));assert.equal(await page.locator('.iv-image-scroll').evaluate(e=>e.scrollTop),0);ok('适合窗口恢复完整图片并解除拖动偏移');
     await page.screenshot({path:path.join(shots,'image-generation-viewer-v2.6.0.png')});
     await page.keyboard.press('ArrowRight');assert((await page.locator('.iv-generation').innerText()).includes('来源没有记录资源列表'));ok('没有生成数据时明确说明，不编造使用资源');
-    await page.keyboard.press('Escape');assert.equal(await page.locator('#imageViewer').count(),0);assert.equal(await page.locator('#dClose').isVisible(),true);ok('Escape 仅关闭大图，保留模型详情');
+    await page.keyboard.press('Escape');assert.equal(await page.locator('#imageViewer').count(),0);assert.equal(await page.locator('#dFavorite').isVisible(),true);ok('Escape 仅关闭大图，保留模型详情');
     await page.evaluate(()=>{
       window.fixtureDetail=null;state.models=state.display=Array.from({length:130},(_,i)=>({path:'D:\\AI\\models\\focus'+i+'.safetensors',name:'Model '+i,base:'SDXL',type:'LoRA',size:100}));state.mmView='masonry';window.fixtureScanRows=state.models;renderMm();
       $('#mmFilter').value='不匹配';applyMmFilter();
@@ -539,10 +541,10 @@ function ok(name) { passed++; console.log('OK ' + name); }
     await page.evaluate(()=>{window.fixtureAppearance={integrated:true,maximized:true};syncWindowControls(window.fixtureAppearance);});assert.equal(await page.locator('[data-resize-edge=bottom-right]').isVisible(),false);ok('最大化后不出现缩放边缘');
     await page.evaluate(()=>{window.fixtureAppearance={integrated:true,maximized:false};syncWindowControls(window.fixtureAppearance);});
     const modelCard=page.locator('.ms-card').first();await modelCard.click({button:'right'});
-    assert.equal(await page.locator('#ctxMenu .ctx-group').count(),3);assert.equal(await page.locator('#ctxMenu [data-act]:visible').count(),4);ok('模型右键仅显示四个常用动作，低频功能按三个用途分组');
+    assert.equal(await page.locator('#ctxMenu .ctx-group').count(),3);assert.equal(await page.locator('#ctxMenu [data-act]:visible').count(),5);ok('模型右键仅显示五个常用动作，低频功能按三个用途分组');
     await page.locator('#ctxMenu .ctx-group summary').first().click();assert.equal(await page.locator('#ctxMenu [data-act=copy_cname]').isVisible(),true);ok('复制分组可展开，复制 C站名功能保留');
     await page.locator('#ctxMenu .ctx-group summary').nth(1).click();await page.locator('#ctxMenu [data-act=copy_cname]').waitFor({state:'hidden'});assert.equal(await page.locator('#ctxMenu [data-act=rename_c]').isVisible(),true);assert.equal(await page.locator('#ctxMenu [data-act=copy_cname]').isVisible(),false);ok('改名与整理分组展开时收起其他分组');
-    assert.equal(await page.locator('#ctxMenu [data-act]').count(),14);ok('模型右键原有十三项仍保留并添加模型信息入口');
+    assert.equal(await page.locator('#ctxMenu [data-act]').count(),15);ok('模型右键原有十三项仍保留并添加模型信息及收藏入口');
     await page.locator('#ctxMenu .ctx-group summary').first().click();await page.locator('#ctxMenu [data-act=copy_name]').click();assert((await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='copy_text').at(-1))).args[0].includes('Model'));ok('折叠菜单操作仍作用于右键指定的模型');
     await page.evaluate(()=>{state.mmView='list';renderMm();});await page.locator('#mmTable tbody tr[data-path]').first().click({button:'right'});assert.equal(await page.locator('#ctxMenu .ctx-group').count(),3);ok('模型列表和瀑布流共用同一分组右键菜单');
     await page.keyboard.press('Escape');await page.evaluate(()=>$('#ctxMenu').style.display='none');
@@ -571,6 +573,38 @@ function ok(name) { passed++; console.log('OK ' + name); }
     await page.locator('[data-settings-category="organize"]').click();await page.evaluate(()=>document.querySelector('.content').scrollTop=0);await page.screenshot({path:path.join(docsShots,'settings-classification.png')});
     await page.evaluate(()=>{window.fixtureHistoryThumbs={};window.fixtureHistory=state.models.slice(0,5).map((m,i)=>{const id='doc-history-'+i;window.fixtureHistoryThumbs[id]=state.coverCache.get(m.path).split(',')[1];return {id,filename:m.name,modelName:m.civitai_name,status:'done',cached_thumb:true,model_url:'https://civitai.com/models/123',total:m.size,dest_dir:'D:\\Example\\models',file_path:m.path,finished_at:1791370200-i*300};});});
     await page.locator('.nav-tab[data-page="dlmanager"]').click();await page.locator('#dlHistoryTab').click();await page.waitForTimeout(300);await page.screenshot({path:path.join(docsShots,'download-history.png')});ok('README 五张示例截图仅使用虚构模型和程序绘制风景，不读取用户配置');
+    // 连续缩放、收藏、固定工具栏和三步引导的新回归。
+    await page.evaluate(()=>{switchPage('models');state.cfg.model_favorites=[];state.mmView='masonry';applyMmFilter();});
+    const pinPath=await page.evaluate(()=>state.display.at(-1).path);
+    await page.evaluate(p=>toggleModelFavorite(p),pinPath);
+    assert.equal(await page.evaluate(()=>state.display[0].path),pinPath);assert.equal(await page.locator('#mmMasonry .model-star').count(),1);ok('收藏模型置顶且显示实心星标');
+    await page.evaluate(()=>{state.mmSort.rev=true;renderMm();});assert.equal(await page.evaluate(()=>state.display[0].path),pinPath);ok('降序排序不会把收藏沉到底部');
+    await page.evaluate(p=>showModelDetail(p),pinPath);assert.equal(await page.locator('#dFavorite').getAttribute('aria-pressed'),'true');await page.locator('#dFavorite').click();assert.equal(await page.locator('#dFavorite').getAttribute('aria-pressed'),'false');ok('详情右上角星标替代关闭，并可取消收藏');
+    await page.locator('#mmToolbarLock').click();assert.equal(await page.locator('#mmToolbarLock').getAttribute('aria-pressed'),'true');
+    await page.evaluate(()=>{const seed=state.models.slice();state.models=Array.from({length:120},(_,i)=>({...seed[i%seed.length],path:'D:/Example/models/pinned-'+i+'.safetensors',name:'pin-'+i+'.safetensors'}));applyMmFilter();});
+    for(const view of ['masonry','list']){
+      await page.evaluate(v=>{state.mmView=v;renderMm();},view);
+      const before=await page.locator('#mmToolbar').boundingBox(),scrollId=view==='masonry'?'#mmMasonryViewport':'#mmTableWrap';
+      const metrics=await page.locator(scrollId).evaluate(e=>({h:e.clientHeight,sh:e.scrollHeight,sw:e.scrollWidth,w:e.clientWidth}));assert(metrics.sh>metrics.h && metrics.h>40,JSON.stringify({view,metrics}));
+      await page.locator(scrollId).evaluate(e=>e.scrollTop=400);const after=await page.locator('#mmToolbar').boundingBox();assert(Math.abs(before.y-after.y)<1);assert.equal(await page.locator('.content').evaluate(e=>e.scrollTop),0);ok(view+' 固定工具栏仅滚动下方列表');
+    }
+    await page.locator('#mmToolbarLock').click();assert.equal(await page.locator('#mmToolbarLock').getAttribute('aria-pressed'),'false');ok('工具栏锁定状态可取消并保存');
+    await page.evaluate(()=>openImageViewer(window.fixtureDetail));await page.waitForTimeout(120);
+    await page.evaluate(()=>setViewerZoom(1.237));const mid=await page.evaluate(()=>({zoom:imageViewer.zoom,target:imageViewer.targetZoom}));assert.equal(mid.target,1.237);assert.notEqual(mid.zoom,mid.target);ok('无极缩放接受任意小数且通过动画渐进，而非整数跳档');
+    await page.waitForFunction(()=>imageViewer.zoom===1.237);await page.evaluate(()=>setViewerZoom(.071));await page.waitForFunction(()=>imageViewer.zoom===.071);ok('连续缩放支持小于旧 20% 限制');
+    await page.evaluate(()=>setViewerZoom(9.41));await page.waitForFunction(()=>imageViewer.zoom===9.41);ok('连续缩放支持超过旧 800% 限制');
+    await page.evaluate(()=>setViewerZoom(1,null,true));
+    const imgBox=await page.locator('#ivImage').boundingBox();await page.mouse.move(imgBox.x+imgBox.width/2,imgBox.y+imgBox.height/2);const z0=await page.evaluate(()=>imageViewer.targetZoom);await page.mouse.wheel(0,-7);const z1=await page.evaluate(()=>imageViewer.targetZoom);assert(Math.abs(z1-z0*Math.exp(.014))<.000001);ok('滚轮按实际 delta 连续缩放，细小触控板输入不会跳一档');
+    const overlayStyle=await page.locator('#imageViewer').evaluate(e=>({filter:getComputedStyle(e).backdropFilter,bg:getComputedStyle(e).backgroundColor}));assert.equal(overlayStyle.filter,'none');assert(overlayStyle.bg.includes('0.58'));ok('大图保留半透明背景，移除昂贵的整屏背景模糊');
+    await page.evaluate(()=>{state.cfg.pointer_effects='trail';state.cfg.pointer_effect_quality='low';state.cfg.effects_fps_limit=144;applyUiAppearance();});
+    await page.mouse.move(500,300);await page.mouse.down();await page.mouse.up();await page.waitForFunction(()=>document.querySelector('#pointerEffects')?.dataset.running==='true');
+    const effect=await page.locator('#pointerEffects').evaluate(e=>({w:e.width,h:e.height,cap:e.dataset.fpsLimit}));assert.equal(effect.cap,'144');assert(effect.w*effect.h<1280*820/4,JSON.stringify(effect));ok('大图打开时拖尾仍运行，仅使用局部画布并接受 144 帧上限');
+    await page.evaluate(()=>{state.cfg.effects_fps_limit=0;applyUiAppearance();});assert.equal(await page.evaluate(()=>window.cftEffectsFpsLimit),0);ok('0 帧上限跟随显示刷新，不锁 30/60');
+    await page.evaluate(()=>{state.cfg.pointer_effects='off';applyUiAppearance();closeImageViewer();showOnboarding();});
+    await page.mouse.move(1270,810);await page.screenshot({path:path.join(docsShots,'onboarding.png')});assert.equal(await page.locator('#obSteps .ob-step').count(),3);assert.equal(await page.locator('.ob-preview-stack>div').count(),3);ok('新引导仅三步，欢迎页使用主题化视觉卡片');
+    await page.locator('#obNext').click();await page.locator('#obDir').fill('D:/Example/newdownloads');await page.locator('#obModelDirs').fill('D:/Example/first\nD:/Example/second');await page.locator('#obNext').click();assert.equal(await page.locator('#obKey').getAttribute('type'),'password');ok('精简引导提供目录与可选 Key，不堆砌功能说明');
+    await page.locator('#obPrev').click();assert.equal(await page.locator('#obDir').inputValue(),'D:/Example/newdownloads');ok('精简引导回退时保留已填写目录');
+    await page.locator('#obNext').click();await page.locator('#obSkipAll').click();await page.waitForFunction(()=>document.querySelector('#obMask').style.display==='none');assert.equal(await page.evaluate(()=>state.cfg.onboarding_done),true);ok('跳过剩余引导保存标记，不会因为未填 Key 每次启动重开');
     const unresolvedIcons=await page.evaluate(()=>Array.from(document.querySelectorAll('svg.ic use')).map(e=>e.getAttribute('href')).filter(ref=>!document.querySelector(ref)));
     assert.deepEqual(unresolvedIcons,[]); ok('全部可见与动态图标均有 sprite 定义');
     assert.deepEqual(errors,[]);assert.equal(await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='log_ui_error').length),0); ok('无前端异常');
