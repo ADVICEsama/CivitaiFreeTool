@@ -100,6 +100,13 @@ class CivitaiAPI:
         """按版本 ID 获取版本信息（含 files/downloadUrl）"""
         return self._get("/model-versions/%s" % version_id)
 
+    def get_image_metadata(self,image_id):
+        if isinstance(image_id,bool) or not str(image_id).isdigit():raise ValueError('图片 ID 无效')
+        result=self._get('/images',params={'imageId':str(image_id),'withMeta':'true','limit':1},retries=1)
+        for image in result.get('items',[]) if isinstance(result,dict) else []:
+            if isinstance(image,dict) and str(image.get('id'))==str(image_id):return image
+        return {}
+
     def get_model_version_by_hash(self, sha256):
         """按文件 SHA256 反查模型版本（反向解析核心）"""
         return self._get("/model-versions/by-hash/%s" % sha256)

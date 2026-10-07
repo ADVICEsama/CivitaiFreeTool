@@ -340,3 +340,8 @@ html body .ctx-menu {z-index:10060;min-width:220px;max-width:min(320px,calc(100v
 #mmImageSizeControl input {writing-mode:vertical-lr;direction:rtl;appearance:auto;width:26px;height:160px;min-width:0;accent-color:var(--primary);}
 #mmImageSizeControl label,#mmImageSizeControl output {font-size:calc(12px * var(--type-scale,1));color:var(--text);white-space:nowrap;}
 #mmImageSizeControl small {font-size:calc(10px * var(--type-scale,1));white-space:nowrap;}
+
+/* 大图的留白为半透明遮罩，模型页保留在其后；图片、工具和参数仍清晰。 */
+.image-viewer {background:color-mix(in srgb,var(--bg) 58%,transparent);backdrop-filter:blur(2px);}
+.iv-stage {background:rgba(0,0,0,.22);}
+.iv-generation {background:color-mix(in srgb,var(--surface) 94%,transparent);}

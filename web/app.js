@@ -2875,11 +2875,11 @@ function syncDialogRender(d, st) {
 
 async function showModelDetail(path, historyId = "") {
   const generation = ++detailGeneration;
-  const json = await api.call(historyId ? "get_history_detail" : "get_model_detail", historyId || path);
+  let json;try{json = await api.call(historyId ? "get_history_detail" : "get_model_detail", historyId || path);}catch(_){setStatus('详情读取异常，请检查元数据或刷新后重试');return;}
   let d;
-  try { d = JSON.parse(json || "{}"); } catch (e) { d = {}; }
+  try { d = typeof json==='object' && json!==null?json:JSON.parse(json || "{}"); } catch (e) { d = {}; }
   if (generation !== detailGeneration || !$("#page-models").classList.contains("active")) return;
-  if (!d.ok) { setStatus("详情获取失败"); return; }
+  if (!d.ok) { setStatus(d.msg||"详情获取失败：元数据格式异常或文件不可读取"); return; }
   detailRow = d;
   detailRow.history_id = historyId;
   document.body.classList.add("models-workspace");

@@ -137,7 +137,7 @@ function renderGeneration(c){
   const prompt=imageText(meta.prompt||c.prompt),negative=imageText(meta.negativePrompt||meta['Negative prompt']||c.negative);
   const textBlock=(id,label,value)=>'<section class="iv-data"><header><h3>'+label+'</h3><button class="icon-btn" data-iv-copy="'+id+'" aria-label="复制'+label+'"'+(value?'':' disabled')+'>'+_icon('copy')+'</button></header><div class="iv-prompt">'+esc(value||'来源未提供')+'</div></section>';
   const fields=Object.entries(meta).filter(([key])=>!['prompt','negativePrompt','Negative prompt','resources','civitaiResources','workflow','comfyPrompt'].includes(key));
-  v.root.querySelector('.iv-generation').innerHTML='<header class="iv-data-head"><h2>'+_icon('settings')+'生成数据</h2><button class="btn btn-tiny" data-iv-copy="all">'+_icon('copy')+'复制全部</button></header><p class="iv-source">'+esc(c.metadata_source||'来源未提供生成数据')+'</p><section class="iv-data"><h3>使用资源</h3>'+(resources.length?resources.map(r=>{
+  v.root.querySelector('.iv-generation').innerHTML='<header class="iv-data-head"><h2>'+_icon('settings')+'生成数据</h2><button class="btn btn-tiny" data-iv-copy="all">'+_icon('copy')+'复制全部</button></header><p class="iv-source">'+esc(c.metadata_source||'来源未提供生成数据')+'</p>'+(c.metadata_note?'<p class="iv-source">'+esc(c.metadata_note)+'</p>':'')+'<section class="iv-data"><h3>使用资源</h3>'+(resources.length?resources.map(r=>{
     const name=imageText(r.modelName||r.name||r.modelVersionName||'未命名资源'),id=r.modelId||r.model?.id;
     return '<div class="iv-resource">'+(/^\d+$/.test(String(id))?'<button class="iv-resource-link" data-resource-id="'+esc(id)+'">'+esc(name)+'</button>':'<b>'+esc(name)+'</b>')+'<small>'+esc(imageText(r.type||''))+' · '+esc(imageText(r.versionName||r.version||r.modelVersionId||''))+'</small></div>';
   }).join(''):'<p class="iv-missing">图片来源没有记录资源列表，不根据提示词猜测。</p>')+'</section>'+textBlock('prompt','正面提示词',prompt)+textBlock('negative','负面提示词',negative)+'<section class="iv-data"><h3>其他参数</h3><div class="iv-badges">'+fields.map(([k,value])=>'<span><b>'+esc(k)+'</b>: '+esc(imageText(value))+'</span>').join('')+(c.width&&c.height?'<span>尺寸: '+esc(c.width)+' × '+esc(c.height)+'</span>':'')+'</div>'+(!fields.length?'<p class="iv-missing">来源未提供其他参数</p>':'')+'</section>'+
@@ -162,10 +162,21 @@ async function loadViewerImage(index){
   try{
     const full=await api.call('get_gallery_image',v.detail.path,index,v.detail.history_id||'');
     if(imageViewer!==v || request!==imageViewerRequest)return;
-    if(full?.ok && full.b64){v.full=full;img.src='data:'+(full.mime||'image/jpeg')+';base64,'+full.b64;setViewerZoom(1);
+    if(full?.ok && full.b64){Object.assign(c,{meta:{...(c.meta||{}),...(full.meta||{})},resources:full.resources?.length?full.resources:(c.resources||[]),metadata_source:full.metadata_source||c.metadata_source,width:full.width,height:full.height});renderGeneration(c);v.full=full;img.src='data:'+(full.mime||'image/jpeg')+';base64,'+full.b64;setViewerZoom(1);
       v.root.querySelector('#ivStatus').textContent=full.original_available?(full.preview_limited?'大图预览限制 4096 px，保存图片仍使用来源文件':'大图已加载；滚轮缩放图片'):'仅有缓存预览，来源原图不可用';
     }else v.root.querySelector('#ivStatus').textContent=full?.msg||'大图加载失败，保留现有预览';
   }catch(_){if(imageViewer===v && request===imageViewerRequest)v.root.querySelector('#ivStatus').textContent='大图加载失败，保留现有预览';}
+  if(imageViewer!==v || request!==imageViewerRequest)return;
+  try {
+    const metadata=await api.call('get_gallery_metadata',v.detail.path,index,v.detail.history_id||'');
+    if(imageViewer!==v || request!==imageViewerRequest)return;
+    if(metadata?.ok){
+      c.metadata_note=metadata.metadata_note||'';
+      c.meta=metadata.online_metadata?{...(c.meta||{}),...(metadata.meta||{})}:{...(metadata.meta||{}),...(c.meta||{})};if(metadata.resources?.length)c.resources=metadata.resources;
+      if(metadata.online_metadata || ((!c.metadata_source || c.metadata_source==='未提供生成数据') && Object.keys(metadata.meta||{}).length))c.metadata_source=metadata.metadata_source;
+      renderGeneration(c);
+    }
+  }catch(_){ /* 保留原图已读取的元数据，不让网络失败清空面板。 */ }
 }
 window.addEventListener('resize',()=>{if(imageViewer)setViewerZoom(imageViewer.zoom);});
 const normalizedModelPath=p=>String(p||'').replace(/\\/g,'/').toLowerCase();

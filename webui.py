@@ -3,6 +3,7 @@
 前端（web/index.html）通过 window.pywebview.api 调用；耗时任务后台线程 + 前端轮询进度。
 业务逻辑复用 civitai_api / downloader / model_manager / reverse_parse / translator / config。"""
 import json
+import math
 import os
 import re
 import shutil
@@ -12,7 +13,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.6.5"
+APP_VERSION = "2.6.6"
 
 import civitai_api
 import config
@@ -24,6 +25,14 @@ import translator
 import browser_bridge
 from gui import (_download_image, _recycle_to_trash, _text_to_rules, _rules_to_text,
                  _folder_visible, _friendly_api_error)
+
+
+def _json_safe(value):
+    """兼容旧元数据 NaN/Infinity，但不改用户原文件，不编造数值。"""
+    if isinstance(value,float) and not math.isfinite(value):return None
+    if isinstance(value,dict):return {str(k):_json_safe(v) for k,v in value.items()}
+    if isinstance(value,(list,tuple)):return [_json_safe(v) for v in value]
+    return value
 
 
 def _todo_label(url):
@@ -774,6 +783,7 @@ class Api:
         try:
             with open(self._history_asset(task_id, ".json"), encoding="utf-8") as f: info = json.load(f)
         except (OSError, ValueError): info = {}
+        info=_json_safe(info) if isinstance(info,dict) else {}
         thumb = self.get_history_thumbnail(task_id)
         if live:
             if not live.get("info"): live["info"] = info
@@ -1055,10 +1065,16 @@ class Api:
                     info = json.load(f)
             except Exception:
                 info = {}
+        if not isinstance(info,dict):info={}
+        info=_json_safe(info)
         # 字段归一化：扁平 json（trained_words/trigger_words）→ 全结构 trainedWords
         if info and not info.get("trainedWords"):
             info["trainedWords"] = info.get("trained_words") or info.get("trigger_words") or []
         images = info.get("images") or []
+        images=[x if isinstance(x,dict) else {} for x in images] if isinstance(images,list) else []
+        for image in images:
+            if not isinstance(image.get('meta'),dict):image['meta']={}
+        if info:info['images']=images
 
         def _img_prompt(idx):
             """按 C 站 images 序号取 (正面, 负面) 提示词（下载图按 image_%02d 命名，一一对应）"""
@@ -1162,15 +1178,13 @@ class Api:
                 idx = next((i for i,image in enumerate(images) if image.get('url')==c.get('url')), -1)
             image = images[idx] if 0<=idx<len(images) else {}
             c.update(image_gallery.generation(image,c.get('local_path')))
+            if isinstance(c.get('meta',{}).get('comfyPrompt'),dict):
+                c['prompt']=c['meta'].get('prompt') or '';c['negative']=c['meta'].get('negativePrompt') or ''
             if c.get('local_path') and not re.search(r'image_\d+',os.path.basename(c['local_path']),re.I) and c.get('metadata_source')=='C站模型信息缓存':
                 c['metadata_source']='模型缓存首图参数；自定义封面可能不对应'
-        return json.dumps({
-            "ok": True,
-            "path": path,
-            "name": os.path.basename(path),
-            "info": info,
-            "covers": covers,
-        }, ensure_ascii=False)
+        return json.dumps(_json_safe({
+            "ok": True,"path": path,"name": os.path.basename(path),"info": info,"covers": covers,
+        }),ensure_ascii=False,allow_nan=False)
 
     def _gallery_item(self, path, index, history_id=''):
         detail = json.loads(self.get_history_detail(history_id) if history_id else self.get_model_detail(path))
@@ -1183,6 +1197,34 @@ class Api:
         import image_gallery
         try:return image_gallery.preview(self._gallery_item(path,index,history_id),self.cfg)
         except Exception:return {'ok':False,'msg':'图片读取失败；在线图片可能无权限或网络不可用，可打开 C站原图页'}
+
+    def get_gallery_metadata(self,path,index,history_id=''):
+        import image_gallery
+        try:
+            item=self._gallery_item(path,index,history_id)
+            result=image_gallery.generation(item,item.get('local_path'));result['online_metadata']=False
+            image_id=item.get('image_id')
+            if str(image_id or '').isdigit() and '自定义封面' not in item.get('metadata_source',''):
+                cache=getattr(self,'_gallery_metadata_cache',None)
+                if cache is None:cache={};self._gallery_metadata_cache=cache
+                cached=cache.get(str(image_id));now=time.monotonic()
+                if cached and now-cached[0]<600:online=cached[1]
+                else:
+                    proxy=self.cfg.get('proxy_address') if self.cfg.get('proxy_enabled') else None
+                    client=civitai_api.CivitaiAPI(self.cfg.get('api_key',''),timeout=10,proxy=proxy,verify=self.cfg.get('ssl_verify',True))
+                    try:online=client.get_image_metadata(image_id)
+                    except Exception:online={}
+                    if len(cache)>=256:cache.pop(next(iter(cache)))
+                    cache[str(image_id)]=(now,online)
+                if online:
+                    fresh=image_gallery.generation(online)
+                    result['meta']={**result['meta'],**fresh['meta']}
+                    if fresh['resources']:result['resources']=fresh['resources']
+                    if fresh['meta'] or fresh['resources']:result['metadata_source']='C站图片接口（withMeta=true）';result['online_metadata']=True
+            if not result.get('meta') and not result.get('resources'):
+                result['metadata_note']='缓存没有图片 ID，无法按图查询 C站；原图或本地缓存也未记录生成参数。可同步模型信息或打开 C站原图页查看。' if not image_id else 'C站未返回可读取的生成参数：可能未保存、当前账户不可见或在线查询失败。'
+            return _json_safe({'ok':True,**result})
+        except Exception:return {'ok':False,'msg':'生成数据不可用，保留原图参数；可打开 C站原图页查看'}
 
     def copy_gallery_image(self, path, index, history_id=''):
         import image_gallery,base64
@@ -1350,6 +1392,10 @@ class Api:
             except Exception:
                 info = {}
         images = info.get("images") or []
+        images=[x if isinstance(x,dict) else {} for x in images] if isinstance(images,list) else []
+        for image in images:
+            if not isinstance(image.get('meta'),dict):image['meta']={}
+        if info:info['images']=images
         if not images:
             return json.dumps({"ok": False, "msg": "no images in info"})
         base = os.path.splitext(path)[0]

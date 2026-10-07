@@ -1,159 +1,116 @@
 # CivitaiFreeTool
 
-> **免费 · 全功能 · 无付费墙** —— Civitai / HuggingFace 模型下载、管理、反向解析工具（Windows / Linux / macOS）
+> 免费的 Civitai / HuggingFace 模型下载与本地模型管理工作台。
 
-![Version](https://img.shields.io/badge/version-2.6.5-blue) ![License](https://img.shields.io/badge/license-MIT-green) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-orange) ![CI](https://github.com/ADVICEsama/CivitaiFreeTool/workflows/tests/badge.svg)
+![Version](https://img.shields.io/badge/version-2.6.6-blue) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-orange) ![CI](https://github.com/ADVICEsama/CivitaiFreeTool/workflows/tests/badge.svg)
 
-CivitaiFreeTool 是一款开箱即用的 AI 模型管理桌面工具：**批量下载 C 站 / HuggingFace 模型、本地模型管理（缩略图 / 改名 / 整理 / 校验 / 移动）、模型更新检测、反向解析、ComfyUI 工作流分析**，全部功能免费开放。内置**圆角现代（Modern Rounded）与 Metro（Windows 10 扁平）两套完整主题体系**，同一功能两种视觉语言。
+[下载最新版](https://github.com/ADVICEsama/CivitaiFreeTool/releases/latest) · [更新日志](CHANGELOG.md) · [问题反馈](https://github.com/ADVICEsama/CivitaiFreeTool/issues) · [Linux / macOS](LINUX.md)
 
-配套 **Chrome / Firefox 扩展**：浏览 C 站模型页时点击图标一键下载，直达软件下载管理（见下方「Chrome 扩展」）。
+## 当前工作台
 
----
+- **左侧导航 + 常驻模型详情**：列表/瀑布流共用管理能力；打开详情不挤走模型卡片。无可见顶栏，右上角保留窗口按钮，顶部空白和页面标题可拖动。
+- **持久下载任务与历史**：自动保存任务；已结束任务可收进独立历史。历史提供缩略图/信息缓存、保存到文件夹、打开实际文件位置、C站入口，以及模型卡片定位。
+- **更清楚的右键菜单**：常用动作直接展示；复制、改名与整理、元数据与更新按用途折叠。删除进入回收站并确认。
+- **图片与生成数据**：大图可拖动、缩放、翻页、右键复制/保存；半透明背景保留后面的模型页。读取原图 PNG/ComfyUI/EXIF 元数据，并按图片 ID 查询 C站 `withMeta=true` 数据。提示词、资源和采样参数只显示来源实际提供的内容。
+- **分组设置**：常用、外观、下载、目录、分类整理、网络、翻译、维护；跨分类搜索，分类规则旁直接提供步骤与示例。
+- **自由外观**：14 套配色、本地字体名称即预览、五档独立字号与图标尺寸、强调色、密度、圆角和轻量交互特效。瀑布流按钮悬停展开竖向图片大小滑条。
 
-## v2.6.5 工作台更新
+## 界面示例
 
-- 无顶栏，仅保留右上角三个透明网页窗口按钮，随主题适配；关闭整窗 easy_drag，顶部宽拖动区、页面标题/侧栏名称可拖动，设置菜单不再导致窗口偏移。设置中可恢复系统标题栏。
-- Windows 11 22H2+ 的 Mica / Mica Alt 扩展到整个窗口背景；WebView2 透明底、半透明面板，图片与文字不透明。外部控制模式不持续抢写 Mica For Everyone 的 DWM 属性。
-- 模型右键按复制、改名与整理、元数据与更新三个用途折叠；常用操作直接展示，列表和瀑布流一致。
-- 模型详情图片点击放大：上一张/下一张、图片缩放、保存来源图片、复制分享链接、C站原图页入口、图片按住拖动、固定视口滚动条、右键复制/保存与生成数据 JSON 导出；点击黑色空白退出，不再显示举报。
-- 展示来源已提供的提示词、负面提示词、资源列表、采样器/步数/CFG/种子/尺寸和本地 PNG / ComfyUI 元数据；缺失时明确提示，不猜测、不执行节点。
-- 详情提供“文件名 → C站名称”：先预览，只改当前模型及附属文件，关联更新下载历史路径。
-- 下载历史点击模型信息或双击模型，同步定位并高亮瀑布流卡片/列表行；必要时清除前端筛选，不擅自修改模型管理目录。
-- 字体菜单名字即本地字体预览；五档独立字号与图标大小；瀑布流按钮悬停展开竖向大小滑条；Alt + 滚轮调模型图片，Ctrl + 滚轮始终全局缩放。
-- 发布维护流程见 [发布说明](docs/RELEASING.md)：每次修复后提交源码并发布 Release，附 Windows 包、Chrome ZIP、Firefox ZIP 与校验文件。
+下面是 **当前前端的演示截图**：使用虚构模型、文件路径及程序绘制的风景；不包含用户 API Key、私有模型或真实下载任务。它们用于展示界面，不代表下载或生成结果。
 
-## ✨ 功能总览
+### 模型管理与常驻详情
 
-### 🖥️ Chrome 扩展一键下载
-- 浏览器打开 Civitai 模型页 → 点扩展图标 → 确认小窗（模型名 + 链接）→ 一键开始下载
-- 软件自动切到「下载管理」页显示进度；解析失败小窗直接显示原因（代理 / 网络 / 权限）
-- 右键页面或链接也可直达下载；扩展安装见 `chrome-extension/README.md`
+![模型管理工作台](docs/screenshots/models-workbench.png)
 
-### 📥 批量下载
-- 支持 `civitai.red` / `civitai.com` / `huggingface.co`（仓库或文件直链）
-- 粘贴多个链接一键解析入队；**点击后立即跳转下载管理页**（解析中按钮禁用，杜绝重复下载同一模型）
-- 付费 / Early Access 模型自动识别：弹窗选择「加入到期提醒（自动判断免费时间）」或「仍要下载」
-- 断点续传 · 并发下载 · 下载完成自动写元数据（`模型名.civitai.info` / WebUI 可读 `模型名.json`，含**触发词**）
+### 大图、半透明背景与生成数据
 
-### 📁 下载管理
-- 实时进度 / 速度 / 剩余时间，暂停、重试、移除、清空已完成
-- 列表缩略图 + 行右键菜单（打开文件夹 / 复制文件名 / 打开 C 站）
-- 下载完成后可选移动到分类文件夹（弹窗显示封面缩略图）
-- SHA256 完整性校验；下载到 HTML 页面（付费/失效）自动报错不写文件
+![图片与生成数据](docs/screenshots/image-generation-viewer.png)
 
-### 🧩 模型管理
-- 多目录扫描（WebUI `models` + ComfyUI `models` 合并显示），**瀑布流 / 列表双视图**，两主题下均完整适配
-- **列表排版**：名称 / 本地文件名 / 作者三段式层级，路径只显文件夹，数字等宽；**表头列宽可拖拽**（双击分隔线重置）
-- **筛选与排序**：关键词、底模、更新状态、**作者**、所在文件夹；排序支持文件名 / 大小 / C站名 / 版本 / 时间 / 类型 / 底模 / 作者
-- **改名**：自定义（保留扩展名）/ **改成 C 站名** / 文件名翻译中文（批量）
-- **整理模型**：目标环境（WebUI / ComfyUI）+ 三种模式（手动分类 / C 站 tags 自动两级分类 / 自定义规则）
-- **移动文件…**：右键把模型连同全部附属文件（info / json / 预览图 / 示例图 / images 目录）移动到指定文件夹（限模型管理目录内，同名冲突自动拒绝）
-- **缩略图自定义**：详情页任意图片右键「设为模型缩略图」（含尚未下载的 C 站在线图，自动下载后设置）
-- **更新角标**：检查更新后，有新版模型卡片右上角 ❗ 直达 C 站新版页（不会自动下载）
-- **🔧 恢复误整理**：按移动日志反向恢复，预览后执行，只移动不删除
-- 校验完整性（哈希比对）· 清理冗余文件 · 下载封面图（走代理）· 翻译成中文 · 文件夹显示/隐藏
-- 详情面板：多图画廊（本地图集 + C 站图）、**简介中文翻译（富文本排版）**、触发词复制、图片右键（复制图片 / 正面提示词 / 负面提示词 / 设为缩略图 / 打开原图页）
-- 流畅度：封面双端缓存 + 滚动/筛选/排序状态保留，删除、刷新秒级完成不闪屏
+### 下载历史
 
-### 🔔 模型更新检测
-- 「检查更新」：按底模分组对比 C 站，版本新旧按**发布时间**判定；支持**只检查勾选**（忽略缓存与白名单）
-- 「更新页」：模型信息 / 当前版本 / 可用版本 / 发布时间 / 状态五列，表头点击排序；每行版本下拉可选降级版本
-- **批量从 C 站同步**：勾选模型一键获取最新名称 / 简介 / 触发词 / 版本（带实时进度与汇总）
-- **白名单**：对不关心的模型「不再提醒更新」（行右键 / 菜单均可加入）
-- 更新下载只由你显式触发；新版默认下到旧版所在文件夹，旧版默认保留（可设置为移入回收站）
+![独立下载历史](docs/screenshots/download-history.png)
 
-### 🔍 反向解析
-- 批量反查任务工作台：任务控制（开始 / 暂停 / 停止）、真实进度（11 / 290）、文件队列、状态徽章（成功 / 反查中 / 等待 / 失败）
-- 把已下载的模型文件识别出 C 站信息：模型名、触发词、类型、基础模型，并生成封面
-- SHA256 反查 + 百度翻译；结果表：文件名 + 路径双行、SHA256 等宽展示（悬停看完整）
-- 入口统一在模型管理页发起（选中 → 识别模型信息 / 批量从 C 站同步）
+### 外观设置
 
-### 🔬 工作流分析
-- 拖入 / 选择 ComfyUI 的 `.json` / `.png` 工作流，解析节点、模型引用（本地匹配 + SHA256）、正/负面提示词
-- 双主题排版：节点列表（可搜索）、引用的模型、提示词卡片（一键复制）；未找到的模型提供搜索下载入口
+![外观设置](docs/screenshots/settings-appearance.png)
 
-### ⚙️ 设置
-- **11 套主题**：深色 / 暮紫 / 深海 / 森林 / 熔岩 + 浅色 / 晴空 / 樱粉 / 薄荷 / 现代浅色 + **Metro（Windows 10 扁平风）**
-  - Metro 专属：亮 / 暗 / 跟随系统 + 6 种主题色（或跟随 Windows 主题色）；经典主题按钮带 Emoji、Metro 全线性图标（自动切换）
-- 下载目录、API Key、百度翻译、代理（C 站被墙时启用）、界面缩放、启动默认页
-- 分类规则（目标环境 / 整理模式 / 自定义规则）、维护（清理图片缓存）；旧版处理策略（保留 / 移入回收站）
-- 新手引导：功能介绍页 + 逐步配置
+### 分类规则与使用介绍
 
-### 💡 细节体验
-- 全部按钮 / 菜单项带 **hover 浮窗备注**
-- 关于弹窗：动态版本号 + 最近更新 + GitHub 直达；左上角 logo 点击同样打开关于
-- 到期提醒（记录需等待免费的模型，到期自动提示）
-- 断点续传失败自动重试、Windows Shell API 打开所在文件夹（无黑窗）、删除一律进回收站可还原
+![分类规则说明](docs/screenshots/settings-classification.png)
 
----
+## 快速开始（Windows）
 
-## 🚀 快速开始（Windows）
+1. 在 [Releases](https://github.com/ADVICEsama/CivitaiFreeTool/releases/latest) 下载 Windows 便携 ZIP 或版本号 EXE。
+2. 解压到个人可写目录，运行 `CivitaiFreeToolWeb.exe`。默认启动软件窗口；原生窗口真正无法显示时可用浏览器兜底，设置里可关闭或手动打开浏览器界面。
+3. 设置下载目录、模型管理目录；如需要，在 C站账户中申请 API Key 后填写。它不是使用本地模型管理的前提。
+4. 粘贴 Civitai / HuggingFace 链接进行下载，或扫描已有模型。
 
-1. 从 **Releases** 下载 `CivitaiFreeToolWeb.exe`（单文件，免安装）
-2. 双击运行，首次启动弹出引导：主题 → 下载目录 → API Key → 模型目录 → 反向解析
-3. （可选）到 `civitai.com/user/account` 免费申请 API Key，模型查询更完整
+**更新已有安装只替换 EXE，保留配置、任务、历史和缓存。** 新版默认把软件信息存放在 EXE 旁，可在「设置 → 目录」迁移到个人目录；不要把配置目录当作临时文件删除。
 
-> 配置保存在程序同目录 `user_config.json`（含 API Key，**请勿分享该文件**）
+### 隐私与 Key
 
-### 🌐 Linux / macOS
+- `user_config.json` 可能包含 API Key、翻译密钥或代理信息，**不要上传或分享**。
+- 配置、任务/历史 JSON、模型文件和运行缓存不属于发布源码/便携包。
+- 示例截图与测试使用虚构数据。遇到问题提供日志时仍需先脱敏。
+- 客户端访问 C站使用账户权限；不绕过付费、Early Access、浏览等级或访问限制。
 
-本仓库支持跨平台运行（社区贡献），安装与使用方法见 **[LINUX.md](LINUX.md)**（含依赖安装、已知限制）。
+## 下载与模型管理
 
-## 🧩 Chrome 扩展安装
+- 多链接批量解析、断点续传、并发下载、暂停/重试；SHA256 校验，拒绝把 HTML 错误页面当成模型。
+- 多目录扫描、关键词/底模/作者/状态/文件夹筛选、列宽调整及多种排序。
+- 自定义改名、文件名 → C站名称、文件名翻译；按手动分类、tags 或自定义规则整理。
+- 移动模型连同 sidecar/预览图/images 目录；冲突拒绝覆盖。历史路径同步更新，误整理可按日志恢复。
+- 更新检测、版本选择、更新白名单；更新下载由用户触发，默认保留旧版。
+- SHA256 反向识别模型、简介翻译、触发词复制、封面选择；解析 ComfyUI 工作流中的模型引用和提示词。
 
-1. 从 Releases 下载 `CivitaiFreeTool-ChromeExtension-*.zip` 并解压
-2. Chrome 打开 `chrome://extensions/` → 开启「开发者模式」
-3. 「加载已解压的扩展程序」→ 选择 `chrome-extension` 文件夹
-4. 打开 CivitaiFreeTool（v2.1.0+）→ 浏览 C 站模型页 → 点击扩展图标一键下载
+## 外观与快捷键
 
-> 📄 图文安装说明与最新下载：**https://advicesama.github.io/CivitaiFreeTool/**（软件 + 扩展项目主页）
+| 操作 | 行为 |
+| --- | --- |
+| Ctrl + 滚轮 | 全局界面缩放 |
+| Alt + 滚轮（瀑布流） | 调整模型图片大小 |
+| 图片查看器普通滚轮 | 缩放当前图片 |
+| 按住放大后的图片拖动 | 移动查看位置 |
+| 图片查看器空白处 / Escape | 关闭大图；有右键菜单时 Escape 先关闭菜单 |
+| 双击窗口拖动区 | 最大化 / 还原 |
 
-## 🧩 源码构建
+Mica / Mica Alt 是 Windows 原生**壁纸色调材质**，并不透视其他窗口；失焦、系统关闭透明、高对比度等条件下会回退纯色。内置效果需要支持的 Windows 11；外部模式配合 Mica For Everyone 需要另行安装/配置，框架切换需重启。参见 [微软 Mica 说明](https://learn.microsoft.com/en-us/windows/apps/design/style/mica)。
 
-```bash
-# 依赖（Python 3.10+；Linux/macOS 另见 LINUX.md）
-pip install pywebview pillow requests
-# 打包（含 web 资源）
-pyinstaller --onefile --windowed --name CivitaiFreeToolWeb \
-  --add-data "web;web" --icon "icon.ico" \
-  --version-file "version_info.txt" --hidden-import clr main_web.py
+## Chrome / Firefox 扩展
+
+Release 同时附带两款扩展 ZIP，`manifest.json` 在压缩包根目录。
+
+- **Chrome / Edge**：解压 Chrome 包，在扩展管理页启用开发者模式，加载已解压目录。
+- **Firefox**：当前包未签名，通过 `about:debugging` 临时加载；长期安装需要 Mozilla 签名。不能把它当作已签名永久扩展。
+- 软件运行后，在 C站模型页点击扩展图标，确认模型与链接后添加下载。
+
+详细说明：[Chrome](chrome-extension/README.md) · [Firefox](firefox-extension/README.md)。
+
+## 源码运行与构建
+
+Windows 使用 Python 3.12 与现有 `requirements.txt`：
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python -m pip install -r requirements.txt
+.\.venv\Scripts\python main_web.py --window
+# 构建：Spec 包含网页、原生辅助 DLL、托盘及 Tcl/Tk
+.\.venv\Scripts\python -m pip install pyinstaller
+.\.venv\Scripts\python -m PyInstaller -y CivitaiFreeToolWeb.spec
 ```
 
-## ✅ 质量保障
+原生辅助代码由 Windows 自带 .NET Framework C# 编译器构建，不需要额外安装完整 Visual Studio。Linux/macOS 使用社区提供的适配，安装依赖与限制见 [LINUX.md](LINUX.md)；本轮原生窗口验证在 Windows 完成，不声称其他平台已复测。
 
-- **CI 自动测试**：每次 push / PR 自动运行单测（GitHub Actions）
-- **分支保护**：main 禁止强制推送 / 删除，合并前必须通过状态检查
-- **社区贡献**：全部 PR 经审核合并（跨平台支持、稳定性修复等），感谢 [@guanhaisen](https://github.com/guanhaisen)、[@LckHot](https://github.com/LckHot)
+## 测试、贡献与维护
 
-## 📝 更新日志
+- 后端/桥服务回归与隔离前端测试位于 `tests/`；需要真实窗口的改动另做原生检查。
+- GitHub Actions 的状态以实际运行结果为准，版本号/本地测试通过不等于远端 CI 已通过。
+- 修复后发布包含 EXE、Windows ZIP、源码 ZIP、两款扩展和 SHA256 的完整附件，见 [发布流程](docs/RELEASING.md)。
+- 感谢 [guanhaisen](https://github.com/guanhaisen)、[LckHot](https://github.com/LckHot) 等社区贡献；本次 [Fork 检查](docs/FORKS.md) 说明哪些分支存在独立变更及检查范围。
 
-### v2.2.x（2026-09）
-- 🎨 **双主题体系**：Metro（Win10 扁平）与「现代圆角」两套完整视觉语言全页面落地；经典主题全面适配；Emoji 跟随主题自动切换；Metro 亮暗 / 主题色
-- 🖼️ **工作流分析 + 反向解析两页重做**：同结构、双主题不同视觉；节点搜索、提示词复制、真实任务进度、状态徽章
-- 📋 **模型列表重做**：三段式排版、路径只显文件夹、表头列宽拖拽（双击重置）、作者筛选与排序、样式全主题生效
-- 📁 **移动文件 / 缩略图自定义**：模型与附属文件整体搬移；详情任意图（含在线图）一键设为缩略图
-- 🔔 **更新页增强**：批量从 C 站同步、白名单全行可见、C 站入口缩略图、五列排序
-- 🔍 **流畅度**：封面双端缓存（删除 / 刷新不闪屏、秒级就绪）、排序筛选滚动位置保留
-- 🌐 **翻译**：简介中文翻译按简介同款排版渲染；翻译输入自动转纯文本
-- 🐛 **真 Bug 修复**：浏览器模式页面打不开（桥接层缩进事故）、Metro 按钮残留 Emoji（启动顺序）、检查更新缓存被冲掉、删除后排序/筛选重置、「去更新」等冗余按钮清理
-- 📦 首轮 GitHub Release 恢复发布（v2.2.1 起，含网盘交付包）
+详细历史请看 [CHANGELOG.md](CHANGELOG.md)，不再用旧版 Emoji/双主题截图代表当前工作台。
 
-### v2.1.x（2026-08 ~ 09）
-- 🌐 **跨平台**：Linux / macOS 支持（posix_compat + Qt 后端 + 中文字体）
-- 🖥️ **Chrome 扩展**：一键下载当前 C 站模型页（确认小窗 + 直接下载 + 自动切下载管理页）
-- 🐛 修复：插件下载无缩略图（封面走代理）；触发词读不到（字段归一化）；改名丢失扩展名；打开 C 站跳主页；设置页底部遮挡；`import time` 缺失
-- 🔒 main 分支保护 + CI 自动测试
+## 反馈
 
-### v2.0.0（2026-08）
-- 10 套颜色主题；批量下载点击即反馈；下载管理缩略图 + 右键菜单；恢复误整理；多目录扫描；新手引导 6 步等
-
-### v1.5.5.x（历史迭代）
-- 本地 PNG 提示词识别 · 复制图片到剪贴板 · C 站 tags 两级分类 · 移动日志回退 · 待办自动时间 · 下载 HTML 检测等
-
----
-
-## 🤝 反馈
-
-- GitHub Issues：https://github.com/ADVICEsama/CivitaiFreeTool/issues
-- 作者 B 站：https://space.bilibili.com/273101122
-- 粉丝群：909810278
+[GitHub Issues](https://github.com/ADVICEsama/CivitaiFreeTool/issues) · [作者 B 站](https://space.bilibili.com/273101122) · 粉丝群：909810278

@@ -55,10 +55,12 @@ function ok(name) { passed++; console.log('OK ' + name); }
           return JSON.stringify({root:'D:\\AI\\models',tree});
         }
         if (method === 'get_download_history') return {items:window.fixtureHistory,error:''};
+        if (method === 'get_history_thumbnail' && window.fixtureHistoryThumbs?.[args[0]])return window.fixtureHistoryThumbs[args[0]];
         if (method === 'get_history_thumbnail') return 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j0x0AAAAASUVORK5CYII=';
         if (method === 'history_move_to') { const row=window.fixtureHistory.find(r=>r.id===args[0]);row.dest_dir=args[1];row.file_path=args[1]+'\\'+row.filename;return {ok:true,msg:'fixture move'}; }
         if ((method === 'get_history_detail' || method === 'get_model_detail') && window.fixtureDetail) return JSON.stringify({...window.fixtureDetail,path:args[0]});
-        if(method==='get_gallery_image')return {ok:true,b64:window.fixtureCoverB64,mime:'image/png',width:600,height:900,original_available:true};
+        if(method==='get_gallery_image')return {ok:true,b64:window.fixtureCoverB64,mime:'image/png',width:600,height:900,original_available:true,...(window.fixtureOriginalMetadata||{})};
+        if(method==='get_gallery_metadata')return window.fixtureOnlineMetadata||{};
         if(method==='copy_gallery_image')return {ok:true,msg:'当前图片已复制（fixture）'};
         if(method==='save_gallery_image')return {ok:true,msg:'已保存原图片（fixture）'};
         if (method === 'get_history_detail' || method === 'get_model_detail') return JSON.stringify({ok:true,path:method==='get_history_detail'?(window.fixtureHistory.find(r=>r.id===args[0])?.file_path||args[0]):args[0],name:'示例模型',base:'SDXL',ver:'v1.2',size:1048576,covers:[],info:{name:'示例模型',type:'LoRA',baseModel:'SDXL',trainedWords:['soft light'],description:'这是隔离测试数据，不包含真实模型。',version:{name:'v1.2'}}});
@@ -477,7 +479,10 @@ function ok(name) { passed++; console.log('OK ' + name); }
     });
     await page.evaluate(()=>showModelDetail('D:\\AI\\models\\gallery.safetensors'));
     assert.equal(await page.locator('#dRenameC').isVisible(),true);ok('模型详情直接提供文件名到 C站名称入口');
+    await page.evaluate(()=>{window.fixtureOriginalMetadata={meta:{originalSteps:26},metadata_source:'原图 PNG 演示数据'};window.fixtureOnlineMetadata={ok:true,online_metadata:true,meta:{onlineSteps:24},metadata_source:'C站图片接口演示'};});
     await page.locator('#dMain').click();await page.locator('#imageViewer').waitFor();
+    await page.waitForFunction(()=>document.querySelector('.iv-generation').textContent.includes('onlineSteps'));assert((await page.locator('.iv-generation').innerText()).includes('originalSteps'));ok('原图和 withMeta 接口元数据加载后实际刷新生成数据');
+    const overlay=await page.locator('#imageViewer').evaluate(e=>({background:getComputedStyle(e).backgroundColor,blur:getComputedStyle(e).backdropFilter}));assert(overlay.background.includes('0.58'));ok('大图遮罩半透明，模型管理页面保留在后方');
     assert((await page.locator('.iv-generation').innerText()).includes('watercolor mountains'));assert((await page.locator('.iv-generation').innerText()).includes('steps'));assert.equal(await page.locator('#imageViewer script').count(),0);ok('图片点击放大并显示生成参数，提示词只按文本展示');
     await page.locator('[data-iv-copy=prompt]').click();assert.equal((await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='copy_text').at(-1))).args[0],'watercolor mountains <script>not executed</script>');ok('生成数据正面提示词可单独复制');
     await page.locator('[data-iv-copy=all]').click();assert((await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='copy_text').at(-1))).args[0].includes('cfgScale'));ok('复制全部包含采样参数与资源列表');
@@ -551,6 +556,21 @@ function ok(name) { passed++; console.log('OK ' + name); }
     const vertical=await page.locator('#mmImageSize').boundingBox();assert(vertical.height>vertical.width*4);assert.equal(await page.locator('#mmImageSize').getAttribute('aria-orientation'),'vertical');ok('瀑布流按钮悬停展开竖向大小滑条');
     await page.locator('#mmImageSize').focus();await page.keyboard.press('ArrowUp');await page.keyboard.press('Escape');assert.equal(await page.locator('#mmImageSizeControl').isVisible(),false);ok('竖向滑条支持键盘且 Escape 收起不重新打开');
     await page.mouse.move(400,600);assert.equal(await page.locator('#mmImageSizeControl').isVisible(),false);ok('调整滑条不再始终占据模型管理标题行');
+    const docsShots=path.resolve(__dirname,'../docs/screenshots');fs.mkdirSync(docsShots,{recursive:true});
+    await page.evaluate(()=>{
+      closeImageViewer();closeMasonrySizeMenu();state.cfg.theme='dark_blue';state.cfg.ui_text_size='standard';state.cfg.ui_font='';document.documentElement.dataset.theme='dark_blue';applyUiAppearance();applyZoom(100);syncWindowControls({integrated:true,maximized:false});
+      const names=['山川水彩','暮色建筑','柔光风景','墨色山峦','云端城市','湖畔晨光','秋日森林','极简空间','远山薄雾','电影色彩','星空夜景','海岸线'];
+      state.models=state.display=names.map((name,i)=>({name:name+'_v1.safetensors',civitai_name:name,path:'D:\\Example\\models\\'+name+'.safetensors',base:'SDXL',type:'LoRA',size:24641536,author:'Demo Studio',version:'v1.0'}));state.mmView='masonry';state.coverCache.clear();
+      names.forEach((name,i)=>{const c=document.createElement('canvas');c.width=360;c.height=420+(i%3)*80;const g=c.getContext('2d');const palettes=[['#90b9c7','#284355','#f7d9a3'],['#9e8ba7','#443859','#efbbb2'],['#95b9aa','#335749','#e8cd99']];const p=palettes[i%3];g.fillStyle=p[0];g.fillRect(0,0,c.width,c.height);g.fillStyle=p[2];g.beginPath();g.arc(265,80,35,0,Math.PI*2);g.fill();for(let k=0;k<3;k++){g.fillStyle=k===2?p[1]:p[0];g.beginPath();g.moveTo(-20,c.height);g.lineTo(0,200+k*35);for(let j=0;j<5;j++)g.lineTo(j*90,150+((i+j+k)%3)*60+k*45);g.lineTo(400,c.height);g.fill();}g.fillStyle='#ffffff';g.font='20px sans-serif';g.fillText('LANDSCAPE / '+String(i+1).padStart(2,'0'),20,c.height-24);state.coverCache.set(state.models[i].path,c.toDataURL('image/jpeg'));});
+      window.fixtureScanRows=state.models;state.mmChecked.clear();$('#mmFilter').value='';setMasonrySize(180);switchPage('models');renderMm();$('#mmCount').textContent='12 个示例模型';document.activeElement.blur();window.fixtureDetail={ok:true,name:state.models[0].name,info:{name:'山川水彩',type:'LoRA',baseModel:'SDXL',trainedWords:['landscape','watercolor'],description:'用于截图展示的虚构模型，不代表实际下载。',version:{name:'v1.0'}},covers:[{b64:state.coverCache.get(state.models[0].path).split(',')[1],meta:{prompt:'mountain landscape, watercolor',steps:26},resources:[]}]};setStatus('演示模型 · 截图数据不连接真实下载');
+    });
+    await page.evaluate(()=>showModelDetail(state.models[0].path));await page.mouse.move(600,760);await page.waitForTimeout(350);await page.screenshot({path:path.join(docsShots,'models-workbench.png')});
+    await page.evaluate(()=>{const first=state.models[0];window.fixtureDetail={ok:true,path:first.path,name:first.name,info:{name:'山川水彩',type:'LoRA'},covers:[{b64:state.coverCache.get(first.path).split(',')[1],meta:{prompt:'mountain landscape, watercolor, warm light',negativePrompt:'blur',steps:26,cfgScale:6,seed:2026},resources:[{name:'Landscape demo resource',type:'LoRA',version:'v1'}],metadata_source:'演示生成数据（非用户图片）'}]};window.fixtureOriginalMetadata={width:360,height:420};window.fixtureOnlineMetadata={};window.fixtureCoverB64=state.coverCache.get(first.path).split(',')[1];openImageViewer(window.fixtureDetail);});
+    await page.locator('#ivImage').waitFor();await page.waitForTimeout(350);await page.screenshot({path:path.join(docsShots,'image-generation-viewer.png')});await page.keyboard.press('Escape');
+    await page.locator('.nav-tab[data-page="settings"]').click();await page.locator('[data-settings-category="appearance"]').click();await page.evaluate(()=>{document.querySelector('.content').scrollTop=0;document.querySelector('[data-key=theme]').value='dark_blue';});await page.mouse.move(600,760);await page.waitForTimeout(150);await page.screenshot({path:path.join(docsShots,'settings-appearance.png')});
+    await page.locator('[data-settings-category="organize"]').click();await page.evaluate(()=>document.querySelector('.content').scrollTop=0);await page.screenshot({path:path.join(docsShots,'settings-classification.png')});
+    await page.evaluate(()=>{window.fixtureHistoryThumbs={};window.fixtureHistory=state.models.slice(0,5).map((m,i)=>{const id='doc-history-'+i;window.fixtureHistoryThumbs[id]=state.coverCache.get(m.path).split(',')[1];return {id,filename:m.name,modelName:m.civitai_name,status:'done',cached_thumb:true,model_url:'https://civitai.com/models/123',total:m.size,dest_dir:'D:\\Example\\models',file_path:m.path,finished_at:1791370200-i*300};});});
+    await page.locator('.nav-tab[data-page="dlmanager"]').click();await page.locator('#dlHistoryTab').click();await page.waitForTimeout(300);await page.screenshot({path:path.join(docsShots,'download-history.png')});ok('README 五张示例截图仅使用虚构模型和程序绘制风景，不读取用户配置');
     const unresolvedIcons=await page.evaluate(()=>Array.from(document.querySelectorAll('svg.ic use')).map(e=>e.getAttribute('href')).filter(ref=>!document.querySelector(ref)));
     assert.deepEqual(unresolvedIcons,[]); ok('全部可见与动态图标均有 sprite 定义');
     assert.deepEqual(errors,[]);assert.equal(await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='log_ui_error').length),0); ok('无前端异常');

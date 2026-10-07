@@ -6,37 +6,97 @@ from urllib.parse import urlsplit
 
 LIMIT = 25 * 1024 * 1024
 
-def generation(image=None, local_path=None):
-    image = image if isinstance(image, dict) else {}
-    meta = dict(image.get('meta') or {}) if isinstance(image.get('meta'), dict) else {}
-    source = 'C站模型信息缓存' if meta else '未提供生成数据'
-    if local_path:
+def comfy_generation(graph):
+    """只读解析标准 ComfyUI API 图中实际连接的节点，不执行或猜测未知节点。"""
+    if not isinstance(graph,dict) or len(graph)>10000:return {}
+    sampler=next((n for n in graph.values() if isinstance(n,dict) and n.get('class_type') in ('KSampler','KSamplerAdvanced')),None)
+    if not sampler:return {}
+    inputs=sampler.get('inputs') or {}
+    if not isinstance(inputs,dict):return {}
+    def nodes(reference):
+        seen=set();pending=[reference];out=[]
+        while pending and len(seen)<256:
+            value=pending.pop()
+            if not isinstance(value,list) or len(value)<2 or str(value[0]) not in graph:continue
+            key=str(value[0])
+            if key in seen:continue
+            seen.add(key);node=graph[key]
+            if not isinstance(node,dict):continue
+            out.append(node);values=node.get('inputs') or {}
+            if isinstance(values,dict):pending.extend(v for v in values.values() if isinstance(v,list))
+        return out
+    result={}
+    for side,label in [('positive','prompt'),('negative','negativePrompt')]:
+        texts=[]
+        for node in nodes(inputs.get(side)):
+            if not str(node.get('class_type','')).startswith('CLIPTextEncode'):continue
+            values=node.get('inputs') or {}
+            for field in ('text','text_g','text_l'):
+                text=values.get(field)
+                if isinstance(text,str) and text and text not in texts:texts.append(text)
+        if texts:result[label]='\n'.join(texts)
+    for key in ('seed','noise_seed','steps','cfg','sampler_name','scheduler','denoise'):
+        value=inputs.get(key)
+        if isinstance(value,(str,int,float)) and not isinstance(value,bool):result[{'cfg':'cfgScale','sampler_name':'sampler','noise_seed':'seed'}.get(key,key)]=value
+    for node in nodes(inputs.get('latent_image')):
+        values=node.get('inputs') or {}
+        for key in ('width','height'):
+            if isinstance(values.get(key),(int,float)):result.setdefault(key,values[key])
+    resources=[]
+    for node in nodes(inputs.get('model')):
+        values=node.get('inputs') or {}
+        for field,kind in [('ckpt_name','CHECKPOINT'),('lora_name','LORA'),('unet_name','DIFFUSION_MODEL')]:
+            name=values.get(field)
+            if isinstance(name,str) and name:
+                resource={'name':name.replace('\\','/').split('/')[-1],'type':kind}
+                if resource not in resources:resources.append(resource)
+    if resources:result['resources']=resources
+    return result
+
+
+def generation(image=None, local_path=None, saved=None):
+    image=image if isinstance(image,dict) else {}
+    meta=dict(image.get('meta') or {}) if isinstance(image.get('meta'),dict) else {}
+    source=image.get('metadata_source') or ('C站模型信息缓存' if meta else '未提供生成数据')
+    data=saved if isinstance(saved,dict) else {}
+    if local_path and saved is None:
         try:
             from PIL import Image
-            with Image.open(local_path) as im: saved = dict(im.info)
-            parameters = saved.get('parameters')
-            if isinstance(parameters, str) and parameters.strip():
-                parts = re.split(r'\n(?=Steps:\s*\d)', parameters, maxsplit=1)
-                positive, _, negative = parts[0].partition('\nNegative prompt:')
-                meta = {'prompt': positive.strip(), 'negativePrompt': negative.strip()}
-                if len(parts)>1:
-                    for key,value in re.findall(r'(?:^|,\s*)([^:,]+):\s*([^,]+)',parts[1]):meta[key.strip()]=value.strip()
-                source='本地图片 PNG parameters'
-            elif saved.get('prompt') or saved.get('workflow'):
-                meta = {}
-                for key in ('prompt','workflow'):
-                    value=saved.get(key)
-                    if value:
-                        try:value=json.loads(value) if isinstance(value,str) else value
-                        except (ValueError,TypeError):pass
-                        meta['comfyPrompt' if key=='prompt' and isinstance(value,dict) else key]=value
-                source='本地图片 ComfyUI 元数据'
+            with Image.open(local_path) as im:data=dict(im.info)
         except Exception:pass
-    resources = image.get('resources') or meta.get('resources') or meta.get('civitaiResources') or []
+    parameters=data.get('parameters')
+    if isinstance(parameters,str) and parameters.strip():
+        parts=re.split(r'\n(?=Steps:\s*\d)',parameters,maxsplit=1)
+        positive,_,negative=parts[0].partition('\nNegative prompt:')
+        meta.update({'prompt':positive.strip(),'negativePrompt':negative.strip()})
+        if len(parts)>1:
+            for key,value in re.findall(r'(?:^|,\s*)([^:,]+):\s*([^,]+)',parts[1]):meta[key.strip()]=value.strip()
+        source='原图内嵌 PNG parameters' if saved is not None else '本地图片 PNG parameters'
+    elif data.get('prompt') or data.get('workflow'):
+        for key in ('prompt','workflow'):
+            value=data.get(key)
+            if value:
+                try:value=json.loads(value,parse_constant=lambda _:None) if isinstance(value,str) else value
+                except (ValueError,TypeError):pass
+                meta['comfyPrompt' if key=='prompt' and isinstance(value,dict) else key]=value
+        source='原图内嵌 ComfyUI 元数据' if saved is not None else '本地图片 ComfyUI 元数据'
+    else:
+        comment=data.get('UserComment') or data.get('comment')
+        if isinstance(comment,bytes):comment=comment.removeprefix(b'ASCII\0\0\0').decode('utf-8',errors='replace')
+        if isinstance(comment,str):
+            try:
+                fields=json.loads(comment,parse_constant=lambda _:None)
+                if isinstance(fields,dict):meta.update(fields);source='原图内嵌 EXIF/Comment 元数据'
+            except (ValueError,TypeError):pass
+    if isinstance(meta.get('comfyPrompt'),dict):
+        for key,value in comfy_generation(meta['comfyPrompt']).items():meta.setdefault(key,value)
+    resources=image.get('resources') or meta.get('resources') or meta.get('civitaiResources') or []
     if not isinstance(resources,list):resources=[]
-    return {'meta':meta,'resources':[r for r in resources if isinstance(r,dict)],'metadata_source':source,
-            'image_id':image.get('id'),'width':image.get('width'),'height':image.get('height'),
-            'orig_url':image.get('url') or '', 'image_page':('https://civitai.com/images/'+str(image['id'])) if str(image.get('id','')).isdigit() else ''}
+    return {'meta':meta,'resources':[v for v in resources if isinstance(v,dict)],'metadata_source':source,
+            'image_id':image.get('id') or image.get('image_id'),'width':image.get('width'),'height':image.get('height'),
+            'orig_url':image.get('url') or image.get('orig_url') or '',
+            'image_page':image.get('image_page') or ('https://civitai.com/images/'+str(image['id']) if str(image.get('id','')).isdigit() else '')}
+
 
 def original_url(url):
     parsed=urlsplit(str(url or ''))
@@ -73,11 +133,16 @@ def preview(item,cfg):
     import base64
     data,fmt,w,h,original=read_bytes(item,cfg)
     with Image.open(io.BytesIO(data)) as im:
+        saved=dict(im.info)
+        try:saved['UserComment']=im.getexif().get(0x9286) or saved.get('UserComment')
+        except Exception:pass
+        fields=generation(item,saved=saved)
         im=im.convert('RGBA' if 'A' in im.getbands() else 'RGB');im.thumbnail((4096,4096))
         buf=io.BytesIO();im.save(buf,'PNG' if im.mode=='RGBA' else 'JPEG',**({} if im.mode=='RGBA' else {'quality':94}))
         mime='image/png' if im.mode=='RGBA' else 'image/jpeg'
     return {'ok':True,'b64':base64.b64encode(buf.getvalue()).decode(),'mime':mime,'width':w,'height':h,
-            'original_available':original,'preview_limited':max(w,h)>4096}
+            'original_available':original,'preview_limited':max(w,h)>4096,
+            'meta':fields['meta'],'resources':fields['resources'],'metadata_source':fields['metadata_source']}
 
 
 def clipboard_dib(data):

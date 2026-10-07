@@ -11,6 +11,35 @@ class GalleryTests(unittest.TestCase):
         r=image_gallery.generation({'id':123,'width':1024,'height':1536,'meta':{'prompt':'landscape','steps':12},'resources':[{'name':'Landscape','modelId':7}]})
         self.assertEqual(r['meta']['steps'],12);self.assertEqual(r['resources'][0]['modelId'],7)
         self.assertEqual(r['image_page'],'https://civitai.com/images/123')
+    def test_original_preview_reads_png_metadata_before_conversion(self):
+        with TemporaryDirectory() as d:
+            p=Path(d)/'original.png';png=PngImagePlugin.PngInfo();png.add_text('parameters','mountain landscape\nNegative prompt: blur\nSteps: 26, CFG scale: 6, Seed: 123')
+            Image.new('RGB',(50,70),'blue').save(p,pnginfo=png)
+            result=image_gallery.preview({'local_path':str(p)},{});self.assertEqual(result['meta']['prompt'],'mountain landscape');self.assertEqual(result['meta']['Steps'],'26')
+
+    def test_nonfinite_model_metadata_serializes_as_valid_json_without_mutation(self):
+        with TemporaryDirectory() as d:
+            model=Path(d)/'anima测试 e20-styles.safetensors';model.write_bytes(b'fixture');info=model.with_suffix('.civitai.info');original=json.dumps({'name':'fixture','images':[{'url':'https://image.civitai.com/a/width=100/x.png','meta':{'cfgScale':float('nan'),'steps':float('inf')}}]});info.write_text(original,encoding='utf-8')
+            api=webui.Api.__new__(webui.Api);api.cfg={};raw=api.get_model_detail(str(model));result=json.loads(raw,parse_constant=lambda _:self.fail('invalid nonfinite JSON'))
+            self.assertTrue(result['ok']);self.assertIsNone(result['info']['images'][0]['meta']['cfgScale']);self.assertEqual(info.read_text(encoding='utf-8'),original)
+
+    def test_online_generation_queries_exact_image_with_meta_and_caches(self):
+        api=webui.Api.__new__(webui.Api);api.cfg={};api._gallery_item=Mock(return_value={'image_id':7,'meta':{},'resources':[]})
+        with patch.object(webui.civitai_api,'CivitaiAPI') as client:
+            client.return_value.get_image_metadata.return_value={'id':7,'meta':{'prompt':'safe landscape'},'resources':[{'name':'fixture resource'}]}
+            first=api.get_gallery_metadata('fixture',0);second=api.get_gallery_metadata('fixture',0);self.assertEqual(first['meta']['prompt'],'safe landscape');self.assertTrue(second['online_metadata']);self.assertEqual(client.return_value.get_image_metadata.call_count,1)
+
+    def test_image_metadata_api_uses_with_meta_and_checks_returned_id(self):
+        import civitai_api
+        client=civitai_api.CivitaiAPI();client._get=Mock(return_value={'items':[{'id':99,'meta':{'prompt':'wrong image'}}]})
+        self.assertEqual(client.get_image_metadata(7),{});client._get.assert_called_once_with('/images',params={'imageId':'7','withMeta':'true','limit':1},retries=1)
+        with self.assertRaises(ValueError):client.get_image_metadata('bad/id')
+
+    def test_comfy_generation_reads_connected_sampler_and_not_unrelated_text(self):
+        graph={'1':{'class_type':'KSampler','inputs':{'positive':['2',0],'negative':['3',0],'model':['4',0],'steps':20,'cfg':6,'seed':7}},'2':{'class_type':'CLIPTextEncode','inputs':{'text':'mountain landscape'}},'3':{'class_type':'CLIPTextEncode','inputs':{'text':'blur'}},'4':{'class_type':'CheckpointLoaderSimple','inputs':{'ckpt_name':'demo.safetensors'}},'5':{'class_type':'CLIPTextEncode','inputs':{'text':'unconnected not used'}}}
+        result=image_gallery.generation(saved={'prompt':json.dumps(graph)})
+        self.assertEqual(result['meta']['prompt'],'mountain landscape');self.assertEqual(result['meta']['negativePrompt'],'blur');self.assertEqual(result['meta']['steps'],20);self.assertEqual(result['resources'][0]['name'],'demo.safetensors');self.assertNotIn('unconnected',result['meta']['prompt'])
+
     def test_missing_data_not_invented(self):
         r=image_gallery.generation({});self.assertEqual(r['meta'],{});self.assertEqual(r['resources'],[])
     def test_png_parameters_parsed(self):
