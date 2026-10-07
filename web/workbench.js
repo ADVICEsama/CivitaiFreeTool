@@ -120,12 +120,29 @@ function buildWorkbenchSettings() {
   refreshLocalFontOptions();
   refreshStorageInfo();
 }
-let masonrySaveTimer=0;
+let masonrySaveTimer=0,masonryMenuCloseTimer=0;
+function openMasonrySizeMenu(){
+  if(typeof state==='undefined' || state.mmView!=='masonry')return;
+  clearTimeout(masonryMenuCloseTimer);$('#mmViewSeg').classList.add('size-menu-open');
+  $('#mmViewMasonry').setAttribute('aria-expanded','true');positionMasonrySizeMenu();
+}
+function positionMasonrySizeMenu(){
+  const menu=$('#mmImageSizeControl'),anchor=$('#mmViewMasonry');if(!menu || !$('#mmViewSeg').classList.contains('size-menu-open'))return;
+  const rect=anchor.getBoundingClientRect(),box=menu.getBoundingClientRect(),z=Number(document.documentElement.style.zoom)||1;
+  const x=Math.max(8,Math.min(rect.right-box.width,innerWidth-box.width-8));
+  const y=rect.bottom+6+box.height<innerHeight-8?rect.bottom+6:Math.max(8,rect.top-box.height-6);
+  Object.assign(menu.style,{left:x/z+'px',top:y/z+'px',right:'auto'});
+}
+function closeMasonrySizeMenu(){
+  clearTimeout(masonryMenuCloseTimer);$('#mmViewSeg')?.classList.remove('size-menu-open');
+  $('#mmViewMasonry')?.setAttribute('aria-expanded','false');
+}
+
 function setMasonrySize(value,save=false) {
   const width=Math.max(140,Math.min(420,Math.round((Number(value)||220)/10)*10));
   document.documentElement.style.setProperty('--model-card-width',width+'px');
   if(typeof state!=='undefined' && state.cfg)state.cfg.masonry_card_width=width;
-  const control=$('#mmImageSizeControl');if(control)control.hidden=typeof state==='undefined' || state.mmView!=='masonry';
+  const control=$('#mmImageSizeControl');if(control){control.hidden=typeof state==='undefined' || state.mmView!=='masonry';if(control.hidden)closeMasonrySizeMenu();}
   for(const id of ['mmImageSize','setting-masonry_card_width']){const input=document.getElementById(id);if(input)input.value=width;}
   for(const id of ['mmImageSizeValue','masonrySizeSettings']){const label=document.getElementById(id);if(label)label.textContent=width+' px';}
   if(save){clearTimeout(masonrySaveTimer);masonrySaveTimer=setTimeout(()=>api.call('save_config',{masonry_card_width:width}).catch(()=>setStatus('图片大小保存失败')),350);}
@@ -316,7 +333,20 @@ function decorateWorkbenchIcons(root = document) {
 function initializeWorkbench() {
   decorateWorkbenchIcons();
   document.querySelectorAll(".sidebar-brand,.sidebar-name,.sidebar-name small,.page-title,.card > h2,.iv-toolbar").forEach(el=>el.classList.add("pywebview-drag-region"));
-  $('#mmImageSize').addEventListener('input',e=>setMasonrySize(e.target.value,true));
+  const sizeAnchor=$('#mmViewMasonry'),sizeMenu=$('#mmImageSizeControl');
+  sizeAnchor.setAttribute('aria-controls','mmImageSizeControl');sizeAnchor.setAttribute('aria-expanded','false');
+  for(const el of [sizeAnchor,sizeMenu]){
+    el.addEventListener('pointerenter',openMasonrySizeMenu);
+    el.addEventListener('pointerleave',()=>{masonryMenuCloseTimer=setTimeout(closeMasonrySizeMenu,160);});
+    el.addEventListener('focusin',openMasonrySizeMenu);
+  }
+  sizeAnchor.addEventListener('click',()=>setTimeout(openMasonrySizeMenu,0));
+  document.addEventListener('pointerdown',e=>{if(!e.target.closest('#mmViewSeg'))closeMasonrySizeMenu();});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape' && $('#mmViewSeg').classList.contains('size-menu-open')){sizeAnchor.focus();closeMasonrySizeMenu();e.preventDefault();e.stopImmediatePropagation();}},true);
+  document.addEventListener('focusin',e=>{if(!e.target.closest('#mmViewSeg'))closeMasonrySizeMenu();});
+  document.addEventListener('scroll',positionMasonrySizeMenu,true);window.addEventListener('resize',positionMasonrySizeMenu);window.addEventListener('cft:zoom',positionMasonrySizeMenu);
+  sizeAnchor.addEventListener('keydown',e=>{if(e.key==='ArrowDown'){openMasonrySizeMenu();$('#mmImageSize').focus();e.preventDefault();}});
+  $('#mmImageSize').addEventListener('input' ,e=>setMasonrySize(e.target.value,true));
   $('#mmImageSizeControl').addEventListener('wheel',e=>{
     if(e.ctrlKey || e.altKey)return;
     e.preventDefault();setMasonrySize(Number(state.cfg.masonry_card_width || 220)+(e.deltaY<0?20:-20),true);

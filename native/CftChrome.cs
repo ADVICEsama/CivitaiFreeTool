@@ -6,6 +6,8 @@ using System.Runtime.InteropServices;
 namespace CftNative {
   public class Frame : NativeWindow {
     [StructLayout(LayoutKind.Sequential)] public struct RECT { public int L,T,R,B; }
+    [StructLayout(LayoutKind.Sequential)] struct POINT { public int X,Y; }
+    [StructLayout(LayoutKind.Sequential)] struct MINMAX { public POINT Reserved,MaxSize,MaxPosition,MinTrack,MaxTrack; }
     [StructLayout(LayoutKind.Sequential)] struct MONITOR { public int Size; public RECT Bounds,Work; public int Flags; }
     [DllImport("user32.dll")] static extern int GetWindowLong(IntPtr h,int i);
     [DllImport("user32.dll")] static extern int SetWindowLong(IntPtr h,int i,int v);
@@ -16,11 +18,19 @@ namespace CftNative {
     [DllImport("user32.dll")] static extern bool GetMonitorInfo(IntPtr h,ref MONITOR m);
     [DllImport("user32.dll")] static extern bool ReleaseCapture();
     [DllImport("user32.dll")] static extern IntPtr SendMessage(IntPtr h,int m,IntPtr w,IntPtr l);
-    public void BeginResize(int edge){if(edge<1||edge>8||IsZoomed(Handle))return;ReleaseCapture();SendMessage(Handle,0x112,(IntPtr)(0xf000|edge),IntPtr.Zero);}
+    [DllImport("user32.dll")] static extern bool RedrawWindow(IntPtr h,IntPtr r,IntPtr region,uint flags);
+    public void Repaint(){RedrawWindow(Handle,IntPtr.Zero,IntPtr.Zero,0x485);}
+    public void BeginResize(int edge){
+      if(edge<1||edge>8||IsZoomed(Handle))return;
+      // 常态不添加 THICKFRAME，避免 WinForms 无框窗口留下旧尺寸非客户区白框。
+      int style=GetWindowLong(Handle,-16);SetWindowLong(Handle,-16,style|0x00040000);Refresh();
+      try{ReleaseCapture();SendMessage(Handle,0x112,(IntPtr)(0xf000|edge),IntPtr.Zero);}
+      finally{if(Handle!=IntPtr.Zero){SetWindowLong(Handle,-16,GetWindowLong(Handle,-16)&~0x00040000);Refresh();Repaint();}}
+    }
     public int TitleHeight=48, Edge=6, ControlsWidth=138;
     int oldStyle;
-    public Frame(IntPtr hwnd) { AssignHandle(hwnd);oldStyle=GetWindowLong(hwnd,-16);SetWindowLong(hwnd,-16,(oldStyle & ~0x00c00000)|0x00040000|0x00010000|0x00020000|0x00080000);Refresh(); }
-    public void Refresh() { SetWindowPos(Handle,IntPtr.Zero,0,0,0,0,0x27); }
+    public Frame(IntPtr hwnd) { AssignHandle(hwnd);oldStyle=GetWindowLong(hwnd,-16);SetWindowLong(hwnd,-16,(oldStyle & ~0x00c40000)|0x00010000|0x00020000|0x00080000);Refresh(); }
+    public void Refresh() { SetWindowPos(Handle,IntPtr.Zero,0,0,0,0,0x37); }
     public int Hit(int x,int y) {
       RECT r;GetWindowRect(Handle,out r);x-=r.L;y-=r.T;
       if(!IsZoomed(Handle)) {
@@ -32,8 +42,17 @@ namespace CftNative {
     }
     protected override void WndProc(ref Message m) {
       if(m.Msg==0x83 && m.WParam!=IntPtr.Zero) { // WM_NCCALCSIZE: 内容扩展到整个窗体。
-        if(IsZoomed(Handle)){MONITOR v=new MONITOR();v.Size=Marshal.SizeOf(v);if(GetMonitorInfo(MonitorFromWindow(Handle,2),ref v))Marshal.StructureToPtr(v.Work,m.LParam,false);}
+        // 不把监视器绝对坐标写进 NCCALCSIZE，最大化工作区在 GETMINMAXINFO 管理。
         m.Result=IntPtr.Zero;return;
+      }
+      if(m.Msg==0x24){ // WM_GETMINMAXINFO: 尊重任务栏、多屏和 WinForms 最小尺寸。
+        base.WndProc(ref m);MONITOR v=new MONITOR();v.Size=Marshal.SizeOf(v);
+        if(GetMonitorInfo(MonitorFromWindow(Handle,2),ref v)){
+          MINMAX limits=(MINMAX)Marshal.PtrToStructure(m.LParam,typeof(MINMAX));
+          limits.MaxPosition.X=v.Work.L-v.Bounds.L;limits.MaxPosition.Y=v.Work.T-v.Bounds.T;
+          limits.MaxSize.X=v.Work.R-v.Work.L;limits.MaxSize.Y=v.Work.B-v.Work.T;
+          Marshal.StructureToPtr(limits,m.LParam,false);
+        }return;
       }
       if(m.Msg==0x84){long p=m.LParam.ToInt64();m.Result=(IntPtr)Hit((short)(p&0xffff),(short)((p>>16)&0xffff));return;}
       base.WndProc(ref m);

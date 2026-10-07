@@ -326,3 +326,17 @@ html body .ctx-menu {z-index:10060;min-width:220px;max-width:min(320px,calc(100v
 .ctx-group[open] .ctx-chevron {transform:rotate(180deg);}
 .ctx-group>div {border-left:2px solid var(--border);margin:0 6px 5px 20px;padding-left:4px;}
 .ctx-menu .ctx-item:focus-visible,.ctx-group-label:focus-visible {outline:2px solid var(--primary);outline-offset:-2px;}
+
+/* 大图视口与画布分离：滚动条属于固定视口，不跟着图片底部走。 */
+.iv-image-scroll {flex:1 1 0;min-width:0;min-height:0;display:block;position:relative;overflow:auto;padding:0;scrollbar-gutter:stable;overscroll-behavior:contain;}
+.iv-image-canvas {width:max-content;min-width:100%;min-height:100%;display:flex;align-items:center;justify-content:center;padding:12px;box-sizing:border-box;}
+#ivImage {user-select:none;-webkit-user-drag:none;touch-action:none;}
+.iv-image-scroll[data-pannable=true] #ivImage {cursor:grab;}
+.iv-image-scroll.is-panning #ivImage {cursor:grabbing;}
+/* 大小调节藏进瀑布流按钮的二级菜单；不是单独占一行的横向滑条。 */
+#mmViewSeg {position:relative;overflow:visible;}
+#mmImageSizeControl {display:none;position:fixed;top:0;right:0;z-index:10030;width:112px;flex-direction:column;gap:10px;padding:14px 10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:var(--shadow-hover);}
+#mmViewSeg.size-menu-open #mmImageSizeControl:not([hidden]) {display:flex;}
+#mmImageSizeControl input {writing-mode:vertical-lr;direction:rtl;appearance:auto;width:26px;height:160px;min-width:0;accent-color:var(--primary);}
+#mmImageSizeControl label,#mmImageSizeControl output {font-size:calc(12px * var(--type-scale,1));color:var(--text);white-space:nowrap;}
+#mmImageSizeControl small {font-size:calc(10px * var(--type-scale,1));white-space:nowrap;}

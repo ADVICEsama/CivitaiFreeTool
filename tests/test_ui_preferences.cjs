@@ -190,6 +190,7 @@ function ok(name) { passed++; console.log('OK ' + name); }
       state.mmView='masonry';renderMm();
     });
     await page.locator('.ms-card').first().waitFor();
+    await page.locator('#mmViewMasonry').hover();await page.locator('#mmImageSizeControl').waitFor({state:'visible'});
     await page.locator('#mmImageSize').fill('320');await page.locator('#mmImageSize').dispatchEvent('input');
     assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--model-card-width').trim()),'320px');ok('瀑布流图片大小滑杆生效');
     const zoomBefore=await page.evaluate(()=>state.cfg.ui_zoom);
@@ -491,6 +492,12 @@ function ok(name) { passed++; console.log('OK ' + name); }
     await page.locator('#ivImage').click({button:'right'});await page.keyboard.press('Escape');assert.equal(await page.locator('#ivContext').isVisible(),false);assert.equal(await page.locator('#imageViewer').isVisible(),true);ok('Escape 先关闭图片右键菜单');
     await page.locator('#ivSave').click();assert((await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='save_gallery_image').at(-1))).args[0].includes('gallery.safetensors'));ok('图片保存请求指定当前模型与图片索引');
     await page.locator('#ivPlus').click();assert((await page.locator('#ivFit').innerText()).includes('120'));ok('图片放大按钮只调整当前图片');
+    await page.evaluate(()=>setViewerZoom(3));
+    const panBefore=await page.locator('.iv-image-scroll').evaluate(e=>({x:e.scrollLeft,y:e.scrollTop,w:e.clientWidth,h:e.clientHeight,sw:e.scrollWidth,sh:e.scrollHeight}));assert(panBefore.sw>panBefore.w && panBefore.sh>panBefore.h);ok('超大图片有可访问的横向和纵向画布，不负溢出截掉边缘');
+    const stage=await page.locator('.iv-image-scroll').boundingBox();await page.mouse.move(stage.x+stage.width/2,stage.y+stage.height/2);await page.mouse.down();await page.mouse.move(stage.x+stage.width/2-80,stage.y+stage.height/2-65,{steps:10});await page.mouse.up();
+    const panAfter=await page.locator('.iv-image-scroll').evaluate(e=>({x:e.scrollLeft,y:e.scrollTop}));assert(panAfter.x>panBefore.x+60 && panAfter.y>panBefore.y+45);assert.equal(await page.locator('#imageViewer').isVisible(),true);ok('按住图片可同时拖动横纵显示位置，拖完不误关');
+    const frame=await page.locator('.iv-image-scroll').evaluate(e=>{const r=e.getBoundingClientRect(),stage=e.closest('.iv-stage').getBoundingClientRect(),status=document.querySelector('#ivStatus').getBoundingClientRect();return {height:r.height,stage:stage.height,status:status.height,bottom:r.bottom,statusTop:status.top};});assert(frame.height<frame.stage && Math.abs(frame.bottom-frame.statusTop)<2);ok('滚动条固定在图片视口边缘而非跟到大图下面');
+    await page.evaluate(()=>setViewerZoom(1));assert.equal(await page.locator('.iv-image-scroll').evaluate(e=>e.scrollTop),0);ok('适合窗口恢复完整图片并解除拖动偏移');
     await page.screenshot({path:path.join(shots,'image-generation-viewer-v2.6.0.png')});
     await page.keyboard.press('ArrowRight');assert((await page.locator('.iv-generation').innerText()).includes('来源没有记录资源列表'));ok('没有生成数据时明确说明，不编造使用资源');
     await page.keyboard.press('Escape');assert.equal(await page.locator('#imageViewer').count(),0);assert.equal(await page.locator('#dClose').isVisible(),true);ok('Escape 仅关闭大图，保留模型详情');
@@ -540,6 +547,10 @@ function ok(name) { passed++; console.log('OK ' + name); }
     await page.screenshot({path:path.join(shots,'window-corner-v2.6.4.png')});
     await page.evaluate(()=>showModelDetail('D:\\AI\\models\\gallery.safetensors'));await page.evaluate(()=>{window.fixtureDetail={ok:true,path:'D:\\AI\\models\\gallery.safetensors',covers:[{b64:window.fixtureCoverB64,meta:{},resources:[]}]};openImageViewer(window.fixtureDetail);});
     await page.locator('#ivImage').waitFor();await page.locator('.iv-image-scroll').click({position:{x:10,y:100}});assert.equal(await page.locator('#imageViewer').count(),0);ok('点击图片两侧黑色空白关闭大图并保留模型详情');
+    await page.evaluate(()=>{switchPage('models');mmSetView('masonry');});await page.locator('#mmViewMasonry').hover();await page.locator('#mmImageSizeControl').waitFor({state:'visible'});
+    const vertical=await page.locator('#mmImageSize').boundingBox();assert(vertical.height>vertical.width*4);assert.equal(await page.locator('#mmImageSize').getAttribute('aria-orientation'),'vertical');ok('瀑布流按钮悬停展开竖向大小滑条');
+    await page.locator('#mmImageSize').focus();await page.keyboard.press('ArrowUp');await page.keyboard.press('Escape');assert.equal(await page.locator('#mmImageSizeControl').isVisible(),false);ok('竖向滑条支持键盘且 Escape 收起不重新打开');
+    await page.mouse.move(400,600);assert.equal(await page.locator('#mmImageSizeControl').isVisible(),false);ok('调整滑条不再始终占据模型管理标题行');
     const unresolvedIcons=await page.evaluate(()=>Array.from(document.querySelectorAll('svg.ic use')).map(e=>e.getAttribute('href')).filter(ref=>!document.querySelector(ref)));
     assert.deepEqual(unresolvedIcons,[]); ok('全部可见与动态图标均有 sprite 定义');
     assert.deepEqual(errors,[]);assert.equal(await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='log_ui_error').length),0); ok('无前端异常');

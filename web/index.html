@@ -148,9 +148,6 @@
         <span class="status-pill" id="mmCount">未扫描</span>
       </div>
 
-      <div class="masonry-size-control" id="mmImageSizeControl" hidden>
-        <label for="mmImageSize">图片大小</label><input id="mmImageSize" type="range" min="140" max="420" step="10" value="220" aria-label="瀑布流图片大小"/><output id="mmImageSizeValue">220 px</output><span>Alt + 滚轮调整</span>
-      </div>
       <!-- ===== Metro 工具区（仅 Metro 主题显示；按钮全部是"代理"，点击转给下面老按钮，逻辑零改动） ===== -->
       <div class="mm-metro">
         <!-- 第一行：主操作（Primary / High / Medium） -->
@@ -215,6 +212,9 @@
           <span class="mm-seg" id="mmViewSeg" data-tip="切换视图（默认瀑布流）">
             <button class="btn seg" id="mmViewList"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-list"/></svg>列表</button>
             <button class="btn seg" id="mmViewMasonry"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-grid"/></svg>瀑布流</button>
+            <div class="masonry-size-control" id="mmImageSizeControl" hidden role="group" aria-label="瀑布流图片大小">
+              <label for="mmImageSize">图片大小</label><output id="mmImageSizeValue">220 px</output><input id="mmImageSize" type="range" min="140" max="420" step="10" value="220" aria-label="瀑布流图片大小" aria-orientation="vertical"/><small>Alt + 滚轮</small>
+            </div>
           </span>
         </div>
         <!-- 第三行：筛选（底模 / 状态 / 排序 + 方向 / 文件夹筛选） -->

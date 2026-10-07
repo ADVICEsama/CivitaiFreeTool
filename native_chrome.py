@@ -14,6 +14,7 @@ class IntegratedChrome:
         self.webview = form.browser.webview
         self.frame = Frame(form.Handle)
         self.maximized = False
+        self.last_bounds = None
         self.webview.Dock = getattr(DockStyle, 'None')
         self.layout_handler = lambda *_: self.layout()
         form.Resize += self.layout_handler
@@ -34,6 +35,9 @@ class IntegratedChrome:
         if ctypes.windll.user32.GetClientRect(ctypes.c_void_p(self.form.Handle.ToInt64()),ctypes.byref(rect)):
             self.webview.SetBounds(0,0,max(0,rect.right-rect.left),max(0,rect.bottom-rect.top))
         else:self.webview.SetBounds(0,0,self.form.ClientSize.Width,self.form.ClientSize.Height)
+        bounds=(self.webview.Width,self.webview.Height,self.maximized)
+        if bounds!=self.last_bounds:
+            self.last_bounds=bounds;self.form.Invalidate(True);self.frame.Repaint()
 
     def refresh(self, options):
         self.layout()  # 不创建字体、图像或原生按钮；主题/圆角全部由现有 CSS 控制。

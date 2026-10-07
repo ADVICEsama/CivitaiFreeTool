@@ -37,6 +37,17 @@ class WindowAppearanceTests(unittest.TestCase):
         with patch.dict(sys.modules,{'System':system}):
             self.assertFalse(c.resize('unsafe')['ok']);self.assertTrue(c.resize('bottom-right')['queued']);c.chrome.frame.BeginResize.assert_called_once_with(8)
 
+    def test_native_frame_has_no_permanent_thickframe(self):
+        source=(Path(__file__).resolve().parents[1]/'native/CftChrome.cs').read_text(encoding='utf-8')
+        constructor=source[source.index('public Frame('):source.index('public void Refresh')]
+        self.assertIn('~0x00c40000',constructor);self.assertNotIn('|0x00040000',constructor)
+        self.assertIn('WM_GETMINMAXINFO',source);self.assertNotIn('StructureToPtr(v.Work,m.LParam',source)
+
+    def test_native_resize_restores_frameless_style(self):
+        source=(Path(__file__).resolve().parents[1]/'native/CftChrome.cs').read_text(encoding='utf-8')
+        self.assertIn('finally{if(Handle!=IntPtr.Zero)',source)
+        self.assertIn('GetWindowLong(Handle,-16)&~0x00040000',source)
+
     def test_light_theme(self):
         self.assertEqual(dict(appearance_plan({'background': '#ffffff'}))[20], 0)
 
