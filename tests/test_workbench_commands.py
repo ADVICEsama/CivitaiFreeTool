@@ -55,7 +55,13 @@ class FeatureTests(unittest.TestCase):
     def test_site_default_and_shortcuts_default_off(self):
         self.assertEqual(config.DEFAULTS['site_domain'],'civitai.red');self.assertIs(config.DEFAULTS['shortcuts_enabled'],False)
     def test_shortcut_preferences_normalized(self):
-        cfg={'shortcuts_enabled':'false','shortcuts_preset':'bad','shortcuts_bindings':{'model:favorite':'Ctrl+F','invalid':9}};config.normalize_ui_preferences(cfg);self.assertFalse(cfg['shortcuts_enabled']);self.assertEqual(cfg['shortcuts_preset'],'arrows');self.assertEqual(cfg['shortcuts_bindings'],{'model:favorite':'Ctrl+F'})
+        cfg={'shortcuts_enabled':'false','shortcuts_preset':'bad','shortcuts_bindings':{'model:favorite':'Ctrl+F','invalid':9}};config.normalize_ui_preferences(cfg);self.assertFalse(cfg['shortcuts_enabled']);self.assertNotIn('shortcuts_preset',cfg);self.assertEqual(cfg['shortcuts_bindings'],{'model:favorite':'Ctrl+F'})
+    def test_legacy_navigation_migrates_without_enabling(self):
+        for preset,keys in [('wasd',('W','S')),('vim',('K','J'))]:
+            cfg={'shortcuts_preset':preset,'shortcuts_bindings':{'model:favorite':'Ctrl+F'}};config.normalize_ui_preferences(cfg)
+            self.assertNotIn('shortcuts_preset',cfg);self.assertFalse(cfg['shortcuts_enabled']);self.assertEqual(cfg['shortcuts_bindings']['model:previous'],keys[0]);self.assertEqual(cfg['shortcuts_bindings']['model:next'],keys[1]);self.assertEqual(cfg['shortcuts_bindings']['model:favorite'],'Ctrl+F')
+    def test_legacy_navigation_does_not_replace_custom_clear(self):
+        cfg={'shortcuts_preset':'wasd','shortcuts_bindings':{'model:next':''}};config.normalize_ui_preferences(cfg);self.assertEqual(cfg['shortcuts_bindings']['model:next'],'')
     def test_pause_all_and_remove_all_use_snapshot(self):
         a=self.api();tasks=[Mock(id='a',filename='same'),Mock(id='b',filename='same')];a.dl=Mock(tasks=tasks)
         a.dl_action('pause_all');self.assertEqual(a.dl.pause_task.call_count,2)

@@ -97,6 +97,7 @@ function applyZoom(v) {
     document.documentElement.style.zoom = z;
     if (content) content.style.height = "calc(100vh / " + z + ")";
   }
+  document.documentElement.style.setProperty("--ui-zoom-factor", String(z));
   document.documentElement.style.setProperty("--app-height", "calc(100vh / " + z + ")");
   document.documentElement.dataset.compactLayout = window.innerWidth / z < 1080 ? "true" : "false";
   document.documentElement.dataset.narrowLayout = window.innerWidth / z < 760 ? "true" : "false";
@@ -120,24 +121,42 @@ document.addEventListener("wheel", (e) => {
   }, 600);
 }, { passive: false });
 
-function setStatus(t) { $("#statusText").textContent = t; }
+function setStatus(t) {
+  const text = String(t ?? "");
+  $("#statusText").textContent = text;
+  if (text && text !== toastLastStatus) { toastLastStatus = text; showToast(text); }
+  if (!text) toastLastStatus = "";
+}
 
-// 醒目 toast 提示（底部悬浮，2.6s 自动消失）——用于右键等快捷操作的反馈
-let toastTimer = null;
+// 底部中心胶囊与左下角状态同步；重复轮询不延长提示，不拦截鼠标。
+let toastTimer = null, toastHideTimer = null, toastFrame = 0, toastLastStatus = "";
+function positionToast() {
+  const t = document.getElementById("toast"); if (!t) return;
+  const actions = document.getElementById("settingsActions"), z = Number(document.documentElement.style.zoom) || 1;
+  const rect = actions?.getBoundingClientRect();
+  const bottom = rect && actions.getClientRects().length && rect.top < innerHeight ? Math.max(24, innerHeight - rect.top + 12) : 24;
+  t.style.bottom = bottom / z + "px";
+}
+window.addEventListener("resize", positionToast);
+window.addEventListener("cft:zoom", positionToast);
 function showToast(msg) {
+  const text = String(msg ?? "");
+  if (!text) return;
   let t = document.getElementById("toast");
   if (!t) {
     t = document.createElement("div");
     t.id = "toast";
+    t.setAttribute("aria-hidden", "true"); // 状态栏保留文本，避免读屏重复播报。
     document.body.appendChild(t);
   }
-  t.textContent = msg;
+  clearTimeout(toastTimer); clearTimeout(toastHideTimer); cancelAnimationFrame(toastFrame);
+  t.textContent = text;
   t.style.display = "block";
-  requestAnimationFrame(() => { t.style.opacity = "1"; });
-  clearTimeout(toastTimer);
+  positionToast();
+  toastFrame = requestAnimationFrame(() => { t.style.opacity = "1"; });
   toastTimer = setTimeout(() => {
     t.style.opacity = "0";
-    setTimeout(() => { t.style.display = "none"; }, 300);
+    toastHideTimer = setTimeout(() => { t.style.display = "none"; }, 300);
   }, 2600);
 }
 
@@ -1391,6 +1410,7 @@ function renderMm() {
       "<td data-col='size'>" + fmtSize(r.size) + "</td><td class='c-time' data-col='mtime'>" + fmtTime(r.mtime) + "</td>" +
       "<td class='c-path' data-col='path' data-full='" + esc(rel.replace(/[^\\/]+$/, "")) + "' data-tip='" + esc(r.path) + "'>" + esc(short(rel.replace(/[^\\/]+$/, ""), 26) || "\\") + "</td></tr>";
   }).join("");
+  tbody.querySelectorAll("td[data-col]:not([data-col=sel]):not([data-col=name]):not([data-col=path])").forEach(td=>td.title=td.textContent.trim());
   $("#mmCheckLabel").textContent = "已勾选 " + state.mmChecked.size + " 个";
   _applyCoverCache($("#mmTable"));
   loadThumbs(0);
@@ -1454,7 +1474,7 @@ async function loadThumbs(start) {
 (function () {
   let drag = null;
   const KEY = "mm_col_w2";
-  const FLEX = "name";                     // 弹性列（width:auto）
+  const flexName = () => $("#mmTable").dataset.mmFlex || "name"; // 路径优先弹性，路径隐藏时名称兜底
   function thOf(colName) { return document.querySelector('#mmTable th[data-col="' + colName + '"]'); }
   function colOf(colName) { return document.querySelector('#mmTable col.c-' + colName); }
   function visibleNext(th) {
@@ -1463,9 +1483,10 @@ async function loadThumbs(start) {
     return (el && el.dataset && el.dataset.col) ? el : null;
   }
   function targetOf(th) {                  // 分隔线（th 右缘）对应目标列：默认左列；左列是弹性列时取右列
-    if (th.dataset.col !== FLEX) return th;
+    if (th.dataset.col === "sel") return null; // 选择格不是信息列，不能拖成宽列。
+    if (th.dataset.col !== flexName()) return th;
     const nx = visibleNext(th);
-    return (nx && nx.dataset.col !== FLEX) ? nx : null;
+    return (nx && nx.dataset.col !== flexName()) ? nx : null;
   }
   function applyWidth(colName, px) {
     const v = Math.round(px) + "px";
@@ -1473,17 +1494,20 @@ async function loadThumbs(start) {
     const th = thOf(colName); if (th) th.style.width = v;
   }
   function saveWidths() {
-    const out = {};
+    let out = {}; try { out = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (_) {}
+    delete out.sel;
     document.querySelectorAll("#mmTable col[class^='c-']").forEach((c) => {
       const name = c.className.replace(/^c-/, "");
-      if (c.style.width && name !== FLEX) out[name] = c.style.width;
+      if (name === "sel" || name === flexName()) return;
+      if (c.style.width) out[name] = c.style.width; else delete out[name];
     });
     try { localStorage.setItem(KEY, JSON.stringify(out)); } catch (e) { }
+    window.mmApplyCols();
   }
   function restoreWidths() {
     let w = {};
     try { w = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) { }
-    Object.keys(w).forEach((k) => { if (k !== FLEX) applyWidth(k, parseFloat(w[k])); });
+    Object.keys(w).forEach((k) => { const px=parseFloat(w[k]); if (k !== "sel" && k !== flexName() && Number.isFinite(px) && px >= 50) applyWidth(k, px); });
   }
   document.addEventListener("mousemove", (e) => {
     if (!drag) return;
@@ -1550,6 +1574,22 @@ $("#mmTable thead").addEventListener("click", (e) => {
 const MM_COLS = [["sel", "勾选"], ["thumb", "缩略图"], ["name", "模型信息"], ["cname", "C站模型名"],
                  ["type", "类型"], ["base", "基础模型"], ["ver", "版本"], ["update", "更新"],
                  ["hash", "哈希"], ["size", "大小"], ["mtime", "下载时间"], ["path", "路径"]];
+// 列宽以内容用途为单位；只让一个可见列弹性，避免 fixed 布局把空白均摊给勾选格。
+function mmSizeColumns(hidden) {
+  const table = $("#mmTable"), scale = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--type-scale")) || 1;
+  const widths = {sel:40,name:({1:160,2:220,3:280})[Number(state.cfg.model_list_size)||3]||280,cname:180,type:56,base:88,ver:72,update:80,hash:140,size:80,mtime:136,path:120};
+  const flex = hidden.has("path") ? "name" : "path"; table.dataset.mmFlex = flex;
+  let saved = {}; try { saved = JSON.parse(localStorage.getItem("mm_col_w2") || "{}"); } catch (_) {}
+  let minimum = 0;
+  for (const [key, width] of Object.entries(widths)) table.style.setProperty("--mm-col-"+key, width * scale + "px");
+  document.querySelectorAll("#mmTable thead th[data-col]").forEach(th => {
+    const key=th.dataset.col; if(key===flex || key==="sel") th.style.width="";
+    if(hidden.has(key)) return;
+    const custom=parseFloat(saved[key]);
+    minimum += key!==flex && key!=="sel" && Number.isFinite(custom) && custom>=50 ? custom : (widths[key]||80)*scale;
+  });
+  table.style.minWidth = Math.ceil(minimum) + "px";
+}
 function mmApplyCols() {
   let hidden = [];
   const DEFAULT_HIDDEN = ["cname", "hash"];   // 只收起「C站模型名」「哈希」；大小/时间/路径都保留（信息密度优先）
@@ -1564,13 +1604,7 @@ function mmApplyCols() {
     }
   } catch (e) { hidden = DEFAULT_HIDDEN.slice(); }
   const hs = new Set(hidden);
-  // 极简档只保留模型名称与选择格；不改写用户自定义列，放大后恢复。
-  if (Number(state.cfg.model_list_size || 3) === 1) {
-    document.querySelectorAll("#mmTable thead th[data-col]").forEach(th => {
-      if (!["sel", "name"].includes(th.dataset.col)) hs.add(th.dataset.col);
-    });
-    hs.delete("sel"); hs.delete("name");
-  }
+  // 档位只调整模型信息单元格；类型/基础/版本/更新/大小/时间/路径依用户列设置保留。
   // 表头与数据行必须用同一份清单、同步隐藏（否则表头 A 位置/数据 B 位置）
   document.querySelectorAll("#mmTable thead [data-col], #mmTable tbody [data-col]").forEach((el) => {
     el.style.display = hs.has(el.dataset.col) ? "none" : "";
@@ -1588,7 +1622,7 @@ function mmApplyCols() {
   }
   // 「缩略图」是伪列（缩略图在模型信息单元格里，没有独立 <col>）：用表上的 class 控制
   const tbl = document.getElementById("mmTable");
-  if (tbl) tbl.classList.toggle("no-thumb", hs.has("thumb"));
+  if (tbl) {tbl.classList.toggle("no-thumb", hs.has("thumb")); mmSizeColumns(hs);}
 }
 $("#mmTable thead").addEventListener("contextmenu", (e) => {
   e.preventDefault();
@@ -4302,8 +4336,7 @@ const SETTING_FIELDS = [
   ["界面", "integrated_titlebar", "隐藏标题栏，仅保留窗口按钮", "bool"],
   ["界面", "window_appearance", "原生标题栏与材质", "select", [["theme", "跟随软件主题（推荐）"], ["mica", "Mica 标题栏 · Windows 11"], ["mica_alt", "Mica Alt 标题栏 · Windows 11"], ["system", "Windows 系统外观"], ["external", "外部工具控制（需另装 MFE）"]]],
   ["界面", "shortcuts_enabled", "启用快捷键（默认关闭）", "bool"],
-  ["界面", "shortcuts_preset", "快捷键预设", "select", [["arrows","方向键 · 常规"],["wasd","W/S · 单手"],["vim","J/K · 类 Vim"]]],
-  ["界面", "model_list_size", "模型列表大小", "select", [["3","完整 · 最大（当前样式）"],["2","紧凑 · 无封面/作者"],["1","极简 · 仅 C站模型名称"]]],
+  ["界面", "model_list_size", "模型列表大小", "select", [["3","完整 · 最大（当前样式）"],["2","紧凑 · 无封面/作者"],["1","极简 · 名称精简（信息列保留）"]]],
   ["界面", "masonry_card_width", "瀑布流图片大小", "range", [140,420,10]],
   ["界面", "custom_accent_enabled", "自定义强调色（所有主题）", "bool"],
   ["界面", "custom_accent", "自定义强调色", "color"],

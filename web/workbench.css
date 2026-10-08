@@ -432,5 +432,25 @@ html[data-model-list-size]:not([data-model-list-size="3"]) #mmTable .ml-thumb {d
 html[data-model-list-size="2"] #mmTable .ml-3,html[data-model-list-size="1"] #mmTable .ml-3,html[data-model-list-size="1"] #mmTable .ml-2,html[data-model-list-size="1"] #mmTable .mm-upd {display:none;}
 html[data-model-list-size="1"] #mmTable .c-name,html[data-model-list-size="1"] #mmTable col.c-name {min-width:0;}
 
-.shortcut-note {color:var(--text-dim);line-height:1.7;}.shortcut-group {border:1px solid var(--border);border-radius:var(--radius-sm);margin-top:12px;padding:10px;}.shortcut-group summary {font-weight:600;cursor:pointer;padding:6px;}.shortcut-row {display:flex;align-items:center;justify-content:space-between;gap:18px;padding:8px;border-top:1px solid var(--border);}.shortcut-row[hidden] {display:none;}.shortcut-key {width:160px;cursor:pointer;}.shortcut-key:focus {border-color:var(--primary);}.settings-exit-mask {z-index:20000;display:flex;align-items:center;justify-content:center;}.settings-exit-dialog {position:static;width:min(500px,90vw);}.settings-exit-dialog p {line-height:1.7;}.settings-exit-dialog .rd-actions {flex-wrap:wrap;}.settings-exit-dialog #settingsExitError {color:var(--danger);}
+.shortcut-note {color:var(--text-dim);line-height:1.7;}.shortcut-group {border:1px solid var(--border);border-radius:var(--radius-sm);margin-top:12px;padding:10px;}.shortcut-group summary {font-weight:600;cursor:pointer;padding:6px;}.shortcut-row {display:grid;grid-template-columns:minmax(0,1fr) max-content minmax(112px,220px);align-items:center;gap:18px;padding:8px;border-top:1px solid var(--border);}.shortcut-row>span {min-width:0;overflow-wrap:anywhere;}.shortcut-reset {grid-column:2;justify-self:center;}.shortcut-reset[hidden] {display:none;}.shortcut-key {grid-column:3;justify-content:center;font-variant-numeric:tabular-nums;}.shortcut-row[hidden] {display:none;}.shortcut-key {box-sizing:border-box;width:100%;min-width:0;cursor:pointer;}.shortcut-key.recording {border-color:var(--primary);background:var(--surface3,var(--surface2));}.shortcut-key:focus {border-color:var(--primary);}.settings-exit-mask {z-index:20000;display:flex;align-items:center;justify-content:center;}.settings-exit-dialog {position:static;width:min(500px,90vw);}.settings-exit-dialog p {line-height:1.7;}.settings-exit-dialog .rd-actions {flex-wrap:wrap;}.settings-exit-dialog #settingsExitError {color:var(--danger);}
 #dlTable .dl-check-col {width:36px;min-width:36px;text-align:center;}#dlTable input[type=checkbox] {accent-color:var(--primary);width:16px;height:16px;cursor:pointer;}
+
+/* 提示始终圆胶囊；所有主题/字号/缩放共用，不挡住后面的点击。 */
+html #toast {bottom:calc(24px / var(--ui-zoom-factor,1));border-radius:999px;pointer-events:none;max-width:min(calc((100vw - 32px) / var(--ui-zoom-factor,1)),640px);box-sizing:border-box;padding:8px 18px;text-align:center;white-space:normal;overflow-wrap:anywhere;line-height:1.5;max-height:6em;overflow:hidden;z-index:var(--z-toast,20001);}
+@media (max-width:800px) {.shortcut-row {gap:8px;grid-template-columns:minmax(0,1fr) max-content minmax(96px,150px);}}
+
+/* 选择格始终小列，名称定宽，路径作为唯一弹性列；没有百分比剩余空间被均摊的问题。 */
+html[data-model-list-size] #mmTable col.c-sel {width:var(--mm-col-sel,40px);}
+html[data-model-list-size] #mmTable col.c-name {width:var(--mm-col-name,280px);}
+html[data-model-list-size] #mmTable col.c-cname {width:var(--mm-col-cname,180px);}
+html[data-model-list-size] #mmTable col.c-type {width:var(--mm-col-type,56px);}
+html[data-model-list-size] #mmTable col.c-base {width:var(--mm-col-base,88px);}
+html[data-model-list-size] #mmTable col.c-ver {width:var(--mm-col-ver,72px);}
+html[data-model-list-size] #mmTable col.c-update {width:var(--mm-col-update,80px);}
+html[data-model-list-size] #mmTable col.c-hash {width:var(--mm-col-hash,140px);}
+html[data-model-list-size] #mmTable col.c-size {width:var(--mm-col-size,80px);}
+html[data-model-list-size] #mmTable col.c-mtime {width:var(--mm-col-mtime,136px);}
+html[data-model-list-size] #mmTable col.c-path {width:var(--mm-col-path,120px);}
+html[data-model-list-size] #mmTable[data-mm-flex=path] col.c-path,html[data-model-list-size] #mmTable[data-mm-flex=name] col.c-name {width:auto;}
+html[data-model-list-size] #mmTable thead th,html[data-model-list-size] #mmTable tbody td {padding-left:6px;padding-right:6px;}
+#mmTable th[data-col=sel] .col-resize {display:none;}

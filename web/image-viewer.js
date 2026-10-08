@@ -85,8 +85,6 @@ async function openImageViewer(detail,index=0) {
   const keyHandler=e=>{
     if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();const menu=root.querySelector('#ivContext');if(menu?.style.display==='block')menu.style.display='none';else closeImageViewer();return;}
     if(e.target.closest('input,textarea'))return;
-    if(e.key==='ArrowLeft'){e.preventDefault();loadViewerImage(imageViewer.index-1);}
-    if(e.key==='ArrowRight'){e.preventDefault();loadViewerImage(imageViewer.index+1);}
     if(e.key==='Tab'){
       const items=[...root.querySelectorAll('button:not(:disabled),summary')].filter(el=>el.getClientRects().length);
       const first=items[0],last=items.at(-1);

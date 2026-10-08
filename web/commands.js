@@ -1,10 +1,10 @@
 "use strict";
 // Local application commands only: no system-wide hooks, no eval, no automatic destructive action.
-const SHORTCUT_PRESETS={arrows:{previous:'ArrowUp',next:'ArrowDown',favorite:'F',identify:'R',select:'Space',recycle:'Delete',preview:'Enter'},wasd:{previous:'W',next:'S',favorite:'F',identify:'R',select:'Space',recycle:'Delete',preview:'Enter'},vim:{previous:'K',next:'J',favorite:'F',identify:'R',select:'Space',recycle:'Delete',preview:'Enter'}};
+const SHORTCUT_DEFAULTS={'model:previous':'ArrowUp','model:next':'ArrowDown','model:favorite':'F','model:identify':'R','model:select':'Space','model:recycle':'Delete','model:preview':'Enter','image:previous':'ArrowLeft','image:next':'ArrowRight'};
 const commandRegistry=new Map();let shortcutSaveTimer=0,shortcutRunning=new Set(),shortcutNavigateAt=0,shortcutHistoryId='';
 let settingsBaseline=new Map(),settingsExitPending=false;
 const PAGE_NAMES={download:'批量下载',dlmanager:'下载管理',models:'模型管理',updates:'检查更新',reverse:'反向解析',workflow:'工作流分析',settings:'设置'};
-function shortcutBindings(){return {...Object.fromEntries(Object.entries(SHORTCUT_PRESETS[state.cfg.shortcuts_preset]||SHORTCUT_PRESETS.arrows).map(([k,v])=>['model:'+k,v])),...(state.cfg.shortcuts_bindings||{})};}
+function shortcutBindings(){return {...SHORTCUT_DEFAULTS,...(state.cfg.shortcuts_bindings||{})};}
 function canonicalShortcut(value){
   const parts=String(value||'').trim().split('+').filter(Boolean),raw=parts.pop();if(!raw)return '';
   const aliases={' ':'Space',space:'Space',spacebar:'Space',up:'ArrowUp',down:'ArrowDown',left:'ArrowLeft',right:'ArrowRight',esc:'Escape',del:'Delete'};
@@ -68,13 +68,35 @@ function renderShortcutSettings(){
   const panel=document.querySelector('[data-settings-panel="shortcuts"]');if(!panel)return;
   panel.querySelector('#shortcutCatalog')?.remove();collectShortcutCommands();
   const bindings=shortcutBindings(),groups=new Map();for(const [id,c] of commandRegistry){if(!groups.has(c.scope))groups.set(c.scope,[]);groups.get(c.scope).push([id,c]);}
-  const section=document.createElement('div');section.id='shortcutCatalog';section.innerHTML='<p class="shortcut-note">快捷键默认全部关闭。点击设键框后按组合键；Backspace 清除，Escape 取消。输入文字或打开确认框时不触发，删除仍需确认。修改预设不会自动启用；Windows 占用的组合键无法在软件中接管。</p><input class="input" id="shortcutSearch" type="search" placeholder="搜索功能，例如 收藏、反查、下载、复制" aria-label="搜索快捷键功能"/>'+Array.from(groups,([scope,commands])=>'<details class="shortcut-group" open><summary>'+esc(PAGE_NAMES[scope]||({global:'导航与公共功能',image:'图片大图'})[scope]||scope)+' · '+commands.length+' 项</summary>'+commands.map(([id,c])=>'<div class="shortcut-row" data-command="'+esc(id)+'"><span>'+esc(c.label)+'</span><button class="btn btn-tiny shortcut-run" type="button" aria-label="运行此功能">使用</button><input class="input shortcut-key" id="binding-'+esc(id)+'" data-shortcut-key="'+esc(id)+'" readonly value="'+esc(bindings[id]||'')+'" placeholder="点击设键" aria-label="'+esc(c.label)+' 快捷键"/></div>').join('')+'</details>').join('');panel.appendChild(section);
+  const section=document.createElement('div');section.id='shortcutCatalog';
+  section.innerHTML='<p class="shortcut-note">默认关闭。点击右侧快捷键按钮后按一次组合键；Esc 或退格键清除，Tab / 失焦取消录入。只有一套常规初始值，修改后左侧出现“重置”。输入文字或确认弹窗中不触发，删除仍需确认。</p><input class="input" id="shortcutSearch" type="search" placeholder="搜索功能，例如 收藏、反查、下载、复制" aria-label="搜索快捷键功能"/>'+Array.from(groups,([scope,commands])=>'<details class="shortcut-group" open><summary>'+esc(PAGE_NAMES[scope]||({global:'导航与公共功能',image:'图片大图'})[scope]||scope)+' · '+commands.length+' 项</summary>'+commands.map(([id,c])=>'<div class="shortcut-row" data-command="'+esc(id)+'"><span>'+esc(c.label)+'</span><button class="btn btn-tiny shortcut-reset" type="button" '+((bindings[id]||'')===(SHORTCUT_DEFAULTS[id]||'')?'hidden':'')+' aria-label="重置 '+esc(c.label)+' 到初始快捷键">重置</button><button class="btn shortcut-key" id="binding-'+esc(id)+'" data-shortcut-key="'+esc(id)+'" type="button" value="'+esc(bindings[id]||'')+'" aria-label="绑定 '+esc(c.label)+' 快捷键">'+esc(bindings[id]||'点击绑定')+'</button></div>').join('')+'</details>').join('');panel.appendChild(section);
+  const endRecording=button=>{button.classList.remove('recording');button.textContent=button.value||'点击绑定';button.removeAttribute('title');button.setAttribute('aria-pressed','false');};
+  const beginRecording=button=>{section.querySelectorAll('.shortcut-key.recording').forEach(endRecording);button.classList.add('recording');button.textContent='请按组合键…';button.title='Esc / 退格清除；Tab / 失焦取消';button.setAttribute('aria-pressed','true');};
+  const assign=(button,key,reset=false)=>{
+    const id=button.dataset.shortcutKey;
+    const duplicate=Object.entries(shortcutBindings()).find(([other,value])=>other!==id&&canonicalShortcut(value)===key&&key);
+    if(duplicate){endRecording(button);setStatus('此键已配置给：'+(commandRegistry.get(duplicate[0])?.label||duplicate[0])+'；请先清除该项绑定，再'+(reset?'重置':'绑定'));return;}
+    const custom={...(state.cfg.shortcuts_bindings||{})};if(reset)delete custom[id];else custom[id]=key;
+    state.cfg.shortcuts_bindings=custom;button.value=key;endRecording(button);
+    button.closest('.shortcut-row').querySelector('.shortcut-reset').hidden=key===(SHORTCUT_DEFAULTS[id]||'');publishSettingsDirty();saveShortcutPreferences();
+  };
   section.querySelector('#shortcutSearch').oninput=e=>{const query=e.target.value.toLowerCase();section.querySelectorAll('.shortcut-row').forEach(row=>row.hidden=!row.textContent.toLowerCase().includes(query));section.querySelectorAll('.shortcut-group').forEach(group=>group.hidden=!Array.from(group.querySelectorAll('.shortcut-row')).some(row=>!row.hidden));};
-  section.addEventListener('click',e=>{const button=e.target.closest('.shortcut-run');if(!button)return;const command=commandRegistry.get(button.closest('[data-command]').dataset.command);if(!command)return;const run=async()=>{if(command.scope==='image'&&!imageViewer){await modelCommand('preview');}else if(PAGE_NAMES[command.scope])switchPage(command.scope);if(command.scope==='global'||command.scope==='image'||document.querySelector('.nav-tab.active')?.dataset.page===command.scope)await command.run();};if(settingsHaveChanges())requestSettingsLeave(run);else run().catch(()=>setStatus('当前功能未能执行'));});
-  section.addEventListener('keydown',e=>{const input=e.target.closest('.shortcut-key');if(!input)return;e.preventDefault();e.stopPropagation();if(e.key==='Escape'){input.blur();return;}if(['Control','Alt','Shift','Meta'].includes(e.key))return;const id=input.closest('[data-command]').dataset.command,key=e.key==='Backspace'?'':shortcutFromEvent(e);if(!key&&e.key!=='Backspace'){setStatus('暂不支持此键，请使用字母、数字、方向键或组合键');return;}const duplicate=Object.entries(shortcutBindings()).find(([other,value])=>other!==id&&value===key&&key);if(duplicate){setStatus('此键已用于：'+(commandRegistry.get(duplicate[0])?.label||duplicate[0]));return;}state.cfg.shortcuts_bindings={...(state.cfg.shortcuts_bindings||{}),[id]:key};input.value=key;publishSettingsDirty();saveShortcutPreferences();});
+  section.addEventListener('click',e=>{const reset=e.target.closest('.shortcut-reset');if(reset){const button=reset.closest('.shortcut-row').querySelector('.shortcut-key');assign(button,SHORTCUT_DEFAULTS[button.dataset.shortcutKey]||'',true);return;}const button=e.target.closest('.shortcut-key');if(button)beginRecording(button);});
+  section.addEventListener('focusout',e=>{if(e.target.matches('.shortcut-key'))endRecording(e.target);});
+  section.addEventListener('keydown',e=>{
+    const button=e.target.closest('.shortcut-key');if(!button || e.isComposing)return;
+    if(e.key==='Tab'){endRecording(button);return;}
+    if(!button.classList.contains('recording')){
+      if(['Enter',' '].includes(e.key) && !e.ctrlKey && !e.altKey && !e.metaKey){e.preventDefault();e.stopPropagation();beginRecording(button);}return;
+    }
+    e.preventDefault();e.stopPropagation();if(['Control','Alt','Shift','Meta'].includes(e.key))return;
+    const clearing=['Escape','Backspace'].includes(e.key),key=clearing?'':shortcutFromEvent(e);
+    if(!key&&!clearing){setStatus('暂不支持此键，请使用字母、数字、方向键或组合键');return;}
+    assign(button,key);
+  });
 }
-function saveShortcutPreferences(){clearTimeout(shortcutSaveTimer);shortcutSaveTimer=setTimeout(async()=>{try{if(!await api.call('save_config',{shortcuts_enabled:state.cfg.shortcuts_enabled===true,shortcuts_preset:state.cfg.shortcuts_preset||'arrows',shortcuts_bindings:state.cfg.shortcuts_bindings||{}}))throw Error('save');setStatus('快捷键设置已保存');}catch(_){setStatus('快捷键保存失败，请点击保存设置重试');}},250);}
-function applyShortcutPreference(key,value){state.cfg[key]=key==='shortcuts_enabled'?!!value:value;if(key==='shortcuts_preset')state.cfg.shortcuts_bindings={};renderShortcutSettings();saveShortcutPreferences();}
+function saveShortcutPreferences(){clearTimeout(shortcutSaveTimer);shortcutSaveTimer=setTimeout(async()=>{try{if(!await api.call('save_config',{shortcuts_enabled:state.cfg.shortcuts_enabled===true,shortcuts_bindings:state.cfg.shortcuts_bindings||{}}))throw Error('save');setStatus('快捷键设置已保存');}catch(_){setStatus('快捷键保存失败，请点击保存设置重试');}},250);}
+function applyShortcutPreference(key,value){if(key!=='shortcuts_enabled')return;state.cfg.shortcuts_enabled=value===true;renderShortcutSettings();saveShortcutPreferences();}
 function settingRawValue(el){return el.type==='checkbox'?String(el.checked):String(el.value??'');}
 function markSettingSaved(key){const el=document.querySelector('#settingsForm [data-key="'+CSS.escape(key)+'"]');if(el)settingsBaseline.set(el.id,settingRawValue(el));publishSettingsDirty();}
 function captureSettingsBaseline(){settingsBaseline=new Map(Array.from(document.querySelectorAll('#settingsForm [data-key],#organizeRules,#settingsForm [data-shortcut-key]')).map(el=>[el.id,settingRawValue(el)]));publishSettingsDirty();}
@@ -88,12 +110,12 @@ async function requestSettingsLeave(proceed){
   mask.querySelector('#settingsStay').onclick=finish;mask.querySelector('#settingsDiscard').onclick=()=>leave(false);mask.querySelector('#settingsSaveLeave').onclick=()=>leave(true);mask.querySelector('#settingsStay').focus();mask.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();finish();}});
 }
 window.requestSettingsClose=()=>{if(settingsHaveChanges())requestSettingsLeave(()=>api.call('window_control','close'));else api.call('set_settings_dirty',false).then(()=>api.call('window_control','close'));};
-window.addEventListener('cft:config-saved',e=>{const cfg=e.detail||{};if(cfg.shortcuts_bindings||cfg.shortcuts_preset){for(const el of document.querySelectorAll('[data-shortcut-key]'))settingsBaseline.set(el.id,settingRawValue(el));}for(const el of document.querySelectorAll('#settingsForm [data-key]')){const key=el.dataset.key;if(!(key in cfg))continue;const value=Array.isArray(cfg[key])?cfg[key].join('\n'):String(cfg[key]??'');if(settingRawValue(el)===value)settingsBaseline.set(el.id,settingRawValue(el));}publishSettingsDirty();});
+window.addEventListener('cft:config-saved',e=>{const cfg=e.detail||{};if(cfg.shortcuts_bindings){for(const el of document.querySelectorAll('[data-shortcut-key]'))settingsBaseline.set(el.id,settingRawValue(el));}for(const el of document.querySelectorAll('#settingsForm [data-key]')){const key=el.dataset.key;if(!(key in cfg))continue;const value=Array.isArray(cfg[key])?cfg[key].join('\n'):String(cfg[key]??'');if(settingRawValue(el)===value)settingsBaseline.set(el.id,settingRawValue(el));}publishSettingsDirty();});
 document.addEventListener('input',e=>{if(e.target.closest('#settingsForm'))publishSettingsDirty();});document.addEventListener('change',e=>{if(e.target.closest('#settingsForm'))publishSettingsDirty();});
 window.addEventListener('beforeunload',e=>{if(settingsHaveChanges()){e.preventDefault();e.returnValue='设置尚未保存';}});
 document.addEventListener('click',e=>{const row=e.target.closest('#dlHistoryTable tbody tr[data-history-id]');if(row&&!e.target.closest('button,a,input')){shortcutHistoryId=row.dataset.historyId;document.querySelectorAll('#dlHistoryTable tbody tr').forEach(r=>r.classList.toggle('sel-row',r===row));}});
 document.addEventListener('keydown',async e=>{
-  if(typeof state==='undefined'||!window.__ready||state.cfg.shortcuts_enabled!==true||e.isComposing||e.defaultPrevented||e.target.closest('input,textarea,select,[contenteditable=true]'))return;
+  if(typeof state==='undefined'||!window.__ready||state.cfg.shortcuts_enabled!==true||e.isComposing||e.defaultPrevented||e.target.closest('input,textarea,select,[contenteditable=true],[data-shortcut-key]'))return;
   if([' ','Enter'].includes(e.key)&&e.target.closest('button,a,summary'))return;
   if(document.querySelector('.rd-mask,.settings-exit-mask,.mm-menu.open,.folders-panel.open')||getComputedStyle(document.querySelector('#obMask')).display!=='none'||settingsExitPending)return;
   collectShortcutCommands();const key=shortcutFromEvent(e),binding=Object.entries(shortcutBindings()).find(([,value])=>canonicalShortcut(value)===key&&key);if(!binding)return;

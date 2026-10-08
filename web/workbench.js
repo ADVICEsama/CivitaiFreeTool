@@ -159,7 +159,7 @@ function setMasonrySize(value,save=false) {
   for(const id of ['mmImageSizeValue','masonrySizeSettings']){const label=document.getElementById(id);if(label)label.textContent=width+' px';}
   if(save){clearTimeout(masonrySaveTimer);masonrySaveTimer=setTimeout(()=>api.call('save_config',{masonry_card_width:width}).catch(()=>setStatus('图片大小保存失败')),350);}
 }
-const MODEL_LIST_SIZES = {3:['完整 · 最大','封面、名称、文件名、作者'],2:['紧凑 · 无封面/作者','名称、本地文件名'],1:['极简 · 仅名称','仅 C站模型名称；未识别用文件名']};
+const MODEL_LIST_SIZES = {3:['完整 · 最大','封面、名称、文件名、作者'],2:['紧凑 · 无封面/作者','名称、本地文件名'],1:['极简 · 名称精简','隐藏封面/作者/本地名；基础、版本等信息列保留']};
 let listSaveTimer=0,listMenuCloseTimer=0,listPersistedSize=null,listSaveGeneration=0;
 function closeListSizeMenu(){
   clearTimeout(listMenuCloseTimer);$('#mmViewSeg')?.classList.remove('list-size-menu-open');

@@ -74,9 +74,8 @@ DEFAULTS = {
     "folder_picker_folded": [],
     "folder_picker_show_paths": False,  # 默认只显示目录名，可独立开关
     "shortcuts_enabled": False,
-    "shortcuts_preset": "arrows",
     "shortcuts_bindings": {},
-    "model_list_size": 3,               # 1 仅名称 / 2 无封面和作者 / 3 完整（现有最大）
+    "model_list_size": 3,               # 1 精简名称但保留信息列 / 2 无封面和作者 / 3 完整（现有最大）
     "masonry_card_width": 220,         # 瀑布流图片/卡片宽度，140–420
     "ui_text_size": "standard",         # small / standard / large / xlarge / huge；不改变界面缩放
     "integrated_titlebar": True,        # 应用内窗口栏；失败保留标准系统框
@@ -195,9 +194,13 @@ def normalize_ui_preferences(cfg):
         try:value=int(cfg.get(key,default));cfg[key]=0 if key=="effects_fps_limit" and value==0 else max(lo,min(hi,value))
         except (TypeError,ValueError,OverflowError):cfg[key]=default
     cfg['shortcuts_enabled']=cfg.get('shortcuts_enabled') is True
-    if cfg.get('shortcuts_preset') not in ('arrows','wasd','vim'):cfg['shortcuts_preset']='arrows'
+    legacy_shortcuts=cfg.pop("shortcuts_preset", None)
     bindings=cfg.get('shortcuts_bindings')
     cfg['shortcuts_bindings']={str(k)[:150]:v[:80] for k,v in list(bindings.items())[:2000] if isinstance(k,str) and isinstance(v,str)} if isinstance(bindings,dict) else {}
+    # 删除多预设入口；旧 W/S、J/K 用户的导航键迁移为普通自定义绑定，不自动开启。
+    legacy_navigation={"wasd":("W","S"),"vim":("K","J")}.get(legacy_shortcuts)
+    if legacy_navigation:
+        for command,key in zip(("model:previous","model:next"),legacy_navigation):cfg['shortcuts_bindings'].setdefault(command,key)
     values=cfg.get("model_favorites")
     cfg["model_favorites"]=list(dict.fromkeys(p for p in values if isinstance(p,str) and p.strip()))[:10000] if isinstance(values,list) else []
 
