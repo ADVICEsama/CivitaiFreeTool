@@ -54,8 +54,10 @@ function ok(name) { passed++; console.log('OK ' + name); }
           if (window.fixtureFolderMode === 'error') throw new Error('fixture folder failure');
           if (window.fixtureFolderMode === 'empty') return JSON.stringify({root:'',tree:[]});
           const tree = Array.from({length:80}, (_,i) => ({name: '分类 '+i, path:'分类 '+i, children:[{name:'风格 <script> & "中文" '+i, path:'分类 '+i+'/风格 <script> & "中文" '+i, children:[]}]}));
-          return JSON.stringify({root:'D:\\AI\\models',tree});
+          if(window.fixtureFolderDelay) await new Promise(r=>setTimeout(r,window.fixtureFolderDelay));
+          return JSON.stringify({root:'D:\\AI\\models',tree,hidden:window.fixtureCfg.hidden_model_folders||[],show_root:window.fixtureCfg.show_root_models!==false});
         }
+        if (method === 'save_folders') {if(window.fixtureFolderSaveError)return false;window.fixtureCfg.hidden_model_folders=args[0];window.fixtureCfg.show_root_models=args[1];return true;}
         if (method === 'get_download_history') return {items:window.fixtureHistory,error:''};
         if (method === 'get_history_thumbnail' && window.fixtureHistoryThumbs?.[args[0]])return window.fixtureHistoryThumbs[args[0]];
         if (method === 'get_history_thumbnail') return 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j0x0AAAAASUVORK5CYII=';
@@ -574,6 +576,31 @@ function ok(name) { passed++; console.log('OK ' + name); }
     await page.locator('[data-settings-category="organize"]').click();await page.evaluate(()=>document.querySelector('.content').scrollTop=0);await page.screenshot({path:path.join(docsShots,'settings-classification.png')});
     await page.evaluate(()=>{window.fixtureHistoryThumbs={};window.fixtureHistory=state.models.slice(0,5).map((m,i)=>{const id='doc-history-'+i;window.fixtureHistoryThumbs[id]=state.coverCache.get(m.path).split(',')[1];return {id,filename:m.name,modelName:m.civitai_name,status:'done',cached_thumb:true,model_url:'https://civitai.com/models/123',total:m.size,dest_dir:'D:\\Example\\models',file_path:m.path,finished_at:1791370200-i*300};});});
     await page.locator('.nav-tab[data-page="dlmanager"]').click();await page.locator('#dlHistoryTab').click();await page.waitForTimeout(300);await page.screenshot({path:path.join(docsShots,'download-history.png')});ok('README 五张示例截图仅使用虚构模型和程序绘制风景，不读取用户配置');
+    // 文件夹显隐弹层：真实鼠标点击、固定工具栏、代理入口与缩放边界。
+    await page.locator('.nav-tab[data-page="models"]').click();
+    await page.evaluate(()=>{state.cfg.model_toolbar_locked=true;applyModelToolbarLock();applyZoom(100);});
+    await page.locator('#mmFolders').click();await page.locator('#fmAll').waitFor();
+    assert.equal(await page.evaluate(()=>$('#mmFoldersPanel').parentElement===document.body),true);ok('文件夹显隐脱离固定工具栏，不被 overflow 裁切');
+    assert.equal(await page.locator('#mmFolders').getAttribute('aria-expanded'),'true');
+    await page.locator('#mmFoldersPanel .fm-item[data-path="分类 0"]').click();
+    await page.waitForFunction(()=>window.fixtureCfg.hidden_model_folders?.includes('分类 0'));assert.equal(await page.locator('#mmFoldersPanel .fm-item[data-path="分类 0"] .fm-state').innerText(),'隐藏');ok('点击分类保存隐藏状态，菜单保持展开');
+    await page.keyboard.press('Escape');assert.equal(await page.locator('#mmFoldersPanel').isVisible(),false);ok('Escape 关闭文件夹菜单');
+    await page.locator('#mmFolders').click();await page.locator('#fmAll').waitFor();assert.equal(await page.locator('#mmFoldersPanel .fm-item[data-path="分类 0"] .fm-state').innerText(),'隐藏');ok('重开读取已保存的文件夹显隐');
+    await page.locator('#mmFoldersPanel .fm-item[data-path="分类 0"]').click();await page.waitForFunction(()=>window.fixtureCfg.hidden_model_folders?.length===0);ok('隐藏的分类可以再次恢复显示');
+    await page.locator('#fmNone').click();await page.waitForFunction(()=>window.fixtureCfg.show_root_models===false);assert.equal(await page.evaluate(()=>window.fixtureCfg.hidden_model_folders.length),160);ok('全部隐藏包含根目录和所有子文件夹');
+    await page.locator('#fmAll').click();await page.waitForFunction(()=>window.fixtureCfg.show_root_models===true && window.fixtureCfg.hidden_model_folders.length===0);ok('全部显示恢复根目录和全部子文件夹');
+    await page.evaluate(()=>window.fixtureFolderSaveError=true);await page.locator('#mmFoldersPanel .fm-item[data-path="分类 1"]').click();await page.waitForFunction(()=>!fmSaving);assert.equal(await page.locator('#mmFoldersPanel .fm-item[data-path="分类 1"] .fm-state').innerText(),'显示');ok('保存失败保留旧状态，不假装成功');
+    await page.evaluate(()=>window.fixtureFolderSaveError=false);await page.keyboard.press('Escape');
+    await page.locator('[data-menu="mmMoreMenu"]').click();await page.locator('#mmMoreMenu [data-proxy="mmFolders"]').click();await page.locator('#fmAll').waitFor();assert.equal(await page.locator('#mmFoldersPanel').isVisible(),true);ok('更多菜单代理入口展开文件夹显隐且不误关');
+    await page.locator('#mmFolders').click();assert.equal(await page.locator('#mmFoldersPanel').isVisible(),false);ok('再次点击显隐按钮收起弹层');
+    for(const zoom of [80,150,200]){
+      await page.setViewportSize({width:780,height:620});await page.evaluate(z=>applyZoom(z),zoom);await page.locator('#mmFolders').click();await page.locator('#fmAll').waitFor();
+      const rect=await page.locator('#mmFoldersPanel').boundingBox();assert(rect.x>=7 && rect.y>=7 && rect.x+rect.width<=773 && rect.y+rect.height<=613,JSON.stringify(rect));ok(zoom+'% 缩放窄窗文件夹菜单不越界');await page.keyboard.press('Escape');
+    }
+    await page.setViewportSize({width:1280,height:820});await page.evaluate(()=>{applyZoom(100);window.fixtureFolderMode='error';});await page.locator('#mmFolders').click();await page.waitForFunction(()=>$('#mmFoldersPanel').textContent.includes('读取失败'));ok('读取失败可见提示，不产生未处理异常');await page.keyboard.press('Escape');
+    await page.evaluate(()=>{window.fixtureFolderMode='normal';window.fixtureFolderDelay=250;});await page.locator('#mmFolders').click();await page.keyboard.press('Escape');await page.waitForTimeout(300);assert.equal(await page.locator('#mmFoldersPanel').isVisible(),false);ok('读取过程中收起菜单，迟到响应不会重新打开');
+    await page.evaluate(()=>window.fixtureFolderDelay=0);await page.locator('#mmFolders').click();await page.locator('#fmAll').waitFor();await page.locator('.nav-tab[data-page="settings"]').click();assert.equal(await page.locator('#mmFoldersPanel').isVisible(),false);ok('切换页面关闭文件夹菜单');
+    await page.evaluate(()=>{state.cfg.model_toolbar_locked=false;applyModelToolbarLock();});
     // 连续缩放、收藏、固定工具栏和三步引导的新回归。
     await page.evaluate(()=>{switchPage('models');state.cfg.model_favorites=[];state.mmView='masonry';applyMmFilter();});
     for(const view of ['masonry','list']){

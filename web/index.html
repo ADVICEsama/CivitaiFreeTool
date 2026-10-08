@@ -275,8 +275,8 @@
         <button class="btn" id="mmSelNone">清除勾选</button>
         <button class="btn" id="mmSelInv">反选</button>
         <span class="folders-wrap" id="mmFoldersWrap">
-          <button class="btn" id="mmFolders" data-tip="切换文件夹列表显示，可单独隐藏/显示各分类文件夹"><span class="emj">📁</span> 文件夹显隐</button>
-          <div class="folders-panel" id="mmFoldersPanel"></div>
+          <button class="btn" id="mmFolders" aria-controls="mmFoldersPanel" aria-expanded="false" data-tip="切换文件夹列表显示，可单独隐藏/显示各分类文件夹"><span class="emj">📁</span> 文件夹显隐</button>
+          <div class="folders-panel" id="mmFoldersPanel" role="dialog" aria-label="模型文件夹显示"></div>
         </span>
         <button class="btn mm-classic-only" id="mmViewToggle" data-tip="切换瀑布流 / 列表视图"><span class="emj">🖼️</span> 瀑布流</button>
         <span class="status-pill" id="mmCheckLabel">已勾选 0 个</span>

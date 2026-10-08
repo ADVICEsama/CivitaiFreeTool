@@ -13,7 +13,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.6.9"
+APP_VERSION = "2.6.10"
 
 import civitai_api
 import config
@@ -2215,13 +2215,17 @@ class Api:
         return {"ok": True, "added": n}
 
     def save_folders(self, hidden, show_root):
-        """保存文件夹显示设置并更新当前扫描结果"""
+        """保存文件夹显示设置；写盘失败不改变当前筛选。"""
+        previous = dict(self.cfg)
         self.cfg["hidden_model_folders"] = list(hidden or [])
         self.cfg["show_root_models"] = bool(show_root)
         try:
-            config.save(self.cfg)
+            if config.save(self.cfg) is False:
+                raise OSError("folder settings were not saved")
         except Exception:
-            pass
+            self.cfg.clear()
+            self.cfg.update(previous)
+            return False
         # 立即应用：重算显示行（_folder_visible 需要相对路径，多目录按各自根计算）
         if self.model_rows:
             hidden_set = set(self.cfg["hidden_model_folders"])

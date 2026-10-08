@@ -253,6 +253,7 @@ const state = {
 
 // ---------- 页面切换 ----------
 function switchPage(name) {
+  if (name !== "models") fmClose();
   if (name !== "models" && $("#detailMask").style.display === "flex") closeDetail();
   $$(".nav-tab").forEach((t) => t.classList.toggle("active", t.dataset.page === name));
   $$(".page").forEach((p) => p.classList.toggle("active", p.id === "page-" + name));
@@ -2705,76 +2706,102 @@ function fmRender() {
   const hidden = new Set(foldersState.hidden || []);
   const showRoot = foldersState.show_root;
   panel.innerHTML =
-    '<div class="fm-title">文件夹显示（点击条目切换）</div>' +
+    '<div class="fm-title">模型文件夹显示</div><div class="fm-title">点击切换；隐藏父文件夹会同时隐藏其子目录模型。不会移动或删除文件。</div>' +
     '<div class="fm-toolbar">' +
-    '<button class="btn btn-tiny" id="fmAll">全选</button>' +
-    '<button class="btn btn-tiny" id="fmNone">全不选</button></div>' +
+    '<button class="btn btn-tiny" id="fmAll">全部显示</button>' +
+    '<button class="btn btn-tiny" id="fmNone">全部隐藏</button></div>' +
     '<div class="fm-item fm-top" data-path="__root__">' +
       '<span class="fm-icon"></span><span class="fm-name">根目录下的模型</span>' +
       '<span class="fm-state ' + (showRoot ? "on" : "off") + '">' + (showRoot ? "显示" : "隐藏") + "</span></div>" +
     '<hr class="fp-sep"/>' +
     fmTreeHtml(foldersState.tree || [], hidden, 0);
 }
-// 文件夹全选/全不选：隐藏集合整体变更后保存并刷新
-function fmSetHidden(nextHidden) {
-  foldersState.hidden = nextHidden;
-  api.call("save_folders", nextHidden, foldersState.show_root).then(() => {
-    fmRender();
+// 独立弹层：锁定工具栏的 overflow 不再裁切文件夹菜单。
+let fmAnchor = null, fmRequest = 0, fmSaving = false;
+function fmClose(restoreFocus = false) {
+  ++fmRequest;
+  $("#mmFoldersPanel").classList.remove("open");
+  $("#mmFolders").setAttribute("aria-expanded", "false");
+  if (restoreFocus && fmAnchor) fmAnchor.focus();
+}
+function fmPosition() {
+  const panel = $("#mmFoldersPanel");
+  if (!panel.classList.contains("open") || !fmAnchor) return;
+  if (!fmAnchor.getClientRects().length || !$("#page-models").classList.contains("active")) { fmClose(); return; }
+  const z = Number(document.documentElement.style.zoom) || 1;
+  const rect = fmAnchor.getBoundingClientRect(), gap = 8;
+  panel.style.minWidth = "0";
+  panel.style.width = Math.min(340 * z, innerWidth - 2 * gap) / z + "px";
+  const below = innerHeight - rect.bottom - 2 * gap, above = rect.top - 2 * gap;
+  const upwards = below < 180 * z && above > below;
+  panel.style.maxHeight = Math.max(60, Math.min(440 * z, upwards ? above : below, innerHeight - 2 * gap)) / z + "px";
+  const box = panel.getBoundingClientRect();
+  panel.style.left = Math.max(gap, Math.min(rect.left, innerWidth - box.width - gap)) / z + "px";
+  panel.style.top = Math.max(gap, Math.min(upwards ? rect.top - box.height - gap : rect.bottom + gap, innerHeight - box.height - gap)) / z + "px";
+}
+async function fmSave(nextHidden, showRoot) {
+  if (!foldersState || fmSaving) return;
+  fmSaving = true;
+  const panel = $("#mmFoldersPanel");
+  panel.setAttribute("aria-busy", "true");
+  try {
+    const saved = await api.call("save_folders", nextHidden, showRoot);
+    if (saved !== true) throw new Error("save_folders failed");
+    foldersState.hidden = nextHidden; foldersState.show_root = showRoot;
+    fmRender(); fmPosition();
+    setStatus("文件夹显示已保存（仅筛选显示，不移动或删除模型）");
     mmScan();
-  });
+  } catch (err) { setStatus("文件夹显示保存失败，请重试"); }
+  finally { fmSaving = false; panel.removeAttribute("aria-busy"); }
 }
 $("#mmFoldersPanel").addEventListener("click", (e) => {
+  e.stopPropagation();
   const btn = e.target.closest("#fmAll, #fmNone");
-  if (!btn) return;
-  if (!foldersState) return;
-  const all = [];
-  (function walk(nodes) {
-    (nodes || []).forEach((n) => {
-      all.push(n.path);
-      walk(n.children);
-    });
-  })(foldersState.tree || []);
-  if (btn.id === "fmAll") fmSetHidden([]);       // 全部显示
-  else fmSetHidden(all);                          // 全部隐藏
+  if (btn && foldersState) {
+    const all = [];
+    (function walk(nodes) { (nodes || []).forEach(n => { all.push(n.path); walk(n.children); }); })(foldersState.tree);
+    fmSave(btn.id === "fmAll" ? [] : all, btn.id === "fmAll");
+    return;
+  }
+  const item = e.target.closest(".fm-item");
+  if (!item || !foldersState) return;
+  const path = item.dataset.path, hidden = new Set(foldersState.hidden || []);
+  if (path !== "__root__") { if (hidden.has(path)) hidden.delete(path); else hidden.add(path); }
+  fmSave(Array.from(hidden), path === "__root__" ? !foldersState.show_root : foldersState.show_root);
 });
 $("#mmFolders").addEventListener("click", async (e) => {
   e.stopPropagation();
   const panel = $("#mmFoldersPanel");
-  if (panel && panel.classList.contains("open")) {
-    panel.classList.remove("open");
-    return;
-  }
-  const json = await api.call("get_folders");
-  try {
-    foldersState = JSON.parse(json || "{}");
-  } catch (err) { foldersState = {}; }
-  if (!foldersState || !foldersState.tree) { setStatus("请先配置模型管理目录"); return; }
-  fmRender();
+  if (panel.classList.contains("open")) { fmClose(); return; }
+  fmAnchor = e.currentTarget.getClientRects().length ? e.currentTarget : $("[data-menu='mmMoreMenu']");
+  if (panel.parentElement !== document.body) document.body.appendChild(panel);
   panel.classList.add("open");
+  $("#mmFolders").setAttribute("aria-expanded", "true");
+  panel.innerHTML = '<div class="fm-title">正在读取文件夹…</div>';
+  fmPosition();
+  const request = ++fmRequest;
+  try {
+    const json = await api.call("get_folders");
+    if (request !== fmRequest) return;
+    const data = typeof json === "string" ? JSON.parse(json || "{}") : json;
+    if (!data || !data.root || !Array.isArray(data.tree)) {
+      panel.innerHTML = '<div class="fm-title">请先在设置中配置模型管理目录</div>'; return;
+    }
+    foldersState = {...data, hidden: data.hidden || [], show_root: data.show_root !== false};
+    _mmFolderTree = data.tree;
+    fmRender();
+    if (!data.tree.length) panel.insertAdjacentHTML("beforeend", '<div class="fm-title">暂无子文件夹，根目录模型仍可单独切换</div>');
+  } catch (err) {
+    if (request === fmRequest) { panel.innerHTML = '<div class="fm-title">文件夹读取失败，请关闭后重试</div>'; setStatus("文件夹读取失败，请重试"); }
+  } finally { if (request === fmRequest) fmPosition(); }
 });
-document.addEventListener("click", (e) => {
-  const panel = $("#mmFoldersPanel");
-  if (panel && panel.classList.contains("open") && !e.target.closest("#mmFoldersWrap")) {
-    panel.classList.remove("open");
-  }
+document.addEventListener("click", e => {
+  if (!e.target.closest("#mmFoldersWrap, #mmFoldersPanel, [data-proxy='mmFolders']")) fmClose();
 });
-$("#mmFoldersPanel").addEventListener("click", async (e) => {
-  const item = e.target.closest(".fm-item");
-  if (!item || !foldersState) return;
-  const path = item.dataset.path;
-  const hidden = new Set(foldersState.hidden || []);
-  if (path === "__root__") {
-    foldersState.show_root = !foldersState.show_root;
-  } else {
-    if (hidden.has(path)) hidden.delete(path); else hidden.add(path);
-    foldersState.hidden = Array.from(hidden);
-  }
-  await api.call("save_folders", Array.from(hidden), foldersState.show_root);
-  fmRender();
-  setStatus("文件夹显示已保存");
-  await api.call("scan_models");
-  pollMmScan();
-});
+document.addEventListener("keydown", e => { if (e.key === "Escape" && $("#mmFoldersPanel").classList.contains("open")) fmClose(true); });
+window.addEventListener("resize", fmPosition);
+window.addEventListener("cft:zoom", fmPosition);
+document.addEventListener("scroll", e => { if (!$("#mmFoldersPanel").contains(e.target)) fmPosition(); }, true);
 
 // 模型详情二级界面（C 站风格）
 let detailRow = null;
@@ -4928,7 +4955,8 @@ function bindMmMetro() {
   // 1) 代理按钮：点击 → 原按钮 click()
   document.querySelectorAll(".mm-metro [data-proxy]").forEach((el) => {
     if (el._px) return; el._px = 1;
-    el.addEventListener("click", () => {
+    el.addEventListener("click", (e) => {
+      if (el.dataset.proxy === "mmFolders") e.stopPropagation();
       _closeMmMenus();
       const src = document.getElementById(el.dataset.proxy);
       if (src && !src.disabled) src.click();

@@ -414,3 +414,7 @@ body.models-workspace.model-toolbar-locked #mmMasonry{height:auto;overflow:visib
 .ob-themes .ob-theme{width:auto;min-height:42px;}
 .ob-themes .ob-theme.sel{border-color:var(--primary);color:var(--primary);}
 @media(max-width:600px){.ob-page-grid{grid-template-columns:1fr;}}
+
+/* 文件夹显隐弹层脱离滚动工具栏，跟随主题和全局缩放。 */
+#mmFoldersPanel {position:fixed;right:auto;bottom:auto;box-sizing:border-box;z-index:var(--z-dropdown,340);overscroll-behavior:contain;}
+#mmFoldersPanel[aria-busy=true] .fm-item,#mmFoldersPanel[aria-busy=true] button {pointer-events:none;opacity:.65;}
