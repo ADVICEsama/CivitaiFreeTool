@@ -137,6 +137,26 @@ def comfy_generation(graph):
     return result
 
 
+def resource_ids(resource):
+    """只读明确的模型/版本字段、站点模型 URL 和 AIR，不把普通数字名字当模型 ID。"""
+    from urllib.parse import parse_qs
+    model=resource.get('model');version=resource.get('modelVersion')
+    mid=resource.get('modelId') or (model.get('id') if isinstance(model,dict) else None)
+    vid=resource.get('modelVersionId') or resource.get('versionId') or (version.get('id') if isinstance(version,dict) else None)
+    for value in [resource.get(k) for k in ('air','resource','urn','name','url','modelUrl','modelPage')]:
+        if not isinstance(value,str): continue
+        air=re.search(r'urn:air:[^\s:]+:[^\s:]+:civitai:(\d+)@(\d+)',value)
+        if air: mid=mid or air[1];vid=vid or air[2]
+        parsed=urlsplit(value)
+        if parsed.hostname in ('civitai.com','civitai.red','www.civitai.com','www.civitai.red'):
+            match=re.match(r'^/models/(\d+)(?:/|$)',parsed.path)
+            if match: mid=mid or match[1]
+            q=parse_qs(parsed.query);vid=vid or (q.get('modelVersionId') or [None])[0]
+            match=re.match(r'^/model-versions/(\d+)(?:/|$)',parsed.path)
+            if match: vid=vid or match[1]
+    return (int(mid) if str(mid or '').isdigit() and int(mid)>0 else None,int(vid) if str(vid or '').isdigit() and int(vid)>0 else None)
+
+
 def generation(image=None, local_path=None, saved=None):
     image=image if isinstance(image,dict) else {}
     meta=dict(image.get('meta') or {}) if isinstance(image.get('meta'),dict) else {}
@@ -147,14 +167,20 @@ def generation(image=None, local_path=None, saved=None):
             from PIL import Image
             with Image.open(local_path) as im:data=dict(im.info)
         except Exception:pass
-    parameters=data.get('parameters')
+    parameters=data.get('parameters') or meta.get('parameters')
     if isinstance(parameters,str) and parameters.strip():
         parts=re.split(r'\n(?=Steps:\s*\d)',parameters,maxsplit=1)
         positive,_,negative=parts[0].partition('\nNegative prompt:')
         meta.update({'prompt':positive.strip(),'negativePrompt':negative.strip()})
         if len(parts)>1:
             for key,value in re.findall(r'(?:^|,\s*)([^:,]+):\s*([^,]+)',parts[1]):meta[key.strip()]=value.strip()
-        source='原图内嵌 PNG parameters' if saved is not None else '本地图片 PNG parameters'
+        embedded=re.search(r'(?:^|,\s*)Civitai resources:\s*(\[.*)',parameters,re.S)
+        if embedded:
+            try:
+                values,_=json.JSONDecoder().raw_decode(embedded[1])
+                if isinstance(values,list):meta['civitaiResources']=values
+            except (ValueError,TypeError):pass
+        source='原图内嵌 PNG parameters'  if saved is not None else '本地图片 PNG parameters'
     elif data.get('prompt') or data.get('workflow'):
         for key in ('prompt','workflow'):
             value=data.get(key)
@@ -173,7 +199,7 @@ def generation(image=None, local_path=None, saved=None):
             except (ValueError,TypeError):pass
     if isinstance(meta.get('comfyPrompt'),dict):
         for key,value in comfy_generation(meta['comfyPrompt']).items():meta.setdefault(key,value)
-    resources=image.get('resources') or meta.get('resources') or meta.get('civitaiResources') or []
+    resources=meta.get('civitaiResources') or image.get('resources') or meta.get('resources') or []
     if not isinstance(resources,list):resources=[]
     return {'meta':meta,'resources':[v for v in resources if isinstance(v,dict)],'metadata_source':source,
             'image_id':image.get('id') or image.get('image_id'),'width':image.get('width'),'height':image.get('height'),

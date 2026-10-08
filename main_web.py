@@ -647,6 +647,12 @@ def main():
     # 关窗行为：设置 close_action = exit（默认退出）/ minimize（最小化到任务栏，不退出）
     try:
         def _on_closing():
+            if getattr(api, '_settings_dirty', False):
+                def confirm_settings_close():
+                    try: window.evaluate_js("window.requestSettingsClose && window.requestSettingsClose()")
+                    except Exception: _startup_log("settings close confirmation unavailable; close deferred")
+                threading.Thread(target=confirm_settings_close,daemon=True).start()
+                return False
             if getattr(api,"_storage_migrating",False):
                 _startup_log("close deferred: data migration running")
                 return False

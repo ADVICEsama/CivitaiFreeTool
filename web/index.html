@@ -117,16 +117,18 @@
       <div id="dlQueuePanel" role="tabpanel" aria-labelledby="dlQueueTab">
       <div class="btn-row" id="dlQueueActions">
         <button class="btn btn-primary" id="dlStartAll" data-tip="开始下载所有未完成的任务"><span class="emj">▶️</span> ▶全部开始</button>
+        <button class="btn" id="dlPauseAll" data-tip="暂停所有等待中和下载中的任务"><svg class="ic" viewBox="0 0 24 24"><use href="#i-pause"/></svg>全部暂停</button>
+        <button class="btn" id="dlRemoveAll" data-tip="移除整个任务队列，不删除已下载文件；仍保留下载历史"><svg class="ic" viewBox="0 0 24 24"><use href="#i-x"/></svg>全部移除</button>
         <button class="btn" id="dlPauseSel" data-tip="暂停选中的下载任务"><span class="emj">⏸️</span> 暂停选中</button>
         <button class="btn" id="dlRetrySel" data-tip="重试选中的失败任务"><span class="emj">🔄</span> <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-refresh"/></svg>重试选中</button>
         <button class="btn" id="dlRemoveSel"><span class="emj">🗑️</span> <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-trash"/></svg>移除选中</button>
         <button class="btn" id="dlSetTarget" data-tip="给选中（未勾选=全部）的任务指定保存文件夹；也可以直接点每行「保存到」列单独设置"><span class="emj">📂</span> <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-folder"/></svg>设置保存到</button>
-        <button class="btn" id="dlClearDone" data-tip="从队列收起已完成、失败、取消的任务；不会删除下载历史或模型文件"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><use href="#i-list"/></svg>移入下载历史</button>
+        <button class="btn" id="dlClearDone" data-tip="从队列收起已完成、失败、取消的任务；不会删除下载历史或模型文件"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><use href="#i-list"/></svg>全部移入下载历史</button>
         <button class="btn" id="dlSave" data-tip="任务已自动保存；此按钮立即刷新磁盘副本"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><use href="#i-file"/></svg>立即保存</button>
       </div>
       <div class="table-wrap">
         <table class="grid" id="dlTable">
-          <thead><tr><th class="c-thumb">图</th><th class="c-file">文件名</th><th class="c-dest">保存到</th><th>状态</th><th>进度</th><th>速度</th><th>大小</th><th class="c-err">错误</th></tr></thead>
+          <thead><tr><th class="dl-check-col"><input id="dlSelectAll" type="checkbox" aria-label="全选下载任务"/></th><th class="c-thumb">图</th><th class="c-file">文件名</th><th class="c-dest">保存到</th><th>状态</th><th>进度</th><th>速度</th><th>大小</th><th class="c-err">错误</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
@@ -212,8 +214,13 @@
           </span>
           <span class="mm-spacer"></span>
           <span class="mm-seg" id="mmViewSeg" data-tip="切换视图（默认瀑布流）">
-            <button class="btn seg" id="mmViewList"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-list"/></svg>列表</button>
+            <button class="btn seg" id="mmViewList" aria-controls="mmListSizeControl" aria-expanded="false"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-list"/></svg>列表</button>
             <button class="btn seg" id="mmViewMasonry"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-grid"/></svg>瀑布流</button>
+            <div class="list-size-control" id="mmListSizeControl" hidden role="group" aria-label="模型列表大小">
+              <label for="mmListSize">列表大小</label><output id="mmListSizeValue">完整 · 最大</output>
+              <input id="mmListSize" type="range" min="1" max="3" step="1" value="3" aria-label="模型列表大小" aria-orientation="vertical" aria-valuetext="完整 · 最大"/>
+              <small id="mmListSizeHint">封面、名称、文件名、作者</small><small>Alt + 滚轮</small>
+            </div>
             <div class="masonry-size-control" id="mmImageSizeControl" hidden role="group" aria-label="瀑布流图片大小">
               <label for="mmImageSize">图片大小</label><output id="mmImageSizeValue">220 px</output><input id="mmImageSize" type="range" min="140" max="420" step="10" value="220" aria-label="瀑布流图片大小" aria-orientation="vertical"/><small>Alt + 滚轮</small>
             </div>
@@ -487,6 +494,7 @@
 <script src="workbench.js"></script>
 <script src="appearance.js"></script>
 <script src="image-viewer.js"></script>
+<script src="commands.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

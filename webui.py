@@ -13,7 +13,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.6.10"
+APP_VERSION = "2.6.11"
 
 import civitai_api
 import config
@@ -82,6 +82,7 @@ class Api:
         self._updates = self._load_updates()
         self.mm_scan_state = {"running": False, "rows": [], "msg": ""}
         self.rp_rows = []
+        self._rp_launch_lock = threading.RLock()
         self._rp_state = {"running": False, "paused": False, "done": 0, "total": 0}
         self._rp_pause_ev = threading.Event()
         self._rp_stop_ev = threading.Event()
@@ -474,6 +475,7 @@ class Api:
         finally:self._storage_migrating=False
 
     def save_config(self, new_cfg):
+        previous=dict(self.cfg)
         # 真 merge：只更新传入字段，绝不回退未传入的已保存设置
         for k, v in (new_cfg or {}).items():
             self.cfg[k] = v
@@ -495,6 +497,8 @@ class Api:
         self.cfg["api_key"] = str(self.cfg.get("api_key") or "").strip()
         config.normalize_ui_preferences(self.cfg)
         ok = config.save(self.cfg)
+        if not ok:
+            self.cfg.clear();self.cfg.update(previous);return False
         self.api = self._new_api()
         self.dl.cfg = self.cfg
         return ok
@@ -524,25 +528,38 @@ class Api:
         except Exception:return {'ok':False,'msg':'清理失败，请检查目录权限'}
 
     def open_gallery_resource(self, resource):
-        if not isinstance(resource,dict):return {'ok':False,'msg':'资源信息无效'}
-        model=resource.get('model');mid=resource.get('modelId') or (model.get('id') if isinstance(model,dict) else None)
-        vid=resource.get('modelVersionId') or resource.get('versionId')
-        if not str(mid or '').isdigit() and str(vid or '').isdigit():
-            try:mid=self.api.get_model_version(int(vid)).get('modelId')
-            except Exception:pass
-        name=str(resource.get('modelName') or resource.get('name') or resource.get('modelVersionName') or '')[:300]
-        if not str(mid or '').isdigit() and name:
-            target=os.path.splitext(os.path.basename(name))[0].casefold()
-            matches=[r for r in self.model_rows if os.path.splitext(os.path.basename(r.get('name','')))[0].casefold()==target]
-            ids={str(r.get('modelId') or (r.get('info') or {}).get('modelId') or '') for r in matches};ids={v for v in ids if v.isdigit()}
-            if len(ids)==1:mid=ids.pop()
-        from urllib.parse import urlencode
-        direct=str(mid or '').isdigit()
-        url='https://civitai.com/models/'+str(mid) if direct else 'https://civitai.com/search/models?'+urlencode({'query':name})
-        if direct and str(vid or '').isdigit():url+='?modelVersionId='+str(vid)
-        if not direct and not name:return {'ok':False,'msg':'资源没有模型 ID 或名称'}
+        import image_gallery
+        if not isinstance(resource, dict): return {'ok':False,'msg':'资源信息无效'}
+        from urllib.parse import urlsplit, parse_qs
+        mid, vid = image_gallery.resource_ids(resource)
+        rows = getattr(self, 'model_rows', [])
+        if not mid and vid:
+            ids = {str(r.get('modelId') or '') for r in rows if str(r.get('verId') or (r.get('info') or {}).get('versionId') or '') == str(vid)}
+            ids = {v for v in ids if v.isdigit() and int(v)>0}
+            if len(ids)==1: mid=ids.pop()
+        name=str(resource.get('modelName') or resource.get('name') or '')[:300]
+        if not mid and name:
+            target=os.path.splitext(os.path.basename(name.replace('\\','/')))[0].casefold()
+            matches=[r for r in rows if os.path.splitext(os.path.basename(r.get('name','')))[0].casefold()==target]
+            ids={str(r.get('modelId') or (r.get('info') or {}).get('modelId') or '') for r in matches}
+            ids={v for v in ids if v.isdigit() and int(v)>0}
+            if len(ids)==1: mid=ids.pop()
+        if (not str(mid or '').isdigit() or int(mid)<=0) and not vid:
+            return {'ok':False,'msg':'来源缺少可解析的模型/版本 ID 或模型地址，无法直达；不会猜测或按 ID 搜索'}
+        site=str(self.cfg.get('site_domain') or 'civitai.red').strip().rstrip('/')
+        if '://' not in site: site='https://'+site
+        parsed=urlsplit(site)
+        if parsed.scheme not in ('https','http') or not parsed.hostname or parsed.username or parsed.password:
+            return {'ok':False,'msg':'设置中的 C站网址无效，请先修正站点设置'}
+        base=parsed.scheme+'://'+parsed.netloc
+        if str(mid or '').isdigit() and int(mid)>0:
+            url=base+'/models/'+str(mid)
+            if vid:url+='?modelVersionId='+str(vid)
+        else:
+            # Civitai 自己的版本路由会重定向到所属模型页，不依赖额外 API 查询。
+            url=base+'/model-versions/'+str(vid)
         self.open_url(url)
-        return {'ok':True,'direct':direct,'msg':'已打开 C站模型页' if direct else '来源没有模型 ID，已按资源名称打开 C站搜索'}
+        return {'ok':True,'direct':True,'msg':'已打开 '+parsed.hostname+' 的模型页面'}
 
     # ---------------- 对话框 ----------------
     def pick_dir(self):
@@ -995,8 +1012,8 @@ class Api:
             except Exception:
                 return {"ok": False, "msg": "无法打开"}
 
-    def dl_action(self, action, filenames=None):
-        tasks = [t for t in self.dl.tasks if t.filename in (filenames or [])]
+    def dl_action(self, action, filenames=None, task_ids=None):
+        tasks = [t for t in self.dl.tasks if (t.id in task_ids if task_ids is not None else t.filename in (filenames or []))]
         if action == "start_all":
             for t in list(self.dl.tasks):
                 if t.status in (downloader.ST_PENDING, downloader.ST_PAUSED, downloader.ST_ERROR):
@@ -1004,6 +1021,10 @@ class Api:
                         self.dl.retry_task(t)
                     else:
                         self.dl.resume_task(t)
+        elif action in ("pause_all", "remove_all"):
+            for t in list(self.dl.tasks):
+                if action == "pause_all":self.dl.pause_task(t)
+                else:self.dl.remove_task(t)
         elif action == "pause":
             for t in tasks:
                 self.dl.pause_task(t)
@@ -2087,7 +2108,21 @@ class Api:
                 continue
         return json.dumps(out, ensure_ascii=False)
 
+    def get_settings_dirty(self):
+        return bool(getattr(self,"_settings_dirty",False))
+
+    def set_settings_dirty(self, dirty):
+        self._settings_dirty=bool(dirty)
+        return True
+
     def open_url(self, url):
+        from urllib.parse import urlsplit, urlunsplit
+        original=urlsplit(str(url or ''))
+        if original.hostname in ('civitai.com','civitai.red','www.civitai.com','www.civitai.red'):
+            site=str(self.cfg.get('site_domain') or 'civitai.red').strip()
+            preferred=urlsplit(site if '://' in site else 'https://'+site)
+            if preferred.scheme in ('http','https') and preferred.hostname and not preferred.username and not preferred.password:
+                url=urlunsplit((preferred.scheme,preferred.netloc,original.path,original.query,original.fragment))
         if not posix_compat.IS_WINDOWS:
             return posix_compat.open_url(url)
         try:
@@ -3801,10 +3836,12 @@ class Api:
         return self._rp_state
 
     def rp_remove(self, paths):
-        self.rp_rows = [r for r in self.rp_rows if r["path"] not in (paths or [])]
+        active=set(self._rp_state.get("active_paths") or []) if self._rp_state.get("running") else set()
+        self.rp_rows = [r for r in self.rp_rows if r["path"] not in (paths or []) or r["path"] in active]
         return True
 
     def rp_clear(self):
+        if self._rp_state.get("running"):return False
         self.rp_rows = []
         self._rp_state = {"running": False, "paused": False, "done": 0, "total": 0}
         return True
@@ -3812,69 +3849,95 @@ class Api:
     def rp_get_rows(self):
         return self.rp_rows
 
-    def rp_start(self):
-        if self._rp_state["running"]:
-            return False
-        if not self.rp_rows:
-            return False
-        self._rp_pause_ev.clear()
-        self._rp_stop_ev.clear()
-        self._rp_state = {"running": True, "paused": False, "done": 0, "total": len(self.rp_rows)}
-        n = max(1, int(self.cfg.get("hash_threads", 4)))
-        lock = threading.Lock()
-        idx = [0]
+    def rp_identify_model(self, path):
+        """详情入口只启动当前模型，不启动队列中其它待反查模型。"""
+        if not isinstance(path,str) or not os.path.isfile(path): return {'started':False,'msg':'当前模型文件不存在'}
+        with self._rp_launch_lock:
+            if self._rp_state.get('running'): return {'started':False,'msg':'已有反查正在运行，请结束后再识别当前模型'}
+            self.rp_add_paths([path])
+            return {'started':self.rp_start([path]),'path':path,'msg':'已开始识别当前模型'}
 
-        def worker():
-            api = self._new_api()
-            while True:
-                if self._rp_stop_ev.is_set():
-                    return
-                if self._rp_pause_ev.is_set():
-                    self._rp_state["paused"] = True
-                    while self._rp_pause_ev.is_set() and not self._rp_stop_ev.is_set():
-                        time.sleep(0.2)
-                    self._rp_state["paused"] = False
+    def rp_start(self, paths=None):
+        with self._rp_launch_lock:
+            if self._rp_state["running"]:
+                return False
+            selected = {os.path.normcase(os.path.abspath(p)) for p in paths} if paths is not None else None
+            tasks = [r for r in self.rp_rows if selected is None or os.path.normcase(os.path.abspath(r['path'])) in selected]
+            if not tasks:
+                return False
+            self._rp_pause_ev.clear()
+            self._rp_stop_ev.clear()
+            self._rp_state = {"running": True, "paused": False, "done": 0, "total": len(tasks), "scope": "single" if selected is not None and len(tasks)==1 else "batch", "path": tasks[0]["path"] if len(tasks)==1 else "", "progress": 0, "msg": "等待反查", "active_paths": [r["path"] for r in tasks]}
+            n = max(1, int(self.cfg.get("hash_threads", 4)))
+            lock = threading.Lock()
+            idx = [0]
+
+            def worker():
+                api = self._new_api()
+                while True:
                     if self._rp_stop_ev.is_set():
                         return
-                with lock:
-                    i = idx[0]
-                    idx[0] += 1
-                if i >= len(self.rp_rows):
-                    return
-                r = self.rp_rows[i]
-                r["status"] = "反查中"
-                try:
-                    res = reverse_parse.reverse_by_hash(
-                        r["path"], api, self.cfg,
-                        translate_desc=bool(self.cfg.get("auto_translate", True)),
-                        cancel_ev=self._rp_stop_ev)
-                    if self._rp_stop_ev.is_set() and res.get("error") == "已取消":
-                        r["status"] = "已取消"
-                    else:
-                        r["sha"] = (res["sha256"] or "")[:16] + "…" if res["sha256"] else ""
-                        if res["found"]:
-                            r["status"] = "成功"
-                            r["model"] = (res["model"] or {}).get("name", "")
-                            r["version"] = (res["version"] or {}).get("name", "")
+                    if self._rp_pause_ev.is_set():
+                        self._rp_state["paused"] = True
+                        while self._rp_pause_ev.is_set() and not self._rp_stop_ev.is_set():
+                            time.sleep(0.2)
+                        self._rp_state["paused"] = False
+                        if self._rp_stop_ev.is_set():
+                            return
+                    with lock:
+                        i = idx[0]
+                        idx[0] += 1
+                    if i >= len(tasks):
+                        return
+                    r = tasks[i]
+                    r["status"] = "反查中"
+                    try:
+                        def progress(read, total):
+                            if len(tasks)==1:
+                                self._rp_state['progress']=min(90,round(90*read/max(1,total)))
+                                self._rp_state['msg']='正在计算哈希' if read<total else '正在查询 C站模型信息'
+                        res = reverse_parse.reverse_by_hash(
+                            r["path"], api, self.cfg,
+                            translate_desc=bool(self.cfg.get("auto_translate", True)), progress_cb=progress,
+                            cancel_ev=self._rp_stop_ev)
+                        if self._rp_stop_ev.is_set() and res.get("error") == "已取消":
+                            r["status"] = "已取消"
                         else:
-                            r["status"] = "未收录" if "404" in res.get("error", "") else "失败"
-                            r["model"] = res.get("error", "")
-                except Exception as e:
-                    r["status"] = "失败"
-                    r["model"] = str(e)[:80]
-                with lock:
-                    self._rp_state["done"] += 1
+                            r["sha"] = (res["sha256"] or "")[:16] + "…" if res["sha256"] else ""
+                            if res["found"]:
+                                r["status"] = "成功"
+                                r["model"] = (res["model"] or {}).get("name", "")
+                                r["version"] = (res["version"] or {}).get("name", "")
+                                try:
+                                    with open(res['info_path'],encoding='utf-8') as f: info=json.load(f)
+                                    creator=info.get('creator');creator=creator.get('username','') if isinstance(creator,dict) else creator or ''
+                                    version=info.get('version');version=version.get('name','') if isinstance(version,dict) else version or ''
+                                    for row in self.model_rows:
+                                        if os.path.normcase(os.path.abspath(row.get('path','')))==os.path.normcase(os.path.abspath(r['path'])):
+                                            row.update(info=info,civitai_name=info.get('name',''),author=creator,ver=version,modelId=info.get('modelId') or info.get('id') or '',verId=info.get('versionId') or '',type=info.get('type',''),base=info.get('baseModel',''),trainedWords=info.get('trainedWords') or [])
+                                except (OSError,ValueError,KeyError,TypeError): pass
+                            else:
+                                r["status"] = "未收录" if "404" in res.get("error", "") else "失败"
+                                r["model"] = res.get("error", "")
+                    except Exception as e:
+                        r["status"] = "失败"
+                        r["model"] = str(e)[:80]
+                    with lock:
+                        self._rp_state["done"] += 1
 
-        def run_all():
-            pool = [threading.Thread(target=worker, daemon=True) for _ in range(n)]
-            for t in pool:
-                t.start()
-            for t in pool:
-                t.join()
-            self._rp_state["running"] = False
+            def run_all():
+                pool = [threading.Thread(target=worker, daemon=True) for _ in range(n)]
+                for t in pool:
+                    t.start()
+                for t in pool:
+                    t.join()
+                self._rp_state["progress"] = 100
+                self._rp_state["msg"] = "反查结束"
+                self._rp_state["running"] = False
 
-        threading.Thread(target=run_all, daemon=True).start()
-        return True
+            threading.Thread(target=run_all, daemon=True).start()
+            return True
+
 
     def rp_pause(self):
         if self._rp_pause_ev.is_set():

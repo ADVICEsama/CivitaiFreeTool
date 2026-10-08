@@ -211,10 +211,10 @@ html body #dlTable {min-width:920px;table-layout:fixed;}
 html body #dlTable .c-file {min-width:0;}
 html body #dlTable .c-thumb {width:48px;}
 html body #dlTable .c-dest {min-width:0;width:128px;}
-html body #dlTable th:nth-child(4),html body #dlTable .dl-task-status {width:144px;min-width:0;}
-html body #dlTable th:nth-child(5) {width:70px;}
+html body #dlTable th:nth-child(5),html body #dlTable .dl-task-status {width:144px;min-width:0;}
 html body #dlTable th:nth-child(6) {width:70px;}
-html body #dlTable th:nth-child(7) {width:116px;}
+html body #dlTable th:nth-child(7) {width:70px;}
+html body #dlTable th:nth-child(8) {width:116px;}
 html body #dlTable .c-err {width:128px;min-width:0;}
 html body #dlTable[data-has-errors="false"] .c-err {display:none;}
 /* 字体菜单名字即预览；与原生 select 不同，WebView2 下每行字体均可控。 */
@@ -418,3 +418,19 @@ body.models-workspace.model-toolbar-locked #mmMasonry{height:auto;overflow:visib
 /* 文件夹显隐弹层脱离滚动工具栏，跟随主题和全局缩放。 */
 #mmFoldersPanel {position:fixed;right:auto;bottom:auto;box-sizing:border-box;z-index:var(--z-dropdown,340);overscroll-behavior:contain;}
 #mmFoldersPanel[aria-busy=true] .fm-item,#mmFoldersPanel[aria-busy=true] button {pointer-events:none;opacity:.65;}
+
+/* 模型列表：完整档维持旧最大样式，较小档仅精简显示，不改变模型数据。 */
+#mmListSizeControl {display:none;position:fixed;z-index:10030;width:180px;flex-direction:column;align-items:center;gap:9px;padding:14px 10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:var(--shadow-hover);}
+#mmViewSeg.list-size-menu-open #mmListSizeControl:not([hidden]) {display:flex;}
+#mmListSizeControl input {writing-mode:vertical-lr;direction:rtl;appearance:auto;width:26px;height:132px;min-width:0;accent-color:var(--primary);}
+#mmListSizeControl label,#mmListSizeControl output {font-size:calc(12px * var(--type-scale,1));color:var(--text);}
+#mmListSizeControl small {font-size:calc(10px * var(--type-scale,1));text-align:center;color:var(--text-dim);line-height:1.5;}
+html[data-model-list-size="2"] #mmTable tbody tr,html[data-model-list-size="2"] #mmTable tbody td {height:calc(44px * var(--type-scale,1));}
+html[data-model-list-size="1"] #mmTable tbody tr,html[data-model-list-size="1"] #mmTable tbody td {height:calc(30px * var(--type-scale,1));}
+html[data-model-list-size]:not([data-model-list-size="3"]) #mmTable tbody td {padding-top:3px;padding-bottom:3px;}
+html[data-model-list-size]:not([data-model-list-size="3"]) #mmTable .ml-thumb {display:none;}
+html[data-model-list-size="2"] #mmTable .ml-3,html[data-model-list-size="1"] #mmTable .ml-3,html[data-model-list-size="1"] #mmTable .ml-2,html[data-model-list-size="1"] #mmTable .mm-upd {display:none;}
+html[data-model-list-size="1"] #mmTable .c-name,html[data-model-list-size="1"] #mmTable col.c-name {min-width:0;}
+
+.shortcut-note {color:var(--text-dim);line-height:1.7;}.shortcut-group {border:1px solid var(--border);border-radius:var(--radius-sm);margin-top:12px;padding:10px;}.shortcut-group summary {font-weight:600;cursor:pointer;padding:6px;}.shortcut-row {display:flex;align-items:center;justify-content:space-between;gap:18px;padding:8px;border-top:1px solid var(--border);}.shortcut-row[hidden] {display:none;}.shortcut-key {width:160px;cursor:pointer;}.shortcut-key:focus {border-color:var(--primary);}.settings-exit-mask {z-index:20000;display:flex;align-items:center;justify-content:center;}.settings-exit-dialog {position:static;width:min(500px,90vw);}.settings-exit-dialog p {line-height:1.7;}.settings-exit-dialog .rd-actions {flex-wrap:wrap;}.settings-exit-dialog #settingsExitError {color:var(--danger);}
+#dlTable .dl-check-col {width:36px;min-width:36px;text-align:center;}#dlTable input[type=checkbox] {accent-color:var(--primary);width:16px;height:16px;cursor:pointer;}

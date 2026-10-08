@@ -90,12 +90,12 @@ class FavoriteResourceTests(unittest.TestCase):
         self.assertEqual(a.cfg['model_favorites'],['D:/models/b.safetensors']);a.dl.relocate.assert_called_once()
     def test_resource_model_id_and_version_resolution(self):
         a=self.api();a.api.get_model_version.return_value={'modelId':55}
-        self.assertTrue(a.open_gallery_resource({'modelId':9})['direct']);a.open_url.assert_called_with('https://civitai.com/models/9')
-        self.assertTrue(a.open_gallery_resource({'modelVersionId':77})['direct']);a.open_url.assert_called_with('https://civitai.com/models/55?modelVersionId=77')
-    def test_resource_exact_local_match_else_explicit_search(self):
+        self.assertTrue(a.open_gallery_resource({'modelId':9})['direct']);a.open_url.assert_called_with('https://civitai.red/models/9')
+        self.assertTrue(a.open_gallery_resource({'modelVersionId':77})['direct']);a.open_url.assert_called_with('https://civitai.red/model-versions/77')
+    def test_resource_exact_local_match_else_no_guessing(self):
         a=self.api();a.model_rows=[{'name':'foo.safetensors','modelId':9}]
         self.assertTrue(a.open_gallery_resource({'name':'foo.safetensors'})['direct'])
-        r=a.open_gallery_resource({'name':'a & b.safetensors','model':'invalid'});self.assertFalse(r['direct']);self.assertIn('query=a+',a.open_url.call_args[0][0]);self.assertIn('%26',a.open_url.call_args[0][0])
+        r=a.open_gallery_resource({'name':'a & b.safetensors','model':'invalid'});self.assertFalse(r['ok']);self.assertEqual(a.open_url.call_count,1)
     def test_frame_and_cache_limits_and_invalid_favorites(self):
         for value in [None,'bad',float('inf'),-1,10,0,60,144,360,1000]:
             cfg={'effects_fps_limit':value,'gallery_cache_mb':value,'model_favorites':'invalid'};config.normalize_ui_preferences(cfg)

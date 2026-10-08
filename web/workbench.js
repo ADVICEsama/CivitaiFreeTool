@@ -4,6 +4,7 @@ const SETTINGS_CATEGORIES = [
   { id: "general", label: "目录与账号", icon: "folder", description: "先配置存放位置和账号，其余选项可保持默认。" },
   { id: "download", label: "下载行为", icon: "download", description: "选择下载完成后生成哪些文件，以及旧版本如何处理。" },
   { id: "appearance", label: "外观与布局", icon: "sparkles", description: "配色、信息密度和路径显示可即时预览并保存。主题切换后请点保存。" },
+  { id: "shortcuts", label: "快捷键", icon: "settings", description: "默认关闭。可点击每个功能的设键入口；支持三套预设及自定义，删除仍需确认。" },
   { id: "network", label: "网络与代理", icon: "globe", description: "网络正常时无需改动。关闭证书验证会降低连接安全性。" },
   { id: "translation", label: "翻译服务", icon: "file", description: "配置百度翻译账号，决定简介和文件名是否汉化。" },
   { id: "organize", label: "分类规则", icon: "tag", description: "这里定义模型的整理方式；保存设置本身不会移动任何文件。" },
@@ -29,6 +30,7 @@ const WORKBENCH_SETTING_HELP = {
   ui_mode: "默认先打开软件窗口，只有失败才按兜底开关用浏览器。选择浏览器启动后，以后直接打开浏览器，不创建软件窗口。选择即保存，重启生效。",
   browser_fallback_enabled: "默认开启；仍先启动软件窗口，确认初始化失败后才用浏览器兜底。想一直使用浏览器，请选择“界面模式”；也可点下方按钮主动打开。",
   ui_font: "从本机已安装字体中选择；立即预览并保存。不下载网络字体。不包含中文的字体会回退到系统中文字体。",
+  model_list_size: "三档独立调节列表行高与信息：当前完整样式是最大，紧凑去掉封面与作者，极简再去本地文件名；极简仅留 C站模型名称和勾选格。未识别模型暂用文件名，不改变全局字号或瀑布流。",
   masonry_card_width: "140–420 px；模型页滑杆或 Alt + 滚轮都可调整，普通滚轮仍用于浏览模型。",
   folder_picker_show_paths: "仅控制分类选择窗口。默认只显示文件夹名字，也可在该窗口顶部临时切换并记住。",
   cache_detail_images: "把详情中已加载的在线缩略图缓存在本机，重复打开优先读取缓存。不下载原图；关闭后不写新缓存。",
@@ -44,6 +46,7 @@ let historyPage = 1;
 let historyRequest = 0;
 
 function settingCategory(key, oldGroup) {
+  if(key.startsWith("shortcuts_"))return "shortcuts";
   if (ADVANCED_SETTING_KEYS.has(key)) return "advanced";
   return ({ "基本": "general", "下载": "download", "界面": "appearance", "网络": "network", "翻译": "translation" })[oldGroup] || "advanced";
 }
@@ -119,14 +122,18 @@ function buildWorkbenchSettings() {
   form.querySelectorAll("[data-settings-category]").forEach(b => b.addEventListener("click", () => showSettingsCategory(b.dataset.settingsCategory)));
   $("#settingsSearch").addEventListener("input", filterWorkbenchSettings);
   applyWorkbenchThemeOptions();
+  setModelListSize(state.cfg.model_list_size,false);
   showSettingsCategory(settingsCategory);
   applyCustomUi();
   updateRulesGuide();
   refreshLocalFontOptions();
   refreshStorageInfo();
+  if(typeof renderShortcutSettings === "function")renderShortcutSettings();
+  if(typeof captureSettingsBaseline === "function")captureSettingsBaseline();
 }
 let masonrySaveTimer=0,masonryMenuCloseTimer=0;
 function openMasonrySizeMenu(){
+  closeListSizeMenu();
   if(typeof state==='undefined' || state.mmView!=='masonry')return;
   clearTimeout(masonryMenuCloseTimer);$('#mmViewSeg').classList.add('size-menu-open');
   $('#mmViewMasonry').setAttribute('aria-expanded','true');positionMasonrySizeMenu();
@@ -151,6 +158,61 @@ function setMasonrySize(value,save=false) {
   for(const id of ['mmImageSize','setting-masonry_card_width']){const input=document.getElementById(id);if(input)input.value=width;}
   for(const id of ['mmImageSizeValue','masonrySizeSettings']){const label=document.getElementById(id);if(label)label.textContent=width+' px';}
   if(save){clearTimeout(masonrySaveTimer);masonrySaveTimer=setTimeout(()=>api.call('save_config',{masonry_card_width:width}).catch(()=>setStatus('图片大小保存失败')),350);}
+}
+const MODEL_LIST_SIZES = {3:['完整 · 最大','封面、名称、文件名、作者'],2:['紧凑 · 无封面/作者','名称、本地文件名'],1:['极简 · 仅名称','仅 C站模型名称；未识别用文件名']};
+let listSaveTimer=0,listMenuCloseTimer=0,listPersistedSize=null,listSaveGeneration=0;
+function closeListSizeMenu(){
+  clearTimeout(listMenuCloseTimer);$('#mmViewSeg')?.classList.remove('list-size-menu-open');
+  $('#mmViewList')?.setAttribute('aria-expanded','false');
+}
+function openListSizeMenu(){
+  if(state.mmView!=='list')return;
+  closeMasonrySizeMenu();clearTimeout(listMenuCloseTimer);$('#mmViewSeg').classList.add('list-size-menu-open');
+  $('#mmViewList').setAttribute('aria-expanded','true');positionListSizeMenu();
+}
+function positionListSizeMenu(){
+  const menu=$('#mmListSizeControl'),anchor=$('#mmViewList');if(!menu || !$('#mmViewSeg').classList.contains('list-size-menu-open'))return;
+  const rect=anchor.getBoundingClientRect(),box=menu.getBoundingClientRect(),z=Number(document.documentElement.style.zoom)||1;
+  const x=Math.max(8,Math.min(rect.right-box.width,innerWidth-box.width-8));
+  const y=rect.bottom+6+box.height<innerHeight-8?rect.bottom+6:Math.max(8,rect.top-box.height-6);
+  Object.assign(menu.style,{left:x/z+'px',top:y/z+'px',right:'auto'});
+}
+function setModelListSize(value,save=false){
+  const n=Number(value),size=Number.isFinite(n)?Math.max(1,Math.min(3,Math.round(n))):3;
+  if(listPersistedSize===null)listPersistedSize=size;
+  const previous=Number(state.cfg.model_list_size || 3),info=MODEL_LIST_SIZES[size];
+  state.cfg.model_list_size=size;document.documentElement.dataset.modelListSize=String(size);
+  for(const id of ['mmListSize','setting-model_list_size']){const input=document.getElementById(id);if(input)input.value=String(size);}
+  $('#mmListSize')?.setAttribute('aria-valuetext',info[0]);
+  if($('#mmListSizeValue'))$('#mmListSizeValue').textContent=info[0];
+  if($('#mmListSizeHint'))$('#mmListSizeHint').textContent=info[1];
+  const menu=$('#mmListSizeControl');if(menu){menu.hidden=state.mmView!=='list';if(menu.hidden)closeListSizeMenu();}
+  if(state.mmView==='list')mmApplyCols();
+  if(save){
+    if(size===3 && previous<3)loadThumbs(0);
+    clearTimeout(listSaveTimer);const generation=++listSaveGeneration;
+    listSaveTimer=setTimeout(async()=>{
+      try{if(!await api.call('save_config',{model_list_size:size}))throw Error('save');listPersistedSize=size;}
+      catch(_){if(generation===listSaveGeneration)setModelListSize(listPersistedSize,false);setStatus('列表大小保存失败，已恢复上次保存的档位');}
+    },350);
+  }
+  positionListSizeMenu();
+}
+function bindModelListSize(){
+  const anchor=$('#mmViewList'),menu=$('#mmListSizeControl');
+  for(const el of [anchor,menu]){
+    el.addEventListener('pointerenter',openListSizeMenu);
+    el.addEventListener('pointerleave',()=>{listMenuCloseTimer=setTimeout(closeListSizeMenu,160);});
+    el.addEventListener('focusin',openListSizeMenu);
+  }
+  anchor.addEventListener('click',()=>setTimeout(openListSizeMenu,0));
+  anchor.addEventListener('keydown',e=>{if(e.key==='ArrowDown'){openListSizeMenu();$('#mmListSize').focus();e.preventDefault();}});
+  menu.addEventListener('input',e=>{if(e.target.id==='mmListSize')setModelListSize(e.target.value,true);});
+  menu.addEventListener('wheel',e=>{if(e.ctrlKey || e.metaKey || e.altKey)return;e.preventDefault();setModelListSize(Number(state.cfg.model_list_size || 3)+(e.deltaY<0?1:-1),true);},{passive:false});
+  document.addEventListener('pointerdown',e=>{if(!e.target.closest('#mmViewSeg'))closeListSizeMenu();});
+  document.addEventListener('focusin',e=>{if(!e.target.closest('#mmViewSeg'))closeListSizeMenu();});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape' && $('#mmViewSeg').classList.contains('list-size-menu-open')){anchor.focus();closeListSizeMenu();e.preventDefault();e.stopImmediatePropagation();}},true);
+  document.addEventListener('scroll',positionListSizeMenu,true);window.addEventListener('resize',positionListSizeMenu);window.addEventListener('cft:zoom',positionListSizeMenu);
 }
 let localFontRequest=null;
 let localFontFamilies=[];
@@ -299,7 +361,7 @@ function updateDownloadQueueCount() {
 
 const WORKBENCH_ICON_IDS = {
   btnParse:"play", btnClearUrls:"x", btnAddUrl:"plus", btnDlTarget:"folder", btnDlTargetReset:"refresh", dlHistoryTab:"clock", dlQueueTab:"list", dlHistoryRefresh:"refresh",
-  dlStartAll:"play", dlPauseSel:"pause", dlRetrySel:"refresh", dlRemoveSel:"x", dlSave:"file", mmViewToggle:"layers", mmUpdOnly:"refresh", mmScan:"scan", mmRefresh:"refresh", mmVerify:"shield", mmCheckUpd:"refresh", mmUpdate:"refresh", mmUpdDl:"download", mmRename:"pencil", mmLocalize:"file", mmJson:"file", mmSite:"external", mmCovers:"image", mmTranslate:"file", mmSendRp:"search", mmOrganize:"folder", mmCleanup:"trash", mmDedupe:"layers", mmFolders:"folder", mmRecover:"refresh", mmRestore:"refresh", mmFilterClear:"x", mmSelAll:"check", mmSelNone:"x", mmSelInv:"refresh", rpAddFiles:"file", rpAddDir:"folder", rpRemoveSel:"x", rpStart:"play", rpPause:"pause", rpStop:"x", btnSaveSettings:"check", btnTestApi:"globe", btnTestBaidu:"file", btnOnboarding:"info", openLogs:"folder", wfAddFiles:"file", wfAddFile:"file", wfChoose:"folder"
+  dlStartAll:"play", dlPauseAll:"pause", dlRemoveAll:"x", dlPauseSel:"pause", dlRetrySel:"refresh", dlRemoveSel:"x", dlSave:"file", mmViewToggle:"layers", mmUpdOnly:"refresh", mmScan:"scan", mmRefresh:"refresh", mmVerify:"shield", mmCheckUpd:"refresh", mmUpdate:"refresh", mmUpdDl:"download", mmRename:"pencil", mmLocalize:"file", mmJson:"file", mmSite:"external", mmCovers:"image", mmTranslate:"file", mmSendRp:"search", mmOrganize:"folder", mmCleanup:"trash", mmDedupe:"layers", mmFolders:"folder", mmRecover:"refresh", mmRestore:"refresh", mmFilterClear:"x", mmSelAll:"check", mmSelNone:"x", mmSelInv:"refresh", rpAddFiles:"file", rpAddDir:"folder", rpRemoveSel:"x", rpStart:"play", rpPause:"pause", rpStop:"x", btnSaveSettings:"check", btnTestApi:"globe", btnTestBaidu:"file", btnOnboarding:"info", openLogs:"folder", wfAddFiles:"file", wfAddFile:"file", wfChoose:"folder"
 };
 function syncModelInspector(active) {
   applyModelToolbarLock();
@@ -367,6 +429,7 @@ function decorateWorkbenchIcons(root = document) {
   });
 }
 function initializeWorkbench() {
+  bindModelListSize();
   decorateWorkbenchIcons();
   document.querySelectorAll(".sidebar-brand,.sidebar-name,.sidebar-name small,.page-title,.card > h2,.iv-toolbar").forEach(el=>el.classList.add("pywebview-drag-region"));
   const sizeAnchor=$('#mmViewMasonry'),sizeMenu=$('#mmImageSizeControl');

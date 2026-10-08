@@ -73,6 +73,10 @@ DEFAULTS = {
     "folder_picker_favorites": [],
     "folder_picker_folded": [],
     "folder_picker_show_paths": False,  # 默认只显示目录名，可独立开关
+    "shortcuts_enabled": False,
+    "shortcuts_preset": "arrows",
+    "shortcuts_bindings": {},
+    "model_list_size": 3,               # 1 仅名称 / 2 无封面和作者 / 3 完整（现有最大）
     "masonry_card_width": 220,         # 瀑布流图片/卡片宽度，140–420
     "ui_text_size": "standard",         # small / standard / large / xlarge / huge；不改变界面缩放
     "integrated_titlebar": True,        # 应用内窗口栏；失败保留标准系统框
@@ -187,9 +191,13 @@ def load():
 
 
 def normalize_ui_preferences(cfg):
-    for key,default,lo,hi in [("effects_fps_limit",60,15,360),("gallery_cache_mb",1024,64,8192)]:
+    for key,default,lo,hi in [("effects_fps_limit",60,15,360),("gallery_cache_mb",1024,64,8192),("model_list_size",3,1,3)]:
         try:value=int(cfg.get(key,default));cfg[key]=0 if key=="effects_fps_limit" and value==0 else max(lo,min(hi,value))
         except (TypeError,ValueError,OverflowError):cfg[key]=default
+    cfg['shortcuts_enabled']=cfg.get('shortcuts_enabled') is True
+    if cfg.get('shortcuts_preset') not in ('arrows','wasd','vim'):cfg['shortcuts_preset']='arrows'
+    bindings=cfg.get('shortcuts_bindings')
+    cfg['shortcuts_bindings']={str(k)[:150]:v[:80] for k,v in list(bindings.items())[:2000] if isinstance(k,str) and isinstance(v,str)} if isinstance(bindings,dict) else {}
     values=cfg.get("model_favorites")
     cfg["model_favorites"]=list(dict.fromkeys(p for p in values if isinstance(p,str) and p.strip()))[:10000] if isinstance(values,list) else []
 

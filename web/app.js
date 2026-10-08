@@ -43,7 +43,9 @@ window.addEventListener("unhandledrejection", (e) => {
 
 const api = {
   call(method, ...args) {
-    return window.pywebview.api[method](...args);
+    const result=window.pywebview.api[method](...args);
+    if(method==='save_config')return Promise.resolve(result).then(ok=>{if(ok)window.dispatchEvent(new CustomEvent('cft:config-saved',{detail:args[0]}));return ok;});
+    return result;
   },
 };
 
@@ -102,6 +104,9 @@ function applyZoom(v) {
   window.dispatchEvent(new Event("cft:zoom"));
 }
 document.addEventListener("wheel", (e) => {
+  if (e.altKey && !e.ctrlKey && !e.metaKey && state.mmView === "list" && e.target.closest && e.target.closest("#mmTableWrap, #mmListSizeControl")) {
+    e.preventDefault(); setModelListSize(Number(state.cfg.model_list_size || 3) + (e.deltaY < 0 ? 1 : -1), true); return;
+  }
   if (e.altKey && !e.ctrlKey && e.target.closest && e.target.closest("#mmMasonry, #mmImageSizeControl")) {
     e.preventDefault(); setMasonrySize(Number(state.cfg.masonry_card_width || 220) + (e.deltaY < 0 ? 20 : -20), true); return;
   }
@@ -253,6 +258,7 @@ const state = {
 
 // ---------- 页面切换 ----------
 function switchPage(name) {
+  if (name !== "settings" && typeof settingsHaveChanges === "function" && settingsHaveChanges()) {requestSettingsLeave(()=>switchPage(name));return;}
   if (name !== "models") fmClose();
   if (name !== "models" && $("#detailMask").style.display === "flex") closeDetail();
   $$(".nav-tab").forEach((t) => t.classList.toggle("active", t.dataset.page === name));
@@ -1016,7 +1022,7 @@ async function dlRefresh() {
     state.dlTasks = tasks || [];
     $("#dlTable").dataset.hasErrors=state.dlTasks.some(t=>t.error)?"true":"false";
     const tbody = $("#dlTable tbody");
-    const selPaths = new Set(Array.from(tbody.querySelectorAll("tr.sel-row")).map((tr) => tr.dataset.fn));
+    const selPaths = new Set(Array.from(tbody.querySelectorAll("tr.sel-row")).map((tr) => tr.dataset.taskId));
     tbody.innerHTML = state.dlTasks.map((t) => {
       const st = { pending: "等待中", downloading: "下载中", done: "已完成", paused: "已暂停", error: "失败", canceled: "已取消" }[t.status] || t.status;
       const prog = t.status === "downloading" ? t.progress.toFixed(1) + "%" : st;
@@ -1037,13 +1043,14 @@ async function dlRefresh() {
       const destTip = (destFull ? destFull : (effFull + "\n（全局目标）")) + "\n点击选择该文件的保存文件夹";
       const destLeaf = String(destShow || effFull || "未设置").replace(/[\\/]$/, "").split(/[\\/]/).pop();
       const destCell = "<td class='c-dest cell-dest' data-task='" + esc(t.id) + "' title='" + esc(destTip) + "'><button type='button' class='dest-picker' aria-label='保存到 " + esc(destLeaf) + "'>" + _icon("folder") + "<span>" + esc(destLeaf) + "</span>" + _icon("chevron-down") + "</button>" + (destFull ? "" : " <span class='dest-def'>默认</span>") + "</td>";
-      return '<tr data-fn="' + esc(t.filename) + '" class="' + (selPaths.has(t.filename) ? "sel-row" : "") + '">' +
-        "<td class='c-thumb'>" + thumb + "</td><td class='c-file'><div>" + esc(t.filename) + "</div>" +
+      return '<tr data-task-id="'+esc(t.id)+'" data-fn="' + esc(t.filename) + '" class="' + (selPaths.has(t.id) ? "sel-row" : "") + '">' +
+        '<td class="dl-check-col"><input type="checkbox" class="dl-task-check" aria-label="选择下载任务 ' + esc(t.filename) + '"'+(selPaths.has(t.id)?' checked':'')+'/></td>' + "<td class='c-thumb'>" + thumb + "</td><td class='c-file'><div>" + esc(t.filename) + "</div>" +
         (effFull ? '<div class="file-subpath" title="' + esc(effFull + (/[/\\]$/.test(effFull) ? "" : (effFull.includes("\\") || /^[a-z]:/i.test(effFull) ? "\\" : "/")) + t.filename) + '">' +
           esc(effFull + (/[/\\]$/.test(effFull) ? "" : (effFull.includes("\\") || /^[a-z]:/i.test(effFull) ? "\\" : "/")) + t.filename) + "</div>" : "") +
         "</td>" + destCell + "<td class='dl-task-status'>" + esc(st) + (["done", "error", "canceled"].includes(t.status) ? '<button class="btn btn-tiny task-archive" data-archive-task="' + esc(t.id) + '">' + _icon("clock") + '移入历史</button>' : "") + "</td><td>" + esc(prog) + "</td>" +
         "<td>" + esc(speed) + "</td><td>" + esc(size) + "</td>" + errCell + "</tr>";
     }).join("");
+    syncDlSelection();
     loadDlThumbs(state.dlTasks || []);
     if (typeof updateDownloadQueueCount === "function") updateDownloadQueueCount();
     // 下载受限（Early Access/付费）→ 弹窗选择
@@ -1203,19 +1210,26 @@ $("#dlTable tbody").addEventListener("click", async (e) => {
   const tr = e.target.closest("tr");
   if (!tr) return;
   const ctrl = e.ctrlKey || e.metaKey;
-  if (ctrl) tr.classList.toggle("sel-row");
+  if(e.target.matches(".dl-task-check"))tr.classList.toggle("sel-row",e.target.checked);
+  else if (ctrl) tr.classList.toggle("sel-row");
   else {
     $$("#dlTable tbody tr").forEach((r) => r.classList.remove("sel-row"));
     tr.classList.add("sel-row");
   }
+  syncDlSelection();
 });
 
 function dlSel() {
   return Array.from($$("#dlTable tbody tr.sel-row")).map((r) => r.dataset.fn);
 }
 
+function dlSelectedIds(){return Array.from(document.querySelectorAll('#dlTable tbody tr.sel-row')).map(r=>r.dataset.taskId);}
+function syncDlSelection(){const rows=Array.from(document.querySelectorAll('#dlTable tbody tr'));rows.forEach(r=>{const input=r.querySelector('.dl-task-check');if(input)input.checked=r.classList.contains('sel-row');});const count=rows.filter(r=>r.classList.contains('sel-row')).length;$('#dlSelectAll').checked=rows.length>0&&count===rows.length;$('#dlSelectAll').indeterminate=count>0&&count<rows.length;}
+$('#dlSelectAll').addEventListener('change',e=>{document.querySelectorAll('#dlTable tbody tr').forEach(r=>r.classList.toggle('sel-row',e.target.checked));syncDlSelection();});
+$('#dlPauseAll').addEventListener('click',()=>dlAct('pause_all'));
+$('#dlRemoveAll').addEventListener('click',async()=>{if(await confirmBox('移除全部下载任务？只收起任务并取消未完成下载，不删除模型文件或历史。'))dlAct('remove_all');});
 async function dlAct(action) {
-  const result = await api.call("dl_action", action, action === "start_all" || action === "clear_done" || action === "save" ? null : dlSel());
+  const result = await api.call("dl_action", action, null, ["start_all","pause_all","remove_all","clear_done","save"].includes(action) ? null : dlSelectedIds());
   if (action === "save") setStatus(result ? "任务及历史已保存" : "记录保存失败，请检查目录写入权限");
   dlRefresh();
 }
@@ -1226,7 +1240,7 @@ $("#dlRemoveSel").addEventListener("click", () => dlAct("remove"));
 // 批量/单选：给任务指定保存文件夹（应用内文件夹树；未勾选=全部任务）
 $("#dlSetTarget").addEventListener("click", async () => {
   const sel = dlSel();
-  const tasks = (state.dlTasks || []).filter((t) => !sel.length || sel.indexOf(t.filename) >= 0);
+  const ids=dlSelectedIds();const tasks = (state.dlTasks || []).filter((t) => !ids.length || ids.includes(t.id));
   if (!tasks.length) { setStatus(sel.length ? "选中的任务里没有可设置的" : "任务列表为空"); return; }
   const p = await pickFolderModal();
   if (!p) return;
@@ -1325,6 +1339,7 @@ function pollMmScan() {
 
 function renderMm() {
   setMasonrySize((state.cfg || {}).masonry_card_width, false);
+  setModelListSize((state.cfg || {}).model_list_size, false);
   const _scMV=$("#mmMasonryViewport")?.scrollTop||0;
   const _scM = ($("#mmMasonry") || {}).scrollTop || 0;
   const _scT = ($("#mmTableWrap") || {}).scrollTop || 0;
@@ -1411,6 +1426,7 @@ function _applyCoverCache(root) {
   });
 }
 async function loadThumbs(start) {
+  if (state.mmView === "list" && Number(state.cfg.model_list_size || 3) < 3) return;
   const batch = state.display.slice(start, start + 40);
   if (!batch.length) return;
   const miss = batch.filter((r) => !state.coverCache.has(r.path));
@@ -1548,6 +1564,13 @@ function mmApplyCols() {
     }
   } catch (e) { hidden = DEFAULT_HIDDEN.slice(); }
   const hs = new Set(hidden);
+  // 极简档只保留模型名称与选择格；不改写用户自定义列，放大后恢复。
+  if (Number(state.cfg.model_list_size || 3) === 1) {
+    document.querySelectorAll("#mmTable thead th[data-col]").forEach(th => {
+      if (!["sel", "name"].includes(th.dataset.col)) hs.add(th.dataset.col);
+    });
+    hs.delete("sel"); hs.delete("name");
+  }
   // 表头与数据行必须用同一份清单、同步隐藏（否则表头 A 位置/数据 B 位置）
   document.querySelectorAll("#mmTable thead [data-col], #mmTable tbody [data-col]").forEach((el) => {
     el.style.display = hs.has(el.dataset.col) ? "none" : "";
@@ -2803,6 +2826,34 @@ window.addEventListener("resize", fmPosition);
 window.addEventListener("cft:zoom", fmPosition);
 document.addEventListener("scroll", e => { if (!$("#mmFoldersPanel").contains(e.target)) fmPosition(); }, true);
 
+// 详情单模型立即反查：不切页，不启动批量队列里的其它模型。
+let detailRpPath=null;
+async function identifyDetailModel(path){
+  if(detailRpPath){setStatus('当前已有模型正在识别，请稍候');return false;}
+  detailRpPath=path;let failures=0;
+  const updateButton=()=>{if($('#dRp'))$('#dRp').disabled=!!detailRpPath;};updateButton();
+  try{
+    const start=await api.call('rp_identify_model',path);
+    if(!start?.started){setStatus(start?.msg||'识别未启动');return false;}
+    setStatus('正在识别当前模型：'+String(path).split(/[\\/]/).pop());
+    while(true){
+      await new Promise(r=>setTimeout(r,600));
+      let progress,rows;
+      try{[progress,rows]=await Promise.all([api.call('rp_state'),api.call('rp_get_rows')]);failures=0;}
+      catch(_){if(++failures<3)continue;setStatus('暂时无法读取进度；后端识别仍在继续，请稍后检查');return false;}
+      const row=(rows||[]).find(r=>normalizedModelPath(r.path)===normalizedModelPath(path));
+      if(progress?.running){setStatus((progress.msg||'正在反查')+' · '+(progress.progress||0)+'% · '+String(path).split(/[\\/]/).pop());continue;}
+      if(row?.status==='成功'){
+        const parsed=JSON.parse((await api.call('get_scan_rows'))||'[]');if(Array.isArray(parsed)){state.models=parsed;applyMmFilter();}
+        if(normalizedModelPath(detailRow?.path)===normalizedModelPath(path))await showModelDetail(path);
+        setStatus('模型识别完成：'+(row.model||String(path).split(/[\\/]/).pop()));return true;
+      }
+      setStatus('模型识别'+(row?.status||'未完成')+(row?.model?'：'+row.model:''));return false;
+    }
+  }catch(_){setStatus('当前模型识别启动失败，请检查日志或网络后重试');return false;}
+  finally{detailRpPath=null;updateButton();}
+}
+
 // 模型详情二级界面（C 站风格）
 let detailRow = null;
 let detailGeneration = 0;
@@ -3177,12 +3228,8 @@ async function showModelDetail(path, historyId = "") {
   });
   $("#dRenameC", panel).addEventListener("click", () => renameDetailToCivitai(d));
   $("#dRename", panel).addEventListener("click", () => { closeDetail(); showRenameDialog(d.path, d.name); });
-  $("#dRp", panel).addEventListener("click", async () => {
-    await api.call("rp_add_paths", [d.path]);
-    closeDetail();
-    setStatus("已发送去识别模型信息");
-    document.querySelector('.nav-tab[data-page="reverse"]').click();
-  });
+  $("#dRp", panel).disabled=!!detailRpPath;
+  $("#dRp", panel).addEventListener("click", () => identifyDetailModel(d.path));
   $("#dSync", panel).addEventListener("click", async () => {
     const btn = $("#dSync", panel);
     if (btn) btn.disabled = true;
@@ -4254,6 +4301,9 @@ const SETTING_FIELDS = [
   ["界面", "ui_text_size", "全局字号（不缩放界面）", "select", [["small", "小 · 90%"], ["standard", "标准 · 100%"], ["large", "大 · 110%"], ["xlarge", "较大 · 120%"], ["huge", "最大 · 130%"]]],
   ["界面", "integrated_titlebar", "隐藏标题栏，仅保留窗口按钮", "bool"],
   ["界面", "window_appearance", "原生标题栏与材质", "select", [["theme", "跟随软件主题（推荐）"], ["mica", "Mica 标题栏 · Windows 11"], ["mica_alt", "Mica Alt 标题栏 · Windows 11"], ["system", "Windows 系统外观"], ["external", "外部工具控制（需另装 MFE）"]]],
+  ["界面", "shortcuts_enabled", "启用快捷键（默认关闭）", "bool"],
+  ["界面", "shortcuts_preset", "快捷键预设", "select", [["arrows","方向键 · 常规"],["wasd","W/S · 单手"],["vim","J/K · 类 Vim"]]],
+  ["界面", "model_list_size", "模型列表大小", "select", [["3","完整 · 最大（当前样式）"],["2","紧凑 · 无封面/作者"],["1","极简 · 仅 C站模型名称"]]],
   ["界面", "masonry_card_width", "瀑布流图片大小", "range", [140,420,10]],
   ["界面", "custom_accent_enabled", "自定义强调色（所有主题）", "bool"],
   ["界面", "custom_accent", "自定义强调色", "color"],
@@ -4373,7 +4423,7 @@ const SETTING_TIPS = {
   "custom_accent": "点击色块自由选色，实时预览。黑白文字自动适配；需先开启自定义强调色",
   "ui_density": "调整下载、模型、更新等列表以及分类窗口的行间距，紧凑模式显示更多内容",
   "ui_corners": "统一面板、弹窗、输入框和按钮的圆角；跟随主题可恢复原样式",
-  "api_key": "Civitai 账号免费生成的 API Key，用于查询模型信息、下载与反向解析。在 civitai.com/user/account 登录后点「New API Key」生成",
+  "api_key": "Civitai 账号免费生成的 API Key，用于查询模型信息、下载与反向解析。在 civitai.red/user/account 登录后点「New API Key」生成",
   "download_dir": "模型下载后存放的位置，可填任意文件夹（如 D:\\models）",
   "models_dirs": "本地模型管理目录：软件从这里扫描模型并显示封面/触发词。WebUI 与 ComfyUI 分开存放时每行填一个（如 D:\\sd-webui-forge-neo\\webui\\models 和 D:\\ComfyUI\\models），扫描会合并显示",
   "site_domain": "打开 C 站页面用的域名：网络异常时可在 civitai.red 与 civitai.com 之间切换",
@@ -4476,7 +4526,7 @@ $("#settingsForm").addEventListener("click", (e) => {
   if (link) api.call("open_url", link.dataset.url);
 });
 
-$("#btnSaveSettings").addEventListener("click", async () => {
+async function saveSettings() {
   const cfg = {};
   Object.assign(cfg, state.cfg);
   $$("#settingsForm [data-key]").forEach((el) => {
@@ -4506,7 +4556,9 @@ $("#btnSaveSettings").addEventListener("click", async () => {
   document.documentElement.dataset.theme = state.cfg.theme || "modern";
   applyUiAppearance();
   buildSettingsForm();
-});
+  return true;
+}
+$("#btnSaveSettings").addEventListener("click",()=>saveSettings().catch(()=>setStatus("设置保存失败，请重试")));
 
 // 设置里「下载目标文件夹」的选择/清除（点击即时保存，不依赖底部「保存设置」）
 $("#settingsForm").addEventListener("click", async (e) => {
@@ -4546,6 +4598,8 @@ $("#settingsForm").addEventListener("change", (e) => {
   if (!el) return;
   const key = el.dataset.key;
   let val = el.type === "checkbox" ? el.checked : (el.type === "number" ? Number(el.value) : el.value);
+  if(key.startsWith("shortcuts_")){applyShortcutPreference(key,val);return;}
+  if(key==="model_list_size"){setModelListSize(val,true);return;}
   if(key==="effects_fps_limit"){val=val===0?0:Math.max(15,Math.min(360,Math.round(Number(val)||60)));el.value=val;}
   if(key==="gallery_cache_mb"){val=Math.max(64,Math.min(8192,Math.round(Number(val)||1024)));el.value=val;}
   if(key==='ui_mode' || key==='browser_fallback_enabled'){
@@ -4659,7 +4713,7 @@ async function init() {
 }
 
 // ===== 首次使用引导（主题 / 下载目录 / API key / 模型目录 / 反向解析） =====
-const OB_STEPS = ["页面介绍", "主题", "下载目录", "API Key", "模型目录", "反向解析"];
+const OB_STEPS = ["申请 API Key", "页面介绍", "主题", "下载目录", "模型目录", "反向解析"];
 let obStep = 0;
 let obTheme = "dark";
 let obDirVal = "";   // 跨步骤保存（输入框只在对应步骤渲染）
@@ -4683,6 +4737,7 @@ $("#obMiniClose").addEventListener("click", async () => {
   await finishOnboarding();
 });
 function showOnboarding() {
+  if(typeof settingsHaveChanges==="function"&&settingsHaveChanges()){requestSettingsLeave(showOnboarding);return;}
   obStep = 0;obStartPage=document.querySelector(".nav-tab.active")?.dataset.page||"models";
   obTheme = state.cfg.theme || "dark";
   obDirVal = state.cfg.download_dir || "";
@@ -4698,9 +4753,10 @@ function renderOnboarding() {
   $("#obSteps").innerHTML = OB_STEPS.map((s, i) =>
     '<div class="ob-step ' + (i === obStep ? "active" : i < obStep ? "done" : "") + '">' + s + "</div>").join("");
   $("#obPrev").style.display = obStep === 0 ? "none" : "inline-block";
+  $("#obNext").disabled=obStep===0&&!obKeyVal.trim();
   $("#obNext").textContent = obStep === OB_STEPS.length - 1 ? "完成 " : "下一步";
   const body = $("#obBody");
-  if (obStep === 0) {
+  if (obStep === 1) {
     const pages=[
       ['download','download','批量下载','粘贴模型链接，解析后选择文件和保存位置，再开始下载。'],
       ['dlmanager','list','下载管理','查看进度，暂停或重试；已结束任务可收进历史，打开实际文件位置。'],
@@ -4712,11 +4768,11 @@ function renderOnboarding() {
     ];
     body.innerHTML='<p class="ob-label">先认识这些页面。点击任意页面直接体验，引导会缩到右下角，随时可以继续。</p><div class="ob-page-grid">'+pages.map(([page,icon,title,text])=>'<button class="ob-page-card" data-page="'+page+'">'+_icon(icon)+'<span><b>'+title+'</b><small>'+text+'</small></span></button>').join('')+'</div>';
     body.querySelectorAll('[data-page]').forEach(button=>button.onclick=()=>{obStartPage=button.dataset.page;switchPage(obStartPage);setObMini(true);});
-  } else if (obStep === 1) {
+  } else if (obStep === 2) {
     const options=SETTING_FIELDS.find(field=>field[1]==='theme')[4];
     body.innerHTML='<p class="ob-label">选择喜欢的主题，设置里还能调整字体、字号和强调色。</p><div class="ob-themes">'+options.map(([value,label])=>'<button class="btn ob-theme" data-t="'+esc(value)+'">'+esc(label)+'</button>').join('')+'</div>';
     body.querySelectorAll('[data-t]').forEach(button=>{button.classList.toggle('sel',button.dataset.t===obTheme);button.onclick=()=>{obTheme=button.dataset.t;state.cfg.theme=obTheme;document.documentElement.dataset.theme=obTheme;applyUiAppearance();body.querySelectorAll('[data-t]').forEach(b=>b.classList.toggle('sel',b===button));};});
-  } else if (obStep === 2) {
+  } else if (obStep === 3) {
     body.innerHTML =
       '<div class="ob-label">下载目录（模型下载后存放位置，可修改）</div>' +
       '<div style="display:flex;gap:8px"><input class="input" id="obDir" style="flex:1" value="' + esc(obDirVal) + '"/>' +
@@ -4728,25 +4784,25 @@ function renderOnboarding() {
       if (picked) { obDirVal = picked; $("#obDir").value = picked; }
     });
     $("#obBrowse2") && null;
-  } else if (obStep === 3) {
+  } else if (obStep === 0) {
     body.innerHTML =
-      '<div class="ob-label">Civitai API Key（免费申请，用于查询模型信息与下载）</div>' +
+      '<div class="ob-label">第一步：先申请 Civitai API Key（免费申请，用于查询模型信息与下载）</div>' +
       '<input class="input" id="obKey" type="password" value="' + esc(obKeyVal) + '" placeholder="粘贴你的 API Key"/>' +
-      '<div class="ob-guide" id="obGuide" style="display:none">' +
+      '<div class="ob-guide" id="obGuide">' +
       '<div style="font-weight:600;margin-bottom:6px">如何注册 API Key：</div>' +
-      '<div>1. 打开 <a class="ob-link" id="obApiPage">civitai.com/user/account</a>（登录后点 Account Settings 生成 API Keys）</div>' +
+      '<div>1. 打开 <a class="ob-link" id="obApiPage">civitai.red/user/account</a>（登录后点 Account Settings 生成 API Keys）</div>' +
       '<div>2. 登录账号后点击「New API Key」生成</div>' +
       '<div>3. 复制生成的 Key 粘贴到上方输入框即可</div></div>' +
       '<div class="ob-actions2"><button class="btn" id="obToggleGuide">如何注册 API？</button>' +
       '<button class="btn" id="obOpenApi">打开注册页</button></div>' +
-      '<div style="color:var(--text-dim);font-size:calc(12px * var(--type-scale, 1));margin-top:6px">不填也能用，但模型查询与部分下载功能受限。</div>';
-    $("#obKey").addEventListener("input", () => { obKeyVal = $("#obKey").value; });
+      '<div style="color:var(--text-dim);font-size:calc(12px * var(--type-scale, 1));margin-top:6px">请先完成申请并填写 API Key，再进入页面介绍；Key 仅保存到你的本地配置。</div>';
+    $("#obKey").addEventListener("input", () => { obKeyVal = $("#obKey").value;$("#obNext").disabled=!obKeyVal.trim();$("#obSkipAll").disabled=!obKeyVal.trim(); });
     $("#obToggleGuide").addEventListener("click", () => {
       const g = $("#obGuide");
       g.style.display = g.style.display === "none" ? "block" : "none";
     });
-    $("#obOpenApi").addEventListener("click", () => api.call("open_url", "https://civitai.com/user/account"));
-    $("#obApiPage").addEventListener("click", () => api.call("open_url", "https://civitai.com/user/account"));
+    $("#obOpenApi").addEventListener("click", () => api.call("open_url", "https://civitai.red/user/account"));
+    $("#obApiPage").addEventListener("click", () => api.call("open_url", "https://civitai.red/user/account"));
   } else if (obStep === 4) {
     // 模型管理目录：手把手选择（可多目录）
     body.innerHTML =
@@ -4791,11 +4847,13 @@ function renderOnboarding() {
   }
   body.scrollTop=0;
   $('#obSkipAll')?.remove();$('#obNext').insertAdjacentHTML('beforebegin','<button class="btn" id="obSkipAll">跳过引导，直接使用</button>');
+  $('#obSkipAll').disabled=!obKeyVal.trim();$('#obSkipAll').title=obKeyVal.trim()?'跳过后续介绍':'请先申请并填写 API Key';
   $('#obSkipAll').onclick=finishOnboarding;
 }
 
 // 引导完成：保存全部配置
 async function finishOnboarding() {
+  if(!obKeyVal.trim()){obStep=0;renderOnboarding();showToast("请先申请并填写 Civitai API Key");return false;}
   state.cfg.onboarding_done = true;
   state.cfg.api_key = (obKeyVal || "").trim();
   state.cfg.download_dir = (obDirVal || state.cfg.download_dir || "").trim();
@@ -4815,6 +4873,11 @@ async function finishOnboarding() {
   setStatus('引导已完成。可在设置里随时重新打开。');
 }
 $("#obNext").addEventListener("click",async()=>{
+  if(obStep===0){
+    if(!obKeyVal.trim()){showToast('请先申请并填写 API Key');return;}
+    try{if(!await api.call('save_config',{api_key:obKeyVal.trim(),site_domain:state.cfg.site_domain||'civitai.red'})){showToast('API Key 保存失败，请重试');return;}state.cfg=await api.call('get_config');buildSettingsForm();}
+    catch(_){showToast('API Key 保存失败，请重试');return;}
+  }
   if(obStep===OB_STEPS.length-1){await finishOnboarding();return;}
   obStep++;renderOnboarding();
 });

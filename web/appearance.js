@@ -169,6 +169,7 @@ function syncWindowControls(actual) {
 document.getElementById('windowControls')?.addEventListener('click',async e=>{
   const button=e.target.closest('[data-window-action]');if(!button)return;
   try {
+    if(button.dataset.windowAction==='close' && typeof settingsHaveChanges==='function' && settingsHaveChanges()){window.requestSettingsClose();return;}
     const result=await api.call('window_control',button.dataset.windowAction);
     if(result?.ok===false){setStatus(result.msg||'窗口操作失败');return;}
     if(button.dataset.windowAction==='maximize')setTimeout(async()=>{
