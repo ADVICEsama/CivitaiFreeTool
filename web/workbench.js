@@ -214,6 +214,7 @@ function bindModelListSize(){
   document.addEventListener('keydown',e=>{if(e.key==='Escape' && $('#mmViewSeg').classList.contains('list-size-menu-open')){anchor.focus();closeListSizeMenu();e.preventDefault();e.stopImmediatePropagation();}},true);
   document.addEventListener('scroll',positionListSizeMenu,true);window.addEventListener('resize',positionListSizeMenu);window.addEventListener('cft:zoom',positionListSizeMenu);
 }
+window.addEventListener('cft:config-saved',e=>{if(e.detail?.model_list_size!==undefined)listPersistedSize=Math.max(1,Math.min(3,Math.round(Number(e.detail.model_list_size)||3)));});
 let localFontRequest=null;
 let localFontFamilies=[];
 async function refreshLocalFontOptions() {

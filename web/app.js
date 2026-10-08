@@ -4563,8 +4563,9 @@ $("#btnSaveSettings").addEventListener("click",()=>saveSettings().catch(()=>setS
 // 设置里「下载目标文件夹」的选择/清除（点击即时保存，不依赖底部「保存设置」）
 $("#settingsForm").addEventListener("click", async (e) => {
   if (e.target.closest("#resetAppearance")) {
-    const defaults = { custom_accent_enabled: false, custom_accent: "#60A5FA", ui_density: "standard", ui_corners: "theme", ui_font: "", ui_text_size: "standard", window_appearance: "theme", masonry_card_width:220 };
+    const defaults = { custom_accent_enabled: false, custom_accent: "#60A5FA", ui_density: "standard", ui_corners: "theme", ui_font: "", ui_text_size: "standard", window_appearance: "theme", masonry_card_width:220, model_list_size:3 };
     Object.assign(state.cfg, defaults);
+    setModelListSize(3,false);
     for (const [key, value] of Object.entries(defaults)) {
       const input = $('#settingsForm [data-key="' + key + '"]');
       if (input) { if (input.type === "checkbox") input.checked = value; else input.value = value; }
@@ -4579,7 +4580,7 @@ $("#settingsForm").addEventListener("click", async (e) => {
     const p = await pickFolderModal();
     if (p && await applyDownloadTarget(p)) {
       const inp = $('#settingsForm [data-key="' + pick.dataset.dirpick + '"]');
-      if (inp) inp.value = p;
+      if (inp) {inp.value = p;markSettingSaved(pick.dataset.dirpick);}
     }
     return;
   }
@@ -4587,7 +4588,7 @@ $("#settingsForm").addEventListener("click", async (e) => {
   if (clr) {
     if (await applyDownloadTarget("")) {
       const inp = $('#settingsForm [data-key="' + clr.dataset.dirclear + '"]');
-      if (inp) inp.value = "";
+      if (inp) {inp.value = "";markSettingSaved(clr.dataset.dirclear);}
     }
   }
 });
