@@ -4,7 +4,7 @@ const SETTINGS_CATEGORIES = [
   { id: "general", label: "目录与账号", icon: "folder", description: "先配置存放位置和账号，其余选项可保持默认。" },
   { id: "download", label: "下载行为", icon: "download", description: "选择下载完成后生成哪些文件，以及旧版本如何处理。" },
   { id: "appearance", label: "外观与布局", icon: "sparkles", description: "配色、信息密度和路径显示可即时预览并保存。主题切换后请点保存。" },
-  { id: "shortcuts", label: "快捷键", icon: "settings", description: "默认关闭。可点击每个功能的设键入口；支持三套预设及自定义，删除仍需确认。" },
+  { id: "shortcuts", label: "快捷键", icon: "settings", description: "默认关闭。点击按钮绑定，修改后可单项重置到初始；Esc / 退格清除，删除模型仍需确认。" },
   { id: "network", label: "网络与代理", icon: "globe", description: "网络正常时无需改动。关闭证书验证会降低连接安全性。" },
   { id: "translation", label: "翻译服务", icon: "file", description: "配置百度翻译账号，决定简介和文件名是否汉化。" },
   { id: "organize", label: "分类规则", icon: "tag", description: "这里定义模型的整理方式；保存设置本身不会移动任何文件。" },
