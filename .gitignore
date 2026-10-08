@@ -74,3 +74,13 @@ deployment*.json
 
 # 已查看的原图与生成信息私有运行缓存
 gallery_cache/
+
+# 发行压缩包放 GitHub Release，不提交到扩展源码目录
+/chrome-extension/*.zip
+/firefox-extension/*.zip
+/firefox-extension/*.xpi
+# 根目录旧版独立更新说明统一由 CHANGELOG / docs/releases 管理
+/更新说明_v*.md
+
+# 本机私人资料，不属于项目源码
+/AI绘画文档/

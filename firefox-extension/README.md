@@ -1,44 +1,30 @@
-# CivitaiFreeTool 一键下载（Chrome 扩展）
+# CivitaiFreeTool 一键下载（Firefox 扩展）
 
-在浏览器里浏览 Civitai 模型页时，点击扩展图标弹出**确认小窗**，确认后当前模型**直接开始下载**到 CivitaiFreeTool（无需手动复制链接、无需回到软件点解析）。
+在 `civitai.red` / `civitai.com` 的模型页面点击扩展图标，确认模型与链接后，将下载交给正在运行的 CivitaiFreeTool。
 
-## 使用流程
-1. 打开 Chrome，访问 Civitai 模型页（`civitai.red/models/...` 或 `civitai.com/models/...`）
-2. 点击工具栏扩展图标 → 弹出确认小窗（显示模型名 + 链接）
-3. 点「⬇️ 开始下载」→ 绿勾 ✅ 提示已开始
-4. CivitaiFreeTool「下载管理」页实时显示进度，下载完成自动生成 json + 封面
+## 获取与临时安装
 
-**快捷方式**：右键页面或链接 → 「一键下载到 CivitaiFreeTool」（跳过确认窗，角标 ✓ 反馈）。
+当前扩展的 `manifest.json` 声明最低 Firefox 版本为 121.0。发行 ZIP 统一放在 [GitHub Release](https://github.com/ADVICEsama/CivitaiFreeTool/releases/latest)，源码目录不再保存旧压缩包。
 
-## 安装
-1. 打开 Chrome，地址栏进入 `chrome://extensions/`
-2. 右上角打开「开发者模式」
-3. 点「加载已解压的扩展程序」，选择本文件夹（`chrome-extension`）
-4. 工具栏固定图标
+1. 在 Release 下载名称含 **FirefoxExtension** 的 ZIP，不要使用 Chrome 包。
+2. 打开 `about:debugging#/runtime/this-firefox`。
+3. 点击“临时载入附加组件”，选择下载的 Firefox ZIP；包内 `manifest.json` 位于根目录。
+4. 若直接使用本目录源码，也可选择本目录的 `manifest.json`。
 
-## 前提
-- **CivitaiFreeTool.exe v2.1.1+ 必须先打开**（内置本地桥服务 `127.0.0.1:47531` 随软件启动）
-- 模型页需 CivitaiFreeTool 能访问（C 站被墙时需在软件设置里启用代理）
+当前发行包未签名，临时加载在 Firefox 重启后需要重新操作；长期安装需要 Mozilla 签名，不能把 ZIP 当作已签名永久扩展。
+
+## 使用
+
+1. 先启动 `CivitaiFreeToolWeb.exe`。
+2. 打开 C站模型页面，点击扩展图标。
+3. 确认当前模型与链接，点击“开始下载”。
+4. 在软件的“下载管理”查看任务进度。
+
+也可以使用扩展提供的页面/链接右键下载入口。软件的本地桥服务监听 `127.0.0.1:47531`；扩展只接受支持的模型页面或模型下载链接，不支持图片页、主页。
 
 ## 常见问题
-| 现象 | 原因与处理 |
-|---|---|
-| 小窗提示「未连接到 CivitaiFreeTool」 | 软件未运行或版本过旧（需 v2.1.1+）→ 打开/更新软件 |
-| 小窗提示「不是模型页」 | 当前页不是 Civitai 模型页（图片页/主页不支持） |
-| 点「开始下载」后提示失败原因 | 按提示处理：如模型已下架、网络不通（需代理） |
-| 下载管理里没看到任务 | 确认软件版本 ≥ v2.1.1；解析入队是后台任务，稍等片刻或看状态栏提示 |
 
-## 说明
-- 仅接受 `civitai.red` / `civitai.com` 的模型页（含 `?modelVersionId=` 版本链接和 `/api/download/models/` 下载链接）
-- 桥服务只监听 `127.0.0.1`，且仅响应 Chrome 扩展与本机页面来源，其他网站无法向你的软件提交下载
-
-## Firefox 安装
-
-Firefox 需 **121 或更高版本**（MV3 扩展支持）。
-
-1. 打开 `about:debugging#/runtime/this-firefox`
-2. 点 **「临时载入附加组件」**
-3. 选本目录下的 **`CivitaiFreeTool-FirefoxExtension-v1.1.0.zip`**
-
-> 压缩包里 `manifest.json` 在根目录，可直接被 Firefox 识别。
-> 需要永久安装可上传到 addons.mozilla.org 签名；本地开发用 `web-ext run --source-dir .`。
+- **未连接软件**：先启动或更新 CivitaiFreeTool；再重试扩展。
+- **不是模型页**：切换到具体模型页面，不要在主页或图片页面操作。
+- **下载失败**：检查模型是否可访问、是否下架，以及软件中的网络/代理设置。
+- **重启浏览器后扩展消失**：这是未签名扩展的临时加载行为，不是安装完成的永久扩展。
