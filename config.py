@@ -81,6 +81,8 @@ DEFAULTS = {
     "shortcuts_enabled": False,
     "shortcuts_bindings": {},
     "model_list_size": 3,               # 1 精简名称但保留信息列 / 2 无封面和作者 / 3 完整（现有最大）
+    "masonry_info_mode": "always",     # always / slide / fade
+    "masonry_overlay_size": "partial", # partial / full
     "masonry_card_width": 220,         # 瀑布流图片/卡片宽度，140–420
     "ui_text_size": "standard",         # small / standard / large / xlarge / huge；不改变界面缩放
     "integrated_titlebar": True,        # 应用内窗口栏；失败保留标准系统框
@@ -196,6 +198,8 @@ def load():
 
 
 def normalize_ui_preferences(cfg):
+    if cfg.get("masonry_info_mode","always") not in ("always","slide","fade"):cfg["masonry_info_mode"]="always"
+    if cfg.get("masonry_overlay_size","partial") not in ("partial","full"):cfg["masonry_overlay_size"]="partial"
     if cfg.get("download_name_mode", "original") not in ("original", "civitai", "chinese"): cfg["download_name_mode"] = "original"
     cfg["filename_include_version"] = cfg.get("filename_include_version") is True
     if cfg.get("multi_file_download", "ask") not in ("ask", "first", "all"): cfg["multi_file_download"] = "ask"

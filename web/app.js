@@ -1729,15 +1729,15 @@ function renderMasonry(rows) {
     const _sub = (_cn && _cn !== r.name) ? String(r.name || "") : "";
     const _meta = [r.base, r.type].filter(Boolean).map((x) => short(String(x), 16)).join(" · ");
     const _meta2 = [r.ver ? short(String(r.ver), 16) : "", fmtSize(r.size)].filter(Boolean).join(" · ");
-    return '<div class="ms-card' + (checked ? " checked" : "") + (normalizedModelPath(state.historyFocusPath)===normalizedModelPath(r.path)?' history-focus':'') + '" data-idx="' + i + '" data-path="' + esc(r.path) + '" title="' + esc(String(r.name || "") + " · " + String(r.path || "")) + '">' +
+    return '<div class="ms-card' + (checked ? " checked" : "") + (normalizedModelPath(state.historyFocusPath)===normalizedModelPath(r.path)?' history-focus':'') + '" tabindex="0" data-idx="' + i + '" data-path="' + esc(r.path) + '" title="' + esc(String(r.name || "") + " · " + String(r.path || "")) + '">' +
       '<span class="ms-check">' + (checked ? '<span class="cbox on"></span>' : '<span class="cbox"></span>') + "</span>" +
       _msTag(r) +
       (r.upd && r.upd.has_update ? '<a href="#" class="ms-upd" data-url="' + esc(r.upd.url || "") + '" title="' + esc(updTip(r.upd)) + '">' + _icon("alert") + '</a>' : "") +
       '<div class="ms-img-wrap" data-ph="loading"><img class="ms-img" data-idx="' + i + '" data-path="' + esc(r.path) + '" alt=""/></div>' +
-      '<div class="ms-name">' + (isModelFavorite(r.path)?_icon('star','ic model-star'):'') + esc(short(_disp, 30)) + "</div>" +
+      '<div class="ms-info"><div class="ms-name">' + (isModelFavorite(r.path)?_icon('star','ic model-star'):'') + esc(short(_disp, 30)) + "</div>" +
       (_sub ? '<div class="ms-sub">' + esc(short(_sub, 30)) + "</div>" : "") +
       '<div class="ms-meta">' + esc(_meta || (r.type || "-")) + "</div>" +
-      '<div class="ms-size">' + esc(_meta2 || fmtSize(r.size)) + "</div></div>";
+      '<div class="ms-size">' + esc(_meta2 || fmtSize(r.size)) + "</div></div></div>";
   }).join("");
   _applyCoverCache($("#mmMasonry"));
   $("#mmCheckLabel").textContent = "已勾选 " + state.mmChecked.size + " 个";
@@ -2115,7 +2115,7 @@ function _updRowHtml(x) {
     "</div></td></tr>";
 }
 
-function _updFilterRows() {
+function _updLibraryRows() {
   const items = state.mmUpdItems || {};
   const union = Object.assign({}, items);
   for (const r of (state.models || [])) {         // 扫到、有 C 站信息、但还没检查过的 → 补一条「未检查」行
@@ -2124,7 +2124,10 @@ function _updFilterRows() {
                         local_base: r.base || "", model_type: r.type || "", author: r.author || "" };
     }
   }
-  let rows = Object.entries(union).map(([path, it]) => ({ path, it: it || {} }));
+  return Object.entries(union).map(([path, it]) => ({ path, it: it || {} }));
+}
+function _updFilterRows() {
+  let rows = _updLibraryRows();
   const q = String(state.updQ || "").trim().toLowerCase();
   if (state.updBase) rows = rows.filter((x) => String(x.it.local_base || "") === state.updBase);
   if (q) rows = rows.filter((x) => ((x.it.model_name || "") + " " + x.path + " " + (x.it.local_name || "") + " " + (x.it.author || "")).toLowerCase().includes(q));
@@ -2197,8 +2200,9 @@ async function renderUpdatesPage() {
   // 顶部统计
   const nUpd = Object.values(items).filter((it) => it && it.has_update).length;
   const ca = state.mmUpdCheckedAt ? new Date(state.mmUpdCheckedAt * 1000).toLocaleString() : "还没检查过";
+  const libraryTotal=_updLibraryRows().length;
   const cnt = $("#updCount");
-  if (cnt) cnt.innerHTML = "可更新 <b class=\"warn\">" + nUpd + "</b> ｜ 共 " + Object.keys(items).length + " 个 ｜ 上次检查 " + esc(ca);
+  if (cnt) cnt.innerHTML = "可更新 <b class=\"warn\">" + nUpd + "</b> ｜ 共 " + libraryTotal + " 个 ｜ 上次检查 " + esc(ca);
 
   // 表体 + 空态
   const empty = $("#updEmpty");
@@ -2235,7 +2239,7 @@ async function renderUpdatesPage() {
 
   // 底栏
   const st1 = $("#updStat");
-  if (st1) st1.textContent = "共 " + all.length + " 个模型" + (all.length !== Object.keys(items).length ? "（筛选中，总 " + Object.keys(items).length + "）" : "");
+  if (st1) st1.textContent = "共 " + all.length + " 个模型" + (all.length !== libraryTotal ? "（筛选中，总 " + libraryTotal + "）" : "");
   _updSyncSel();
   const pg = $("#updPager");
   if (pg) pg.innerHTML = _updPagerHtml(pages, state.updPage);
@@ -3760,12 +3764,14 @@ if (_logoEl) _logoEl.addEventListener("click", showAbout);
     if (!text || !text.trim()) { tip.style.display = "none"; return; }
     tip.textContent = text.trim();
     tip.style.display = "block";
-    tip.classList.remove("show");
-    void tip.offsetWidth;
     tip.classList.add("show");
     const zf = parseFloat(document.documentElement.style.zoom) || 1;
-    tip.style.left = (e.clientX / zf + 14) + "px";
-    tip.style.top = (e.clientY / zf + 14) + "px";
+    tip.style.maxWidth=Math.min(360,(innerWidth-16)/zf)+"px";
+    const width=tip.offsetWidth*zf,height=tip.offsetHeight*zf;
+    const x=e.clientX+14+width>innerWidth-8?e.clientX-width-14:e.clientX+14;
+    const y=e.clientY+14+height>innerHeight-8?e.clientY-height-14:e.clientY+14;
+    tip.style.left=Math.max(8,Math.min(x,innerWidth-width-8))/zf+"px";
+    tip.style.top=Math.max(8,Math.min(y,innerHeight-height-8))/zf+"px";
     clearTimeout(tip._h);
     tip._h = setTimeout(() => { tip.style.display = "none"; }, 3000);
   });
@@ -4312,6 +4318,8 @@ const SETTING_FIELDS = [
   ["界面", "shortcuts_enabled", "启用快捷键（默认关闭）", "bool"],
   ["界面", "model_folder_include_subfolders", "勾选文件夹包含子目录", "bool"],
   ["界面", "model_list_size", "模型列表大小", "select", [["3","完整 · 最大（当前样式）"],["2","紧凑 · 无封面/作者"],["1","极简 · 名称精简（信息列保留）"]]],
+  ["界面", "masonry_info_mode", "瀑布流卡片介绍", "select", [["always","常驻介绍（当前样式）"],["slide","只看封面 · 悬停滑出介绍"],["fade","只看封面 · 悬停淡入介绍"]]],
+  ["界面", "masonry_overlay_size", "悬浮介绍覆盖范围", "select", [["partial","卡片下方部分"],["full","整个卡片"]]],
   ["界面", "masonry_card_width", "瀑布流图片大小", "range", [140,420,10]],
   ["界面", "custom_accent_enabled", "自定义强调色（所有主题）", "bool"],
   ["界面", "custom_accent", "自定义强调色", "color"],
@@ -4375,6 +4383,8 @@ function applyCustomUi() {
   const fontCaption = $("#fontPreviewName"); if(fontCaption)fontCaption.textContent = font || "软件默认字体";
   applyTextAndWindowAppearance();
   setMasonrySize(cfg.masonry_card_width,false);
+  root.dataset.masonryInfo=["slide","fade"].includes(cfg.masonry_info_mode)?cfg.masonry_info_mode:"always";
+  root.dataset.masonryOverlay=cfg.masonry_overlay_size==="full"?"full":"partial";
   root.dataset.showPaths = cfg.show_file_paths === false ? "false" : "true";
   root.dataset.density = ["compact", "comfortable"].includes(cfg.ui_density) ? cfg.ui_density : "standard";
   root.dataset.corners = ["square", "soft", "rounded"].includes(cfg.ui_corners) ? cfg.ui_corners : "theme";
@@ -4629,7 +4639,7 @@ $("#settingsForm").addEventListener("change", (e) => {
     api.call("save_config", { [key]: val }).then((ok) => {
       if (!ok) setStatus("外观已预览，保存失败，请重试");
     }).catch(() => setStatus("外观已预览，保存失败，请重试"));
-  } else if (["effects_fps_limit", "cache_original_images", "gallery_cache_mb", "zebra_rows", "pointer_effects", "pointer_effect_quality", "cache_detail_images", "ui_font", "ui_text_size", "window_appearance", "integrated_titlebar", "folder_picker_show_paths"].includes(key)) {
+  } else if (["effects_fps_limit", "cache_original_images", "gallery_cache_mb", "zebra_rows", "masonry_info_mode", "masonry_overlay_size", "pointer_effects", "pointer_effect_quality", "cache_detail_images", "ui_font", "ui_text_size", "window_appearance", "integrated_titlebar", "folder_picker_show_paths"].includes(key)) {
     state.cfg[key] = val;
     if(key==="cache_original_images" && val===false && typeof clearViewerImageCache==="function")clearViewerImageCache();
     applyUiAppearance();

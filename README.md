@@ -2,11 +2,14 @@
 
 > 免费的 Civitai / HuggingFace 模型下载与本地模型管理工作台。
 
-![Version](https://img.shields.io/badge/version-2.6.17-blue) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-orange) ![CI](https://github.com/ADVICEsama/CivitaiFreeTool/workflows/tests/badge.svg)
+![Version](https://img.shields.io/badge/version-2.6.18-blue) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-orange) ![CI](https://github.com/ADVICEsama/CivitaiFreeTool/workflows/tests/badge.svg)
 
 [下载最新版](https://github.com/ADVICEsama/CivitaiFreeTool/releases/latest) · [更新日志](CHANGELOG.md) · [问题反馈](https://github.com/ADVICEsama/CivitaiFreeTool/issues) · [Linux / macOS](LINUX.md)
 
 ## 当前工作台
+
+- **瀑布流悬浮介绍**：设置 → 外观与布局可选常驻、封面悬停滑出或淡入；覆盖下方或整个卡片。深色半透明底 + 大号文字，亮色主题自动换亮底深字，本地文件名始终单行。
+- **透明表格与宽屏适配**：原生 Mica 客户区材质可透过下载表格及斑马纹；更新页宽屏铺满、窄窗按需滚动，菜单说明不会被二级菜单盖住。
 
 - **左侧导航 + 常驻模型详情**：列表/瀑布流共用管理能力；单击仍选中模型，同时更新右侧详情；勾选格独立用于批量选择。打开详情不挤走模型卡片。无可见顶栏，右上角保留窗口按钮，顶部空白和页面标题可拖动。
 - **工作流自适配**：报告式总结 + 大窗三栏（节点 / 只读详情 / 模型）；小窗直接切纵向报告。保持当前节点、搜索和展开状态，路径/哈希折叠，正负提示词独立复制，兼容本地字体和界面缩放。
@@ -42,6 +45,14 @@
 ## 界面示例
 
 下面是 **当前前端的演示截图**：使用虚构模型、文件路径及程序绘制的风景；不包含用户 API Key、私有模型或真实下载任务。它们用于展示界面，不代表下载或生成结果。
+
+### 瀑布流：只看封面，悬停显示大号介绍
+
+左侧卡片处于悬停状态，右侧只显示封面；截图为“淡入 + 整个卡片”。支持滑出 / 淡入、部分 / 整卡片覆盖，默认仍为常驻介绍。
+
+![深色悬浮介绍](docs/screenshots/masonry-hover-dark.png)
+
+![浅色悬浮介绍](docs/screenshots/masonry-hover-light.png)
 
 ### 工作流分析：大窗三栏 / 小窗报告
 

@@ -479,3 +479,48 @@ html[data-model-list-size] #mmTable thead th,html[data-model-list-size] #mmTable
 #dlTable .dl-drag-handle{width:calc(28px * var(--type-scale,1));height:calc(28px * var(--type-scale,1));padding:4px;margin:0;display:grid;place-items:center;flex:none;border-radius:6px;color:var(--muted);}
 #dlTable .dl-drag-handle:hover{background:var(--surface2);color:var(--primary);}
 #dlTable .dl-drag-handle .ic{width:calc(18px * var(--type-scale,1));height:calc(20px * var(--type-scale,1));stroke:none;}
+
+/* Tooltips are outside all dropdown stacking contexts and never intercept clicks. */
+html body .tip-float{z-index:30000!important;pointer-events:none;box-sizing:border-box;}
+/* The local name is secondary information, not an unstyled multi-line paragraph. */
+html body .ms-card .ms-sub{display:block;padding:0 10px 3px;font-size:calc(11px * var(--type-scale,1));line-height:1.45;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text-dim);}
+/* Expose the native material through wrappers and zebra rows as well as the page. */
+html[data-native-material=true] body .table-wrap{background:transparent!important;}
+html[data-native-material=true] body table.grid tbody td{background:transparent!important;}
+html[data-native-material=true] body table.grid tbody tr{background:color-mix(in srgb,var(--surface) 25%,transparent)!important;}
+html[data-native-material=true][data-zebra=true] body table.grid tbody tr:nth-child(even){background:color-mix(in srgb,var(--surface2) 38%,transparent)!important;}
+html[data-native-material=true] body table.grid tbody tr:hover{background:color-mix(in srgb,var(--primary) 20%,transparent)!important;}
+html[data-native-material=true] body table.grid tbody tr:is(.selected,.sel-row){background:color-mix(in srgb,var(--primary) 32%,transparent)!important;}
+html[data-native-material=true] body table.grid thead th{background:color-mix(in srgb,var(--surface) 78%,transparent)!important;}
+
+/* Image-only cards retain their exact layout height when hover information appears. */
+html[data-masonry-info=slide] .ms-card,html[data-masonry-info=fade] .ms-card{overflow:hidden;}
+html[data-masonry-info=slide] .ms-info,html[data-masonry-info=fade] .ms-info{
+  position:absolute;inset:auto 0 0;z-index:2;max-height:100%;box-sizing:border-box;padding:8px 0 2px;
+  background:rgba(8,12,18,.80);color:#f7fafc;opacity:0;pointer-events:none;
+  transition:opacity .18s ease-out,transform .22s ease-out;
+}
+html[data-masonry-info=slide] .ms-info{transform:translateY(100%);}
+html[data-masonry-info=fade] .ms-info{transform:none;}
+html[data-masonry-info=slide] .ms-card:is(:hover,:focus-visible,:focus-within) .ms-info,
+html[data-masonry-info=fade] .ms-card:is(:hover,:focus-visible,:focus-within) .ms-info{opacity:1;transform:none;}
+html[data-masonry-info]:not([data-masonry-info=always])[data-masonry-overlay=full] .ms-info{top:0;display:flex;flex-direction:column;justify-content:flex-end;}
+html[data-masonry-info]:not([data-masonry-info=always]) .ms-info :is(.ms-name,.ms-sub,.ms-meta,.ms-size){color:inherit;flex:none;}
+html[data-masonry-info]:not([data-masonry-info=always]) .ms-info :is(.ms-sub,.ms-meta,.ms-size){color:rgba(247,250,252,.82);}
+html[data-masonry-info]:not([data-masonry-info=always]) .ms-sub{display:block!important;}
+html:is([data-theme^=light],[data-theme=modern],[data-theme=metro][data-scheme=light])[data-masonry-info]:not([data-masonry-info=always]) .ms-info{background:rgba(255,255,255,.88);color:#16202d;}
+html:is([data-theme^=light],[data-theme=modern],[data-theme=metro][data-scheme=light])[data-masonry-info]:not([data-masonry-info=always]) .ms-info :is(.ms-sub,.ms-meta,.ms-size){color:#384555;}
+.ms-card:focus-visible{outline:2px solid var(--primary);outline-offset:2px;}
+@media(prefers-reduced-motion:reduce){html .ms-info{transition:none!important;}}
+
+/* Larger, readable hover text without changing the card or global UI scale. */
+html[data-masonry-info]:not([data-masonry-info=always]) .ms-info .ms-name{font-size:calc(15px * var(--type-scale,1));line-height:1.45;padding:6px 12px 4px;font-weight:650;}
+html[data-masonry-info]:not([data-masonry-info=always]) .ms-info :is(.ms-sub,.ms-meta,.ms-size){font-size:calc(13px * var(--type-scale,1));line-height:1.5;padding-left:12px;padding-right:12px;}
+html[data-masonry-info]:not([data-masonry-info=always]) .ms-info .ms-size{padding-bottom:10px;}
+
+/* Short landscape cards can scroll their info instead of clipping larger text. */
+html[data-masonry-info]:not([data-masonry-info=always]) .ms-info{overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;}
+html[data-masonry-info]:not([data-masonry-info=always]) .ms-card:is(:hover,:focus-visible,:focus-within) .ms-info{pointer-events:auto;}
+html[data-masonry-info]:not([data-masonry-info=always])[data-masonry-overlay=full] .ms-info{justify-content:initial;}
+html[data-masonry-info]:not([data-masonry-info=always])[data-masonry-overlay=full] .ms-info>.ms-name{margin-top:auto;}
+html[data-masonry-info]:not([data-masonry-info=always]) .ms-check{z-index:3;}

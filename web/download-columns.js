@@ -8,7 +8,8 @@ function bindPersistedTableColumns(tableId, defaults, skipColumns=[], key=null) 
   headers.forEach((th,i)=>{const col=document.createElement('col');col.dataset.dlColumn=String(i);group.appendChild(col);th.dataset.dlColumn=String(i);});
   table.prepend(group);
   const columns=[...group.children];
-  let flexColumn=2;
+  const stretch=["dlTable","updTable"].includes(tableId),primaryFlex=tableId==="updTable"?1:2,otherFlex=tableId==="updTable"?3:7;
+  let flexColumn=primaryFlex;
   function apply(){
     const scale=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--type-scale'))||1;
     let total=0;const widths=[];
@@ -18,11 +19,11 @@ function bindPersistedTableColumns(tableId, defaults, skipColumns=[], key=null) 
       let width=Number(saved[i]);if(!Number.isFinite(width)||width<min||width>2000)width=defaults[i]*scale;
       widths[i]=width;if(!hidden)total+=width;
     });
-    if(tableId==='dlTable'){
+    if(stretch){
       const available=Math.max(0,table.parentElement.clientWidth);
       widths[flexColumn]+=Math.max(0,available-total);total=Math.max(total,available);
       table.parentElement.style.overflowX=total>available+1?'auto':'hidden';
-      headers[8].hidden=table.dataset.hasErrors==='false';
+      if(tableId==='dlTable')headers[8].hidden=table.dataset.hasErrors==='false';
     }
     columns.forEach((col,i)=>col.style.width=Math.round(widths[i])+'px');
     group.replaceChildren(...columns.filter((_,i)=>!(tableId==='dlTable'&&i===8&&table.dataset.hasErrors==='false')));
@@ -37,7 +38,7 @@ function bindPersistedTableColumns(tableId, defaults, skipColumns=[], key=null) 
       if(e.button!==0)return;e.preventDefault();e.stopPropagation();
       const zoom=parseFloat(getComputedStyle(document.documentElement).zoom)||1;
       drag={x:e.clientX,width:th.getBoundingClientRect().width/zoom,zoom};
-      if(tableId==='dlTable'&&i===flexColumn)flexColumn=i===2?7:2;handle.setPointerCapture(e.pointerId);th.classList.add('resizing');
+      if(stretch&&i===flexColumn)flexColumn=i===primaryFlex?otherFlex:primaryFlex;handle.setPointerCapture(e.pointerId);th.classList.add('resizing');
     });
     handle.addEventListener('pointermove',e=>{if(!drag)return;e.preventDefault();saved[i]=Math.max(60,Math.min(2000,drag.width+(e.clientX-drag.x)/drag.zoom));apply();});
     const end=()=>{if(drag){drag=null;th.classList.remove('resizing');save();}};
@@ -47,7 +48,7 @@ function bindPersistedTableColumns(tableId, defaults, skipColumns=[], key=null) 
   });
   new MutationObserver(apply).observe(table,{attributes:true,attributeFilter:['data-has-errors']});
   new MutationObserver(apply).observe(document.documentElement,{attributes:true,attributeFilter:['style']});
-  if(tableId==='dlTable')new ResizeObserver(apply).observe(table.parentElement);
+  if(stretch)new ResizeObserver(apply).observe(table.parentElement);
   apply();
 }
 bindPersistedTableColumns('dlTable',[72,48,360,180,160,120,130,200,240],[0,1],'cft-download-column-widths-v1');
