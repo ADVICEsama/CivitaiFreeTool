@@ -256,7 +256,7 @@ const state = {
   coverCache: new Map(),   // 前端封面缓存（path → dataURI）：重绘时同步填充，删除/刷新不再闪屏
   mmSel: new Set(),
   mmSort: { col: "name", rev: false },
-  mmBaseF: "", mmStF: "", mmFolderF: "", mmAuthorF: "",   // Metro 筛选：底模 / 更新状态 / 文件夹 / 作者
+  mmTypeF: "", mmBaseF: "", mmStF: "", mmFolderF: "", mmAuthorF: "",   // Metro 筛选：底模 / 更新状态 / 文件夹 / 作者
   mmUpdOnly: false,          // 只看有更新的模型（更新检测筛选）
   mmUpdItems: null,          // 更新检测结果（path → 记录），「更新」页面用
   mmUpdCheckedAt: 0,
@@ -1885,6 +1885,7 @@ function applyMmFilter() {
       return p2.indexOf("/" + _fp + "/") >= 0 || p2.indexOf("/" + _fp) === p2.length - _fp.length - 1;
     });
   }
+  if (state.mmTypeF) rows = rows.filter(r => String(r.type_filter || r.type || "Unknown").toLowerCase() === state.mmTypeF.toLowerCase());
   if (state.mmBaseF) rows = rows.filter((r) => String(r.base || "") === state.mmBaseF);
   if (state.mmAuthorF) rows = rows.filter((r) => String(r.author || "") === state.mmAuthorF);
   if (state.mmStF) {
@@ -2826,31 +2827,29 @@ function mmOp(name, fn) {
 
 // ===== 文件夹显示：竖排二级菜单 =====
 let foldersState = null;
-function fmTreeHtml(tree, hidden, depth) {
-  return tree.map((n) => {
-    const isHidden = hidden.has(n.path);
-    const kids = n.children.length ? fmTreeHtml(n.children, hidden, depth + 1) : "";
-    return '<div class="fm-item" data-path="' + esc(n.path) + '" style="padding-left:' + (12 + depth * 18) + 'px">' +
-      '<span class="fm-icon">' + "" + "</span>" +
-      '<span class="fm-name">' + esc(n.name) + "</span>" +
-      '<span class="fm-state ' + (isHidden ? "off" : "on") + '">' + (isHidden ? "隐藏" : "显示") + "</span></div>" + kids;
-  }).join("");
+function fmDirectoryVisible(path) {
+  let key=String(path).replace(/\\/g,'/').replace(/^\/+|\/+$/g,'').toLowerCase();
+  const choices=foldersState.visibility || {};
+  if(foldersState.include_subfolders===false)return Object.hasOwn(choices,key)?choices[key]:!key.includes('/');
+  while(key){if(Object.hasOwn(choices,key))return choices[key];key=key.includes('/')?key.slice(0,key.lastIndexOf('/')):'';}
+  return true;
+}
+function fmTreeHtml(tree, depth) {
+  return (tree||[]).map(n=>{
+    const visible=fmDirectoryVisible(n.path);
+    return '<div class="fm-item" role="checkbox" tabindex="0" aria-checked="'+visible+'" data-path="'+esc(n.path)+'" style="padding-left:'+(12+depth*18)+'px">'+
+      '<input type="checkbox" tabindex="-1" aria-hidden="true"'+(visible?' checked':'')+'/>'+_icon('folder')+'<span class="fm-name">'+esc(n.name)+'</span>'+
+      '<span class="fm-state '+(visible?'on':'off')+'">'+(visible?'显示':'隐藏')+'</span></div>'+fmTreeHtml(n.children,depth+1);
+  }).join('');
 }
 function fmRender() {
-  const panel = $("#mmFoldersPanel");
-  if (!foldersState) return;
-  const hidden = new Set(foldersState.hidden || []);
-  const showRoot = foldersState.show_root;
-  panel.innerHTML =
-    '<div class="fm-title">模型文件夹显示</div><div class="fm-title">点击切换；隐藏父文件夹会同时隐藏其子目录模型。不会移动或删除文件。</div>' +
-    '<div class="fm-toolbar">' +
-    '<button class="btn btn-tiny" id="fmAll">全部显示</button>' +
-    '<button class="btn btn-tiny" id="fmNone">全部隐藏</button></div>' +
-    '<div class="fm-item fm-top" data-path="__root__">' +
-      '<span class="fm-icon"></span><span class="fm-name">根目录下的模型</span>' +
-      '<span class="fm-state ' + (showRoot ? "on" : "off") + '">' + (showRoot ? "显示" : "隐藏") + "</span></div>" +
-    '<hr class="fp-sep"/>' +
-    fmTreeHtml(foldersState.tree || [], hidden, 0);
+  const panel=$('#mmFoldersPanel');if(!foldersState)return;
+  const showRoot=foldersState.show_root;
+  panel.innerHTML='<div class="fm-title">模型文件夹显示</div><div class="fm-title">'+
+    (foldersState.include_subfolders===false?'仅显示所勾选文件夹直属的模型，不自动包含子目录。':'勾选包含子目录；子目录选择优先。隐藏 A 后仍可单独勾选 A/B；勾选 A、隐藏 B 即排除 B。')+
+    ' 不移动或删除文件。</div><div class="fm-toolbar"><button class="btn btn-tiny" id="fmAll">全部显示</button><button class="btn btn-tiny" id="fmNone">全部隐藏</button></div>'+
+    '<div class="fm-item fm-top" role="checkbox" tabindex="0" aria-checked="'+showRoot+'" data-path="__root__"><input type="checkbox" tabindex="-1" aria-hidden="true"'+(showRoot?' checked':'')+'/>'+
+    '<span class="fm-name">根目录下的模型</span><span class="fm-state '+(showRoot?'on':'off')+'">'+(showRoot?'显示':'隐藏')+'</span></div><hr class="fp-sep"/>'+fmTreeHtml(foldersState.tree||[],0);
 }
 // 独立弹层：锁定工具栏的 overflow 不再裁切文件夹菜单。
 let fmAnchor = null, fmRequest = 0, fmSaving = false;
@@ -2875,16 +2874,20 @@ function fmPosition() {
   panel.style.left = Math.max(gap, Math.min(rect.left, innerWidth - box.width - gap)) / z + "px";
   panel.style.top = Math.max(gap, Math.min(upwards ? rect.top - box.height - gap : rect.bottom + gap, innerHeight - box.height - gap)) / z + "px";
 }
-async function fmSave(nextHidden, showRoot) {
+async function fmSave(visibility, showRoot) {
   if (!foldersState || fmSaving) return;
   fmSaving = true;
   const panel = $("#mmFoldersPanel");
+  const focusedPath=panel.contains(document.activeElement)?document.activeElement.closest(".fm-item")?.dataset.path:null;
   panel.setAttribute("aria-busy", "true");
   try {
-    const saved = await api.call("save_folders", nextHidden, showRoot);
+    const nextHidden=Object.keys(visibility).filter(p=>visibility[p]===false);
+    const saved = await api.call("save_folders", nextHidden, showRoot, visibility);
     if (saved !== true) throw new Error("save_folders failed");
-    foldersState.hidden = nextHidden; foldersState.show_root = showRoot;
+    foldersState.hidden = nextHidden; foldersState.visibility=visibility; foldersState.show_root = showRoot;
+    Object.assign(state.cfg,{hidden_model_folders:nextHidden,model_folder_visibility:{...visibility},show_root_models:showRoot});
     fmRender(); fmPosition();
+    if(focusedPath)panel.querySelector('.fm-item[data-path="'+CSS.escape(focusedPath)+'"]')?.focus();
     setStatus("文件夹显示已保存（仅筛选显示，不移动或删除模型）");
     mmScan();
   } catch (err) { setStatus("文件夹显示保存失败，请重试"); }
@@ -2896,15 +2899,18 @@ $("#mmFoldersPanel").addEventListener("click", (e) => {
   if (btn && foldersState) {
     const all = [];
     (function walk(nodes) { (nodes || []).forEach(n => { all.push(n.path); walk(n.children); }); })(foldersState.tree);
-    fmSave(btn.id === "fmAll" ? [] : all, btn.id === "fmAll");
+    const visible=btn.id==='fmAll';
+    fmSave(Object.fromEntries(all.map(p=>[p.replace(/\\/g,'/').toLowerCase(),visible])),visible);
     return;
   }
   const item = e.target.closest(".fm-item");
   if (!item || !foldersState) return;
-  const path = item.dataset.path, hidden = new Set(foldersState.hidden || []);
-  if (path !== "__root__") { if (hidden.has(path)) hidden.delete(path); else hidden.add(path); }
-  fmSave(Array.from(hidden), path === "__root__" ? !foldersState.show_root : foldersState.show_root);
+  e.preventDefault();
+  const path=item.dataset.path, choices={...(foldersState.visibility||{})};
+  if(path!=="__root__")choices[path.replace(/\\/g,'/').toLowerCase()]=!fmDirectoryVisible(path);
+  fmSave(choices,path==="__root__"?!foldersState.show_root:foldersState.show_root);
 });
+$("#mmFoldersPanel").addEventListener("keydown",e=>{if((e.key===' '||e.key==='Enter')&&e.target.matches('.fm-item')){e.preventDefault();e.target.click();}});
 $("#mmFolders").addEventListener("click", async (e) => {
   e.stopPropagation();
   const panel = $("#mmFoldersPanel");
@@ -2923,7 +2929,7 @@ $("#mmFolders").addEventListener("click", async (e) => {
     if (!data || !data.root || !Array.isArray(data.tree)) {
       panel.innerHTML = '<div class="fm-title">请先在设置中配置模型管理目录</div>'; return;
     }
-    foldersState = {...data, hidden: data.hidden || [], show_root: data.show_root !== false};
+    foldersState = {...data, hidden: data.hidden || [], visibility:data.visibility||Object.fromEntries((data.hidden||[]).map(p=>[p.replace(/\\/g,'/').toLowerCase(),false])), show_root: data.show_root !== false};
     _mmFolderTree = data.tree;
     fmRender();
     if (!data.tree.length) panel.insertAdjacentHTML("beforeend", '<div class="fm-title">暂无子文件夹，根目录模型仍可单独切换</div>');
@@ -4346,6 +4352,7 @@ const SETTING_FIELDS = [
   ["界面", "integrated_titlebar", "隐藏标题栏，仅保留窗口按钮", "bool"],
   ["界面", "window_appearance", "原生标题栏与材质", "select", [["theme", "跟随软件主题（推荐）"], ["mica", "Mica 标题栏 · Windows 11"], ["mica_alt", "Mica Alt 标题栏 · Windows 11"], ["system", "Windows 系统外观"], ["external", "外部工具控制（需另装 MFE）"]]],
   ["界面", "shortcuts_enabled", "启用快捷键（默认关闭）", "bool"],
+  ["界面", "model_folder_include_subfolders", "勾选文件夹包含子目录", "bool"],
   ["界面", "model_list_size", "模型列表大小", "select", [["3","完整 · 最大（当前样式）"],["2","紧凑 · 无封面/作者"],["1","极简 · 名称精简（信息列保留）"]]],
   ["界面", "masonry_card_width", "瀑布流图片大小", "range", [140,420,10]],
   ["界面", "custom_accent_enabled", "自定义强调色（所有主题）", "bool"],
@@ -4590,6 +4597,7 @@ async function saveSettings() {
     return;
   }
   cfg.organize_rules = parsedRules.rules;
+  const folderModeChanged=(state.cfg.model_folder_include_subfolders!==false)!==(cfg.model_folder_include_subfolders!==false);
   if (!(await api.call("save_config", cfg))) { setStatus("设置保存失败，请检查目录写入权限"); return; }
   state.cfg = await api.call("get_config");
   setStatus("设置已保存");
@@ -4599,6 +4607,7 @@ async function saveSettings() {
   document.documentElement.dataset.theme = state.cfg.theme || "modern";
   applyUiAppearance();
   buildSettingsForm();
+  if(folderModeChanged){foldersState=null;mmScan();}
   return true;
 }
 $("#btnSaveSettings").addEventListener("click",()=>saveSettings().catch(()=>setStatus("设置保存失败，请重试")));
@@ -5125,6 +5134,8 @@ function bindMmMetro() {
   _sec("filters", () => {
   const bf = document.getElementById("mmBaseF"), sf = document.getElementById("mmStF"),
         so = document.getElementById("mmSortF"), sd = document.getElementById("mmSortDir");
+  const tf = document.getElementById("mmTypeF");
+  if (tf) tf.addEventListener("change", () => { state.mmTypeF = tf.value; applyMmFilter(); });
   const ff = document.getElementById("mmFolderF");
   if (ff) ff.addEventListener("change", () => { state.mmFolderF = ff.value; applyMmFilter(); });
   if (bf) bf.addEventListener("change", () => { state.mmBaseF = bf.value; applyMmFilter(); });

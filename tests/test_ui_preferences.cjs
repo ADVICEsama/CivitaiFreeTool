@@ -30,7 +30,7 @@ function ok(name) { passed++; console.log('OK ' + name); }
     await page.addInitScript(() => {
       const key = 'cft-test-config';
       const defaults = { theme:'dark_graphite', ui_zoom:100, ui_scheme:'light', metro_accent:'#0078D4',
-        cache_original_images:false, api_key:'test-fixture-not-a-real-key', default_page:'dlmanager', default_view:'list',
+        model_folder_include_subfolders:true, model_folder_visibility:{}, cache_original_images:false, api_key:'test-fixture-not-a-real-key', default_page:'dlmanager', default_view:'list',
         show_file_paths:true, custom_accent_enabled:false, custom_accent:'#60A5FA', ui_density:'standard', ui_corners:'theme',
         models_dir:'D:\\AI\\models', download_dir:'D:\\AI\\downloads', models_dirs:[],
         ambient_bg:false, ask_move_after_download:false, organize_rules:[],browser_fallback_enabled:true,ui_mode:'window',ui_text_size:'standard',window_appearance:'theme' };
@@ -70,9 +70,9 @@ function ok(name) { passed++; console.log('OK ' + name); }
           if (window.fixtureFolderMode === 'empty') return JSON.stringify({root:'',tree:[]});
           const tree = Array.from({length:80}, (_,i) => ({name: '分类 '+i, path:'分类 '+i, children:[{name:'风格 <script> & "中文" '+i, path:'分类 '+i+'/风格 <script> & "中文" '+i, children:[]}]}));
           if(window.fixtureFolderDelay) await new Promise(r=>setTimeout(r,window.fixtureFolderDelay));
-          return JSON.stringify({root:'D:\\AI\\models',tree,hidden:window.fixtureCfg.hidden_model_folders||[],show_root:window.fixtureCfg.show_root_models!==false});
+          return JSON.stringify({root:'D:\\AI\\models',tree,hidden:window.fixtureCfg.hidden_model_folders||[],visibility:window.fixtureCfg.model_folder_visibility||{},include_subfolders:window.fixtureCfg.model_folder_include_subfolders!==false,show_root:window.fixtureCfg.show_root_models!==false});
         }
-        if (method === 'save_folders') {if(window.fixtureFolderSaveError)return false;window.fixtureCfg.hidden_model_folders=args[0];window.fixtureCfg.show_root_models=args[1];return true;}
+        if (method === 'save_folders') {if(window.fixtureFolderSaveError)return false;window.fixtureCfg.hidden_model_folders=args[0];window.fixtureCfg.show_root_models=args[1];window.fixtureCfg.model_folder_visibility=args[2]||{};return true;}
         if (method === 'get_download_history') return {items:window.fixtureHistory,error:''};
         if (method === 'get_history_thumbnail' && window.fixtureHistoryThumbs?.[args[0]])return window.fixtureHistoryThumbs[args[0]];
         if (method === 'get_history_thumbnail') return 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j0x0AAAAASUVORK5CYII=';

@@ -54,6 +54,8 @@ DEFAULTS = {
     "model_favorites": [],             # 收藏置顶的本地模型路径
     "model_toolbar_locked": False,
     "onboarding_done": False,
+    "model_folder_visibility": {},     # 显式目录选择，更深层选择优先
+    "model_folder_include_subfolders": True,  # 默认递归包含子目录
     "hidden_model_folders": [],         # 模型管理目录中隐藏的子文件夹
     "show_root_models": True,           # 是否显示模型目录根目录下的模型
     "metadata_format": "sd",            # sd / civitai / both（WebUI 可读 json 的格式；.civitai.info 始终生成）

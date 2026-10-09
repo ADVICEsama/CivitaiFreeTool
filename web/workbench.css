@@ -460,3 +460,9 @@ html[data-model-list-size] #mmTable thead th,html[data-model-list-size] #mmTable
 .fp-context button {display:flex;align-items:center;gap:8px;width:100%;border:0;background:transparent;color:var(--text);font:inherit;text-align:left;cursor:pointer;}
 .fp-context button:disabled {opacity:.4;cursor:not-allowed;}
 .fp-context .fp-context-note {padding:8px 12px;font-size:calc(11px * var(--type-scale,1));color:var(--text-dim);border-top:1px solid var(--border);}
+
+#mmFoldersPanel .fm-item {gap:8px;cursor:pointer;}
+#mmFoldersPanel .fm-item:focus-visible {outline:2px solid var(--primary);outline-offset:-2px;}
+#mmFoldersPanel .fm-item input {flex:none;pointer-events:none;accent-color:var(--primary);}
+#mmFoldersPanel .fm-item .ic {flex:none;width:16px;height:16px;}
+#mmTypeF {min-width:155px;}

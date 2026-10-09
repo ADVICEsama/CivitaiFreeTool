@@ -13,7 +13,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.6.15"
+APP_VERSION = "2.6.16"
 
 import civitai_api
 import config
@@ -25,6 +25,7 @@ import translator
 import browser_bridge
 from download_selection import FileChoiceBroker
 import model_naming
+import model_filters
 from gui import (_download_image, _recycle_to_trash, _text_to_rules, _rules_to_text,
                  _folder_visible, _friendly_api_error)
 
@@ -1104,7 +1105,7 @@ class Api:
                     files.extend(model_manager.scan_models(root))
                 hidden = set(self.cfg.get("hidden_model_folders", []))
                 show_root = self.cfg.get("show_root_models", True)
-                files = [f for f in files if _folder_visible(f["rel"], hidden, show_root)]
+                files = [f for f in files if model_filters.folder_visible(f["rel"], self.cfg)]
                 rows = []
                 for f in files:
                     info_path = model_manager.find_info_file(f["path"])
@@ -1123,7 +1124,9 @@ class Api:
                     if isinstance(_cre, dict):
                         _cre = _cre.get("username") or _cre.get("name") or ""
                     _cre = str(_cre or "").strip()
+                    category, category_source = model_filters.model_category(meta.get("type") or (meta.get("model").get("type") if isinstance(meta.get("model"),dict) else ""), f["path"])
                     rows.append({
+                        "type_filter": category, "type_source": category_source,
                         "path": f["path"], "name": f["name"], "size": f["size"],
                         "mtime": f.get("mtime") or 0,
                         "type": meta.get("type", ""),
@@ -1162,6 +1165,8 @@ class Api:
                 "path": r.get("path", ""), "name": r.get("name", ""),
                 "size": r.get("size", 0), "mtime": r.get("mtime") or 0,
                 "type": r.get("type", ""), "base": r.get("base", ""),
+                "type_filter": r.get("type_filter") or model_filters.model_category(r.get("type"), r.get("path"))[0],
+                "type_source": r.get("type_source", ""),
                 "ver": r.get("ver", ""), "verId": r.get("verId", ""),
                 "modelId": r.get("modelId", ""), "url": r.get("url", ""),
                 "trainedWords": r.get("trainedWords", []),
@@ -2363,6 +2368,8 @@ class Api:
             "exists": bool(root and os.path.isdir(root)),
             "tree": tree,
             "hidden": hidden,
+            "visibility": model_filters.folder_choices(self.cfg),
+            "include_subfolders": self.cfg.get("model_folder_include_subfolders", True) is not False,
             "show_root": bool(self.cfg.get("show_root_models", True)),
         }, ensure_ascii=False)
 
@@ -2424,9 +2431,12 @@ class Api:
                 pass
         return {"ok": True, "added": n}
 
-    def save_folders(self, hidden, show_root):
+    def save_folders(self, hidden, show_root, visibility=None):
         """保存文件夹显示设置；写盘失败不改变当前筛选。"""
+        if not isinstance(hidden, list) or any(not isinstance(p,str) for p in hidden): return False
+        if visibility is not None and (not isinstance(visibility,dict) or any(not model_filters.folder_key(p) or not isinstance(v,bool) for p,v in visibility.items())): return False
         previous = dict(self.cfg)
+        self.cfg["model_folder_visibility"] = ({model_filters.folder_key(p):v for p,v in visibility.items()} if visibility is not None else {model_filters.folder_key(p):False for p in hidden if model_filters.folder_key(p)})
         self.cfg["hidden_model_folders"] = list(hidden or [])
         self.cfg["show_root_models"] = bool(show_root)
         try:
@@ -2444,8 +2454,7 @@ class Api:
                 p2 = p.replace("\\", "/")
                 return p2[len(root) + 1:] if root and p2.startswith(root + "/") else p2
             rows = [r for r in self.model_rows
-                    if _folder_visible(_rel(r.get("path", "")), hidden_set,
-                                       self.cfg["show_root_models"])]
+                    if model_filters.folder_visible(_rel(r.get("path", "")), self.cfg)]
             self.mm_scan_state["rows"] = rows
         return True
 

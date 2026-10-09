@@ -231,6 +231,7 @@
         </div>
         <!-- 第三行：筛选（底模 / 状态 / 排序 + 方向 / 文件夹筛选） -->
         <div class="mm-row mm-row3">
+          <select class="input" id="mmTypeF" aria-label="筛选模型类型" data-tip="优先按元数据类型；缺失时按标准模型目录判断，不按文件大小猜测"><option value="">全部类型</option><option value="Checkpoint">大模型 · Checkpoint / UNet</option><option value="LORA">LoRA / LyCORIS</option><option value="VAE">VAE</option><option value="Controlnet">ControlNet</option><option value="TextualInversion">Embedding · 文本嵌入</option><option value="Hypernetwork">Hypernetwork</option><option value="Upscaler">放大模型</option><option value="TextEncoder">文本编码器</option><option value="MotionModule">Motion Module</option><option value="Other">其他类型</option><option value="Unknown">未识别类型</option></select>
           <select class="input" id="mmBaseF" data-tip="按底模筛选"><option value="">全部底模</option></select>
           <select class="input" id="mmAuthorF" data-tip="按作者筛选（读取模型元数据里的 C 站作者）"><option value="">全部作者</option></select>
           <select class="input" id="mmStF" data-tip="按更新状态筛选（需先检查更新）">
