@@ -159,7 +159,7 @@ class SyncEnqueueTest(unittest.TestCase):
         # 任务真实入队（文件名 = 模型名 + 空格 + 版本名 + 扩展名）
         tasks = [t for t in self.app.dl.tasks if t.info and t.info.get("model_id") == "123"]
         self.assertEqual(len(tasks), 1)
-        self.assertEqual(tasks[0].filename, "test v1.safetensors")
+        self.assertEqual(tasks[0].filename, "test.safetensors")
         # 关键：info.meta 必须存在（下载完成后生成 json + 封面缩略图的前提）
         meta = (tasks[0].info or {}).get("meta") or {}
         self.assertIn("info", meta)

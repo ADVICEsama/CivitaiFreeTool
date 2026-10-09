@@ -13,7 +13,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.6.14"
+APP_VERSION = "2.6.15"
 
 import civitai_api
 import config
@@ -24,6 +24,7 @@ import reverse_parse
 import translator
 import browser_bridge
 from download_selection import FileChoiceBroker
+import model_naming
 from gui import (_download_image, _recycle_to_trash, _text_to_rules, _rules_to_text,
                  _folder_visible, _friendly_api_error)
 
@@ -485,6 +486,8 @@ class Api:
             self.cfg.clear();self.cfg.update(previous);return False
         self.api = self._new_api()
         self.dl.cfg = self.cfg
+        if self.cfg["max_concurrent_downloads"] > previous.get("max_concurrent_downloads",3):
+            self.dl._ensure_workers()
         return ok
 
     def _relocate_model(self, old, new):
@@ -635,29 +638,12 @@ class Api:
                                 model_name = model_obj.get("name") or ""
                             except civitai_api.CivitaiError:
                                 pass
-                        src_ext = os.path.splitext(f.get("name") or "")[1] or ".safetensors"
-                        base_name = os.path.splitext(f.get("name") or "")[0]
-                        base_name = model_manager.sanitize_filename(base_name) or model_name
-                        if self.cfg.get("translate_filename", False) and model_name:
-                            if translator._is_cjk(model_name):
-                                base_name = model_manager.sanitize_filename(model_name) + (" " + model_manager.sanitize_filename(os.path.splitext(f.get("name") or "")[0]) if len(files) > 1 else "")
-                            else:
-                                try:
-                                    zh = translator.translate(
-                                        model_name,
-                                        appid=(self.cfg.get("baidu_appid") or "").strip(),
-                                        key=(self.cfg.get("baidu_key") or "").strip())
-                                    if zh and zh != model_name:
-                                        base_name = (model_manager.sanitize_filename(zh) or base_name) + (" " + model_manager.sanitize_filename(os.path.splitext(f.get("name") or "")[0]) if len(files) > 1 else "")
-                                except Exception:
-                                    pass
-                        ver = (version.get("name") or "").strip()
-                        if ver:
-                            base_name = "%s %s" % (base_name, model_manager.sanitize_filename(ver))
-                        # 按设置清理逗号/括号等符号（防 ComfyUI 提示词解析把逗号当分隔导致找不到 lora）
-                        base_name = model_manager.clean_model_name(
-                            base_name, self.cfg.get("rename_clean_rules")) or base_name
-                        fname = base_name + self._variant_suffix(version, f) + src_ext
+                        fname = model_naming.download_name(self.cfg, f, model_name, version.get("name", ""), multi=len(api.model_files(version)) > 1)
+                        if self._variant_suffix(version, f) and self.cfg.get("download_name_mode", "original") == "original":
+                            base, ext = os.path.splitext(fname)
+                            suffix=model_manager.sanitize_filename(version.get("name", "")) if version.get("name") else ""
+                            if self.cfg.get("filename_include_version") and suffix and base.endswith("-"+suffix):base=base[:-(len(suffix)+1)]
+                            fname=model_naming.append_version(base+self._variant_suffix(version,f),suffix,self.cfg.get("filename_include_version"))+ext
                         sd_d = (self.cfg.get("site_domain", "civitai.red") or "civitai.red").strip("/")
                         site_base = sd_d if "://" in sd_d else "https://" + sd_d
                         meta = {}
@@ -676,6 +662,7 @@ class Api:
                             expected_sha256=hashes.get("SHA256") or "",
                             info={"fileId": f.get("id"), "modelName": model_name,
                                   "versionName": version.get("name", ""), "url": u, "meta": meta})
+                        self._prefetch_task_cover(task)
                         self.dl.add_task(task)
                         state["items"].append({"url": u, "ok": True, "msg": "已加入: %s" % fname})
                 except Exception as e:
@@ -707,6 +694,47 @@ class Api:
                     "created_at": t.created_at, "finished_at": t.finished_at,
                 })
             return out
+
+    def _prefetch_task_cover(self, task):
+        """Fetch thumbnail before enqueuing model data. Never write into model folders."""
+        if not self.cfg.get("download_cover", True): return
+        images = ((task.info or {}).get("meta", {}).get("info") or {}).get("images") or []
+        url = images[0].get("url") if images and isinstance(images[0], dict) else ""
+        if not url: return
+        try:
+            import base64,tempfile
+            thumb = self.get_cover_b64(url, 512, timeout=3)
+            if not isinstance(thumb, str) or not thumb: return
+            target = self._history_asset(task.id, ".jpg");os.makedirs(os.path.dirname(target),exist_ok=True)
+            fd,tmp=tempfile.mkstemp(dir=os.path.dirname(target),suffix=".tmp")
+            try:
+                with os.fdopen(fd,"wb") as f:f.write(base64.b64decode(thumb))
+                os.replace(tmp,target)
+            finally:
+                if os.path.exists(tmp):os.unlink(tmp)
+        except Exception: pass  # Missing covers / network timeout must not block downloading.
+
+    def get_task_thumbnails(self, task_ids):
+        import base64
+        requested = set(str(i) for i in (task_ids or [])[:40])
+        with self.dl._lock: tasks = [t for t in self.dl.tasks if t.id in requested]
+        result = {}
+        for task in tasks:
+            try:
+                with open(self._history_asset(task.id, ".jpg"), "rb") as f: result[task.id] = base64.b64encode(f.read()).decode()
+            except OSError:
+                if task.status != downloader.ST_DONE and self.cfg.get("download_cover",True):
+                    with self.dl._lock:
+                        attempted=getattr(self,"_thumb_attempted",None)
+                        if attempted is None:self._thumb_attempted=attempted=set()
+                        if task.id in attempted:continue
+                        attempted.add(task.id)
+                        pool=getattr(self,"_thumb_pool",None)
+                        if pool is None:
+                            from concurrent.futures import ThreadPoolExecutor
+                            self._thumb_pool=pool=ThreadPoolExecutor(max_workers=2,thread_name_prefix="cft-cover")
+                    pool.submit(self._prefetch_task_cover,task)
+        return result
 
     def _history_asset(self, task_id, suffix):
         import hashlib
@@ -742,11 +770,11 @@ class Api:
             if cover:
                 from PIL import Image
                 with Image.open(cover) as im:
-                    im = im.convert("RGB"); im.thumbnail((256,256))
+                    im = im.convert("RGB"); im.thumbnail((512,512))
                     buf = io.BytesIO(); im.save(buf, "JPEG", quality=80)
                     thumb = base64.b64encode(buf.getvalue()).decode()
             elif info.get("images"):
-                thumb = self.get_cover_b64(info["images"][0].get("url", ""), 256)
+                thumb = self.get_cover_b64(info["images"][0].get("url", ""), 512)
             if thumb:
                 with config._json_write_lock:
                     import tempfile
@@ -1024,6 +1052,10 @@ class Api:
             except Exception:
                 return {"ok": False, "msg": "无法打开"}
 
+    def set_download_order(self, task_ids):
+        ok=self.dl.reorder_tasks(task_ids)
+        return {"ok":ok,"msg":"队列顺序已保存；前面的等待任务优先，正在下载的任务不中断" if ok else "排序请求无效，任务未改变"}
+
     def dl_action(self, action, filenames=None, task_ids=None):
         tasks = [t for t in self.dl.tasks if (t.id in task_ids if task_ids is not None else t.filename in (filenames or []))]
         if action == "start_all":
@@ -1037,6 +1069,11 @@ class Api:
             for t in list(self.dl.tasks):
                 if action == "pause_all":self.dl.pause_task(t)
                 else:self.dl.remove_task(t)
+        elif action == "start":
+            for t in tasks:
+                if t.status == downloader.ST_ERROR: self.dl.retry_task(t)
+                elif t.status == downloader.ST_PAUSED: self.dl.resume_task(t)
+                elif t.status == downloader.ST_PENDING: self.dl._ensure_workers()
         elif action == "pause":
             for t in tasks:
                 self.dl.pause_task(t)
@@ -1397,7 +1434,7 @@ class Api:
             info_path=model_manager.find_info_file(path)
             if not info_path:return {'ok':False,'msg':'缺少 C站信息，请先识别模型信息'}
             with open(info_path,encoding='utf-8') as f:info=json.load(f)
-            new,msgs=model_manager.rename_to_civitai(path,info,dry_run=bool(preview),clean_rules=self.cfg.get('rename_clean_rules') or '')
+            new,msgs=model_manager.rename_to_civitai(path,info,dry_run=bool(preview),clean_rules=self.cfg.get('rename_clean_rules') or '', include_version=self.cfg.get('filename_include_version',False))
             if not preview and new!=path:
                 self._relocate_model(path,new)
                 for row in self.model_rows:
@@ -1630,17 +1667,13 @@ class Api:
                     model_name = model_obj.get("name") or ""
                 except civitai_api.CivitaiError:
                     pass
-            src_ext = os.path.splitext(f.get("name") or "")[1] or ".safetensors"
-            base_name = os.path.splitext(f.get("name") or "")[0]
-            base_name = model_manager.sanitize_filename(base_name) or model_name
-            ver = (version.get("name") or "").strip()
-            if ver:
-                base_name = "%s %s" % (base_name, ver)
-            # 按设置清理逗号/括号等符号（防 ComfyUI 提示词解析把逗号当分隔导致找不到 lora）
-            base_name = model_manager.clean_model_name(
-                base_name, self.cfg.get("rename_clean_rules")) or base_name
+            filename = model_naming.download_name(self.cfg, f, model_name, version.get("name", ""), multi=len(api.model_files(version)) > 1)
+            base_name, src_ext = os.path.splitext(filename)
             selected_version = dict(version, files=[dict(f, primary=True)] + [dict(other, primary=False) for other in version.get("files", []) if other is not f])
-            base_name += self._variant_suffix(version, f)
+            if self.cfg.get("download_name_mode", "original") == "original" and self._variant_suffix(version,f):
+                suffix=model_manager.sanitize_filename(version.get("name", "")) if version.get("name") else ""
+                if self.cfg.get("filename_include_version") and suffix and base_name.endswith("-"+suffix):base_name=base_name[:-(len(suffix)+1)]
+                base_name=model_naming.append_version(base_name+self._variant_suffix(version,f),suffix,self.cfg.get("filename_include_version"))
             info = {"fileId": f.get("id"), "source": "civitai", "model_name": model_name or base_name,
                     "modelName": model_name, "versionName": version.get("name", "")}
             if model_id:
@@ -1685,6 +1718,7 @@ class Api:
             task = downloader.DownloadTask(
                 url=dl_url, dest_dir=dest_dir, filename=base_name + src_ext,
                 expected_sha256=hashes.get("SHA256") or "", info=info)
+            self._prefetch_task_cover(task)
             self.dl.add_task(task)
             item.update({"ok": True, "msg": "已加入队列: %s" % (base_name + src_ext), "task_id": task.id})
         except civitai_api.CivitaiError as e:
@@ -1849,6 +1883,15 @@ class Api:
                            "total": len(res.get("resources") or []), "detail": detail},
                           ensure_ascii=False)
 
+    def get_rename_default(self, path):
+        info = {}
+        try:
+            source=model_manager.find_info_file(path)
+            if source:
+                with open(source,encoding="utf-8") as f:info=json.load(f)
+        except Exception: pass
+        return model_naming.download_name(self.cfg, {"name":os.path.basename(path)}, info.get("name") or "", model_naming.version_name(info))
+
     def rename_file(self, path, new_name):
         """右键自定义重命名：主文件 + 附属（preview/json/info/txt）同步改名"""
         import model_manager as mm
@@ -1868,6 +1911,15 @@ class Api:
             new_name = os.path.splitext(new_name)[0]
         else:
             new_base = new_name + ext
+        if self.cfg.get("filename_include_version"):
+            meta = {}
+            try:
+                info_path=mm.find_info_file(path)
+                if info_path:
+                    with open(info_path,encoding="utf-8") as f:meta=json.load(f)
+            except Exception: pass
+            new_name=model_naming.append_version(new_name,model_naming.version_name(meta),True)
+            new_base=new_name+ext
         new_name = mm.sanitize_filename(new_name) or old_base
         new_base = mm.sanitize_filename(new_base) or (old_base + ext)
         new_path = os.path.join(d, new_base)
@@ -1926,7 +1978,7 @@ class Api:
         key = hashlib.sha256((str(size) + ":" + url).encode()).hexdigest()
         return os.path.join(config.APP_DIR, "detail_thumb_cache", key + ".jpg")
 
-    def get_cover_b64(self, url, size=512):
+    def get_cover_b64(self, url, size=512, timeout=15):
         """详情只缓存缩略图，关闭选项后不读写缓存，不自动保存原图。"""
         import io
         import base64
@@ -1951,7 +2003,7 @@ class Api:
             if self.cfg.get("proxy_enabled") and self.cfg.get("proxy_address"):
                 proxy = self.cfg["proxy_address"]
                 handlers.append(urllib.request.ProxyHandler({"http": proxy, "https": proxy}))
-            with urllib.request.build_opener(*handlers).open(req, timeout=15) as resp:
+            with urllib.request.build_opener(*handlers).open(req, timeout=timeout) as resp:
                 data = resp.read(25 * 1024 * 1024 + 1)
             if len(data) > 25 * 1024 * 1024:
                 return ""
@@ -1995,7 +2047,11 @@ class Api:
         import model_manager as _mm
         for ref in refs:
             base = os.path.basename(str(ref)).lower()
+            base = base.replace("\\", "/").split("/")[-1]
             hit = index.get(base)
+            if not hit and not os.path.splitext(base)[1]:
+                candidates = [p for name,p in index.items() if os.path.splitext(name)[0] == base]
+                if len(candidates)==1:hit=candidates[0]
             item = {"ref": str(ref), "local": bool(hit), "path": hit or ""}
             if hit:
                 try:
@@ -2056,12 +2112,27 @@ class Api:
                     prompt = json.dumps(data, ensure_ascii=False)
             except Exception as e:
                 return json.dumps({"ok": False, "msg": "JSON 解析失败: %s" % e})
-        if not wf and not prompt:
-            return json.dumps({"ok": False, "msg": "未找到工作流或提示词信息"})
+        forge_meta = {}
+        if ext in (".png", ".webp"):
+            try:
+                from PIL import Image
+                with Image.open(path) as im: image_info=dict(im.info)
+                wf=image_info.get("workflow") or wf;prompt=image_info.get("prompt") or prompt
+                if not wf and not prompt and image_info.get("parameters"):
+                    import image_gallery
+                    forge_meta=image_gallery.generation(local_path=path).get("meta") or {}
+            except Exception: pass
+        if not wf and not prompt and not forge_meta:
+            return json.dumps({"ok": False, "msg": "未找到 ComfyUI 工作流或 Forge / A1111 生成参数"})
         nodes = []
         models = set()
         pos_prompt = ""
         neg_prompt = ""
+        if forge_meta:
+            pos_prompt=str(forge_meta.get("prompt") or "");neg_prompt=str(forge_meta.get("negativePrompt") or "")
+            model=forge_meta.get("Model")
+            if isinstance(model,str) and model:models.add(model.strip())
+            for name in re.findall(r'<(?:lora|lyco):([^:>]+):',pos_prompt,re.I):models.add(name.strip())
         try:
             if wf:
                 wobj = json.loads(wf)
@@ -2078,7 +2149,7 @@ class Api:
                         link = links.get(str(port.get("link")))
                         if link: item.update(source=link[1], slot=link[2])
                         ports.append(item)
-                    nodes.append({"id": n.get("id"), "type": ntype, "title": title,
+                    nodes.append({"id": n.get("id"), "type": ntype, "title": title, "position": n.get("pos"),
                                   "widgets": [str(w) for w in widgets if isinstance(w, (str, int, float))],
                                   "parameter_names_known": False, "inputs": ports,
                                   "outputs": [{"name": o.get("name", "输出"), "type": o.get("type", "")} for o in n.get("outputs", []) if isinstance(o, dict)]})
@@ -2121,11 +2192,24 @@ class Api:
                                 neg_prompt = t
         except Exception:
             pass
+        preview_b64 = ""
+        if ext in (".png", ".webp"):
+            try:
+                from PIL import Image
+                import io,base64
+                with Image.open(path) as image:
+                    image=image.convert("RGB");image.thumbnail((512,512));buf=io.BytesIO();image.save(buf,"JPEG",quality=82)
+                    preview_b64=base64.b64encode(buf.getvalue()).decode()
+            except Exception: pass
         return json.dumps({
             "ok": True,
             "file": os.path.basename(path),
             "source_path": path,
+            "preview_b64": preview_b64,
             "has_workflow": bool(wf),
+            "source": "forge" if forge_meta else "comfyui",
+            "generation_parameters": {k:v for k,v in forge_meta.items() if k not in ("prompt","negativePrompt")},
+            "edges": [{"source":port["source"], "target":n.get("id"), "input":port.get("name", ""), "slot":port.get("slot",0)} for n in nodes for port in n.get("inputs",[]) if port.get("source") is not None],
             "nodes": nodes,
             "node_count": len(nodes),
             "models": sorted(models),
@@ -2960,6 +3044,34 @@ class Api:
                 "v": int(self._updates.get("v") or 1),
                 "items": self._updates.get("items") or {}}
 
+    def sync_local_model_updates(self):
+        """Local-only synchronization. Missing roots preserve all cached records."""
+        if getattr(self,"_updates_sync_running",False) or self.mm_scan_state.get("running") or self._mm_upd_state.get("running"):
+            return {"ok":False,"msg":"扫描 / 更新检查正在运行，请稍后同步"}
+        configured=list(self.cfg.get("models_dirs") or [])+[self.cfg.get("models_dir") or self.cfg.get("download_dir") or ""]
+        configured=list(dict.fromkeys(str(p).strip() for p in configured if str(p or "").strip()))
+        if not configured or any(not os.path.isdir(p) for p in configured):
+            return {"ok":False,"msg":"模型目录不可用或离线，保留全部更新记录，请检查模型目录"}
+        self._updates_sync_running=True
+        try:
+            self.scan_models()
+            deadline=time.monotonic()+120
+            while self.mm_scan_state.get("running") and time.monotonic()<deadline:time.sleep(.05)
+            if self.mm_scan_state.get("running"):return {"ok":False,"msg":"扫描尚未完成，未清理更新记录"}
+            if str(self.mm_scan_state.get("msg", "")).startswith("扫描失败") or any(not os.path.isdir(p) for p in configured):
+                return {"ok":False,"msg":"扫描失败或目录已离线，保留原更新记录"}
+            # OS existence is authoritative; scan-hidden records are not treated as deleted files.
+            norm=lambda p:os.path.normcase(os.path.abspath(p))
+            alive={norm(r["path"]):r["path"] for r in self.model_rows}
+            current=self._updates.get("items") or {};kept={}
+            for path,item in current.items():
+                if norm(path) in alive and os.path.isfile(alive[norm(path)]):kept[alive[norm(path)]]=item
+            data=dict(self._updates,items=kept)
+            if not config._save_json_atomic(self._updates_path(),data):return {"ok":False,"msg":"更新记录保存失败，旧记录仍保留"}
+            self._updates=data;self._mm_upd_state["items"]=kept
+            return {"ok":True,"removed":len(current)-len(kept),"count":len(self.model_rows),"msg":"同步完成：本地 %d 个模型，清理 %d 个失效更新记录（未删除模型文件）"%(len(self.model_rows),len(current)-len(kept))}
+        finally:self._updates_sync_running=False
+
     def get_mm_update_state(self):
         return self._mm_upd_state
 
@@ -2972,8 +3084,8 @@ class Api:
 
         paths 非空时**只检查勾选的这几个**（显式选择 → 忽略 24h 缓存与更新白名单，立即查）。
         """
-        if self._mm_upd_state.get("running"):
-            return {"started": False, "msg": "正在检查中…"}
+        if self._mm_upd_state.get("running") or getattr(self,"_updates_sync_running",False):
+            return {"started": False, "msg": "正在检查或同步中…"}
         only = [p for p in (paths or []) if p]
         if only:
             want = set(only)
@@ -3235,7 +3347,7 @@ class Api:
                     if nm and not translator._is_cjk(nm):
                         info["name"] = translator.translate(nm, appid, key) or nm
                 newp, msgs = model_manager.rename_to_civitai(
-                    r["path"], info, dry_run=True, clean_rules=self.cfg.get("rename_clean_rules") or "")
+                    r["path"], info, dry_run=True, clean_rules=self.cfg.get("rename_clean_rules") or "", include_version=self.cfg.get("filename_include_version",False))
                 out.append({"path": r["path"], "old": old,
                             "new": os.path.basename(newp) if newp else "",
                             "same": os.path.normpath(newp or "") == os.path.normpath(r["path"]),
@@ -3256,7 +3368,7 @@ class Api:
             for r in rows:
                 try:
                     renamed, msgs = model_manager.rename_to_civitai(
-                        r["path"], r.get("info") or {}, clean_rules=_clean)
+                        r["path"], r.get("info") or {}, clean_rules=_clean, include_version=self.cfg.get("filename_include_version",False))
                     if renamed != r["path"]: self._relocate_model(r["path"], renamed)
                     self.mm_progress["result"].append({"path": r["path"], "msgs": msgs})
                 except Exception as e:
@@ -3287,7 +3399,7 @@ class Api:
                         meta2 = dict(info)
                         meta2["name"] = zh
                         renamed, _ = model_manager.rename_to_civitai(
-                            r["path"], meta2, clean_rules=self.cfg.get("rename_clean_rules") or "")
+                            r["path"], meta2, clean_rules=self.cfg.get("rename_clean_rules") or "", include_version=self.cfg.get("filename_include_version",False))
                         if renamed != r["path"]: self._relocate_model(r["path"], renamed)
                         self.mm_progress["result"].append({"path": r["path"], "ok": True})
                 except Exception:

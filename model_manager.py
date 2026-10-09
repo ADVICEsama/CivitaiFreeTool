@@ -139,7 +139,7 @@ def find_cover(model_path):
     return None
 
 
-def rename_to_civitai(model_path, meta, dry_run=False, log_cb=None, clean_rules=None):
+def rename_to_civitai(model_path, meta, dry_run=False, log_cb=None, clean_rules=None, include_version=False):
     """同目录下把模型重命名为 C 站文件名（files 主文件 name，回退模型名），
     并同步改名附属文件（info/json/预览图/示例图/txt 等），返回 (新路径, 消息列表)。
     不移动目录，避免破坏 SD 的模型文件夹结构。"""
@@ -167,6 +167,8 @@ def rename_to_civitai(model_path, meta, dry_run=False, log_cb=None, clean_rules=
     # 去掉 C 站文件名里可能重复的扩展名
     if new_base.lower().endswith(ext.lower()):
         new_base = new_base[: -len(ext)]
+    import model_naming
+    new_base = model_naming.append_version(new_base,model_naming.version_name(meta),include_version)
     dst_base = os.path.join(os.path.dirname(model_path), new_base)
     dst = dst_base + ext
     if os.path.normpath(dst) == os.path.normpath(model_path):

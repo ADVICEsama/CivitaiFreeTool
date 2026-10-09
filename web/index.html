@@ -120,6 +120,7 @@
         <button class="btn btn-primary" id="dlStartAll" data-tip="开始下载所有未完成的任务"><span class="emj">▶️</span> ▶全部开始</button>
         <button class="btn" id="dlPauseAll" data-tip="暂停所有等待中和下载中的任务"><svg class="ic" viewBox="0 0 24 24"><use href="#i-pause"/></svg>全部暂停</button>
         <button class="btn" id="dlRemoveAll" data-tip="移除整个任务队列，不删除已下载文件；仍保留下载历史"><svg class="ic" viewBox="0 0 24 24"><use href="#i-x"/></svg>全部移除</button>
+        <button class="btn" id="dlStartSel" data-tip="只开始或继续勾选的任务，不影响其它任务"><svg class="ic" viewBox="0 0 24 24"><use href="#i-play"/></svg>开始 / 继续选中</button>
         <button class="btn" id="dlPauseSel" data-tip="暂停选中的下载任务"><span class="emj">⏸️</span> 暂停选中</button>
         <button class="btn" id="dlRetrySel" data-tip="重试选中的失败任务"><span class="emj">🔄</span> <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-refresh"/></svg>重试选中</button>
         <button class="btn" id="dlRemoveSel"><span class="emj">🗑️</span> <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-trash"/></svg>移除选中</button>
@@ -335,6 +336,7 @@
           <option value="state">排序：状态</option>
         </select>
         <span class="upd-spacer"></span>
+        <button class="btn" id="updSync" data-tip="按当前模型库清理失效更新记录，不访问 C站、不移动模型文件"><svg class="ic" viewBox="0 0 24 24"><use href="#i-refresh"/></svg>同步本地模型</button>
         <button class="btn btn-primary" id="updCheck" data-tip="对比 C 站：找出「和你所用底模相同、且比你的版本新」的版本（只列出，不会自动下载）。勾选了条目时只检查勾选的这几个"><span class="emj">⏫</span> 检查更新</button>
         <button class="btn" id="updDlSel" disabled data-tip="把勾选的模型更新到各自下拉里选中的版本（默认推荐版）"><span class="emj">⬇️</span> 批量更新</button>
         <button class="btn" id="updWl" data-tip="📋 更新白名单：名单里的模型不再提示更新（行右键 / ··· 菜单里可加入）"><span class="emj">📋</span> 白名单</button>
@@ -412,16 +414,17 @@
   <!-- 工作流分析：同一份内容，大窗检查器 / 小窗阅读报告 -->
   <section class="page" id="page-workflow">
     <div class="card wf-workspace" data-layout="report">
-      <div class="title-row"><span class="page-title">工作流分析</span><span class="hint">分析 ComfyUI JSON / PNG，查看引用模型与节点参数</span><span class="wf-status" id="wfStatus" role="status"></span></div>
+      <div class="title-row"><span class="page-title">工作流分析</span><span class="hint">分析 ComfyUI 工作流与 Forge / A1111 图片生成参数</span><span class="wf-view-switch"><button type="button" class="btn" id="wfSimple">精简</button><button type="button" class="btn" id="wfFull">完整</button></span><span class="wf-status" id="wfStatus" role="status"></span></div>
       <div class="wf-drop" id="wfDrop">
         <div class="wf-drop-icon"><svg class="ic" viewBox="0 0 24 24"><use href="#i-upload"/></svg></div>
         <div class="wf-drop-text">拖入工作流文件，或 <button class="btn btn-primary" id="wfPick">选择文件</button></div>
-        <div class="wf-drop-sub">支持 ComfyUI .json（UI / API 格式）及含工作流的 .png</div>
+        <div class="wf-drop-sub">支持 ComfyUI JSON / PNG 与包含生成参数的 Forge / A1111 PNG</div>
       </div>
       <div class="wf-result" id="wfResult" style="display:none">
         <div class="wf-result-title" id="wfResultTitle"></div>
         <div class="wf-overview" id="wfOverview" role="status"></div>
         <div class="wf-alert" id="wfAlert" hidden></div>
+        <section class="wf-graph-section" id="wfGraphSection" hidden><div class="wf-graph-toolbar"><strong>节点连接 · 只读画布</strong><button class="btn" id="wfGraphMinus">−</button><button class="btn" id="wfGraphFit">适合窗口</button><button class="btn" id="wfGraphPlus">＋</button><span class="hint">拖动画布平移 · 滚轮缩放 · 点击节点查看参数</span></div><div class="wf-graph-viewport" id="wfGraphViewport"><div id="wfGraphCanvas"></div></div></section>
         <div class="wf-grid">
           <details class="wf-panel wf-node-section" id="wfNodeSection" open>
             <summary class="wf-section-title"><span class="wf-section-number">03</span>节点目录<span class="wf-count" id="wfNodeCount"></span></summary>
@@ -501,8 +504,11 @@
 <script src="appearance.js"></script>
 <script src="image-viewer.js"></script>
 <script src="commands.js"></script>
+<script src="cover-preview.js"></script>
 <script src="download-files.js"></script>
+<script src="workflow-graph.js"></script>
 <script src="workflow.js"></script>
 <script src="app.js"></script>
+<script src="download-columns.js"></script>
 </body>
 </html>

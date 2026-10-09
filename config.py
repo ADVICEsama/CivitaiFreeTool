@@ -22,6 +22,8 @@ DEFAULTS = {
     "models_dir": os.path.join(INSTALL_DIR, "downloads", "models"),
     "models_dirs": [],               # 多模型目录（每行一个；WebUI 与 ComfyUI 分开时都填）
     "max_concurrent_downloads": 3,
+    "download_name_mode": "original",    # original / civitai / chinese
+    "filename_include_version": False,   # 模型名字-原始版本号.后缀
     "multi_file_download": "ask",       # ask / first / all；无人操作 10 秒默认第一个
     "download_timeout": 300,
     "download_retry": 5,                 # 网络中断（SSL EOF/超时）自动重试次数，每次断点续传
@@ -174,6 +176,7 @@ def load():
     except Exception:
         pass
     _import_legacy(cfg)
+    if "download_name_mode" not in disk and cfg.get("translate_filename") is True: cfg["download_name_mode"] = "chinese"
     # 旧配置只有 dark_mode 时兼容为 theme
     if "theme" not in disk:
         if "dark_mode" in disk:
@@ -191,8 +194,10 @@ def load():
 
 
 def normalize_ui_preferences(cfg):
+    if cfg.get("download_name_mode", "original") not in ("original", "civitai", "chinese"): cfg["download_name_mode"] = "original"
+    cfg["filename_include_version"] = cfg.get("filename_include_version") is True
     if cfg.get("multi_file_download", "ask") not in ("ask", "first", "all"): cfg["multi_file_download"] = "ask"
-    for key,default,lo,hi in [("effects_fps_limit",60,15,360),("gallery_cache_mb",1024,64,8192),("model_list_size",3,1,3)]:
+    for key,default,lo,hi in [("max_concurrent_downloads",3,1,32),("effects_fps_limit",60,15,360),("gallery_cache_mb",1024,64,8192),("model_list_size",3,1,3)]:
         try:value=int(cfg.get(key,default));cfg[key]=0 if key=="effects_fps_limit" and value==0 else max(lo,min(hi,value))
         except (TypeError,ValueError,OverflowError):cfg[key]=default
     cfg['shortcuts_enabled']=cfg.get('shortcuts_enabled') is True

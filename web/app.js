@@ -1078,7 +1078,9 @@ async function showDedupeDialog(groups, modelGroups) {
 if ($("#mmDedupe")) $("#mmDedupe").addEventListener("click", mmDedupeFlow);
 
 // ================= 下载管理 =================
+let dlDragging=false;
 async function dlRefresh() {
+  if(dlDragging)return;
   try {
     const tasks = await api.call("get_tasks");
     state.dlTasks = tasks || [];
@@ -1086,11 +1088,11 @@ async function dlRefresh() {
     const tbody = $("#dlTable tbody");
     const selPaths = new Set(Array.from(tbody.querySelectorAll("tr.sel-row")).map((tr) => tr.dataset.taskId));
     tbody.innerHTML = state.dlTasks.map((t) => {
-      const st = { pending: "等待中", downloading: "下载中", done: "已完成", paused: "已暂停", error: "失败", canceled: "已取消" }[t.status] || t.status;
+      const st = { pending: "等待中", downloading: "下载中", retrying: "等待重试", done: "已完成", paused: "已暂停", error: "失败", canceled: "已取消" }[t.status] || t.status;
       const prog = t.status === "downloading" ? t.progress.toFixed(1) + "%" : st;
       const speed = t.speed ? (t.speed / 1048576).toFixed(1) + " MB/s" : "";
       const size = t.total ? fmtSize(t.downloaded) + " / " + fmtSize(t.total) : fmtSize(t.downloaded);
-      const thumb = state.dlThumbs[t.filename] ? '<img class="thumb" src="data:image/jpeg;base64,' + state.dlThumbs[t.filename] + '" alt=""/>' : '<span class="thumb thumb-empty"></span>';
+      const thumb = (state.dlThumbs[t.id] || state.dlThumbs[t.filename]) ? '<img class="thumb" src="data:image/jpeg;base64,' + (state.dlThumbs[t.id] || state.dlThumbs[t.filename]) + '" alt=""/>' : '<span class="thumb thumb-empty"></span>';
       const errCell = t.error
         ? "<td class='c-err err-copy' title='点击复制完整报错'>" + esc(t.error) + "</td>"
         : "<td class='c-err'></td>";
@@ -1106,7 +1108,7 @@ async function dlRefresh() {
       const destLeaf = String(destShow || effFull || "未设置").replace(/[\\/]$/, "").split(/[\\/]/).pop();
       const destCell = "<td class='c-dest cell-dest' data-task='" + esc(t.id) + "' title='" + esc(destTip) + "'><button type='button' class='dest-picker' aria-label='保存到 " + esc(destLeaf) + "'>" + _icon("folder") + "<span>" + esc(destLeaf) + "</span>" + _icon("chevron-down") + "</button>" + (destFull ? "" : " <span class='dest-def'>默认</span>") + "</td>";
       return '<tr data-task-id="'+esc(t.id)+'" data-fn="' + esc(t.filename) + '" class="' + (selPaths.has(t.id) ? "sel-row" : "") + '">' +
-        '<td class="dl-check-col"><input type="checkbox" class="dl-task-check" aria-label="选择下载任务 ' + esc(t.filename) + '"'+(selPaths.has(t.id)?' checked':'')+'/></td>' + "<td class='c-thumb'>" + thumb + "</td><td class='c-file'><div>" + esc(t.filename) + "</div>" +
+        '<td class="dl-check-col"><button type="button" class="dl-drag-handle" draggable="true" aria-label="拖动调整下载顺序" title="拖动排序：前面的等待任务优先">'+_icon('list')+'</button><input type="checkbox" class="dl-task-check" aria-label="选择下载任务 ' + esc(t.filename) + '"'+(selPaths.has(t.id)?' checked':'')+'/></td>' + "<td class='c-thumb'>" + thumb + "</td><td class='c-file'><div>" + esc(t.filename) + "</div>" +
         (effFull ? '<div class="file-subpath" title="' + esc(effFull + (/[/\\]$/.test(effFull) ? "" : (effFull.includes("\\") || /^[a-z]:/i.test(effFull) ? "\\" : "/")) + t.filename) + '">' +
           esc(effFull + (/[/\\]$/.test(effFull) ? "" : (effFull.includes("\\") || /^[a-z]:/i.test(effFull) ? "\\" : "/")) + t.filename) + "</div>" : "") +
         "</td>" + destCell + "<td class='dl-task-status'>" + esc(st) + (["done", "error", "canceled"].includes(t.status) ? '<button class="btn btn-tiny task-archive" data-archive-task="' + esc(t.id) + '">' + _icon("clock") + '移入历史</button>' : "") + "</td><td>" + esc(prog) + "</td>" +
@@ -1124,25 +1126,24 @@ async function dlRefresh() {
 
 // 下载管理列表缩略图：按文件名缓存，已加载的不重复请求（get_covers 传模型文件路径自动找同目录封面）
 const _dlThumbLoading = new Set();
-function loadDlThumbs(tasks) {
-  const todo = tasks.filter((t) =>
-    t.dest_dir && t.status === "done" && !state.dlThumbs[t.filename] && !_dlThumbLoading.has(t.filename)).slice(0, 40);
+async function loadDlThumbs(tasks) {
+  const todo = tasks.filter(t=>!state.dlThumbs[t.id] && !_dlThumbLoading.has(t.id)).slice(0,40);
   if (!todo.length) return;
-  todo.forEach((t) => _dlThumbLoading.add(t.filename));
-  api.call("get_covers", todo.map((t) => t.dest_dir + "\\" + t.filename), 96).then((json) => {
-    try {
-      const covers = JSON.parse(json || "{}");
-      for (const [p, b64] of Object.entries(covers)) {
-        const fn = todo.find((t) => (t.dest_dir + "\\" + t.filename).toLowerCase() === p.toLowerCase());
-        if (fn) {
-          state.dlThumbs[fn.filename] = b64;
-          const img = $("#dlTable tbody tr[data-fn='" + CSS.escape(fn.filename) + "'] .thumb");
-          if (img) img.src = "data:image/jpeg;base64," + b64;
-        }
-      }
-    } catch (e) { /* 忽略 */ }
-    todo.forEach((t) => _dlThumbLoading.delete(t.filename));
-  }).catch(() => todo.forEach((t) => _dlThumbLoading.delete(t.filename)));
+  todo.forEach(t=>_dlThumbLoading.add(t.id));
+  try {
+    const result=await api.call("get_task_thumbnails",todo.map(t=>t.id));
+    const covers=typeof result==='string'?JSON.parse(result):result||{};
+    const done=todo.filter(t=>!covers[t.id] && t.status==='done' && t.dest_dir);
+    if(done.length){
+      const cached=JSON.parse(await api.call('get_covers',done.map(t=>t.dest_dir+'\\'+t.filename),512)||'{}');
+      done.forEach(t=>{const b=cached[t.dest_dir+'\\'+t.filename];if(b)covers[t.id]=b;});
+    }
+    for(const task of todo)if(covers[task.id]){
+      state.dlThumbs[task.id]=covers[task.id];
+      const row=$('#dlTable tbody tr[data-task-id="'+CSS.escape(task.id)+'"]');
+      if(row){const img=document.createElement('img');img.className='thumb';img.alt='';img.src='data:image/jpeg;base64,'+covers[task.id];row.querySelector('.c-thumb').replaceChildren(img);}
+    }
+  }catch(_){}finally{todo.forEach(t=>_dlThumbLoading.delete(t.id));}
 }
 
 // 下载受限（C 站限制）弹窗选择：花费积分重试 / 加入待办并移除 / 浏览器打开
@@ -1291,10 +1292,12 @@ $('#dlSelectAll').addEventListener('change',e=>{document.querySelectorAll('#dlTa
 $('#dlPauseAll').addEventListener('click',()=>dlAct('pause_all'));
 $('#dlRemoveAll').addEventListener('click',async()=>{if(await confirmBox('移除全部下载任务？只收起任务并取消未完成下载，不删除模型文件或历史。'))dlAct('remove_all');});
 async function dlAct(action) {
+  if (["start","pause","retry","remove"].includes(action) && !dlSelectedIds().length) {setStatus("请先勾选下载任务");return;}
   const result = await api.call("dl_action", action, null, ["start_all","pause_all","remove_all","clear_done","save"].includes(action) ? null : dlSelectedIds());
   if (action === "save") setStatus(result ? "任务及历史已保存" : "记录保存失败，请检查目录写入权限");
   dlRefresh();
 }
+$("#dlStartSel").addEventListener("click", () => dlAct("start"));
 $("#dlStartAll").addEventListener("click", () => dlAct("start_all"));
 $("#dlPauseSel").addEventListener("click", () => dlAct("pause"));
 $("#dlRetrySel").addEventListener("click", () => dlAct("retry"));
@@ -1575,7 +1578,7 @@ async function loadThumbs(start) {
         e.preventDefault(); e.stopPropagation();
         const targetTh = thOf(tg.dataset.col);
         drag = { col: tg.dataset.col, startX: e.clientX,
-                 startW: targetTh ? targetTh.getBoundingClientRect().width : 100 };
+                 startW: targetTh ? targetTh.getBoundingClientRect().width / (parseFloat(getComputedStyle(document.documentElement).zoom)||1) : 100 };
         tg.classList.add("resizing");
       });
       hd.addEventListener("dblclick", () => { // 双击 = 重置该列宽度
@@ -2504,6 +2507,14 @@ async function updWhitelistDialog() {
 }
 
 // 工具栏 / 底栏交互（一次性绑定）
+$('#updSync').addEventListener('click',async()=>{
+ const button=$('#updSync');button.disabled=true;setStatus('正在同步本地模型与更新记录…');
+ try{
+  const r=await api.call('sync_local_model_updates');
+  if(r?.ok){state.models=JSON.parse(await api.call('get_scan_rows')||'[]');const u=await api.call('get_model_updates');state.mmUpdItems=u?.items||{};applyUpdatesToRows(state.mmUpdItems);applyMmFilter();state.updPage=1;await renderUpdatesPage();}
+  setStatus(r?.msg||'同步未返回结果');
+ }catch(_){setStatus('同步失败，原更新记录保留');}finally{button.disabled=false;}
+});
 if ($("#updCheck")) $("#updCheck").addEventListener("click", async () => {
   const st = await api.call("get_mm_update_state").catch(() => null);
   if (st && st.running) {                       // 正在检查 → 再点一次 = 停止
@@ -3852,7 +3863,8 @@ $("#ctxMenu").addEventListener("click", async (e) => {
 });
 
 // 改名弹窗
-function showRenameDialog(path, oldName) {
+async function showRenameDialog(path, oldName) {
+  try { const suggested=await api.call("get_rename_default",path);if(typeof suggested === "string" && suggested)oldName=suggested; }catch(_){}
   const mask = document.createElement("div");
   mask.className = "rd-mask";
   const dlg = document.createElement("div");
@@ -4292,7 +4304,7 @@ const SETTING_FIELDS = [
   ["网络", "proxy_enabled", "启用代理", "bool"],
   ["网络", "ssl_verify", "启用证书验证", "bool"],
   ["网络", "proxy_address", "代理地址", "text"],
-  ["网络", "max_concurrent_downloads", "并发下载数", "number"],
+  ["下载", "max_concurrent_downloads", "同时下载数量", "number"],
   ["网络", "download_timeout", "下载超时(秒)", "number"],
   ["网络", "download_retry", "断流自动重试次数", "number"],
   ["网络", "hash_threads", "哈希线程数", "number"],
@@ -4306,7 +4318,8 @@ const SETTING_FIELDS = [
   ["翻译", "baidu_appid", "百度翻译 APP ID", "text"],
   ["翻译", "baidu_key", "百度翻译密钥", "password"],
   ["翻译", "auto_translate", "反向解析自动翻译", "bool"],
-  ["翻译", "translate_filename", "下载文件名为中文", "bool"],
+  ["下载", "download_name_mode", "下载文件命名方式", "select", [["original","原文件名"],["civitai","C站模型名"],["chinese","中文模型名（需要翻译服务）"]]],
+  ["下载", "filename_include_version", "命名附加模型版本号", "bool"],
   ["界面", "theme", "界面主题", "select", [
     ["dark", "深色"],
     ["dark_purple", "暮紫（暗）"],
@@ -4460,7 +4473,7 @@ const SETTING_TIPS = {
   "proxy_enabled": "开启后所有请求走代理（科学上网工具），解析/下载失败时可尝试开启",
   "ssl_verify": "关闭后跳过 TLS 证书验证：代理软件开了 HTTPS 解密（MITM）导致报证书错误时取消勾选即可恢复",
   "proxy_address": "代理软件地址，如 127.0.0.1:7897（Clash 默认端口）",
-  "max_concurrent_downloads": "同时下载的任务数：越大越快，但占用更多带宽",
+  "max_concurrent_downloads": "1–32 个。前面的等待任务优先；降低数量不强行中断当前下载，只限制后续任务启动。",
   "download_timeout": "单个文件下载无响应超过该秒数判定失败并重试",
   "download_retry": "连接被掐断（SSL EOF / 超时，代理节点不稳定时常见）自动重试次数：每次从已下载的断点续传，不重下。0 = 不重试",
   "rename_clean_rules": "下载命名与「改成 C 站名」一键改名时清理符号：ComfyUI 会把文件名里的逗号当成提示词分隔符，导致找不到 lora（如 py,ill,xl 这种名字）。推荐「去逗号」",

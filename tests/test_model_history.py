@@ -33,7 +33,7 @@ class ModelHistoryTests(unittest.TestCase):
         result=json.loads(self.api.get_history_detail(self.task.id))
         self.assertTrue(result['cached_history']);self.assertEqual(result['info']['name'],'fixture');self.assertTrue(result['covers'][0]['b64'])
         asset=Path(self.api._history_asset(self.task.id,'.json')).read_text(encoding='utf-8');self.assertNotIn('secret',asset);self.assertNotIn('downloadUrl',asset)
-        with Image.open(io.BytesIO(base64.b64decode(result['covers'][0]['b64']))) as im:self.assertLessEqual(max(im.size),256)
+        with Image.open(io.BytesIO(base64.b64decode(result['covers'][0]['b64']))) as im:self.assertLessEqual(max(im.size),512)
     def test_move_archived_file_updates_actual_directory_across_restart(self):
         self.api._cache_history_task(self.task);self.api.dl.clear_finished()
         dest=self.root/'moved';dest.mkdir(); images=self.root/'test.images';images.mkdir();(images/'example.jpg').write_bytes(b'fixture')

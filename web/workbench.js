@@ -15,6 +15,8 @@ const ADVANCED_SETTING_KEYS = new Set(["ui_mode", "window_wait_seconds", "browse
 const WORKBENCH_SETTING_HELP = {
   theme: "绯夜为浓郁玫红，夜樱为柔和低饱和粉。强调色、圆角和字体可独立调整。",
   api_key: "用于查询和下载 C 站模型。在 Civitai 账号页面生成后粘贴到这里。",
+  download_name_mode: "下载入队时自动命名，不需要下载后再改。中文需要百度翻译配置，失败保留 C站名字；多个文件保留格式/精度后缀避免重名。原文件名中本来已有的版本文字不会删除。",
+  filename_include_version: "默认关闭。开启后使用“模型名字-原始版本号.后缀”，版本号不翻译；C站名/中文名改名和手动编辑也遵循此设置。缺少版本信息时不编造版本号。",
   multi_file_download: "仅针对同版本多个模型文件，不含训练包。弹窗支持多选；无人操作 10 秒选第一个。开始勾选后停止倒计时，取消不下载。下载全部可能占用大量磁盘与带宽。",
   download_dir: "没有另选保存位置时，模型下载到这个目录。",
   models_dirs: "每行一个模型目录；支持同时添加 WebUI 和 ComfyUI 的模型目录。只扫描，不移动文件。",
@@ -363,7 +365,7 @@ function updateDownloadQueueCount() {
 
 const WORKBENCH_ICON_IDS = {
   btnParse:"play", btnClearUrls:"x", btnAddUrl:"plus", btnDlTarget:"folder", btnDlTargetReset:"refresh", dlHistoryTab:"clock", dlQueueTab:"list", dlHistoryRefresh:"refresh",
-  dlStartAll:"play", dlPauseAll:"pause", dlRemoveAll:"x", dlPauseSel:"pause", dlRetrySel:"refresh", dlRemoveSel:"x", dlSave:"file", mmViewToggle:"layers", mmUpdOnly:"refresh", mmScan:"scan", mmRefresh:"refresh", mmVerify:"shield", mmCheckUpd:"refresh", mmUpdate:"refresh", mmUpdDl:"download", mmRename:"pencil", mmLocalize:"file", mmJson:"file", mmSite:"external", mmCovers:"image", mmTranslate:"file", mmSendRp:"search", mmOrganize:"folder", mmCleanup:"trash", mmDedupe:"layers", mmFolders:"folder", mmRecover:"refresh", mmRestore:"refresh", mmFilterClear:"x", mmSelAll:"check", mmSelNone:"x", mmSelInv:"refresh", rpAddFiles:"file", rpAddDir:"folder", rpRemoveSel:"x", rpStart:"play", rpPause:"pause", rpStop:"x", btnSaveSettings:"check", btnTestApi:"globe", btnTestBaidu:"file", btnOnboarding:"info", openLogs:"folder", wfAddFiles:"file", wfAddFile:"file", wfChoose:"folder"
+  dlStartSel:"play", dlStartAll:"play", dlPauseAll:"pause", dlRemoveAll:"x", dlPauseSel:"pause", dlRetrySel:"refresh", dlRemoveSel:"x", dlSave:"file", mmViewToggle:"layers", mmUpdOnly:"refresh", mmScan:"scan", mmRefresh:"refresh", mmVerify:"shield", mmCheckUpd:"refresh", mmUpdate:"refresh", mmUpdDl:"download", mmRename:"pencil", mmLocalize:"file", mmJson:"file", mmSite:"external", mmCovers:"image", mmTranslate:"file", mmSendRp:"search", mmOrganize:"folder", mmCleanup:"trash", mmDedupe:"layers", mmFolders:"folder", mmRecover:"refresh", mmRestore:"refresh", mmFilterClear:"x", mmSelAll:"check", mmSelNone:"x", mmSelInv:"refresh", rpAddFiles:"file", rpAddDir:"folder", rpRemoveSel:"x", rpStart:"play", rpPause:"pause", rpStop:"x", btnSaveSettings:"check", btnTestApi:"globe", btnTestBaidu:"file", btnOnboarding:"info", openLogs:"folder", wfAddFiles:"file", wfAddFile:"file", wfChoose:"folder"
 };
 function syncModelInspector(active) {
   applyModelToolbarLock();

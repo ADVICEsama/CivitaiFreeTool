@@ -2,7 +2,7 @@
 
 > 免费的 Civitai / HuggingFace 模型下载与本地模型管理工作台。
 
-![Version](https://img.shields.io/badge/version-2.6.14-blue) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-orange) ![CI](https://github.com/ADVICEsama/CivitaiFreeTool/workflows/tests/badge.svg)
+![Version](https://img.shields.io/badge/version-2.6.15-blue) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-orange) ![CI](https://github.com/ADVICEsama/CivitaiFreeTool/workflows/tests/badge.svg)
 
 [下载最新版](https://github.com/ADVICEsama/CivitaiFreeTool/releases/latest) · [更新日志](CHANGELOG.md) · [问题反馈](https://github.com/ADVICEsama/CivitaiFreeTool/issues) · [Linux / macOS](LINUX.md)
 
@@ -10,6 +10,11 @@
 
 - **左侧导航 + 常驻模型详情**：列表/瀑布流共用管理能力；单击仍选中模型，同时更新右侧详情；勾选格独立用于批量选择。打开详情不挤走模型卡片。无可见顶栏，右上角保留窗口按钮，顶部空白和页面标题可拖动。
 - **工作流自适配**：报告式总结 + 大窗三栏（节点 / 只读详情 / 模型）；小窗直接切纵向报告。保持当前节点、搜索和展开状态，路径/哈希折叠，正负提示词独立复制，兼容本地字体和界面缩放。
+- **队列优先级**：手柄拖动排序，前面的等待任务优先，已有下载不中断；下载行为可设同时下载数量 1–32 个。网络重试单独显示“等待重试”，恢复传输后正确回到“下载中”。
+- **下载细节**：选中开始 / 继续，优先缓存封面，鼠标旁悬浮大封面；任务 / 历史 / 更新 / 反查表格都可拖动列宽，双击复位并记住设置。
+- **下载自动命名**：原文件名 / C站名 / 中文名，“附加原始版本号”默认关闭，开启即“模型名字-版本号.后缀”；预览和改名沿用，不需要下载后额外点击改名。
+- **更新同步**：更新管理“同步本地模型”清理已删除模型的旧更新记录，不移动或删除模型；目录离线或写入失败保留记录。
+- **工作流完整模式**：右上角精简 / 完整切换；真实节点连线、平移缩放、关联模型封面。支持 ComfyUI 与 Forge / A1111 PNG 参数；Forge 无节点数据时不造连线。
 - **保护已有分类**：切换全局下载落点不移动已完成模型；重启后的历史完成任务不再次触发搬移或重写元数据。移动仅通过明确的“保存到 / 移动”操作。
 - **多文件版本下载**：同版本多个模型文件弹窗多选，无人操作 10 秒下载第一个；勾选即停止倒计时，确认 / 取消。设置下载行为可改为直接第一个 / 全部；按独立文件 ID / URL 与 SHA256 入队，不把量化变体误下为主文件。
 - **目录记录管理**：收藏胶囊中键取消收藏；右键打开所在位置或清理收藏/失效记录，绝不删除磁盘目录与模型。失效目录仍能清理，确认选择前重新检查。
@@ -41,6 +46,12 @@
 ![工作流三栏](docs/screenshots/workflow-columns.png)
 
 ![工作流报告](docs/screenshots/workflow-report.png)
+
+### 工作流完整画布
+
+只读展示实际保存的节点与连接，点击节点查看参数；不是 ComfyUI 执行器。Forge 图片通常只有生成参数，界面明确说明不绘制虚假连线。
+
+![只读节点画布](docs/screenshots/workflow-full.png)
 
 ### 多文件版本选择
 

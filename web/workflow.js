@@ -62,12 +62,14 @@ window.CftWorkflow = (() => {
     const refs = Array.isArray(r.models) ? r.models : [];
     adapt();
     q('#wfNodeSection').open = workspace.dataset.layout === 'columns';
-    q('#wfResultTitle').innerHTML = `<div class="wf-file">${icon('file')}<span class="wf-file-name" title="${h(r.file)}">${h(r.file || '工作流文件')}</span><span class="wf-tags"><span class="wf-tag">${/\.png$/i.test(r.file || '') ? 'PNG' : 'JSON'}</span><span class="wf-tag">${r.has_workflow ? '内嵌 Workflow' : 'API / 提示词'}</span></span><span class="wf-file-actions"><button class="btn" id="wfRechoose">重新选择</button><button class="btn btn-primary" id="wfReanalyze">重新分析</button></span></div>`;
+    q('#wfResultTitle').innerHTML = `<div class="wf-file">${r.preview_b64 ? `<img class="wf-file-preview" src="data:image/jpeg;base64,${h(r.preview_b64)}" alt="工作流图片预览"/>` : icon('file')}<span class="wf-file-name" title="${h(r.file)}">${h(r.file || '工作流文件')}</span><span class="wf-tags"><span class="wf-tag">${/\.png$/i.test(r.file || '') ? 'PNG' : 'JSON'}</span><span class="wf-tag">${r.source==='forge' ? 'Forge / A1111 参数' : r.has_workflow ? '内嵌 Workflow' : 'API / 提示词'}</span></span><span class="wf-file-actions"><button class="btn" id="wfRechoose">重新选择</button><button class="btn btn-primary" id="wfReanalyze">重新分析</button></span></div>`;
     q('#wfNodeCount').textContent = `${nodes.length} 个`;
     q('#wfModelCount').textContent = `${refs.length} 个`;
     q('#wfNodeSearch').value = '';
     q('#wfNodes').innerHTML = nodes.length ? nodes.map((n,i) => `<button type="button" class="wf-node" data-index="${i}" data-search="${h([n.id,n.type,n.title,...(n.widgets || []),...(n.parameters || []).map(p=>text(p.value))].join(' ').toLowerCase())}" aria-pressed="${i === selected}">${icon('grid')}<span class="wf-node-copy"><span class="wf-node-type">${h(n.title || n.type || '未命名节点')}</span>${n.title && n.title !== n.type ? `<span class="wf-node-sub">${h(n.type)}</span>` : ''}</span><span class="wf-node-id">#${h(n.id ?? i+1)}</span></button>`).join('') : '<div class="wf-empty">未识别到节点</div>';
     filter(); select(selected);
+    if(r.source==='forge')q('#wfNodeDetail').innerHTML='<div class="wf-detail-title">Forge / A1111 生成参数</div>'+pairs(Object.entries(r.generation_parameters||{}));
+    window.CftWorkflowGraph.render(r);
     const pos = r.positive || r.pos_prompt || '', neg = r.negative || r.neg_prompt || '';
     wfLastPromptText = [pos ? '正向:\n'+pos : '',neg ? '负向:\n'+neg : ''].filter(Boolean).join('\n\n');
     q('#wfCopy').style.display = pos || neg ? '' : 'none';
@@ -83,8 +85,10 @@ window.CftWorkflow = (() => {
       if (token !== revision) return;
       if (!Array.isArray(raw)) throw new Error('Invalid matches');
       const matches = refs.map(ref => raw.find(m => m.ref === ref) || {ref,local:false,path:''});
-      q('#wfModels').innerHTML = matches.length ? `<div class="wf-resource-head"><span>模型名称</span><span>本地状态</span><span>操作</span></div>` + matches.map(m => `<article class="wf-resource"><div class="wf-resource-row"><strong class="wf-resource-name" title="${h(m.ref)}">${h(m.ref)}</strong><span class="wf-badge ${m.local ? 'hit' : 'miss'}">${icon(m.local ? 'check' : 'info')}${m.local ? '本地匹配' : '本地缺失'}</span>${m.local ? `<button type="button" class="btn wf-open-model" data-path="${h(m.path)}">打开模型</button>` : `<button type="button" class="btn btn-primary wf-search" data-search="${h(m.ref)}">搜索下载</button>`}</div>${m.local ? `<details class="wf-resource-details"><summary>查看路径与哈希</summary><div class="wf-model-path">${h(m.path)}</div><div class="wf-model-sha">SHA256 前缀：${h(m.sha256 || '未获取')}</div></details>` : ''}</article>`).join('') : '<div class="wf-empty">未识别到模型引用</div>';
+      q('#wfModels').innerHTML = matches.length ? `<div class="wf-resource-head"><span>模型名称</span><span>本地状态</span><span>操作</span></div>` + matches.map(m => `<article class="wf-resource"><div class="wf-resource-row"><span class="wf-resource-title"><img class="wf-model-cover" data-wf-cover="${h(m.path)}" alt="模型封面" hidden/><strong class="wf-resource-name" title="${h(m.ref)}">${h(m.ref)}</strong></span><span class="wf-badge ${m.local ? 'hit' : 'miss'}">${icon(m.local ? 'check' : 'info')}${m.local ? '本地匹配' : '本地缺失'}</span>${m.local ? `<button type="button" class="btn wf-open-model" data-path="${h(m.path)}">打开模型</button>` : `<button type="button" class="btn btn-primary wf-search" data-search="${h(m.ref)}">搜索下载</button>`}</div>${m.local ? `<details class="wf-resource-details"><summary>查看路径与哈希</summary><div class="wf-model-path">${h(m.path)}</div><div class="wf-model-sha">SHA256 前缀：${h(m.sha256 || '未获取')}</div></details>` : ''}</article>`).join('') : '<div class="wf-empty">未识别到模型引用</div>';
       overview(r,refs.length,matches,'done');
+      const paths=matches.filter(m=>m.local).map(m=>m.path);
+      if(paths.length){try{const covers=decode(await api.call('get_covers',paths,512));if(token!==revision)return;q('#wfModels').querySelectorAll('[data-wf-cover]').forEach(img=>{const b=covers?.[img.dataset.wfCover];if(b){img.src='data:image/jpeg;base64,'+b;img.hidden=false;}});}catch(_){}}
     } catch (_) {
       if (token !== revision) return;
       q('#wfModels').innerHTML = '<div class="wf-empty">本地匹配失败，请重新分析</div>';
@@ -102,5 +106,5 @@ window.CftWorkflow = (() => {
     await switchPage('models');
     await showModelDetail(btn.dataset.path);
   });
-  return {render,adapt};
+  return {render,adapt,select};
 })();

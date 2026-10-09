@@ -6,6 +6,7 @@ import os
 import queue
 import threading
 import time
+import uuid
 import urllib.error
 import urllib.request
 
@@ -16,6 +17,7 @@ CHUNK = 256 * 1024
 
 ST_PENDING = "pending"
 ST_DOWNLOADING = "downloading"
+ST_RETRYING = "retrying"
 ST_DONE = "done"
 ST_PAUSED = "paused"
 ST_ERROR = "error"
@@ -35,7 +37,7 @@ class DownloadTask:
         self.total = 0
         self.speed = 0.0
         self.error = ""
-        self.id = "%d_%s" % (time.time_ns(), abs(hash(filename)))
+        self.id = "%d_%s" % (time.time_ns(), uuid.uuid4().hex[:12])
         self.created_at = time.time()
         self.updated_at = self.created_at
         self.finished_at = None
@@ -102,6 +104,20 @@ class Downloader:
         self._notify(task)
         self._ensure_workers()
 
+    def reorder_tasks(self, identities):
+        if not isinstance(identities,list) or any(not isinstance(i,str) for i in identities) or len(set(identities))!=len(identities):return False
+        with self._lock:
+            by_id={t.id:t for t in self.tasks}
+            if any(identity not in by_id for identity in identities):return False
+            order=[by_id[i] for i in identities];picked=set(identities)
+            self.tasks=order+[t for t in self.tasks if t.id not in picked]
+            while True:
+                try:self._queue.get_nowait()
+                except queue.Empty:break
+            for task in self.tasks:
+                if task.status==ST_PENDING and task.id not in self._active_ids:self._queue.put(task)
+        self.save_tasks();self._ensure_workers();return True
+
     def remove_task(self, task):
         ev = self._cancel_events.get(task.id)
         if ev:
@@ -119,8 +135,9 @@ class Downloader:
         ev = self._pause_events.get(task.id)
         if ev:
             ev.set()
-        if task.status in (ST_PENDING, ST_DOWNLOADING):
+        if task.status in (ST_PENDING, ST_DOWNLOADING, ST_RETRYING):
             task.status = ST_PAUSED
+            task.speed = 0.0
             self._notify(task)
 
     def resume_task(self, task):
@@ -159,7 +176,7 @@ class Downloader:
         # 收起终态任务只清队列，历史独立保留。
         self.save_tasks()
         with self._lock:
-            keep = [t for t in self.tasks if t.status in (ST_PENDING, ST_DOWNLOADING, ST_PAUSED)]
+            keep = [t for t in self.tasks if t.status in (ST_PENDING, ST_DOWNLOADING, ST_RETRYING, ST_PAUSED)]
             for t in self.tasks:
                 if t not in keep:
                     self._pause_events.pop(t.id, None)
@@ -196,7 +213,7 @@ class Downloader:
             if t.id in seen:
                 continue
             seen.add(t.id)
-            if t.status == ST_DOWNLOADING or (not resume and t.status == ST_PENDING):
+            if t.status in (ST_DOWNLOADING, ST_RETRYING) or (not resume and t.status == ST_PENDING):
                 t.status = ST_PAUSED
             with self._lock:
                 self.tasks.append(t)
@@ -244,7 +261,7 @@ class Downloader:
 
     # ---------- 内部 ----------
     def _ensure_workers(self):
-        n = max(1, int(self.cfg.get("max_concurrent_downloads", 3)))
+        n = max(1, min(32, int(self.cfg.get("max_concurrent_downloads", 3))))
         with self._lock:
             need = n - len([w for w in self._workers if w.is_alive()])
         for _ in range(max(0, need)):
@@ -291,16 +308,27 @@ class Downloader:
                 task = self._queue.get(timeout=1)
             except queue.Empty:
                 return
-            # 任务可能已被移除/取消/重复入队：原子检查并切换状态，防止双写
+            # Claim the next ordered task atomically; queue items only wake workers.
+            limited=False
             with self._lock:
-                if task.status != ST_PENDING or task.id in self._active_ids:
-                    continue
-                if task not in self.tasks:
-                    continue
-                if self._cancel_events.get(task.id, threading.Event()).is_set():
-                    continue
-                task.status = ST_DOWNLOADING
-                self._active_ids.add(task.id)
+                limit=max(1,min(32,int(self.cfg.get("max_concurrent_downloads",3))))
+                if len(self._active_ids)>=limit:
+                    self._queue.put(task);limited=True
+                else:
+                    wake=task
+                    destination=lambda t:os.path.normcase(os.path.abspath(os.path.join(t.dest_dir if t.id in self._active_ids and t.dest_dir else self._resolve_dest(t),t.filename)))
+                    occupied={destination(t) for t in self.tasks if t.id in self._active_ids}
+                    task=next((t for t in self.tasks if t.status==ST_PENDING and t.id not in self._active_ids and not self._cancel_events.get(t.id,threading.Event()).is_set() and destination(t) not in occupied),None)
+                    if task is None:
+                        if any(t.status==ST_PENDING for t in self.tasks) and self._active_ids:self._queue.put(wake);limited=True
+                        else:continue
+                    else:
+                        task._claimed_dest=self._resolve_dest(task)
+                        task.dest_dir=task._claimed_dest
+                        task.status=ST_DOWNLOADING
+                        self._active_ids.add(task.id)
+            if limited:
+                time.sleep(.1);continue
             try:
                 self._download_impl(task)
             finally:
@@ -316,12 +344,18 @@ class Downloader:
         """
         # 落地目录在「下载开始这一刻」决定：任务没显式指定时用当前全局目标，
         # 而不是入队时的旧值 —— 否则用户入队后再选文件夹就不生效（实测踩过）。
-        task.dest_dir = self._resolve_dest(task)
+        task.dest_dir = getattr(task,"_claimed_dest",None) or self._resolve_dest(task)
         try:
             attempts = max(0, int(self.cfg.get("download_retry", 5) or 5))
         except Exception:
             attempts = 5
         for attempt in range(attempts + 1):
+            if self._cancel_events.get(task.id,threading.Event()).is_set():task.status=ST_CANCELED;task.speed=0;self._notify(task);return
+            if self._pause_events.get(task.id,threading.Event()).is_set():task.status=ST_PAUSED;task.speed=0;self._notify(task);return
+            task.status=ST_DOWNLOADING
+            task.speed=0.0
+            task.error=""
+            self._notify(task)
             self._download_once(task)
             if task.status in (ST_DONE, ST_CANCELED, ST_PAUSED):
                 return
@@ -334,7 +368,8 @@ class Downloader:
             if attempt >= attempts:
                 break
             delay = min(30, 2 ** (attempt + 1))  # 2,4,8,16,30 秒
-            task.status = ST_PENDING
+            task.status = ST_RETRYING
+            task.speed = 0.0
             task.error = "网络中断，%d 秒后自动重试(%d/%d)。原始错误：%s" % (
                 delay, attempt + 1, attempts, err[:100])
             self._notify(task)
