@@ -48,6 +48,8 @@ let settingsCategory = "general";
 let historyItems = [];
 let historyPage = 1;
 let historyRequest = 0;
+let historyRenderSignature="";
+const historyThumbCache=new Map(),historyThumbRequests=new Map();
 
 function settingCategory(key, oldGroup) {
   if(key.startsWith("shortcuts_"))return "shortcuts";
@@ -342,6 +344,9 @@ function renderDownloadHistory() {
   const rows = historyItems.filter(row => [row.filename, row.modelName, row.dest_dir, status[row.status], row.error].join(" ").toLowerCase().includes(q));
   const pages = Math.max(1, Math.ceil(rows.length / 100));
   historyPage = Math.max(1, Math.min(historyPage, pages));
+  const signature=JSON.stringify([historyPage,q,rows]);
+  if(signature===historyRenderSignature&&$("#dlHistoryTable tbody").children.length)return;
+  historyRenderSignature=signature;
   $("#dlHistoryTable tbody").innerHTML = rows.slice((historyPage - 1) * 100, historyPage * 100).map(row =>
     '<tr data-history-id="' + esc(row.id) + '"><td class="c-file" title="' + esc(row.filename) + '"><div class="history-thumb" data-history-thumb="' + esc(row.id) + '">' + _icon('image') + '</div><div>' + esc(row.filename) + '</div><div class="file-subpath" title="' + esc(row.dest_dir) + '">' + esc(row.dest_dir || "") + '</div>' + (row.modelName ? '<div class="history-model">' + esc(row.modelName) + '</div>' : "") + '</td><td><span class="history-result ' + esc(row.status) + '">' + esc(status[row.status] || row.status) + '</span>' + (row.error ? '<div class="history-error" title="' + esc(row.error) + '">' + esc(row.error) + '</div>' : "") + '</td><td>' + fmtSize(row.total || row.downloaded) + '</td><td>' + (row.finished_at ? fmtTime(row.finished_at) : '时间未记录') + '</td><td><button class="btn btn-tiny" data-history-open="' + esc(row.id) + '"' + (row.dest_dir ? "" : " disabled") + '>' + _icon("folder") + '打开目录</button><button class="btn btn-tiny" data-history-save="' + esc(row.id) + '"' + (row.file_exists === false || row.status !== 'done' ? ' disabled' : '') + '>' + _icon('folder') + '保存到…</button><button class="btn btn-tiny" data-history-site="' + esc(row.id) + '"' + (row.model_url ? '' : ' disabled') + '>' + _icon('external') + '打开 C 站</button><button class="btn btn-tiny" data-history-info="' + esc(row.id) + '">' + _icon('info') + '模型信息</button></td></tr>').join("") ||
     '<tr><td colspan="5" class="history-empty">' + (q ? '没有匹配的历史记录' : '暂无下载历史。完成、失败、取消的任务会自动保留；收起队列不会删除它们。') + '</td></tr>';
@@ -349,7 +354,12 @@ function renderDownloadHistory() {
     const item = historyItems.find(row => row.id === cell.dataset.historyThumb);
     if (!item?.cached_thumb) return;
     try {
-      const b64 = await api.call("get_history_thumbnail", item.id);
+      const key=item.id+":"+(item.thumb_revision||0);
+      let b64=historyThumbCache.get(key);
+      if(!b64){
+        if(!historyThumbRequests.has(key))historyThumbRequests.set(key,api.call("get_history_thumbnail",item.id));
+        try{b64=await historyThumbRequests.get(key);if(b64){if(historyThumbCache.size>=200)historyThumbCache.clear();historyThumbCache.set(key,b64);}}finally{historyThumbRequests.delete(key);}
+      }
       if (b64 && cell.isConnected) cell.innerHTML = '<img alt="历史封面" src="data:image/jpeg;base64,' + b64 + '"/>';
     } catch (e) {}
   });
@@ -433,9 +443,16 @@ function decorateWorkbenchIcons(root = document) {
     item.insertAdjacentHTML("afterbegin", _icon(name));
   });
 }
+function decorateModelActionHelp(){
+  const help={mmScan:'读取已配置模型目录中的文件、元数据和封面，不下载或移动模型。',mmRefresh:'重新扫描本地模型，刷新改名或移动后的路径，不移动文件。',mmSelAll:'勾选当前筛选结果中显示的全部模型，不包含隐藏模型。',mmSelNone:'取消模型勾选，不清空搜索或改变筛选。',mmSelInv:'只对当前筛选结果反转勾选，不包含隐藏模型。',mmCheckUpd:'查询 C站版本并标记有更新的模型；不会自动下载新版本或移动旧模型。',mmUpdDl:'把当前可见、勾选且有更新的模型加入下载队列；旧版处理遵循下载设置。',mmVerify:'为选中的可见模型计算哈希并比对 C站记录，不移动或删除模型。',mmJson:'生成 SD WebUI 可读的附属 JSON，不修改模型主文件。',mmCovers:'为选中的可见模型下载示例封面；这是明确的联网下载操作。',mmTranslate:'翻译模型简介并写入附属元数据，保留原文，不翻译触发词。',mmOrganize:'按设置里的分类规则移动模型及附属文件。不是刷新列表；手动模式逐个选择位置，自动模式需先配置目标环境和规则。',mmMoveTo:'将当前筛选中勾选的模型及附属文件、图片目录移动到同一文件夹。同名冲突不覆盖，不包含隐藏模型。',mmFolders:'仅筛选哪些目录的模型显示，不移动或删除文件。子目录选择优先。',mmCleanup:'清理失效的元数据、孤立封面等冗余文件；不是取消勾选，执行前请确认当前模型选择。',mmSendRp:'将当前可见的选中模型加入反向解析队列，按文件哈希查询 C站信息。'};
+  document.querySelectorAll('#page-models [data-proxy]').forEach(item=>{const id=item.dataset.proxy;const button=document.getElementById(id);item.dataset.tip=help[id]||button?.dataset.tip||button?.textContent?.trim()||item.textContent.trim();});
+  for(const [id,tip] of Object.entries(help)){const button=document.getElementById(id);if(button)button.dataset.tip=tip;}
+  document.querySelectorAll('#page-models button[data-menu]').forEach(button=>{button.dataset.tip=button.dataset.tip||'展开'+button.textContent.trim()+'操作菜单；菜单项可悬停查看用途。';});
+}
 function initializeWorkbench() {
   bindModelListSize();
   decorateWorkbenchIcons();
+  decorateModelActionHelp();
   document.querySelectorAll(".sidebar-brand,.sidebar-name,.sidebar-name small,.page-title,.card > h2,.iv-toolbar").forEach(el=>el.classList.add("pywebview-drag-region"));
   const sizeAnchor=$('#mmViewMasonry'),sizeMenu=$('#mmImageSizeControl');
   sizeAnchor.setAttribute('aria-controls','mmImageSizeControl');sizeAnchor.setAttribute('aria-expanded','false');

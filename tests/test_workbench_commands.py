@@ -20,7 +20,7 @@ class FeatureTests(unittest.TestCase):
             self.assertEqual(seen,[str(one)]);self.assertEqual(a.rp_rows[0]['status'],'等待');self.assertEqual(a._rp_state['total'],1)
     def test_batch_still_processes_all_queued_models(self):
         a=self.api();a.rp_add_paths(['fixture-one','fixture-two'])
-        with patch('reverse_parse.reverse_by_hash',side_effect=lambda path,*args,**kw:self.result(Path(path))) as lookup:
+        with patch('webui.os.path.isfile',return_value=True), patch('reverse_parse.reverse_by_hash',side_effect=lambda path,*args,**kw:self.result(Path(path))) as lookup:
             self.assertTrue(a.rp_start());self.wait(a);self.assertEqual(lookup.call_count,2)
     def test_busy_detail_does_not_append_or_restart(self):
         with tempfile.TemporaryDirectory() as d:
@@ -28,7 +28,7 @@ class FeatureTests(unittest.TestCase):
     def test_missing_file_does_not_start(self):self.assertFalse(self.api().rp_identify_model('fixture-missing.safetensors')['started'])
     def test_failure_terminates_and_records_result(self):
         a=self.api();a.rp_add_paths(['fixture'])
-        with patch('reverse_parse.reverse_by_hash',side_effect=RuntimeError('fixture network failure')):
+        with patch('webui.os.path.isfile',return_value=True), patch('reverse_parse.reverse_by_hash',side_effect=RuntimeError('fixture network failure')):
             self.assertTrue(a.rp_start(['fixture']));self.wait(a);self.assertEqual(a.rp_rows[0]['status'],'失败');self.assertIn('fixture network',a.rp_rows[0]['model'])
     def test_hash_progress_and_refreshed_model_row(self):
         with tempfile.TemporaryDirectory() as d:

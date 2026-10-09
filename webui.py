@@ -13,7 +13,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.6.16"
+APP_VERSION = "2.6.17"
 
 import civitai_api
 import config
@@ -201,15 +201,12 @@ class Api:
                 return {"ok":False,"msg":"该模型正在下载，请先暂停再移动"}
         base = os.path.splitext(os.path.basename(path))[0]
         src_dir = os.path.dirname(path)
-        candidates = [path] + [os.path.join(src_dir, base + suffix) for suffix in
-            (".preview.png", ".preview.jpg", ".preview.webp", ".preview.gif", ".txt", ".json", ".info.json", ".civitai.info", ".images")]
-        if any(os.path.exists(os.path.join(dest_dir, os.path.basename(f))) for f in candidates if os.path.exists(f)):
+        candidates = [path] + [os.path.join(src_dir,base+suffix) for suffix in model_manager._SIDE_EXTS+(".images",)]
+        if any(os.path.lexists(os.path.join(dest_dir, os.path.basename(f))) for f in candidates if os.path.lexists(f)):
             return {"ok": False, "msg": "目标存在同名模型或附属文件，请先处理冲突"}
         moved = []
         try:
-            for f in [path] + [os.path.join(src_dir, base + s) for s in
-                               (".preview.png", ".preview.jpg", ".preview.webp", ".preview.gif",
-                                ".txt", ".json", ".info.json", ".civitai.info", ".images")]:
+            for f in candidates:
                 if os.path.exists(f):
                     shutil.move(f, os.path.join(dest_dir, os.path.basename(f)))
                     moved.append((f,os.path.join(dest_dir,os.path.basename(f))))
@@ -491,10 +488,44 @@ class Api:
             self.dl._ensure_workers()
         return ok
 
+    def _resolve_model_path(self, path):
+        if not isinstance(path,str) or not path.strip():return ""
+        path=os.path.abspath(os.path.normpath(path.strip()))
+        aliases=getattr(self,"_model_path_aliases",{})
+        seen=set()
+        while os.path.normcase(path) in aliases and os.path.normcase(path) not in seen:
+            seen.add(os.path.normcase(path));path=aliases[os.path.normcase(path)]
+        return path
+
+    def _selected_model_rows(self, paths):
+        rows=list(self.model_rows)
+        if paths is None:return rows
+        selected={os.path.normcase(self._resolve_model_path(p)) for p in paths if isinstance(p,str)}
+        return [r for r in rows if os.path.normcase(self._resolve_model_path(r.get("path",""))) in selected]
+
     def _relocate_model(self, old, new):
-        self.dl.relocate(old,new)
-        favorites=getattr(self,'cfg',{}).get('model_favorites') or []
+        old=os.path.abspath(os.path.normpath(old));new=os.path.abspath(os.path.normpath(new))
         norm=lambda p:os.path.normcase(os.path.abspath(p))
+        if norm(old)!=norm(new):
+            aliases=getattr(self,"_model_path_aliases",{})
+            aliases[norm(old)]=new;self._model_path_aliases=aliases
+        self.dl.relocate(old,new)
+        # Synchronize all cached path users; never rename/move files here.
+        seen=set()
+        for row in list(getattr(self,"model_rows",[]))+list(getattr(self,"mm_scan_state",{}).get("rows",[]))+list(getattr(self,"rp_rows",[])):
+            if id(row) in seen:continue
+            seen.add(id(row))
+            if row.get("path") and norm(row["path"])==norm(old):
+                row["path"]=new
+                if "name" in row:row["name"]=os.path.basename(new)
+                if row.get("status")=="失败":row["status"]="等待";row["model"]=""
+        updates=getattr(self,"_updates",None)
+        if isinstance(updates,dict):
+            items=updates.get("items") or {};moved=[key for key in list(items) if norm(key)==norm(old)]
+            for key in moved:
+                prior=items.pop(key);items[new]={**prior,**items.get(new,{})}
+            if moved:self._save_updates(updates)
+        favorites=getattr(self,'cfg',{}).get('model_favorites') or []
         updated=[new if norm(p)==norm(old) else p for p in favorites if isinstance(p,str)]
         if updated!=favorites:self.cfg['model_favorites']=updated;config.save(self.cfg)
 
@@ -741,6 +772,42 @@ class Api:
         import hashlib
         return os.path.join(config.APP_DIR, "history_assets", hashlib.sha256(str(task_id).encode()).hexdigest() + suffix)
 
+    def get_task_hover_cover(self, task_id):
+        """Separate high-quality hover source; never enlarge the queue's small icon."""
+        import base64, io, image_gallery
+        from PIL import Image
+        task=next((t for t in self.dl.tasks if t.id==task_id),None)
+        history=next((r for r in self.dl.get_history() if r.get("id")==task_id),None)
+        if task is None and history is None:return ""
+        path=(os.path.join(task.dest_dir,task.filename) if task else history.get("file_path") or os.path.join(history.get("dest_dir",""),history.get("filename","")))
+        info=(task.info or {}).get("meta",{}).get("info",{}) if task else {}
+        if not info:
+            try:
+                with open(self._history_asset(task_id,".json"),encoding="utf-8") as f:info=json.load(f)
+            except (OSError,ValueError):info={}
+        images=info.get("images") or []
+        url=images[0].get("url") if images and isinstance(images[0],dict) else ""
+        if url:
+            cached=image_gallery.cache_load({"url":url},self.cfg,"original")
+            if cached:
+                try:
+                    with Image.open(io.BytesIO(cached)) as im:
+                        im=im.convert("RGB");im.thumbnail((1536,1536));buf=io.BytesIO();im.save(buf,"JPEG",quality=96,subsampling=0)
+                    return base64.b64encode(buf.getvalue()).decode()
+                except (OSError,ValueError):pass
+            from urllib.parse import urlsplit
+            if urlsplit(url).scheme=="https" and urlsplit(url).hostname=="image.civitai.com":
+                high=self.get_cover_b64(url,1024,timeout=8)
+                if high:return high
+        cover=model_manager.find_cover(path)
+        if cover and os.path.isfile(cover):
+            try:
+                with Image.open(cover) as im:
+                    im=im.convert("RGB");im.thumbnail((1536,1536));buf=io.BytesIO();im.save(buf,"JPEG",quality=96,subsampling=0)
+                return base64.b64encode(buf.getvalue()).decode()
+            except (OSError,ValueError):pass
+        return ""
+
     def _cache_history_task(self, task):
         """历史图文独立于模型文件存储；不保留临时签名下载地址。"""
         try:
@@ -860,7 +927,9 @@ class Api:
                     self._cache_history_task(SimpleNamespace(id=row["id"],filename=row["filename"],dest_dir=os.path.dirname(path),info=info))
 
     def get_download_history(self):
-        items = self.dl.get_history()
+        pending={t.id for t in getattr(self.dl,"tasks",[]) if t.status in (downloader.ST_PENDING,downloader.ST_DOWNLOADING,downloader.ST_RETRYING,downloader.ST_PAUSED)}
+        active=getattr(self.dl,"_active_ids",set());pending.update(active if isinstance(active,set) else [])
+        items = [row for row in self.dl.get_history() if row.get("id") not in pending]
         if not getattr(self, "_history_migration_started", False) and not getattr(self,"_storage_migrating",False):
             self._history_migration_started = True
             self._history_migration_running = True
@@ -868,7 +937,10 @@ class Api:
         for row in items:
             path = row.get("file_path") or os.path.join(row.get("dest_dir", ""), row.get("filename", ""))
             row["file_path"], row["file_exists"] = path, os.path.isfile(path)
-            row["cached_thumb"] = os.path.isfile(self._history_asset(row["id"], ".jpg"))
+            thumb=self._history_asset(row["id"], ".jpg")
+            row["cached_thumb"] = os.path.isfile(thumb)
+            try:row["thumb_revision"]=os.stat(thumb).st_mtime_ns
+            except OSError:row["thumb_revision"]=0
         return {"items": items, "error": self.dl.persistence_error}
 
     def get_history_thumbnail(self, task_id):
@@ -1084,6 +1156,8 @@ class Api:
         elif action == "remove":
             for t in tasks:
                 self.dl.remove_task(t)
+        elif action == "remove_completed":
+            return self.dl.clear_completed()
         elif action == "clear_done":
             self.dl.clear_finished()
         elif action == "save":
@@ -1932,20 +2006,10 @@ class Api:
             return {"ok": False, "msg": "文件名未变化"}
         if os.path.exists(new_path):
             return {"ok": False, "msg": "目标文件已存在"}
-        try:
-            os.rename(path, new_path)
-            self._relocate_model(path, new_path)
-        except Exception as e:
-            return {"ok": False, "msg": "重命名失败: %s" % e}
-        for side in (".preview.png", ".preview.jpg", ".preview.webp", ".preview.gif",
-                     ".txt", ".json", ".civitai.info", ".images"):
-            old_side = os.path.join(d, old_base + side)
-            if os.path.exists(old_side):
-                try:
-                    os.rename(old_side, os.path.join(d, new_name + side))
-                except Exception:
-                    pass
-        return {"ok": True, "msg": "已重命名为 " + new_base}
+        ok,messages=mm.rename_model_bundle(path,new_path)
+        if not ok:return {"ok":False,"msg":"；".join(messages)}
+        self._relocate_model(path,new_path)
+        return {"ok":True,"path":new_path,"msg":"已重命名为 "+new_base}
 
     def rm_file(self, path):
         """右键删除：移入回收站（含附属文件）"""
@@ -2017,7 +2081,7 @@ class Api:
                 image = image.convert("RGB")
                 image.thumbnail((size, size))
                 buf = io.BytesIO()
-                image.save(buf, "JPEG", quality=82)
+                image.save(buf, "JPEG", quality=(96 if size>=1024 else 82), subsampling=(0 if size>=1024 else 2))
             data = buf.getvalue()
             if enabled:
                 with config._json_write_lock:
@@ -2242,7 +2306,7 @@ class Api:
                 im = Image.open(cover).convert("RGB")
                 im.thumbnail((size, size))
                 buf = io.BytesIO()
-                im.save(buf, "JPEG", quality=(88 if int(size) > 320 else 82))
+                im.save(buf, "JPEG", quality=(96 if int(size)>=1024 else 88 if int(size)>320 else 82), subsampling=(0 if int(size)>=1024 else 2))
                 b64s = base64.b64encode(buf.getvalue()).decode()
                 if len(self._cover_cache) > 4000:
                     self._cover_cache.clear()
@@ -2972,11 +3036,7 @@ class Api:
         return {"checked_at": 0, "items": {}}
 
     def _save_updates(self, data):
-        try:
-            with open(self._updates_path(), "w", encoding="utf-8", newline="") as f:
-                json.dump(data, f, ensure_ascii=False, indent=1)
-        except Exception:
-            pass
+        return config._save_json_atomic(self._updates_path(),data)
 
     def _sidecar_brief(self, path):
         """从侧车文件读出「模型名 / 版本名 / 底模 / 版本日期」（纯本地，不发网络）。
@@ -3049,9 +3109,16 @@ class Api:
             self._enrich_upd_records()
         except Exception:
             pass
+        configured=self.cfg.get("models_dirs") or [self.cfg.get("models_dir") or self.cfg.get("download_dir") or ""]
+        roots=[os.path.normcase(os.path.abspath(p)).rstrip(os.sep) for p in configured if isinstance(p,str) and p]
+        def in_library(path):
+            p=os.path.normcase(self._resolve_model_path(path))
+            return os.path.isfile(p) and (not roots or any(p.startswith(root+os.sep) for root in roots))
         return {"checked_at": int(self._updates.get("checked_at") or 0),
                 "v": int(self._updates.get("v") or 1),
-                "items": self._updates.get("items") or {}}
+                "items": {self._resolve_model_path(path):record for path,record in (self._updates.get("items") or {}).items()
+                          if in_library(path)}}
+
 
     def sync_local_model_updates(self):
         """Local-only synchronization. Missing roots preserve all cached records."""
@@ -3343,7 +3410,8 @@ class Api:
     def mm_rename_preview(self, act="rename_c", paths=None):
         """批量改名「只读试算」：算出新旧文件名给用户预览，绝不修改任何文件。
         act: rename_c（文件名→C站名） / localize（文件名→中文，需要翻译时走百度翻译，不落盘）"""
-        rows = [r for r in self.model_rows if r["path"] in (paths or [])] or list(self.model_rows)
+        rows = self._selected_model_rows(paths)
+        if not rows:return {"started":False,"msg":"当前选择没有可处理的模型，请刷新列表重新选择"}
         out = []
         appid = self.cfg.get("baidu_appid", "").strip()
         key = self.cfg.get("baidu_key", "").strip()
@@ -3367,7 +3435,11 @@ class Api:
 
     def mm_rename(self, paths=None):
         """重命名为 C 站模型名（后台线程）；按设置里的清理规则去掉逗号/括号等符号"""
-        rows = [r for r in self.model_rows if r["path"] in (paths or [])] or list(self.model_rows)
+        if getattr(self,"mm_progress",{}).get("running"):return {"started":False,"msg":"已有模型操作正在进行"}
+        if paths is not None:
+            selected={os.path.normcase(self._resolve_model_path(p)) for p in paths if isinstance(p,str)}
+            rows=[r for r in self.model_rows if os.path.normcase(self._resolve_model_path(r["path"])) in selected]
+        else:rows=list(self.model_rows)
         if not rows:
             return {"started": False, "msg": "没有可重命名的模型"}
         self.mm_progress = {"running": True, "total": len(rows), "done": 0, "msg": "", "result": []}
@@ -3393,7 +3465,12 @@ class Api:
         """汉化文件名（后台线程）"""
         appid = self.cfg.get("baidu_appid", "").strip()
         key = self.cfg.get("baidu_key", "").strip()
-        rows = [r for r in self.model_rows if r["path"] in (paths or [])] or list(self.model_rows)
+        if getattr(self,"mm_progress",{}).get("running"):return {"started":False,"msg":"已有模型操作正在进行"}
+        if paths is not None:
+            selected={os.path.normcase(self._resolve_model_path(p)) for p in paths if isinstance(p,str)}
+            rows=[r for r in self.model_rows if os.path.normcase(self._resolve_model_path(r["path"])) in selected]
+        else:rows=list(self.model_rows)
+        if not rows:return {"started":False,"msg":"没有可重命名的模型"}
         self.mm_progress = {"running": True, "total": len(rows), "done": 0, "msg": "", "result": []}
 
         def work():
@@ -3422,7 +3499,8 @@ class Api:
 
     def mm_gen_json(self, paths=None, overwrite=False):
         """生成 SD json（后台线程）"""
-        rows = [r for r in self.model_rows if r["path"] in (paths or [])] or list(self.model_rows)
+        rows = self._selected_model_rows(paths)
+        if not rows:return {"started":False,"msg":"当前选择没有可处理的模型，请刷新列表重新选择"}
         self.mm_progress = {"running": True, "total": len(rows), "done": 0, "msg": "", "result": []}
 
         def work():
@@ -3455,7 +3533,8 @@ class Api:
         return {"started": True}
 
     def mm_download_covers(self, paths=None):
-        rows = [r for r in self.model_rows if r["path"] in (paths or [])] or list(self.model_rows)
+        rows = self._selected_model_rows(paths)
+        if not rows:return {"started":False,"msg":"当前选择没有可处理的模型，请刷新列表重新选择"}
         self.mm_progress = {"running": True, "total": len(rows), "done": 0, "msg": "", "result": 0}
 
         def work():
@@ -3502,7 +3581,8 @@ class Api:
         只翻译简介，不翻译触发词——触发词需保持英文原文用于提示词。"""
         appid = self.cfg.get("baidu_appid", "").strip()
         key = self.cfg.get("baidu_key", "").strip()
-        rows = [r for r in self.model_rows if r["path"] in (paths or [])] or list(self.model_rows)
+        rows = self._selected_model_rows(paths)
+        if not rows:return {"started":False,"msg":"当前选择没有可处理的模型，请刷新列表重新选择"}
         self.mm_progress = {"running": True, "total": len(rows), "done": 0, "msg": "", "result": 0}
 
         def work():
@@ -3589,7 +3669,8 @@ class Api:
         return False
 
     def mm_check_update(self, paths=None):
-        rows = [r for r in self.model_rows if r["path"] in (paths or [])] or list(self.model_rows)
+        rows = self._selected_model_rows(paths)
+        if not rows:return {"started":False,"msg":"当前选择没有可处理的模型，请刷新列表重新选择"}
         rows = [r for r in rows if r.get("modelId")]
         self.mm_progress = {"running": True, "total": len(rows), "done": 0, "msg": "", "result": None}
 
@@ -3663,7 +3744,8 @@ class Api:
             return {"ok": False, "msg": "移动失败: %s" % str(e)[:140]}
 
     def mm_organize(self, paths=None):
-        rows = [r for r in self.model_rows if r["path"] in (paths or [])] or list(self.model_rows)
+        rows = self._selected_model_rows(paths)
+        if not rows:return {"started":False,"msg":"当前选择没有可处理的模型，请刷新列表重新选择"}
         rules = self.cfg.get("organize_rules") or None
         env = self.cfg.get("target_env") or ""
         mode = self.cfg.get("organize_mode") or "manual"
@@ -4014,7 +4096,8 @@ class Api:
         return config.APP_DIR
 
     def mm_cleanup(self, paths=None):
-        rows = [r for r in self.model_rows if r["path"] in (paths or [])] or list(self.model_rows)
+        rows = self._selected_model_rows(paths)
+        if not rows:return {"started":False,"msg":"当前选择没有可处理的模型，请刷新列表重新选择"}
         self.mm_progress = {"running": True, "total": len(rows), "done": 0, "msg": "", "result": 0}
 
         def work():
@@ -4034,9 +4117,13 @@ class Api:
 
     # ---------------- 反向解析 ----------------
     def rp_add_paths(self, paths):
-        for p in paths or []:
-            if not any(r["path"] == p for r in self.rp_rows):
-                self.rp_rows.append({"path": p, "sha": "", "status": "等待", "model": "", "version": ""})
+        if not isinstance(paths,list):return False
+        for p in paths:
+            p=self._resolve_model_path(p)
+            if not p:continue
+            if not any(os.path.normcase(self._resolve_model_path(r["path"]))==os.path.normcase(p) for r in self.rp_rows):
+                exists=os.path.isfile(p)
+                self.rp_rows.append({"path":p,"sha":"","status":"等待" if exists else "文件不存在","model":"" if exists else "文件已改名、移动或删除，请刷新模型列表后重新发送。","version":""})
         return True
 
     def rp_add_dir(self, d):
@@ -4073,7 +4160,7 @@ class Api:
         with self._rp_launch_lock:
             if self._rp_state["running"]:
                 return False
-            selected = {os.path.normcase(os.path.abspath(p)) for p in paths} if paths is not None else None
+            selected = {os.path.normcase(self._resolve_model_path(p)) for p in paths if isinstance(p,str)} if paths is not None else None
             tasks = [r for r in self.rp_rows if selected is None or os.path.normcase(os.path.abspath(r['path'])) in selected]
             if not tasks:
                 return False
@@ -4102,6 +4189,11 @@ class Api:
                     if i >= len(tasks):
                         return
                     r = tasks[i]
+                    r["path"]=self._resolve_model_path(r["path"])
+                    if not os.path.isfile(r["path"]):
+                        r["status"]="文件不存在";r["model"]="文件已改名、移动或删除，请刷新模型列表后重新发送。"
+                        with lock:self._rp_state["done"]+=1
+                        continue
                     r["status"] = "反查中"
                     try:
                         def progress(read, total):

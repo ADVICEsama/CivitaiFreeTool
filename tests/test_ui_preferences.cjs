@@ -562,7 +562,7 @@ function ok(name) { passed++; console.log('OK ' + name); }
     await page.evaluate(()=>{window.fixtureAppearance={integrated:true,maximized:true};syncWindowControls(window.fixtureAppearance);});assert.equal(await page.locator('[data-resize-edge=bottom-right]').isVisible(),false);ok('最大化后不出现缩放边缘');
     await page.evaluate(()=>{window.fixtureAppearance={integrated:true,maximized:false};syncWindowControls(window.fixtureAppearance);});
     const modelCard=page.locator('.ms-card').first();await modelCard.click({button:'right'});
-    assert.equal(await page.locator('#ctxMenu .ctx-group').count(),3);assert.equal(await page.locator('#ctxMenu [data-act]:visible').count(),5);ok('模型右键仅显示五个常用动作，低频功能按三个用途分组');
+    assert.equal(await page.locator('#ctxMenu .ctx-group').count(),3);assert.equal(await page.locator('#ctxMenu [data-act]:visible').count(),6);ok('模型右键显示六个常用动作（含单模型移动），低频功能按三个用途分组');
     await page.locator('#ctxMenu .ctx-group summary').first().click();assert.equal(await page.locator('#ctxMenu [data-act=copy_cname]').isVisible(),true);ok('复制分组可展开，复制 C站名功能保留');
     await page.locator('#ctxMenu .ctx-group summary').nth(1).click();await page.locator('#ctxMenu [data-act=copy_cname]').waitFor({state:'hidden'});assert.equal(await page.locator('#ctxMenu [data-act=rename_c]').isVisible(),true);assert.equal(await page.locator('#ctxMenu [data-act=copy_cname]').isVisible(),false);ok('改名与整理分组展开时收起其他分组');
     assert.equal(await page.locator('#ctxMenu [data-act]').count(),15);ok('模型右键原有十三项仍保留并添加模型信息及收藏入口');

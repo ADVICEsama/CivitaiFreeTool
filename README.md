@@ -2,7 +2,7 @@
 
 > 免费的 Civitai / HuggingFace 模型下载与本地模型管理工作台。
 
-![Version](https://img.shields.io/badge/version-2.6.16-blue) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-orange) ![CI](https://github.com/ADVICEsama/CivitaiFreeTool/workflows/tests/badge.svg)
+![Version](https://img.shields.io/badge/version-2.6.17-blue) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-orange) ![CI](https://github.com/ADVICEsama/CivitaiFreeTool/workflows/tests/badge.svg)
 
 [下载最新版](https://github.com/ADVICEsama/CivitaiFreeTool/releases/latest) · [更新日志](CHANGELOG.md) · [问题反馈](https://github.com/ADVICEsama/CivitaiFreeTool/issues) · [Linux / macOS](LINUX.md)
 
@@ -10,6 +10,8 @@
 
 - **左侧导航 + 常驻模型详情**：列表/瀑布流共用管理能力；单击仍选中模型，同时更新右侧详情；勾选格独立用于批量选择。打开详情不挤走模型卡片。无可见顶栏，右上角保留窗口按钮，顶部空白和页面标题可拖动。
 - **工作流自适配**：报告式总结 + 大窗三栏（节点 / 只读详情 / 模型）；小窗直接切纵向报告。保持当前节点、搜索和展开状态，路径/哈希折叠，正负提示词独立复制，兼容本地字体和界面缩放。
+- **批量操作安全**：筛选变化清除不可见选择，移动 / 改名 / 反查只处理当前可见的所选模型；右键一级“移动到…文件夹”只移动当前模型。后台改名结束再刷新，模型、附属文件和 `.images` 图片目录同步，冲突不覆盖，失败回退。
+- **下载与历史修复**：移除已完成只清队列、保留历史；重试任务不假装失败历史，封面不会持续闪烁。高清悬浮预览单独读取并缓存，大窗下载列表铺满、窄窗按需横向滚动；勾选与点阵排序手柄放大居中。
 - **独立目录选择**：文件夹显隐中，子目录选择优先；隐藏 A 仍可单独勾选 A/B，显示 A、隐藏 B 即排除 B 子树。默认包含子目录；设置可改为仅显示勾选目录直属的模型。只筛选，不移动文件。
 - **模型类型筛选**：大模型 / LoRA / VAE / ControlNet / Embedding 等，与底模、作者、关键词叠加，列表和瀑布流均生效；优先读取元数据，缺失时按标准目录判断，否则保留未识别。
 - **队列优先级**：手柄拖动排序，前面的等待任务优先，已有下载不中断；下载行为可设同时下载数量 1–32 个。网络重试单独显示“等待重试”，恢复传输后正确回到“下载中”。
@@ -54,6 +56,12 @@
 只读展示实际保存的节点与连接，点击节点查看参数；不是 ComfyUI 执行器。Forge 图片通常只有生成参数，界面明确说明不绘制虚假连线。
 
 ![只读节点画布](docs/screenshots/workflow-full.png)
+
+### 下载任务布局与完成项管理
+
+表格利用可用宽度，只有确实超宽才出现横向滚动；“移除已完成”不删除模型或下载历史。
+
+![下载任务示例](docs/screenshots/download-queue-v2617.png)
 
 ### 多文件版本选择
 

@@ -1085,11 +1085,12 @@ async function dlRefresh() {
     const tasks = await api.call("get_tasks");
     state.dlTasks = tasks || [];
     $("#dlTable").dataset.hasErrors=state.dlTasks.some(t=>t.error)?"true":"false";
+    $("#dlRemoveCompleted").disabled=!state.dlTasks.some(t=>t.status==="done");
     const tbody = $("#dlTable tbody");
     const selPaths = new Set(Array.from(tbody.querySelectorAll("tr.sel-row")).map((tr) => tr.dataset.taskId));
     tbody.innerHTML = state.dlTasks.map((t) => {
       const st = { pending: "等待中", downloading: "下载中", retrying: "等待重试", done: "已完成", paused: "已暂停", error: "失败", canceled: "已取消" }[t.status] || t.status;
-      const prog = t.status === "downloading" ? t.progress.toFixed(1) + "%" : st;
+      const prog = t.status === "downloading" ? (Number(t.progress)||0).toFixed(1) + "%" : st;
       const speed = t.speed ? (t.speed / 1048576).toFixed(1) + " MB/s" : "";
       const size = t.total ? fmtSize(t.downloaded) + " / " + fmtSize(t.total) : fmtSize(t.downloaded);
       const thumb = (state.dlThumbs[t.id] || state.dlThumbs[t.filename]) ? '<img class="thumb" src="data:image/jpeg;base64,' + (state.dlThumbs[t.id] || state.dlThumbs[t.filename]) + '" alt=""/>' : '<span class="thumb thumb-empty"></span>';
@@ -1108,7 +1109,7 @@ async function dlRefresh() {
       const destLeaf = String(destShow || effFull || "未设置").replace(/[\\/]$/, "").split(/[\\/]/).pop();
       const destCell = "<td class='c-dest cell-dest' data-task='" + esc(t.id) + "' title='" + esc(destTip) + "'><button type='button' class='dest-picker' aria-label='保存到 " + esc(destLeaf) + "'>" + _icon("folder") + "<span>" + esc(destLeaf) + "</span>" + _icon("chevron-down") + "</button>" + (destFull ? "" : " <span class='dest-def'>默认</span>") + "</td>";
       return '<tr data-task-id="'+esc(t.id)+'" data-fn="' + esc(t.filename) + '" class="' + (selPaths.has(t.id) ? "sel-row" : "") + '">' +
-        '<td class="dl-check-col"><button type="button" class="dl-drag-handle" draggable="true" aria-label="拖动调整下载顺序" title="拖动排序：前面的等待任务优先">'+_icon('list')+'</button><input type="checkbox" class="dl-task-check" aria-label="选择下载任务 ' + esc(t.filename) + '"'+(selPaths.has(t.id)?' checked':'')+'/></td>' + "<td class='c-thumb'>" + thumb + "</td><td class='c-file'><div>" + esc(t.filename) + "</div>" +
+        '<td class="dl-check-col"><span class="dl-check-controls"><button type="button" class="dl-drag-handle" draggable="true" aria-label="拖动调整下载顺序" data-tip="拖动排序：前面的等待任务优先，不中断当前下载">'+ '<svg class="ic dl-grip" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="8" cy="6" r="1.7"/><circle cx="16" cy="6" r="1.7"/><circle cx="8" cy="12" r="1.7"/><circle cx="16" cy="12" r="1.7"/><circle cx="8" cy="18" r="1.7"/><circle cx="16" cy="18" r="1.7"/></svg>' +'</button><input type="checkbox" class="dl-task-check" aria-label="选择下载任务 ' + esc(t.filename) + '"'+(selPaths.has(t.id)?' checked':'')+'/></span></td>' + "<td class='c-thumb'>" + thumb + "</td><td class='c-file'><div>" + esc(t.filename) + "</div>" +
         (effFull ? '<div class="file-subpath" title="' + esc(effFull + (/[/\\]$/.test(effFull) ? "" : (effFull.includes("\\") || /^[a-z]:/i.test(effFull) ? "\\" : "/")) + t.filename) + '">' +
           esc(effFull + (/[/\\]$/.test(effFull) ? "" : (effFull.includes("\\") || /^[a-z]:/i.test(effFull) ? "\\" : "/")) + t.filename) + "</div>" : "") +
         "</td>" + destCell + "<td class='dl-task-status'>" + esc(st) + (["done", "error", "canceled"].includes(t.status) ? '<button class="btn btn-tiny task-archive" data-archive-task="' + esc(t.id) + '">' + _icon("clock") + '移入历史</button>' : "") + "</td><td>" + esc(prog) + "</td>" +
@@ -1293,7 +1294,7 @@ $('#dlPauseAll').addEventListener('click',()=>dlAct('pause_all'));
 $('#dlRemoveAll').addEventListener('click',async()=>{if(await confirmBox('移除全部下载任务？只收起任务并取消未完成下载，不删除模型文件或历史。'))dlAct('remove_all');});
 async function dlAct(action) {
   if (["start","pause","retry","remove"].includes(action) && !dlSelectedIds().length) {setStatus("请先勾选下载任务");return;}
-  const result = await api.call("dl_action", action, null, ["start_all","pause_all","remove_all","clear_done","save"].includes(action) ? null : dlSelectedIds());
+  const result = await api.call("dl_action", action, null, ["start_all","pause_all","remove_all","clear_done","remove_completed","save"].includes(action) ? null : dlSelectedIds());
   if (action === "save") setStatus(result ? "任务及历史已保存" : "记录保存失败，请检查目录写入权限");
   dlRefresh();
 }
@@ -1317,6 +1318,7 @@ $("#dlSetTarget").addEventListener("click", async () => {
   setStatus("已设置 " + ok + " 个任务的保存位置" + (fail ? ("，失败 " + fail + (msg ? "：" + msg : "")) : ""));
   dlRefresh();
 });
+$('#dlRemoveCompleted').addEventListener('click',()=>dlAct('remove_completed'));
 $("#dlClearDone").addEventListener("click", () => dlAct("clear_done"));
 $("#dlSave").addEventListener("click", () => dlAct("save"));
 
@@ -1896,6 +1898,10 @@ function applyMmFilter() {
     });
   }
   state.display = rows.slice();
+  // Selection belongs to the current visible result, never hidden rows.
+  const visible=new Set(state.display.map(r=>r.path));
+  for(const selected of [state.mmChecked,state.mmSel])for(const path of selected)if(!visible.has(path))selected.delete(path);
+  state.mmLastSel=null;
   renderMm();
   fillMmBaseOptions();
   fillMmFolderOptions();
@@ -2721,7 +2727,7 @@ async function mmUpdateFlow(paths) {
   return true;
 }
 async function mmUpdateSelectedFlow() {
-  const paths = state.models.filter((r) => state.mmChecked.has(r.path) && r.upd && r.upd.has_update).map((r) => r.path);
+  const paths = state.display.filter((r) => state.mmChecked.has(r.path) && r.upd && r.upd.has_update).map((r) => r.path);
   if (!paths.length) {
     setStatus("没有勾选「有新版」的模型：先点「检查更新」，再用「有更新」筛出来并全选");
     return;
@@ -2750,7 +2756,7 @@ if ($("#mmGoUpdates")) $("#mmGoUpdates").addEventListener("click", () => {
 
 if ($("#mmUpdDl")) $("#mmUpdDl").addEventListener("click", () => {
   // 模型管理页的「更新选中」：把勾选里有新版的交给新的批量更新流程（版本按更新页每行的下拉选择）
-  const paths = state.models.filter((r) => state.mmChecked.has(r.path) && r.upd && r.upd.has_update).map((r) => r.path);
+  const paths = state.display.filter((r) => state.mmChecked.has(r.path) && r.upd && r.upd.has_update).map((r) => r.path);
   if (!paths.length) { setStatus("没有勾选「有新版」的模型：先点「检查更新」，再勾选带 的条目"); return; }
   updBatchDownload(paths);
 });
@@ -2779,7 +2785,7 @@ $$("#mmTable th[data-sort]").forEach((th) => {
 let mmMoving=false;
 async function moveCheckedModels(){
   if(mmMoving)return;
-  const paths=state.models.filter(r=>state.mmChecked.has(r.path)).map(r=>r.path);if(!paths.length){setStatus('请先勾选要批量移动的模型');return;}
+  const paths=state.display.filter(r=>state.mmChecked.has(r.path)).map(r=>r.path);if(!paths.length){setStatus('请先勾选要批量移动的模型');return;}
   mmMoving=true;$('#mmMoveTo').disabled=true;
   try{
     const operation=await api.call('get_mm_progress');if(operation?.running){setStatus('已有模型操作正在进行，请稍后批量移动');return;}
@@ -2802,8 +2808,8 @@ async function moveCheckedModels(){
 $('#mmMoveTo').addEventListener('click',moveCheckedModels);
 
 function mmCheckedPaths() {
-  const checked = state.models.filter((r) => state.mmChecked.has(r.path)).map((r) => r.path);
-  const sel = Array.from(state.mmSel);
+  const checked = state.display.filter((r) => state.mmChecked.has(r.path)).map((r) => r.path);
+  const sel = state.display.filter(r=>state.mmSel.has(r.path)).map(r=>r.path);
   return checked.length ? checked : (sel.length ? sel : null);
 }
 
@@ -2819,9 +2825,10 @@ function mmOp(name, fn) {
     const paths = mmCheckedPaths();
     if (name !== "mmScan" && !paths && !["mmScan"].includes(name)) { setStatus("请先勾选或选中模型"); return; }
     setStatus(name + " 开始 ...");
-    // fire-and-forget + 独立轮询
-    fn(paths).catch(() => {});
-    pollMmProgress();
+    fn(paths).then(result=>{
+      if(!result?.started){setStatus(result?.msg||"操作未开始");return;}
+      pollMmProgress();
+    }).catch(()=>setStatus("操作未开始，请重试"));
   });
 }
 
@@ -3774,17 +3781,17 @@ function placeContextMenu(menu,x,y){
   menu.style.top=Math.max(8,Math.min(y,innerHeight-rect.height-8))/z+'px';
 }
 function contextAction(act,label,icon,tip=''){
-  return '<button type="button" class="ctx-item'+(act==='del'?' danger':'')+'" data-act="'+esc(act)+'" title="'+esc(tip)+'">'+_icon(icon)+'<span>'+esc(label)+'</span></button>';
+  return '<button type="button" class="ctx-item'+(act==='del'?' danger':'')+'" data-act="'+esc(act)+'" title="'+esc(tip||label)+'" data-tip="'+esc(tip||label)+'">'+_icon(icon)+'<span>'+esc(label)+'</span></button>';
 }
 function showModelContextMenu(e,row){
   if(!row)return;e.preventDefault();ctxRow=row;detailImgCtx=null;
   const menu=$('#ctxMenu');
   const action=(act,label,icon,tip)=>contextAction(act,label,icon,tip);
-  const group=(label,icon,items)=>'<details class="ctx-group"><summary class="ctx-group-label">'+_icon(icon)+label+_icon('chevron-down','ic ctx-chevron')+'</summary><div>'+items+'</div></details>';
+  const group=(label,icon,items)=>'<details class="ctx-group"><summary class="ctx-group-label" data-tip="展开'+esc(label)+'功能；菜单项可悬停查看用途">'+_icon(icon)+label+_icon('chevron-down','ic ctx-chevron')+'</summary><div>'+items+'</div></details>';
   menu.innerHTML='<div class="ctx-caption">'+esc(row.civitai_name||row.name||'模型操作')+'</div>'+
-    action('detail','查看模型信息','info')+action('favorite',isModelFavorite(row.path)?'取消收藏置顶':'收藏并置顶','star')+action('folder','打开所在文件夹','folder')+action('site','打开 C站','external')+
+    action('detail','查看模型信息','info')+action('favorite',isModelFavorite(row.path)?'取消收藏置顶':'收藏并置顶','star')+action('folder','打开所在文件夹','folder')+action('move','移动到…文件夹','folder','只移动当前右键模型及附属文件、图片文件夹，不包含其它勾选模型')+action('site','打开 C站','external')+
     '<hr class="ctx-sep"/>'+group('复制','copy',action('copy_name','复制文件名','copy')+action('copy_cname','复制 C站模型名','copy'))+
-    group('改名与整理','pencil',action('rename','自定义改名','pencil')+action('rename_c','文件名 → C站名称','pencil')+action('localize','文件名翻译为中文','file')+action('organize','按分类规则整理','folder')+action('move','移动到文件夹…','folder'))+
+    group('改名与整理','pencil',action('rename','自定义改名','pencil')+action('rename_c','文件名 → C站名称','pencil')+action('localize','文件名翻译为中文','file')+action('organize','按分类规则整理','folder','按设置里的分类规则移动此模型及附属文件；不是刷新或扫描，需先配置目标环境'))+
     group('元数据与更新','settings',action('rp','识别模型信息','search')+action('sdjson','生成 SD 元数据 JSON','file')+action('wl','不再提醒此模型更新','refresh'))+
     '<hr class="ctx-sep"/>'+action('del','移入回收站','trash','可从系统回收站恢复');
   menu.querySelectorAll('.ctx-group').forEach(group=>{
@@ -3903,68 +3910,18 @@ async function showRenameDialog(path, oldName) {
 }
 
 async function showMoveDialog(path) {
-  // 已知文件夹：实时取 get_folders（树路径是相对 → 拼 root 成绝对路径）
-  let root = "";
-  let tree = null;
-  try {
-    const j = JSON.parse((await api.call("get_folders")) || "{}");
-    root = (j && j.root) || "";
-    tree = Array.isArray(j) ? j : ((j && j.tree) || []);
-    _mmFolderTree = tree;
-  } catch (e) { tree = _mmFolderTree || []; }
-  const _abs = (p2) => (/^([A-Za-z]:[\\/]|\/)/.test(String(p2)) ? p2 : (root ? root.replace(/[\\/]+$/, "") + "/" + p2 : p2));
-  const flat = [];
-  (function walk(nodes, depth) {
-    (nodes || []).forEach((n) => {
-      if (n && n.path) flat.push({ path: _abs(n.path), name: (depth ? "\u3000".repeat(depth) : "") + (n.name || n.path) });
-      if (n && n.children) walk(n.children, depth + 1);
-    });
-  })(tree, 0);
-  const curDir = String(path).replace(/[\\/][^\\/]*$/, "");
-  const mask = document.createElement("div");
-  mask.className = "rd-mask";
-  const dlg = document.createElement("div");
-  dlg.className = "rename-dialog mv-dialog";
-  dlg.innerHTML =
-    '<div class="rd-title">移动文件（含附属文件）</div>' +
-    '<div class="mv-info">' + esc(String(path).split(/[\\/]/).pop() || path) + '</div>' +
-    '<div class="mv-info mv-dim">当前位置：' + esc(curDir) + '</div>' +
-    '<select class="input" id="mvSel">' +
-    (flat.some((f) => f.path === curDir) ? "" : '<option value="' + esc(curDir) + '">' + esc(curDir) + "</option>") +
-    flat.map((f) => '<option value="' + esc(f.path) + '">' + esc(f.name) + "</option>").join("") +
-    "</select>" +
-    '<div class="rd-actions">' +
-    '<button class="btn" id="mvBrowse" data-tip="选择列表之外的文件夹（仍须位于模型管理目录内）">浏览…</button>' +
-    '<span style="flex:1"></span>' +
-    '<button class="btn" id="mvCancel">取消</button>' +
-    '<button class="btn btn-primary" id="mvOk">移动</button></div>';
-  document.body.appendChild(mask);
-  document.body.appendChild(dlg);
-  const sel = $("#mvSel");
-  if (sel && flat.some((f) => f.path === curDir)) sel.value = curDir;
-  const close = () => { mask.remove(); dlg.remove(); };
-  $("#mvCancel").addEventListener("click", close);
-  mask.addEventListener("click", close);
-  $("#mvBrowse").addEventListener("click", async () => {
-    const d = await api.call("pick_dir");
-    const v = Array.isArray(d) ? (d[0] || "") : String(d || "");
-    if (!v) return;
-    if (!Array.from(sel.options).some((o) => o.value === v)) {
-      const o = document.createElement("option");
-      o.value = v; o.textContent = "（浏览）" + v;
-      sel.appendChild(o);
-    }
-    sel.value = v;
-  });
-  $("#mvOk").addEventListener("click", async () => {
-    const dest = sel.value;
-    if (!dest) return;
-    close();
-    setStatus("正在移动…");
-    const res = await api.call("mm_move", path, dest);
-    setStatus((res && res.msg) || "移动完成");
-    if (res && res.ok) { await api.call("scan_models"); pollMmScan(); }
-  });
+  if(mmMoving){setStatus('已有移动任务正在进行');return;}
+  mmMoving=true;
+  try{
+    const progress=await api.call('get_mm_progress');if(progress?.running){setStatus('已有模型操作正在进行');return;}
+    const destination=await pickFolderModal({title:'移动当前模型到…文件夹',anyFolder:true});if(!destination)return;
+    const name=String(path).split(/[\\/]/).pop();
+    const confirmation=await confirmBoxRaw('<p>只移动当前模型：<b>'+esc(name)+'</b></p><p>目标：'+esc(destination)+'</p><p>附属文件、同名 .images 图片目录一起移动。同名冲突不覆盖，不包含其它勾选模型。</p>','移动单个模型');
+    if(!confirmation)return;if(confirmation.root)confirmation.root.remove();
+    const result=await api.call('move_file_to',path,destination);setStatus(result?.msg||'移动未完成');
+    if(result?.ok){_mmFolderTree=null;mmScan();if(detailRow?.path===path&&result.path)showModelDetail(result.path);}
+  }catch(_){setStatus('移动未完成，请检查原目录与目标目录');}
+  finally{mmMoving=false;}
 }
 
 function pollMmProgress() {
@@ -3996,7 +3953,7 @@ $("#mmOrganize").addEventListener("click", async () => {
   }
   if ((state.cfg.organize_mode || "manual") === "manual") {
     const paths = Array.from(state.mmChecked);
-    const rows = state.models.filter((r) => paths.includes(r.path));
+    const rows = state.display.filter((r) => paths.includes(r.path));
     if (!rows.length) { setStatus("请先勾选要整理的模型"); return; }
     setStatus("手动整理：共 " + rows.length + " 个，逐个选择目标文件夹 …");
     for (const r of rows) {
@@ -4008,7 +3965,8 @@ $("#mmOrganize").addEventListener("click", async () => {
     mmScan();
     return;
   }
-  mmOp("mmOrganize", (p) => api.call("mm_organize", p));
+  const paths=mmCheckedPaths();if(!paths){setStatus("请先勾选当前筛选结果中的模型");return;}
+  const result=await api.call("mm_organize",paths);if(!result?.started){setStatus(result?.msg||"整理未开始");return;}pollMmProgress();
 });
 mmOp("mmCleanup", (p) => api.call("mm_cleanup", p));
 $("#mmRestore").addEventListener("click", async () => {
@@ -4095,11 +4053,11 @@ async function mmRenamePreview(act, paths) {
   dlg.querySelector("#rpApply").addEventListener("click", () => {
     close();
     setStatus(label + " 开始 …");
-    api.call(act === "rename_c" ? "mm_rename" : "mm_localize", paths).then(() => {
-      setStatus("完成，刷新中 …");
-      api.call("scan_models");
-      pollMmScan();
-    }).catch(() => {});
+    api.call(act === "rename_c" ? "mm_rename" : "mm_localize", paths).then(result => {
+      if(!result?.started){setStatus(result?.msg||"改名未开始");return;}
+      // These APIs start a background worker; do not scan until it finishes.
+      pollMmProgress();
+    }).catch(() => setStatus("改名未开始，请重试"));
   });
 }
 $("#mmRenameMain").addEventListener("click", () => {
@@ -4145,7 +4103,7 @@ async function mmSyncBatchRun() {
   _batchSyncBusy = true;
   try {
     await api.call("rp_add_paths", paths);
-    await api.call("rp_start");
+    await api.call("rp_start", paths);
     const t0 = Date.now();
     let st = null;
     while (true) {

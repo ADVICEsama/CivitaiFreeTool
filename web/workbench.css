@@ -466,3 +466,16 @@ html[data-model-list-size] #mmTable thead th,html[data-model-list-size] #mmTable
 #mmFoldersPanel .fm-item input {flex:none;pointer-events:none;accent-color:var(--primary);}
 #mmFoldersPanel .fm-item .ic {flex:none;width:16px;height:16px;}
 #mmTypeF {min-width:155px;}
+
+.mm-search-field{position:relative;display:inline-flex;min-width:180px;max-width:100%;}
+.mm-search-field .input{padding-right:38px;width:100%;box-sizing:border-box;}
+#mmFilterClear{position:absolute;right:5px;top:50%;transform:translateY(-50%);display:grid;place-items:center;width:28px;height:28px;padding:0;border:0;border-radius:6px;color:var(--muted);background:transparent;cursor:pointer;}
+#mmFilterClear:hover{background:var(--surface2);color:var(--text);}
+#mmFilterClear:focus-visible{outline:2px solid var(--primary);}
+
+#dlTable .dl-check-col{vertical-align:middle!important;padding-left:4px!important;padding-right:4px!important;}
+#dlTable .dl-check-controls{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;}
+#dlTable input[type=checkbox]{width:calc(20px * var(--type-scale,1));height:calc(20px * var(--type-scale,1));margin:0;vertical-align:middle;flex:none;}
+#dlTable .dl-drag-handle{width:calc(28px * var(--type-scale,1));height:calc(28px * var(--type-scale,1));padding:4px;margin:0;display:grid;place-items:center;flex:none;border-radius:6px;color:var(--muted);}
+#dlTable .dl-drag-handle:hover{background:var(--surface2);color:var(--primary);}
+#dlTable .dl-drag-handle .ic{width:calc(18px * var(--type-scale,1));height:calc(20px * var(--type-scale,1));stroke:none;}

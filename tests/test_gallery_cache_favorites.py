@@ -87,7 +87,7 @@ class FavoriteResourceTests(unittest.TestCase):
     def test_favorite_follows_file_relocation(self):
         a=self.api();a.cfg['model_favorites']=['D:/models/a.safetensors']
         with patch.object(config,'save',return_value=True):a._relocate_model('D:/models/a.safetensors','D:/models/b.safetensors')
-        self.assertEqual(a.cfg['model_favorites'],['D:/models/b.safetensors']);a.dl.relocate.assert_called_once()
+        self.assertEqual(a.cfg['model_favorites'],[webui.os.path.abspath('D:/models/b.safetensors')]);a.dl.relocate.assert_called_once()
     def test_resource_model_id_and_version_resolution(self):
         a=self.api();a.api.get_model_version.return_value={'modelId':55}
         self.assertTrue(a.open_gallery_resource({'modelId':9})['direct']);a.open_url.assert_called_with('https://civitai.red/models/9')

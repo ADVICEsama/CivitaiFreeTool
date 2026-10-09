@@ -1,7 +1,7 @@
-/* Cached thumbnails only. The preview never follows arbitrary model links or loads originals. */
+/* Independent HQ previews. Use local covers or already-cached originals; no automatic full original download. */
 (() => {
   const pages = '#page-dlmanager,#page-updates,#page-reverse,#page-workflow';
-  const cache=new Map();
+  const cache=new Map(),inflight=new Map();let cacheBytes=0;
   let target=null, timer=0, popup=null, point={x:0,y:0}, frame=0;
   function hide(){clearTimeout(timer);timer=0;target=null;if(popup){popup.remove();popup=null;}}
   function place(){
@@ -23,9 +23,18 @@
       popup=document.createElement('div');popup.className='cover-hover-preview';popup.setAttribute('aria-hidden','true');
       const cover=new Image();cover.alt='';cover.src=target.currentSrc||target.src;popup.appendChild(cover);document.body.appendChild(popup);cover.onload=place;place();
       const candidate=target,path=candidate.dataset.path||candidate.closest('tr[data-path]')?.dataset.path;
-      if(path){
-        if(cache.has(path))cover.src=cache.get(path);
-        else api.call('get_covers',[path],512).then(value=>{try{const data=typeof value==='string'?JSON.parse(value):value;if(data?.[path]){const src='data:image/jpeg;base64,'+data[path];if(cache.size>200)cache.clear();cache.set(path,src);if(target===candidate&&popup)cover.src=src;}}catch(_){}}).catch(()=>{});
+      const task=candidate.closest('tr[data-task-id]')?.dataset.taskId||candidate.closest('[data-history-id]')?.dataset.historyId;
+      const key=task?'task:'+task:path;
+      if(key){
+        if(cache.has(key))cover.src=cache.get(key);
+        else{
+          if(!inflight.has(key))inflight.set(key,task?api.call('get_task_hover_cover',task):api.call('get_covers',[path],1024));
+          const request=inflight.get(key);
+          request.then(value=>{try{
+            const data=task?value:(typeof value==='string'?JSON.parse(value):value)?.[path];
+            if(data){const src='data:image/jpeg;base64,'+data;if(src.length<=8*1024*1024&&!cache.has(key)){while(cache.size&&(cache.size>=128||cacheBytes+src.length>32*1024*1024)){const first=cache.keys().next().value;cacheBytes-=cache.get(first).length;cache.delete(first);}cache.set(key,src);cacheBytes+=src.length;}if(target===candidate&&popup)cover.src=src;}
+          }catch(_){}}).catch(()=>{}).finally(()=>{if(inflight.get(key)===request)inflight.delete(key);});
+        }
       }
     },180);
   });

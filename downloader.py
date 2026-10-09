@@ -184,6 +184,15 @@ class Downloader:
             self.tasks = keep
         self.save_tasks()
 
+    def clear_completed(self):
+        # Queue-only operation; completed files and independent history remain.
+        if not self.save_tasks():return False
+        with self._lock:
+            done={t.id for t in self.tasks if t.status==ST_DONE}
+            self.tasks=[t for t in self.tasks if t.id not in done]
+            for identity in done:self._pause_events.pop(identity,None);self._cancel_events.pop(identity,None)
+        return self.save_tasks()
+
     def save_tasks(self):
         # 先取得写锁再快照，防止较旧的快照晚写覆盖较新任务状态。
         with self._persist_lock:

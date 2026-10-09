@@ -139,6 +139,35 @@ def find_cover(model_path):
     return None
 
 
+def rename_model_bundle(model_path, destination):
+    """Rename model, all recognized sidecars and .images as one rollback-capable bundle."""
+    src_base = os.path.splitext(model_path)[0]
+    dst_base = os.path.splitext(destination)[0]
+    pairs = [(model_path, destination)] + [(src_base + suffix, dst_base + suffix)
+             for suffix in _SIDE_EXTS + (".images",) if os.path.lexists(src_base + suffix)]
+    if any(os.path.lexists(dst) for src, dst in pairs):
+        return False, ["目标存在同名模型或附属文件/图片文件夹，未改名"]
+    changed = []
+    try:
+        for src, dst in pairs:
+            if os.path.lexists(dst):
+                raise FileExistsError("目标已存在: " + os.path.basename(dst))
+            os.rename(src, dst)
+            changed.append((src, dst))
+    except OSError as error:
+        failed = []
+        for src, dst in reversed(changed):
+            try:
+                if not os.path.lexists(src):
+                    os.rename(dst, src)
+                else:
+                    failed.append(src)
+            except OSError:
+                failed.append(src)
+        return False, [("改名失败，部分文件未能回退，请检查原目录: " if failed else "改名失败，已回退全部文件: ") + str(error)]
+    return True, ["已重命名: %s -> %s" % (os.path.basename(model_path), os.path.basename(destination))]
+
+
 def rename_to_civitai(model_path, meta, dry_run=False, log_cb=None, clean_rules=None, include_version=False):
     """同目录下把模型重命名为 C 站文件名（files 主文件 name，回退模型名），
     并同步改名附属文件（info/json/预览图/示例图/txt 等），返回 (新路径, 消息列表)。
@@ -175,29 +204,18 @@ def rename_to_civitai(model_path, meta, dry_run=False, log_cb=None, clean_rules=
         return model_path, ["已是 C 站文件名: %s" % os.path.basename(model_path)]
     if os.path.exists(dst):
         return model_path, ["目标已存在，跳过: %s" % new_base + ext]
+    if any(os.path.lexists(dst_base + se) for se in _SIDE_EXTS + (".images",) if os.path.lexists(src_base + se)):
+        return model_path, ["目标存在同名附属文件/图片文件夹，未改名"]
     if dry_run:
         return dst, ["将重命名: %s -> %s" % (os.path.basename(model_path), new_base + ext)]
 
-    # 先改主文件：失败则附属文件保持原名，天然一致
-    try:
-        os.rename(model_path, dst)
-    except OSError as e:
-        return model_path, ["重命名失败: %s (%s)" % (new_base + ext, e)]
-    msgs.append("已重命名: %s -> %s" % (os.path.basename(model_path), new_base + ext))
-
-    # 附属文件同步改名（保持与模型同名，SD 预览图约定 <名>.preview.png）
-    for se in _SIDE_EXTS:
-        s = src_base + se
-        if os.path.exists(s):
-            try:
-                os.rename(s, dst_base + se)
-            except OSError as e:
-                msgs.append("附属文件未改名（目标冲突或被占用）: %s (%s)" % (os.path.basename(s), e))
-    return dst, msgs
+    ok, msgs = rename_model_bundle(model_path, dst)
+    return (dst if ok else model_path), msgs
 
 
 def scan_models(root, progress_cb=None):
     """递归扫描模型目录，返回文件信息列表"""
+    root = os.path.normpath(root) if root else root
     results = []
     if not root or not os.path.isdir(root):
         return results

@@ -38,7 +38,16 @@ def reverse_by_hash(file_path, api, cfg, progress_cb=None, translate_desc=False,
         "error": "",
     }
     # 1. 计算哈希（支持中断）
-    sha = model_manager.compute_sha256(file_path, progress_cb=progress_cb, cancel_ev=cancel_ev)
+    file_path = os.path.normpath(file_path)
+    result["file"] = file_path
+    try:
+        sha = model_manager.compute_sha256(file_path, progress_cb=progress_cb, cancel_ev=cancel_ev)
+    except FileNotFoundError:
+        result["error"] = "文件已改名、移动或删除，请刷新模型列表后重新发送。"
+        return result
+    except PermissionError:
+        result["error"] = "无法读取模型文件，请检查权限或文件占用。"
+        return result
     if not sha:
         if cancel_ev is not None and cancel_ev.is_set():
             result["error"] = "已取消"

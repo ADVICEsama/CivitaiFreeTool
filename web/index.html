@@ -125,6 +125,7 @@
         <button class="btn" id="dlRetrySel" data-tip="重试选中的失败任务"><span class="emj">🔄</span> <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-refresh"/></svg>重试选中</button>
         <button class="btn" id="dlRemoveSel"><span class="emj">🗑️</span> <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-trash"/></svg>移除选中</button>
         <button class="btn" id="dlSetTarget" data-tip="给选中（未勾选=全部）的任务指定保存文件夹；也可以直接点每行「保存到」列单独设置"><span class="emj">📂</span> <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-folder"/></svg>设置保存到</button>
+        <button class="btn" id="dlRemoveCompleted" data-tip="只从任务列表移除已完成项；保留下载历史和模型文件，不影响其它状态"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><use href="#i-check"/></svg>移除已完成</button>
         <button class="btn" id="dlClearDone" data-tip="从队列收起已完成、失败、取消的任务；不会删除下载历史或模型文件"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><use href="#i-list"/></svg>全部移入下载历史</button>
         <button class="btn" id="dlSave" data-tip="任务已自动保存；此按钮立即刷新磁盘副本"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><use href="#i-file"/></svg>立即保存</button>
       </div>
@@ -280,8 +281,7 @@
         <button class="btn btn-danger" id="mmCleanup" data-tip="清理冗余文件：删除失效 info、孤儿封面等多余文件"><span class="emj">🗑️</span> 清理冗余文件</button>
       </div>
       <div class="tool-row mm-filter">
-        <input id="mmFilter" class="input" placeholder="筛选：文件名 / C站名 / 路径"/>
-        <button class="btn" id="mmFilterClear">清除</button>
+        <span class="mm-search-field"><input id="mmFilter" class="input" placeholder="筛选：文件名 / C站名 / 路径"/><button type="button" id="mmFilterClear" aria-label="清空搜索" data-tip="只清空搜索文字，不清除勾选或其它筛选"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><use href="#i-x"/></svg></button></span>
         <button class="btn" id="mmUpdOnly" data-tip="只看有更新的模型（先点「检查更新」生成结果）"><span class="emj">❗</span> 有更新</button>
         <button class="btn" id="mmSelAll">全选</button>
         <button class="btn" id="mmSelNone">清除勾选</button>
