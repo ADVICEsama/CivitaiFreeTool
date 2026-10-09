@@ -519,8 +519,17 @@ html[data-masonry-info]:not([data-masonry-info=always]) .ms-info :is(.ms-sub,.ms
 html[data-masonry-info]:not([data-masonry-info=always]) .ms-info .ms-size{padding-bottom:10px;}
 
 /* Short landscape cards can scroll their info instead of clipping larger text. */
-html[data-masonry-info]:not([data-masonry-info=always]) .ms-info{overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;}
+html[data-masonry-info]:not([data-masonry-info=always]) .ms-info{overflow-y:auto;overscroll-behavior:auto;scrollbar-width:thin;}
 html[data-masonry-info]:not([data-masonry-info=always]) .ms-card:is(:hover,:focus-visible,:focus-within) .ms-info{pointer-events:auto;}
-html[data-masonry-info]:not([data-masonry-info=always])[data-masonry-overlay=full] .ms-info{justify-content:initial;}
-html[data-masonry-info]:not([data-masonry-info=always])[data-masonry-overlay=full] .ms-info>.ms-name{margin-top:auto;}
+html[data-masonry-info]:not([data-masonry-info=always])[data-masonry-overlay=full] .ms-info{justify-content:safe center;gap:4px;padding:16px 0;}
+html[data-masonry-info]:not([data-masonry-info=always])[data-masonry-overlay=full] .ms-info>.ms-name{margin-top:0;}
 html[data-masonry-info]:not([data-masonry-info=always]) .ms-check{z-index:3;}
+
+/* Name animation only transforms a text span; cards and columns never change size. */
+html body .has-name-scroll{display:flex;align-items:center;gap:3px;white-space:nowrap;min-width:0;}
+.has-name-scroll>.ic{flex:none;}
+.name-scroll-viewport{display:block;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.name-scroll-text{white-space:nowrap;}
+.name-scroll-viewport.running{text-overflow:clip;}
+.name-scroll-viewport.running .name-scroll-text{display:inline-block;}
+.mm-menu{max-height:calc(100vh - 80px);overflow-y:auto;}

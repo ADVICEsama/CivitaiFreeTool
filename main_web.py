@@ -136,6 +136,96 @@ def _kill_by_name():
         pass
 
 
+
+def _window_api():
+    import ctypes
+    from ctypes import wintypes
+    u = ctypes.windll.user32
+    u.EnumWindows.argtypes = [ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM), wintypes.LPARAM]
+    u.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
+    u.GetWindowTextW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
+    u.IsWindowVisible.argtypes = [wintypes.HWND]
+    u.ShowWindowAsync.argtypes = [wintypes.HWND, ctypes.c_int]
+    u.SetForegroundWindow.argtypes = [wintypes.HWND]
+    return u
+
+
+def _native_windows_for_pid(pid):
+    """Only the verified instance's main window, including a hidden one."""
+    import ctypes
+    from ctypes import wintypes
+    u = _window_api()
+    found = []
+    def collect(hwnd, _):
+        owner = wintypes.DWORD()
+        u.GetWindowThreadProcessId(hwnd, ctypes.byref(owner))
+        if owner.value == pid:
+            title = ctypes.create_unicode_buffer(256)
+            u.GetWindowTextW(hwnd, title, len(title))
+            if title.value == "CivitaiFreeTool":
+                found.append({"handle": hwnd, "visible": bool(u.IsWindowVisible(hwnd))})
+        return True
+    callback = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)(collect)
+    u.EnumWindows(callback, 0)
+    return found
+
+
+def _activate_native_pid(pid):
+    try:
+        windows = _native_windows_for_pid(pid)
+        if len(windows) != 1:
+            return False
+        u = _window_api()
+        handle = windows[0]["handle"]
+        u.ShowWindowAsync(handle, 9)  # SW_RESTORE, posted without blocking another UI thread.
+        for _ in range(10):
+            if u.IsWindowVisible(handle):
+                u.SetForegroundWindow(handle)
+                return True
+            time.sleep(.05)
+    except Exception:
+        pass
+    return False
+
+
+def _activate_existing_instance():
+    """Never activate a file manager by title or silently switch a native app to browser."""
+    try:
+        import watchdog_ext as wd
+        pid = wd.read_app_pid()
+        if not pid or not wd._app_pid_matches(pid, os.path.basename(sys.executable).lower()):
+            return False
+        if _activate_native_pid(pid):
+            _startup_log("existing native window restored (pid %s)" % pid)
+            return True
+        health = wd._app_health()
+        if not wd._health_matches_pid(health, pid):
+            return False
+        if health.get("mode") == "browser":
+            import webbrowser
+            webbrowser.open("http://127.0.0.1:47531/")
+            return True
+        _startup_log("existing native instance still starting; no browser opened")
+        return True  # Keep its downloads and startup intact.
+    except Exception:
+        return False
+
+
+def _reveal_initial_window(window):
+    """A launcher can request SW_HIDE even though WebView's shown event has fired."""
+    if not posix_compat.IS_WINDOWS:
+        return True
+    try:
+        if not _self_visible_window():
+            window.show()
+        visible = _self_visible_window()
+        _startup_log("native visibility verified: %s" % visible)
+        return visible
+    except Exception as error:
+        _startup_log("native show failed: %s" % type(error).__name__)
+        return False
+
+
 def _single_instance():
     """单实例保护：已有实例运行时，激活其主窗口并让新进程退出。
 
@@ -148,8 +238,12 @@ def _single_instance():
     if posix_compat.IS_WINDOWS:
         import ctypes
         from ctypes import wintypes
-        u = ctypes.windll.user32
         k = ctypes.windll.kernel32
+        k.OpenMutexW.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.LPCWSTR]
+        k.OpenMutexW.restype = wintypes.HANDLE
+        k.CreateMutexW.argtypes = [ctypes.c_void_p, wintypes.BOOL, wintypes.LPCWSTR]
+        k.CreateMutexW.restype = wintypes.HANDLE
+        k.CloseHandle.argtypes = [wintypes.HANDLE]
         # 打开已有互斥体：存在 = 已有实例在运行（Global 优先，回退 Local）
         for scope in ("Global\\", "Local\\"):
             h = k.OpenMutexW(wintypes.DWORD(0x001F0001), False, scope + MUTEX_NAME)  # MUTEX_ALL_ACCESS
@@ -158,25 +252,7 @@ def _single_instance():
                 # 1) 窗口模式：激活它的主窗口；
                 # 2) 浏览器模式（没有原生窗口）：探一次后端，能应答就把浏览器界面打开（用户双击就该看到界面）；
                 # 3) 后端无响应（卡死）：弹窗问要不要结束它再启动。
-                activated = False
-                try:
-                    w = u.FindWindowW(None, "CivitaiFreeTool")
-                    if w:
-                        u.ShowWindow(w, 9)  # SW_RESTORE
-                        u.SetForegroundWindow(w)
-                        activated = True
-                except Exception:
-                    pass
-                if not activated:
-                    try:
-                        import urllib.request
-                        with urllib.request.urlopen("http://127.0.0.1:47531/api/health", timeout=2) as resp:
-                            if resp.status == 200:
-                                import webbrowser
-                                webbrowser.open("http://127.0.0.1:47531/")
-                                activated = True
-                    except Exception:
-                        pass
+                activated = _activate_existing_instance()
                 if not activated:
                     try:
                         import ctypes
@@ -291,23 +367,7 @@ def _webview_storage_path():
 def _self_visible_window():
     """当前进程是否有可见顶层窗口（ctypes EnumWindows，失败返回 False）"""
     try:
-        import ctypes
-        from ctypes import wintypes
-        u = ctypes.windll.user32
-        pid = ctypes.windll.kernel32.GetCurrentProcessId()
-        found = []
-
-        def cb(h, _):
-            p = wintypes.DWORD()
-            u.GetWindowThreadProcessId(h, ctypes.byref(p))
-            if p.value == pid and u.IsWindowVisible(h):
-                found.append(h)
-                return False  # 找到即停
-            return True
-
-        WNDENUMPROC = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
-        u.EnumWindows(WNDENUMPROC(cb), 0)
-        return bool(found)
+        return any(w["visible"] for w in _native_windows_for_pid(os.getpid()))
     except Exception:
         return False
 
@@ -678,13 +738,17 @@ def main():
     threading.Thread(target=_watchdog_log_only, daemon=True).start()
     def after_shown():
         _startup_log("native window shown")
-        browser_bridge.set_ui_state(mode="window", window=True)
+        browser_bridge.set_ui_state(mode="window", window=_self_visible_window())
         window_appearance.request({"mode": api.cfg.get("window_appearance", "theme"), "integrated": api.cfg.get("integrated_titlebar", True)})
         set_window_icon()
     window.events.shown += after_shown
+    initial_load = [True]
     def after_loaded():
+        if initial_load[0]:
+            initial_load[0] = False
+            _reveal_initial_window(window)
         _startup_log("native page loaded")
-        browser_bridge.set_ui_state(loaded=True)
+        browser_bridge.set_ui_state(loaded=True, window=_self_visible_window() if posix_compat.IS_WINDOWS else True)
     window.events.loaded += after_loaded
     webview.start(
         debug=False,

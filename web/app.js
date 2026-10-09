@@ -1447,7 +1447,7 @@ function renderMm() {
         (r.upd && r.upd.has_update ? '<a href="#" class="mm-upd" data-url="' + esc(r.upd.url || "") + '" title="' + esc(updTip(r.upd)) + '">' + _icon("alert") + '</a>' : "") +
         '<div class="ml-txt">' +
           '<div class="ml-1" data-tip="' + esc((r.civitai_name || r.name) + "\n" + String(r.name || "")) + '">' + (isModelFavorite(r.path)?_icon("star","ic model-star"):"")+esc(r.civitai_name || r.name) + "</div>" +
-          ((r.civitai_name && r.name && String(r.civitai_name) !== String(r.name)) ? '<div class="ml-2" data-tip="本地文件名">' + esc(short(r.name, 46)) + "</div>" : "") +
+          ((r.civitai_name && r.name && String(r.civitai_name) !== String(r.name)) ? '<div class="ml-2" data-tip="本地文件名">' + esc(r.name) + "</div>" : "") +
           ((r.author || (r.info && r.info.creator)) ? '<div class="ml-3">作者 ' + esc(r.author || (r.info && r.info.creator)) + "</div>" : "") +
         "</div></div></td>" +
       "<td class='c-name' data-col='cname' data-tip='' >" + esc(r.civitai_name || "-") + "</td>" +
@@ -1734,8 +1734,8 @@ function renderMasonry(rows) {
       _msTag(r) +
       (r.upd && r.upd.has_update ? '<a href="#" class="ms-upd" data-url="' + esc(r.upd.url || "") + '" title="' + esc(updTip(r.upd)) + '">' + _icon("alert") + '</a>' : "") +
       '<div class="ms-img-wrap" data-ph="loading"><img class="ms-img" data-idx="' + i + '" data-path="' + esc(r.path) + '" alt=""/></div>' +
-      '<div class="ms-info"><div class="ms-name">' + (isModelFavorite(r.path)?_icon('star','ic model-star'):'') + esc(short(_disp, 30)) + "</div>" +
-      (_sub ? '<div class="ms-sub">' + esc(short(_sub, 30)) + "</div>" : "") +
+      '<div class="ms-info"><div class="ms-name">' + (isModelFavorite(r.path)?_icon('star','ic model-star'):'') + esc(_disp) + "</div>" +
+      (_sub ? '<div class="ms-sub">' + esc(_sub) + "</div>" : "") +
       '<div class="ms-meta">' + esc(_meta || (r.type || "-")) + "</div>" +
       '<div class="ms-size">' + esc(_meta2 || fmtSize(r.size)) + "</div></div></div>";
   }).join("");
