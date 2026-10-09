@@ -545,3 +545,16 @@ html[data-masonry-info]:not([data-masonry-info=always])[data-masonry-overlay=ful
 html[data-masonry-info]:not([data-masonry-info=always])[data-masonry-overlay=full] .ms-size{padding-bottom:3px;}
 
 html[data-masonry-info]:not([data-masonry-info=always])[data-masonry-overlay=full] .ms-name:not([data-civitai-name=true]){flex:none;padding:4px 12px 0 36px;}
+
+/* Names stay together. Only the metadata footer is pinned to the bottom. */
+html[data-masonry-info]:not([data-masonry-info=always])[data-masonry-overlay=full] .ms-titles{flex:1 1 0;min-height:calc(26px * var(--type-scale,1));overflow:hidden;}
+html[data-masonry-info]:not([data-masonry-info=always])[data-masonry-overlay=full] .ms-titles:has(.ms-sub){min-height:calc(46px * var(--type-scale,1));}
+html[data-masonry-info]:not([data-masonry-info=always])[data-masonry-overlay=full] .ms-titles .ms-name{flex:none;min-height:0;}
+html[data-masonry-info]:not([data-masonry-info=always])[data-masonry-overlay=full] .ms-sub[data-local-wrap=true],
+html[data-masonry-info]:not([data-masonry-info=always])[data-masonry-overlay=full] .ms-name[data-civitai-name=false][data-local-wrap=true]{display:block!important;white-space:normal!important;overflow-wrap:anywhere;-webkit-line-clamp:unset;text-overflow:clip;}
+
+/* Center both names together within the space above the unchanged footer. */
+html[data-masonry-info]:not([data-masonry-info=always])[data-masonry-overlay=full] .ms-titles{display:flex;flex-direction:column;justify-content:safe center;}
+
+html[data-masonry-info]:not([data-masonry-info=always])[data-masonry-overlay=full] .ms-titles[data-name-room=true] .ms-name{text-indent:0;}
+html[data-masonry-info]:not([data-masonry-info=always])[data-masonry-overlay=full] .ms-titles[data-name-room=true] .ms-name[data-civitai-name=false]{padding-left:12px;}

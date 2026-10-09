@@ -1734,9 +1734,9 @@ function renderMasonry(rows) {
       _msTag(r) +
       (r.upd && r.upd.has_update ? '<a href="#" class="ms-upd" data-url="' + esc(r.upd.url || "") + '" title="' + esc(updTip(r.upd)) + '">' + _icon("alert") + '</a>' : "") +
       '<div class="ms-img-wrap" data-ph="loading"><img class="ms-img" data-idx="' + i + '" data-path="' + esc(r.path) + '" alt=""/></div>' +
-      '<div class="ms-info"><div class="ms-name" data-civitai-name="' + (_cn ? 'true' : 'false') + '">' + (isModelFavorite(r.path)?_icon('star','ic model-star'):'') + esc(_disp) + "</div>" +
-      '<div class="ms-footer">' +
+      '<div class="ms-info"><div class="ms-titles"><div class="ms-name" data-civitai-name="' + (_cn ? 'true' : 'false') + '">' + (isModelFavorite(r.path)?_icon('star','ic model-star'):'') + esc(_disp) + "</div>" +
       (_sub ? '<div class="ms-sub">' + esc(_sub) + "</div>" : "") +
+      '</div><div class="ms-footer">' +
       (r.author ? '<div class="ms-author" title="' + esc(r.author) + '">作者：' + esc(r.author) + '</div>' : '') +
       '<div class="ms-meta">' + esc(_meta || (r.type || "-")) + "</div>" +
       '<div class="ms-size">' + esc(_meta2 || fmtSize(r.size)) + "</div></div></div></div>";
