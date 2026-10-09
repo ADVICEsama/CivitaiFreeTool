@@ -1734,10 +1734,12 @@ function renderMasonry(rows) {
       _msTag(r) +
       (r.upd && r.upd.has_update ? '<a href="#" class="ms-upd" data-url="' + esc(r.upd.url || "") + '" title="' + esc(updTip(r.upd)) + '">' + _icon("alert") + '</a>' : "") +
       '<div class="ms-img-wrap" data-ph="loading"><img class="ms-img" data-idx="' + i + '" data-path="' + esc(r.path) + '" alt=""/></div>' +
-      '<div class="ms-info"><div class="ms-name">' + (isModelFavorite(r.path)?_icon('star','ic model-star'):'') + esc(_disp) + "</div>" +
+      '<div class="ms-info"><div class="ms-name" data-civitai-name="' + (_cn ? 'true' : 'false') + '">' + (isModelFavorite(r.path)?_icon('star','ic model-star'):'') + esc(_disp) + "</div>" +
+      '<div class="ms-footer">' +
       (_sub ? '<div class="ms-sub">' + esc(_sub) + "</div>" : "") +
+      (r.author ? '<div class="ms-author" title="' + esc(r.author) + '">作者：' + esc(r.author) + '</div>' : '') +
       '<div class="ms-meta">' + esc(_meta || (r.type || "-")) + "</div>" +
-      '<div class="ms-size">' + esc(_meta2 || fmtSize(r.size)) + "</div></div></div>";
+      '<div class="ms-size">' + esc(_meta2 || fmtSize(r.size)) + "</div></div></div></div>";
   }).join("");
   _applyCoverCache($("#mmMasonry"));
   $("#mmCheckLabel").textContent = "已勾选 " + state.mmChecked.size + " 个";
@@ -4320,6 +4322,9 @@ const SETTING_FIELDS = [
   ["界面", "model_list_size", "模型列表大小", "select", [["3","完整 · 最大（当前样式）"],["2","紧凑 · 无封面/作者"],["1","极简 · 名称精简（信息列保留）"]]],
   ["界面", "masonry_info_mode", "瀑布流卡片介绍", "select", [["always","常驻介绍（当前样式）"],["slide","只看封面 · 悬停滑出介绍"],["fade","只看封面 · 悬停淡入介绍"]]],
   ["界面", "masonry_overlay_size", "悬浮介绍覆盖范围", "select", [["partial","卡片下方部分"],["full","整个卡片"]]],
+  ["界面", "name_scroll_speed", "名称滚动速度（像素/秒）", "number"],
+  ["界面", "name_scroll_start_pause", "名称滚动：开头停顿（毫秒）", "number"],
+  ["界面", "name_scroll_end_pause", "名称滚动：末尾停顿（毫秒）", "number"],
   ["界面", "masonry_card_width", "瀑布流图片大小", "range", [140,420,10]],
   ["界面", "custom_accent_enabled", "自定义强调色（所有主题）", "bool"],
   ["界面", "custom_accent", "自定义强调色", "color"],
@@ -4385,6 +4390,7 @@ function applyCustomUi() {
   setMasonrySize(cfg.masonry_card_width,false);
   root.dataset.masonryInfo=["slide","fade"].includes(cfg.masonry_info_mode)?cfg.masonry_info_mode:"always";
   root.dataset.masonryOverlay=cfg.masonry_overlay_size==="full"?"full":"partial";
+  window.dispatchEvent(new Event("cft:name-scroll-options"));
   root.dataset.showPaths = cfg.show_file_paths === false ? "false" : "true";
   root.dataset.density = ["compact", "comfortable"].includes(cfg.ui_density) ? cfg.ui_density : "standard";
   root.dataset.corners = ["square", "soft", "rounded"].includes(cfg.ui_corners) ? cfg.ui_corners : "theme";
@@ -4621,6 +4627,8 @@ $("#settingsForm").addEventListener("change", (e) => {
   let val = el.type === "checkbox" ? el.checked : (el.type === "number" ? Number(el.value) : el.value);
   if(key.startsWith("shortcuts_")){applyShortcutPreference(key,val);return;}
   if(key==="model_list_size"){setModelListSize(val,true);return;}
+  if(key==="name_scroll_speed"){val=Math.max(10,Math.min(240,Math.round(Number.isFinite(Number(val))?Number(val):70)));el.value=val;}
+  if(["name_scroll_start_pause","name_scroll_end_pause"].includes(key)){val=Math.max(0,Math.min(5000,Math.round(Number(val)||0)));el.value=val;}
   if(key==="effects_fps_limit"){val=val===0?0:Math.max(15,Math.min(360,Math.round(Number(val)||60)));el.value=val;}
   if(key==="gallery_cache_mb"){val=Math.max(64,Math.min(8192,Math.round(Number(val)||1024)));el.value=val;}
   if(key==='ui_mode' || key==='browser_fallback_enabled'){
@@ -4639,7 +4647,7 @@ $("#settingsForm").addEventListener("change", (e) => {
     api.call("save_config", { [key]: val }).then((ok) => {
       if (!ok) setStatus("外观已预览，保存失败，请重试");
     }).catch(() => setStatus("外观已预览，保存失败，请重试"));
-  } else if (["effects_fps_limit", "cache_original_images", "gallery_cache_mb", "zebra_rows", "masonry_info_mode", "masonry_overlay_size", "pointer_effects", "pointer_effect_quality", "cache_detail_images", "ui_font", "ui_text_size", "window_appearance", "integrated_titlebar", "folder_picker_show_paths"].includes(key)) {
+  } else if (["effects_fps_limit", "cache_original_images", "gallery_cache_mb", "zebra_rows", "masonry_info_mode", "masonry_overlay_size", "name_scroll_speed", "name_scroll_start_pause", "name_scroll_end_pause", "pointer_effects", "pointer_effect_quality", "cache_detail_images", "ui_font", "ui_text_size", "window_appearance", "integrated_titlebar", "folder_picker_show_paths"].includes(key)) {
     state.cfg[key] = val;
     if(key==="cache_original_images" && val===false && typeof clearViewerImageCache==="function")clearViewerImageCache();
     applyUiAppearance();

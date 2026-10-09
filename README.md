@@ -2,13 +2,13 @@
 
 > 免费的 Civitai / HuggingFace 模型下载与本地模型管理工作台。
 
-![Version](https://img.shields.io/badge/version-2.6.19-blue) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-orange) ![CI](https://github.com/ADVICEsama/CivitaiFreeTool/workflows/tests/badge.svg)
+![Version](https://img.shields.io/badge/version-2.6.20-blue) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-orange) ![CI](https://github.com/ADVICEsama/CivitaiFreeTool/workflows/tests/badge.svg)
 
 [下载最新版](https://github.com/ADVICEsama/CivitaiFreeTool/releases/latest) · [更新日志](CHANGELOG.md) · [问题反馈](https://github.com/ADVICEsama/CivitaiFreeTool/issues) · [Linux / macOS](LINUX.md)
 
 ## 当前工作台
 
-- **完整名称循环滚动**：被截断的名称开头停顿，再缓慢滚动至末尾循环；短名称不动，屏幕外暂停。只滚文字，不改变卡片与列宽。
+- **名称显示与可调滚动**：整卡悬浮时 C站名称使用剩余空间换多行，放不下才省略；本地 LoRA 文件名单行滚动，作者、类型、版本及大小置底。外观设置可调速度和首尾停顿，默认 70px/秒、350/250 毫秒。短单行名字不动，屏幕外暂停，不改变卡片和列宽。
 - **原生窗口恢复**：首次加载后核实窗口真的可见；重复打开按实例 PID 恢复窗口，不误认同名文件管理器，不擅自改浏览器模式。
 - **瀑布流悬浮介绍**：设置 → 外观与布局可选常驻、封面悬停滑出或淡入；覆盖下方或整个卡片。深色半透明底 + 大号文字，亮色主题自动换亮底深字，本地文件名始终单行。
 - **透明表格与宽屏适配**：原生 Mica 客户区材质可透过下载表格及斑马纹；更新页宽屏铺满、窄窗按需滚动，菜单说明不会被二级菜单盖住。
@@ -50,7 +50,9 @@
 
 ### 瀑布流：只看封面，悬停显示大号介绍
 
-左侧卡片处于悬停状态，右侧只显示封面；截图为“淡入 + 整个卡片”，介绍文字居中分组。支持滑出 / 淡入、部分 / 整卡片覆盖，默认仍为常驻介绍。
+左侧卡片处于悬停状态，右侧只显示封面；截图为“淡入 + 整个卡片”，主名称利用上方空间换行，辅助资料置底。支持滑出 / 淡入、部分 / 整卡片覆盖，默认仍为常驻介绍。
+
+![整卡名称空间分配](docs/screenshots/masonry-full-names.png)
 
 ![深色悬浮介绍](docs/screenshots/masonry-hover-dark.png)
 

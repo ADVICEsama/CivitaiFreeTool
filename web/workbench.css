@@ -533,3 +533,15 @@ html body .has-name-scroll{display:flex;align-items:center;gap:3px;white-space:n
 .name-scroll-viewport.running{text-overflow:clip;}
 .name-scroll-viewport.running .name-scroll-text{display:inline-block;}
 .mm-menu{max-height:calc(100vh - 80px);overflow-y:auto;}
+
+/* Full cover: the entire remaining height belongs to the multiline Civitai name. */
+.ms-author{display:none;}
+html[data-masonry-info]:not([data-masonry-info=always])[data-masonry-overlay=full] .ms-info{justify-content:flex-start;gap:0;padding:0;}
+html[data-masonry-info]:not([data-masonry-info=always])[data-masonry-overlay=full] .ms-name[data-civitai-name=true]{display:-webkit-box!important;-webkit-box-orient:vertical;-webkit-line-clamp:var(--ms-title-lines,1);flex:1 1 0;min-height:calc(22px * var(--type-scale,1));margin:0;padding:4px 12px 0;white-space:normal!important;overflow-wrap:anywhere;text-indent:24px;overflow:hidden;text-overflow:ellipsis;}
+html[data-masonry-info]:not([data-masonry-info=always])[data-masonry-overlay=full] .ms-footer{flex:none;margin-top:auto;min-width:0;}
+html[data-masonry-info]:not([data-masonry-info=always])[data-masonry-overlay=full] .ms-author{display:block;font-size:calc(13px * var(--type-scale,1));line-height:1.5;padding:0 12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(247,250,252,.82);}
+html:is([data-theme^=light],[data-theme=modern],[data-theme=metro][data-scheme=light])[data-masonry-info]:not([data-masonry-info=always]) .ms-author{color:#384555;}
+html[data-masonry-info]:not([data-masonry-info=always])[data-masonry-overlay=full] .ms-sub{white-space:nowrap;}
+html[data-masonry-info]:not([data-masonry-info=always])[data-masonry-overlay=full] .ms-size{padding-bottom:3px;}
+
+html[data-masonry-info]:not([data-masonry-info=always])[data-masonry-overlay=full] .ms-name:not([data-civitai-name=true]){flex:none;padding:4px 12px 0 36px;}

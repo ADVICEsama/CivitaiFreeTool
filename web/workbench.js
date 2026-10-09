@@ -36,7 +36,10 @@ const WORKBENCH_SETTING_HELP = {
   model_folder_include_subfolders: "默认开启：A 包含子目录，但子目录显式选择优先。隐藏 A 仍可勾选 B；显示 A、隐藏 B 会排除 B（更深子目录可另选）。关闭后仅显示所勾选目录直属的模型；全部显示仍可勾选所有目录。保存后刷新模型列表，不移动文件。",
   model_list_size: "三档独立调节列表行高与信息：当前完整样式是最大，紧凑去掉封面与作者，极简再去本地文件名；极简仅留 C站模型名称和勾选格。未识别模型暂用文件名，不改变全局字号或瀑布流。",
   masonry_info_mode: "常驻保留当前样式；滑出/淡入模式只显示封面，鼠标悬停或键盘聚焦时展示介绍。保持卡片位置和勾选操作，不改变列表视图。立即保存。",
-  masonry_overlay_size: "只对悬浮介绍生效：下方部分覆盖或整张卡片覆盖。暗色为半透明暗底，亮色为半透明亮底配深色字。悬浮介绍字号更大且跟随全局字号；短横图可滚动查看。",
+  masonry_overlay_size: "只对悬浮介绍生效：下方部分覆盖或整张卡片覆盖。暗色为半透明暗底，亮色为半透明亮底配深色字。整卡覆盖时 C站名换行，放不下才省略；本地文件名单行滚动；作者、分类、版本及大小置底。",
+  name_scroll_speed: "10–240 像素/秒；越大越快。默认 70，修改立即生效并保存。只滚动被截断的单行名称。",
+  name_scroll_start_pause: "0–5000 毫秒；每轮开头及重新悬停时的停顿，默认 350。可设 0，立即滚动。",
+  name_scroll_end_pause: "0–5000 毫秒；滚到末尾后的停顿，默认 250，随后回到开头循环。",
   masonry_card_width: "140–420 px；模型页滑杆或 Alt + 滚轮都可调整，普通滚轮仍用于浏览模型。",
   folder_picker_show_paths: "仅控制分类选择窗口。默认只显示文件夹名字，也可在该窗口顶部临时切换并记住。",
   cache_detail_images: "把详情中已加载的在线缩略图缓存在本机，重复打开优先读取缓存。不下载原图；关闭后不写新缓存。",
@@ -86,7 +89,7 @@ function settingRow(key, label, type, opts, tip) {
   } else if (type === "color") {
     input = '<input class="appearance-color" type="color"' + attrs + ' value="' + esc(/^#[0-9a-f]{6}$/i.test(value || "") ? value : "#60a5fa") + '"/>';
   } else {
-    input = '<input class="input" type="' + (type === "number" ? "number" : "text") + '"' + attrs + (key === "window_wait_seconds" ? ' min="30" max="600" step="1"' : key === "effects_fps_limit" ? ' min="0" max="360" step="1"' : key === "gallery_cache_mb" ? ' min="64" max="8192" step="1"' : "") + ' value="' + esc(value == null ? "" : value) + '"/>';
+    input = '<input class="input" type="' + (type === "number" ? "number" : "text") + '"' + attrs + (key === "window_wait_seconds" ? ' min="30" max="600" step="1"' : key === "effects_fps_limit" ? ' min="0" max="360" step="1"' : key === "name_scroll_speed" ? ' min="10" max="240" step="5"' : ["name_scroll_start_pause","name_scroll_end_pause"].includes(key) ? ' min="0" max="5000" step="50"' : key === "gallery_cache_mb" ? ' min="64" max="8192" step="1"' : "") + ' value="' + esc(value == null ? "" : value) + '"/>';
   }
   if(key === "window_appearance") input += '<p id="windowAppearanceStatus" role="status"></p>';
   const help = tip || "保持默认即可，按需要调整。";

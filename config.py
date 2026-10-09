@@ -83,6 +83,9 @@ DEFAULTS = {
     "model_list_size": 3,               # 1 精简名称但保留信息列 / 2 无封面和作者 / 3 完整（现有最大）
     "masonry_info_mode": "always",     # always / slide / fade
     "masonry_overlay_size": "partial", # partial / full
+    "name_scroll_speed": 70,          # px/s
+    "name_scroll_start_pause": 350,   # ms
+    "name_scroll_end_pause": 250,     # ms
     "masonry_card_width": 220,         # 瀑布流图片/卡片宽度，140–420
     "ui_text_size": "standard",         # small / standard / large / xlarge / huge；不改变界面缩放
     "integrated_titlebar": True,        # 应用内窗口栏；失败保留标准系统框
@@ -203,7 +206,7 @@ def normalize_ui_preferences(cfg):
     if cfg.get("download_name_mode", "original") not in ("original", "civitai", "chinese"): cfg["download_name_mode"] = "original"
     cfg["filename_include_version"] = cfg.get("filename_include_version") is True
     if cfg.get("multi_file_download", "ask") not in ("ask", "first", "all"): cfg["multi_file_download"] = "ask"
-    for key,default,lo,hi in [("max_concurrent_downloads",3,1,32),("effects_fps_limit",60,15,360),("gallery_cache_mb",1024,64,8192),("model_list_size",3,1,3)]:
+    for key,default,lo,hi in [("max_concurrent_downloads",3,1,32),("effects_fps_limit",60,15,360),("gallery_cache_mb",1024,64,8192),("model_list_size",3,1,3),("name_scroll_speed",70,10,240),("name_scroll_start_pause",350,0,5000),("name_scroll_end_pause",250,0,5000)]:
         try:value=int(cfg.get(key,default));cfg[key]=0 if key=="effects_fps_limit" and value==0 else max(lo,min(hi,value))
         except (TypeError,ValueError,OverflowError):cfg[key]=default
     cfg['shortcuts_enabled']=cfg.get('shortcuts_enabled') is True
