@@ -1,0 +1,103 @@
+/* Scoped overrides: shared theme variables / local font / type size stay intact. */
+#page-workflow .wf-workspace { min-width: 0; }
+#page-workflow .title-row { flex-wrap: wrap; gap: 10px 16px; margin-bottom: 18px; }
+#page-workflow .page-title { margin: 0; }
+#page-workflow .hint { flex: 1 1 240px; line-height: 1.6; }
+#page-workflow .wf-status { margin-left: auto; }
+#page-workflow .wf-drop { min-height: 180px; height: auto; padding: 28px 16px; margin: 0; }
+#page-workflow .wf-drop .ic { fill: none; stroke: currentColor; stroke-width: 1.7; }
+#page-workflow .has-result .wf-drop { display: none; min-height: 0; gap: 10px; justify-content: center; padding: 8px 12px; margin-bottom: 12px; }
+#page-workflow .has-result .wf-drop-icon, #page-workflow .has-result .wf-drop-sub { display: none; }
+#page-workflow .has-result .wf-drop-text { font-size: calc(12px * var(--type-scale,1)); }
+#page-workflow .has-result #wfPick { padding: 3px 10px; background: transparent; color: var(--primary); border-color: var(--border); }
+#page-workflow .wf-file { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+#page-workflow .wf-file-name { flex: 1 1 200px; min-width: 0; max-width: none; font-size: calc(13px * var(--type-scale,1)); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#page-workflow .wf-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+#page-workflow .wf-file-actions { flex-wrap: wrap; gap: 8px; }
+#page-workflow .wf-overview { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 22px; padding: 20px 4px 14px; font-size: calc(13px * var(--type-scale,1)); line-height: 1.6; color: var(--text-dim); }
+#page-workflow .wf-overview strong { color: var(--text); font-size: calc(20px * var(--type-scale,1)); }
+#page-workflow .wf-overview > .ic, #page-workflow .wf-ok { color: var(--primary); }
+#page-workflow .wf-warning { color: #c88b32; }
+#page-workflow .wf-alert { margin-bottom: 16px; padding: 10px 14px; font-size: calc(13px * var(--type-scale,1)); line-height: 1.6; border: 1px solid color-mix(in srgb,#c88b32 38%,var(--border)); border-radius: 6px; color: var(--text); background: color-mix(in srgb,#c88b32 9%,var(--surface)); }
+#page-workflow .wf-alert.error { border-color: var(--danger); }
+#page-workflow [hidden] { display: none !important; }
+#page-workflow .wf-grid { display: grid; grid-template-columns: minmax(0,1fr); grid-template-areas: 'models' 'prompts' 'nodes' 'detail'; gap: 18px; }
+#page-workflow .wf-panel { min-width: 0; padding: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
+#page-workflow .wf-model-section { grid-area: models; }
+#page-workflow .wf-prompt-section { grid-area: prompts; }
+#page-workflow .wf-node-section { grid-area: nodes; }
+#page-workflow .wf-detail-section { grid-area: detail; }
+#page-workflow .wf-section-title { display: flex; align-items: center; gap: 8px; color: var(--text); margin: 0 0 14px; padding: 0; font-weight: 650; font-size: calc(15px * var(--type-scale,1)); line-height: 1.6; }
+#page-workflow summary.wf-section-title { cursor: pointer; list-style: none; }
+#page-workflow summary.wf-section-title::after { content: '展开'; font-size: calc(12px * var(--type-scale,1)); margin-left: auto; color: var(--primary); font-weight: 400; }
+#page-workflow details[open] > summary.wf-section-title::after { content: '收起'; }
+#page-workflow details:not([open]) > summary.wf-section-title { margin-bottom: 0; }
+#page-workflow .wf-section-number { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 50%; background: color-mix(in srgb,var(--primary) 12%,var(--surface)); color: var(--primary); font-size: calc(12px * var(--type-scale,1)); }
+#page-workflow .wf-nodes, #page-workflow .wf-models, #page-workflow .wf-prompts { background: transparent; border: 0; padding: 0; border-radius: 0; height: auto; }
+#page-workflow .wf-nodes { max-height: 360px; overflow-y: auto; }
+#page-workflow .wf-node { display: flex; gap: 9px; align-items: center; width: 100%; min-width: 0; padding: 10px 8px; background: transparent; color: var(--text); border: 0; border-bottom: 1px solid var(--border); border-radius: 5px; text-align: left; cursor: pointer; font: inherit; }
+#page-workflow .wf-node[aria-pressed=true] { background: color-mix(in srgb,var(--primary) 14%,var(--surface)); box-shadow: inset 3px 0 var(--primary); }
+#page-workflow .wf-node:hover { background: var(--surface2); }
+#page-workflow .wf-node-copy { flex: 1; min-width: 0; }
+#page-workflow .wf-node-type { display: block; white-space: normal; color: var(--text); font-size: calc(13px * var(--type-scale,1)); overflow-wrap: anywhere; font-weight: 550; }
+#page-workflow .wf-node-sub, #page-workflow .wf-node-id { font-size: calc(11px * var(--type-scale,1)); color: var(--text-dim); overflow-wrap: anywhere; }
+#page-workflow .wf-node-id { max-width: 65px; }
+#page-workflow .wf-node > .ic { color: var(--primary); }
+#page-workflow .wf-node-search { margin-bottom: 10px; }
+#page-workflow .wf-detail-title { display: flex; flex-wrap: wrap; gap: 8px; font-size: calc(17px * var(--type-scale,1)); font-weight: 600; overflow-wrap: anywhere; }
+#page-workflow .wf-detail-type { margin-top: 6px; color: var(--text-dim); overflow-wrap: anywhere; font-size: calc(12px * var(--type-scale,1)); }
+#page-workflow .wf-node-detail h4 { font-size: calc(13px * var(--type-scale,1)); margin: 20px 0 8px; }
+#page-workflow .wf-values { margin: 0; }
+#page-workflow .wf-values > div { display: grid; grid-template-columns: minmax(80px,30%) minmax(0,1fr); gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: calc(13px * var(--type-scale,1)); line-height: 1.6; }
+#page-workflow .wf-values dt { color: var(--text-dim); overflow-wrap: anywhere; }
+#page-workflow .wf-values dd { margin: 0; overflow-wrap: anywhere; white-space: pre-wrap; user-select: text; }
+#page-workflow .wf-resource-head, #page-workflow .wf-resource-row { display: grid; grid-template-columns: minmax(0,1fr) calc(105px * var(--type-scale,1)) calc(95px * var(--type-scale,1)); align-items: center; gap: 12px; }
+#page-workflow .wf-resource-head { color: var(--text-dim); padding: 8px 10px; background: var(--surface2); font-size: calc(12px * var(--type-scale,1)); border-radius: 5px; }
+#page-workflow .wf-resource { padding: 13px 10px; border-bottom: 1px solid var(--border); }
+#page-workflow .wf-resource-name { font-size: calc(13px * var(--type-scale,1)); font-weight: 550; overflow-wrap: anywhere; min-width: 0; }
+#page-workflow .wf-resource .btn { font-size: calc(12px * var(--type-scale,1)); padding: 6px 10px; white-space: nowrap; }
+#page-workflow .wf-badge { display: inline-flex; align-items: center; justify-content: flex-start; gap: 4px; border: 0; padding: 0; background: transparent; font-size: calc(12px * var(--type-scale,1)); white-space: nowrap; }
+#page-workflow .wf-badge.hit { color: var(--primary); }
+#page-workflow .wf-badge.miss { color: #c88b32; }
+#page-workflow .wf-resource-details { margin-top: 8px; }
+#page-workflow .wf-resource-details summary { cursor: pointer; color: var(--text-dim); font-size: calc(11px * var(--type-scale,1)); }
+#page-workflow .wf-model-path, #page-workflow .wf-model-sha { display: block; margin-top: 8px; font-size: calc(12px * var(--type-scale,1)); line-height: 1.6; overflow-wrap: anywhere; user-select: text; }
+#page-workflow .wf-model-sha { font-family: ui-monospace,Consolas,monospace; }
+#page-workflow .wf-prompts { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; max-height: none; }
+#page-workflow .wf-prompt { margin: 0; padding: 12px; border: 1px solid var(--border); border-radius: 6px; min-width: 0; background: color-mix(in srgb,var(--surface2) 35%,var(--surface)); }
+#page-workflow .wf-prompt header { display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: calc(13px * var(--type-scale,1)); padding-bottom: 10px; }
+#page-workflow .wf-prompt-text { white-space: pre-wrap; overflow-wrap: anywhere; font-size: calc(14px * var(--type-scale,1)); line-height: 1.8; color: var(--text); max-height: 300px; overflow-y: auto; user-select: text; }
+#page-workflow .wf-copy { margin-left: auto; font-size: calc(12px * var(--type-scale,1)); }
+#page-workflow .wf-hint, #page-workflow .wf-empty { font-size: calc(13px * var(--type-scale,1)); line-height: 1.7; color: var(--text-dim); }
+#page-workflow [data-layout=columns] .wf-grid { grid-template-columns: minmax(0,.85fr) minmax(0,1.1fr) minmax(0,1.15fr); grid-template-areas: 'nodes detail models' 'prompts prompts prompts'; gap: 14px; }
+#page-workflow [data-layout=columns] .wf-section-number { display: none; }
+#page-workflow [data-layout=columns] .wf-nodes, #page-workflow [data-layout=columns] .wf-node-detail, #page-workflow [data-layout=columns] .wf-models { max-height: 520px; overflow-y: auto; scrollbar-gutter: stable; }
+#page-workflow [data-layout=columns] .wf-resource-head { display: none; }
+#page-workflow [data-layout=columns] .wf-resource-row { grid-template-columns: minmax(0,1fr) auto; gap: 9px; }
+#page-workflow [data-layout=columns] .wf-resource-name { grid-column: 1 / -1; }
+@media (max-width: 850px) {
+  #page-workflow .wf-prompts { grid-template-columns: minmax(0,1fr); }
+  #page-workflow .wf-resource-head { display: none; }
+  #page-workflow .wf-resource-row { grid-template-columns: minmax(0,1fr) auto; }
+  #page-workflow .wf-resource-name { grid-column: 1 / -1; }
+  #page-workflow .wf-file-actions { margin-left: 0; }
+  #page-workflow .wf-panel { padding: 12px; }
+}
+/* 多文件下载选择器：模态焦点、可滚动列表、主题统一。 */
+.df-mask { position: fixed; inset: 0; z-index: 11000; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(0,0,0,.48); }
+.df-dialog { width: min(680px,100%); max-height: calc(100% - 16px); display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); color: var(--text); box-shadow: 0 16px 60px rgba(0,0,0,.25); overflow: hidden; }
+.df-dialog header { padding: 20px 22px 14px; border-bottom: 1px solid var(--border); }
+.df-dialog h2 { font-size: calc(20px * var(--type-scale,1)); margin: 0 0 8px; }
+.df-dialog p { font-size: calc(13px * var(--type-scale,1)); color: var(--text-dim); margin: 0; overflow-wrap: anywhere; }
+.df-list { overflow-y: auto; min-height: 0; padding: 8px 14px; }
+.df-option { display: grid; grid-template-columns: 20px minmax(0,1fr) auto; align-items: center; gap: 12px; padding: 14px 8px; cursor: pointer; border-bottom: 1px solid var(--border); font-size: calc(13px * var(--type-scale,1)); }
+.df-option:has(input:checked) { background: color-mix(in srgb,var(--primary) 10%,var(--surface)); border-radius: 6px; }
+.df-option input { width: 17px; height: 17px; accent-color: var(--primary); }
+.df-file { min-width: 0; overflow-wrap: anywhere; }
+.df-file strong { display: block; font-weight: 550; margin-bottom: 5px; }
+.df-file > span, .df-size, .df-countdown { color: var(--text-dim); font-size: calc(12px * var(--type-scale,1)); line-height: 1.6; }
+.df-dialog footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; border-top: 1px solid var(--border); padding: 16px 22px; }
+.df-dialog footer > div { display: flex; gap: 8px; margin-left: auto; }
+
+#page-workflow .wf-status:empty { display: none; }
+#page-workflow .wf-workspace.over .wf-file { outline: 2px dashed var(--primary); }

@@ -37,7 +37,7 @@ async function downloadUrl(url) {
   const r = await postDownload(url);
   if (r.httpOk && r.ok) {
     badge("✓", "#1a73e8", 3000);
-    chrome.action.setTitle({ title: "已开始下载，可在 CivitaiFreeTool 下载管理查看" });
+    chrome.action.setTitle({ title: r.msg || "已提交，请在 CivitaiFreeTool 选择文件或查看下载结果" });
   } else if (r.httpOk && !r.ok) {
     badge("!", "#d93025", 3000);
     chrome.action.setTitle({ title: r.msg || "下载启动失败" });

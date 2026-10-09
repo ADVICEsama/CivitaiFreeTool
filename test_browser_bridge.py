@@ -10,7 +10,7 @@ import browser_bridge
 PORT = 47539  # 测试端口，避开默认 47531
 
 
-class FakeAPI:
+class FakeAPI(__import__("civitai_api").CivitaiAPI):
     """mock CivitaiAPI：resolve/get_model/get_model_version/pick_file 全部本地返回"""
     def resolve_url(self, url):
         return ("123", None)
@@ -19,8 +19,8 @@ class FakeAPI:
         return {"name": "Test Model", "modelVersions": [{"id": 456}]}
 
     def get_model_version(self, vid):
-        return {"name": "v1", "files": [{"name": "test.safetensors", "primary": True,
-                                         "downloadUrl": "https://example.com/x.safetensors",
+        return {"id": vid, "name": "v1", "files": [{"name": "test.safetensors", "primary": True,
+                                         "downloadUrl": "https://civitai.com/api/download/models/456",
                                          "hashes": {"SHA256": "abc123"}}]}
 
     def pick_file(self, version):

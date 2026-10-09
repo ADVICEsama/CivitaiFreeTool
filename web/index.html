@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="metro.css"/>
 <link rel="stylesheet" href="preferences.css"/>
 <link rel="stylesheet" href="workbench.css"/>
+<link rel="stylesheet" href="workflow.css"/>
 </head>
 <body>
   <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
@@ -408,35 +409,38 @@
     </div>
   </section>
 
-  <!-- 工作流分析 -->
+  <!-- 工作流分析：同一份内容，大窗检查器 / 小窗阅读报告 -->
   <section class="page" id="page-workflow">
-    <div class="card">
-      <div class="title-row"><span class="page-title">工作流分析</span><span class="hint">拖入 ComfyUI 工作流（.json）或带内嵌工作流的图片（.png），解析节点与引用的模型</span><span class="wf-status" id="wfStatus"></span></div>
+    <div class="card wf-workspace" data-layout="report">
+      <div class="title-row"><span class="page-title">工作流分析</span><span class="hint">分析 ComfyUI JSON / PNG，查看引用模型与节点参数</span><span class="wf-status" id="wfStatus" role="status"></span></div>
       <div class="wf-drop" id="wfDrop">
-        <div class="wf-drop-icon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-upload"/></svg></div>
-        <div class="wf-drop-text">拖入文件到此处，或 <span class="wf-link" id="wfPick">点击选择</span></div>
-        <div class="wf-drop-sub">暂时只支持 ComfyUI 工作流格式 · 支持 .json（UI/API prompt）与 .png（内嵌 workflow/prompt）</div>
+        <div class="wf-drop-icon"><svg class="ic" viewBox="0 0 24 24"><use href="#i-upload"/></svg></div>
+        <div class="wf-drop-text">拖入工作流文件，或 <button class="btn btn-primary" id="wfPick">选择文件</button></div>
+        <div class="wf-drop-sub">支持 ComfyUI .json（UI / API 格式）及含工作流的 .png</div>
       </div>
       <div class="wf-result" id="wfResult" style="display:none">
         <div class="wf-result-title" id="wfResultTitle"></div>
+        <div class="wf-overview" id="wfOverview" role="status"></div>
+        <div class="wf-alert" id="wfAlert" hidden></div>
         <div class="wf-grid">
-          <div class="wf-col">
-            <div class="wf-col-title"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-layers"/></svg>节点列表<span class="wf-count" id="wfNodeCount"></span></div>
-            <div class="wf-node-search">
-              <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-search"/></svg>
-              <input id="wfNodeSearch" class="input" placeholder="搜索节点名称..."/>
-            </div>
-            <div class="wf-node-head"><span></span><span>节点</span><span>类型</span><span>文件</span></div>
-            <div class="wf-nodes" id="wfNodes"></div>
-          </div>
-          <div class="wf-col">
-            <div class="wf-col-title"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-file"/></svg>引用的模型（本地匹配 + SHA256）</div>
+          <details class="wf-panel wf-node-section" id="wfNodeSection" open>
+            <summary class="wf-section-title"><span class="wf-section-number">03</span>节点目录<span class="wf-count" id="wfNodeCount"></span></summary>
+            <div class="wf-node-search"><svg class="ic" viewBox="0 0 24 24"><use href="#i-search"/></svg><input id="wfNodeSearch" class="input" aria-label="搜索节点" placeholder="搜索名称、类型或参数…"/></div>
+            <div class="wf-nodes" id="wfNodes" aria-label="节点目录"></div>
+            <div class="wf-hint" id="wfNodeEmpty" hidden>没有匹配的节点</div>
+          </details>
+          <section class="wf-panel wf-detail-section" aria-labelledby="wfDetailHeading">
+            <h3 class="wf-section-title" id="wfDetailHeading">节点详情<span class="wf-count">只读</span></h3>
+            <div id="wfNodeDetail" class="wf-node-detail"></div>
+          </section>
+          <section class="wf-panel wf-model-section" aria-labelledby="wfModelsHeading">
+            <h3 class="wf-section-title" id="wfModelsHeading"><span class="wf-section-number">01</span>引用模型<span class="wf-count" id="wfModelCount"></span></h3>
             <div class="wf-models" id="wfModels"></div>
-          </div>
-        </div>
-        <div class="wf-col" style="margin-top:10px">
-          <div class="wf-col-title"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-tag"/></svg>提示词<button class="btn wf-copy" id="wfCopy" data-tip="复制提示词"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-copy"/></svg>复制</button></div>
-          <div class="wf-prompts" id="wfPrompts"></div>
+          </section>
+          <section class="wf-panel wf-prompt-section" aria-labelledby="wfPromptsHeading">
+            <h3 class="wf-section-title" id="wfPromptsHeading"><span class="wf-section-number">02</span>提示词<button class="btn wf-copy" id="wfCopy">复制全部</button></h3>
+            <div class="wf-prompts" id="wfPrompts"></div>
+          </section>
         </div>
       </div>
     </div>
@@ -497,6 +501,8 @@
 <script src="appearance.js"></script>
 <script src="image-viewer.js"></script>
 <script src="commands.js"></script>
+<script src="download-files.js"></script>
+<script src="workflow.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

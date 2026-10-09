@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "CivitaiFreeTool 一键下载",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "点击图标弹出确认窗，一键把当前 Civitai 模型页下载到 CivitaiFreeTool（需先打开 CivitaiFreeTool.exe）",
   "permissions": [
     "tabs",

@@ -458,7 +458,7 @@ function showDlNotice() {
   dlg.style.width = "380px";
   dlg.innerHTML =
     '<div class="rd-title">已在下载队列中</div>' +
-    '<div style="font-size:calc(13px * var(--type-scale, 1));color:var(--text-dim);line-height:1.8">任务已开始解析并入队，请在本页等待，无需重复点击「解析」。</div>' +
+    '<div style="font-size:calc(13px * var(--type-scale, 1));color:var(--text-dim);line-height:1.8">请求已提交解析；多文件版本将在本页弹窗选择，请等待结果，无需重复点击「解析」。</div>' +
     '<div class="rd-actions"><button class="btn btn-primary" id="dnOk">知道了</button></div>';
   document.body.appendChild(mask);
   document.body.appendChild(dlg);
@@ -3595,73 +3595,10 @@ async function wfAnalyze(path) {
   wfRenderResult(r);
 }
 async function wfRenderResult(r) {
-  $("#wfResult").style.display = "block";
-  const isPng = /\.png$/i.test(r.file || "");
-  $("#wfResultTitle").innerHTML =
-    '<div class="wf-file">' +
-    '<span class="wf-file-ico"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-file"/></svg></span>' +
-    '<span class="wf-file-name" title="' + esc(r.file) + '">' + esc(r.file) + "</span>" +
-    '<span class="wf-tags">' +
-    '<span class="wf-tag">' + (isPng ? "PNG" : "JSON") + "</span>" +
-    '<span class="wf-tag">' + (r.has_workflow ? "含内嵌 Workflow" : "仅提示词信息") + "</span>" +
-    '<span class="wf-tag">节点 ' + (r.node_count || 0) + " 个</span>" +
-    "</span>" +
-    '<span class="wf-file-actions"><button class="btn" id="wfRechoose">重新选择</button><button class="btn btn-primary" id="wfReanalyze">重新分析</button></span>' +
-    "</div>";
-  const nodes = r.nodes || [];
-  const NODE_COLORS = ["#7c5cff", "#2f7cf6", "#1f9d4d", "#e08a00", "#00a0b0", "#d9534f", "#8e6bbf", "#4a90d9"];
-  const nodeIco = (t) => {
-    let h = 0; const sb = String(t || "?");
-    for (let k = 0; k < sb.length; k++) h = (h * 31 + sb.charCodeAt(k)) >>> 0;
-    const c = NODE_COLORS[h % NODE_COLORS.length];
-    return '<span class="wf-node-ico" style="--nc:' + c + '"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-grid"/></svg></span>';
-  };
-  $("#wfNodes").innerHTML = nodes.length
-    ? nodes.map((n) => {
-      const wtxt = (n.widgets && n.widgets.length) ? n.widgets.join(" · ") : "";
-      const key = [n.type, n.title, wtxt].join(" ").toLowerCase();
-      return '<div class="wf-node" data-search="' + esc(key) + '">' + nodeIco(n.type) +
-        '<span class="wf-node-type">' + esc(n.type || "?") + "</span>" +
-        (n.title ? '<span class="wf-node-title">' + esc(n.title) + "</span>" : "") +
-        (wtxt ? '<span class="wf-node-widgets">' + esc(wtxt) + "</span>" : "") +
-        '<span class="wf-node-arrow">\u203a</span></div>';
-    }).join("")
-    : '<div class="wf-empty">未识别到节点</div>';
-  { const nc = $("#wfNodeCount"); if (nc) nc.textContent = nodes.length ? nodes.length + " 个节点" : ""; }
-  { const ns = $("#wfNodeSearch"); if (ns) { ns.value = ""; try { ns.dispatchEvent(new Event("input")); } catch (e) { } } }
-  const refs = r.models || [];
-  $("#wfModels").innerHTML = '<div class="wf-hint">本地匹配计算中...</div>';
-  if (refs.length) {
-    try {
-      const mjson = await api.call("workflow_model_matches", refs);
-      const matches = JSON.parse(mjson || "[]");
-      $("#wfModels").innerHTML = matches.map((m) =>
-        '<div class="wf-model' + (m.local ? " hit" : "") + '">' +
-        '<span class="wf-model-ref">' + esc(m.ref) + "</span>" +
-        (m.local
-          ? '<span class="wf-badge hit">✓ 本地匹配</span>' +
-            '<span class="wf-model-path">' + esc(m.path) + "</span>" +
-            (m.sha256 ? '<span class="wf-model-sha">SHA256: ' + esc(m.sha256) + "…</span>" : "")
-          : '<span class="wf-badge miss">未在本地找到</span>' +
-            '<span class="wf-model-sub">本地: 未找到</span>' +
-            '<span class="wf-search" data-search="' + esc(m.ref) + '">搜索下载</span>') +
-        "</div>").join("");
-    } catch (e) {
-      $("#wfModels").innerHTML = '<div class="wf-empty">模型匹配失败</div>';
-    }
-  } else {
-    $("#wfModels").innerHTML = '<div class="wf-empty">未识别到模型引用</div>';
-  }
-  const pos = r.positive || r.pos_prompt || "";
-  const neg = r.negative || r.neg_prompt || "";
-  wfLastPromptText = [pos ? "正向:\n" + pos : "", neg ? "负向:\n" + neg : ""].filter(Boolean).join("\n\n");
-  { const cp = $("#wfCopy"); if (cp) cp.style.display = (pos || neg) ? "" : "none"; }
-  $("#wfPrompts").innerHTML =
-    (pos ? '<div class="wf-prompt"><span class="wf-prompt-label">正向</span><div class="wf-prompt-text">' + esc(pos) + "</div></div>" : "") +
-    (neg ? '<div class="wf-prompt"><span class="wf-prompt-label neg">负向</span><div class="wf-prompt-text">' + esc(neg) + "</div></div>" : "") +
-    ((!pos && !neg) ? '<div class="wf-empty">未从该 Workflow 中提取到提示词</div>' : "");
+  if (r.source_path) wfLastPath = r.source_path;
+  return window.CftWorkflow.render(r);
 }
-const wfDrop = $("#wfDrop");
+const wfDrop = $(".wf-workspace");
 wfDrop.addEventListener("dragover", (e) => { e.preventDefault(); wfDrop.classList.add("over"); });
 wfDrop.addEventListener("dragleave", () => wfDrop.classList.remove("over"));
 wfDrop.addEventListener("drop", (e) => {
@@ -3713,15 +3650,6 @@ $("#wfPick").addEventListener("click", async () => {
       else setStatus("没有可重新分析的文件");
     }
   }); }
-{ const ns = $("#wfNodeSearch");
-  if (ns) ns.addEventListener("input", () => {
-    const kw = ns.value.trim().toLowerCase();
-    document.querySelectorAll("#wfNodes .wf-node").forEach((row) => {
-      row.style.display = (!kw || String(row.dataset.search || "").includes(kw)) ? "" : "none";
-    });
-  }); }
-
-
 // ===== 关于弹窗（右下角「关于」/左上角 logo） =====
 async function showAbout() {
   const mask = document.createElement("div");
@@ -4368,6 +4296,7 @@ const SETTING_FIELDS = [
   ["网络", "download_timeout", "下载超时(秒)", "number"],
   ["网络", "download_retry", "断流自动重试次数", "number"],
   ["网络", "hash_threads", "哈希线程数", "number"],
+  ["下载", "multi_file_download", "多文件版本下载方式", "select", [["ask", "弹窗多选（无人操作 10 秒选第一个）"], ["first", "直接下载第一个"], ["all", "直接下载全部模型文件"]]],
   ["下载", "gen_metadata", "完成后自动生成 json/info", "bool"],
   ["下载", "download_cover", "完成后自动下载封面", "bool"],
   ["下载", "ask_move_after_download", "完成后询问移动分类", "bool"],

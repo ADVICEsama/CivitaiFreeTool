@@ -22,6 +22,7 @@ DEFAULTS = {
     "models_dir": os.path.join(INSTALL_DIR, "downloads", "models"),
     "models_dirs": [],               # 多模型目录（每行一个；WebUI 与 ComfyUI 分开时都填）
     "max_concurrent_downloads": 3,
+    "multi_file_download": "ask",       # ask / first / all；无人操作 10 秒默认第一个
     "download_timeout": 300,
     "download_retry": 5,                 # 网络中断（SSL EOF/超时）自动重试次数，每次断点续传
     "auto_translate": True,
@@ -190,6 +191,7 @@ def load():
 
 
 def normalize_ui_preferences(cfg):
+    if cfg.get("multi_file_download", "ask") not in ("ask", "first", "all"): cfg["multi_file_download"] = "ask"
     for key,default,lo,hi in [("effects_fps_limit",60,15,360),("gallery_cache_mb",1024,64,8192),("model_list_size",3,1,3)]:
         try:value=int(cfg.get(key,default));cfg[key]=0 if key=="effects_fps_limit" and value==0 else max(lo,min(hi,value))
         except (TypeError,ValueError,OverflowError):cfg[key]=default

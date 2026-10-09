@@ -40,7 +40,7 @@ async function runModelContextCommand(action,row=currentShortcutModel()){
 function collectShortcutCommands(){
   for(const [id,label] of Object.entries({previous:'上一个模型',next:'下一个模型',favorite:'当前模型收藏/取消收藏',identify:'立即反查当前模型',select:'勾选/取消当前模型',recycle:'当前模型移入回收站（需确认）',preview:'查看当前模型大图'}))commandRegistry.set('model:'+id,{label,scope:'models',run:()=>modelCommand(id)});
   document.querySelectorAll('button[id],.submenu[id],.nav-tab[data-page],.mm-metro [data-menu]').forEach(el=>{
-    if(el.closest('#shortcutCatalog')||el.id.startsWith('ob')||el.closest('.rename-dialog,.settings-exit-dialog'))return;
+    if(el.closest('#shortcutCatalog')||el.id.startsWith('ob')||el.closest('.rename-dialog,.settings-exit-dialog,.df-dialog'))return;
     if(el.matches('.nav-tab')){const page=el.dataset.page;commandRegistry.set('page:'+page,{label:'切换到 '+PAGE_NAMES[page],scope:'global',run:()=>switchPage(page)});return;}
     if(!el.matches('button'))return;
     const id=el.id||'menu:'+el.dataset.menu,label=(el.getAttribute('aria-label')||el.textContent).trim().replace(/\s+/g,' ');if(!label)return;
@@ -117,7 +117,7 @@ document.addEventListener('click',e=>{const row=e.target.closest('#dlHistoryTabl
 document.addEventListener('keydown',async e=>{
   if(typeof state==='undefined'||!window.__ready||state.cfg.shortcuts_enabled!==true||e.isComposing||e.defaultPrevented||e.target.closest('input,textarea,select,[contenteditable=true],[data-shortcut-key]'))return;
   if([' ','Enter'].includes(e.key)&&e.target.closest('button,a,summary'))return;
-  if(document.querySelector('.rd-mask,.settings-exit-mask,.mm-menu.open,.folders-panel.open')||getComputedStyle(document.querySelector('#obMask')).display!=='none'||settingsExitPending)return;
+  if(document.querySelector('.rd-mask,.df-mask,.settings-exit-mask,.mm-menu.open,.folders-panel.open')||getComputedStyle(document.querySelector('#obMask')).display!=='none'||settingsExitPending)return;
   collectShortcutCommands();const key=shortcutFromEvent(e),binding=Object.entries(shortcutBindings()).find(([,value])=>canonicalShortcut(value)===key&&key);if(!binding)return;
   const command=commandRegistry.get(binding[0]),page=document.querySelector('.nav-tab.active')?.dataset.page;if(!command)return;
   if(imageViewer?command.scope!=='image':!['global',page].includes(command.scope))return;

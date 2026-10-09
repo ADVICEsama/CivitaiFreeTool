@@ -68,7 +68,7 @@ async function init() {
   }
   $("modelName").textContent = await readPageTitle(tab.id);
   $("modelUrl").textContent = url;
-  $("modelMeta").textContent = "确认后将在 CivitaiFreeTool 中直接下载";
+  $("modelMeta").textContent = "确认后提交给 CivitaiFreeTool，多文件版本在软件内选择";
   show("ready");
 }
 

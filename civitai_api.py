@@ -164,9 +164,43 @@ class CivitaiAPI:
                 return f, files.index(f)
         return primary[0], files.index(primary[0])
 
+    def model_files(self, version):
+        """Only downloadable model variants, not training archives / config attachments."""
+        candidates = [f for f in version.get("files", []) if isinstance(f, dict) and
+                      f.get("type", "Model") in ("Model", "Negative") and f.get("name")]
+        if not candidates:
+            f, _ = self.pick_file(version)
+            candidates = [f]
+        return candidates
+
+    def file_download_url(self, version, file):
+        """Use the API's exact per-file URL, preserving format/fp/size selectors."""
+        url = str(file.get("downloadUrl") or "")
+        if url:
+            u = urllib.parse.urlsplit(url)
+            if u.scheme != "https" or u.hostname not in ("civitai.com", "civitai.red") or not u.path.startswith("/api/download/models/"):
+                raise CivitaiError("文件下载链接不属于 Civitai 官方下载端点")
+            query = urllib.parse.parse_qsl(u.query, keep_blank_values=True)
+            if file.get("id") is not None:
+                existing = [value for key, value in query if key.lower() == "fileid"]
+                if existing and any(value != str(file["id"]) for value in existing):
+                    raise CivitaiError("文件下载链接与文件 ID 不一致")
+                if not existing:
+                    query.append(("fileId", str(file["id"])))
+                    url = urllib.parse.urlunsplit((u.scheme, u.netloc, u.path, urllib.parse.urlencode(query), u.fragment))
+            return url
+        if file.get("id") is not None:
+            return self.build_download_url(version["id"], file["id"])
+        files = self.model_files(version)
+        if len(files) == 1:
+            return self.build_download_url(version["id"])
+        raise CivitaiError("该文件未提供独立下载链接或 ID，拒绝误下主文件")
+
     def build_download_url(self, version_id, file_id=None):
-        # Civitai 无文件级下载端点；版本级下载会 307 到预签名 URL，返回主文件
-        return "https://civitai.com/api/download/models/%s" % version_id
+        # Current website uses fileId for exact variants, including GGUF/quantized files.
+        url = "https://civitai.com/api/download/models/%s" % version_id
+        return url + "?" + urllib.parse.urlencode({"fileId": file_id}) if file_id is not None else url
+
 
 
 def normalize_sha256(s):

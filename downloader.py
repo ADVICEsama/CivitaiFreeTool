@@ -67,6 +67,8 @@ class DownloadTask:
         t.progress = 100.0 if t.status == ST_DONE else float(d.get("progress") or (
             t.downloaded / t.total * 100 if t.total else 0))
         t._last_notified_status = t.status
+        # Restored terminal records are not fresh completion events.
+        t._metadata_started = t.status == ST_DONE
         return t
 
 
@@ -142,6 +144,7 @@ class Downloader:
         task.progress = 0.0
         task.downloaded = 0
         task.finished_at = None
+        task._metadata_started = False
         ev = self._cancel_events.get(task.id)
         if ev:
             ev.clear()

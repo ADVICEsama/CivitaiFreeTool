@@ -15,6 +15,7 @@ const ADVANCED_SETTING_KEYS = new Set(["ui_mode", "window_wait_seconds", "browse
 const WORKBENCH_SETTING_HELP = {
   theme: "绯夜为浓郁玫红，夜樱为柔和低饱和粉。强调色、圆角和字体可独立调整。",
   api_key: "用于查询和下载 C 站模型。在 Civitai 账号页面生成后粘贴到这里。",
+  multi_file_download: "仅针对同版本多个模型文件，不含训练包。弹窗支持多选；无人操作 10 秒选第一个。开始勾选后停止倒计时，取消不下载。下载全部可能占用大量磁盘与带宽。",
   download_dir: "没有另选保存位置时，模型下载到这个目录。",
   models_dirs: "每行一个模型目录；支持同时添加 WebUI 和 ComfyUI 的模型目录。只扫描，不移动文件。",
   site_domain: "用于在浏览器中打开模型页面；模型查询 API 仍使用官方接口。",
