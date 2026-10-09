@@ -454,3 +454,9 @@ html[data-model-list-size] #mmTable col.c-path {width:var(--mm-col-path,120px);}
 html[data-model-list-size] #mmTable[data-mm-flex=path] col.c-path,html[data-model-list-size] #mmTable[data-mm-flex=name] col.c-name {width:auto;}
 html[data-model-list-size] #mmTable thead th,html[data-model-list-size] #mmTable tbody td {padding-left:6px;padding-right:6px;}
 #mmTable th[data-col=sel] .col-resize {display:none;}
+
+.fp-favorite-chip.is-missing {opacity:.6;border-style:dashed;}
+.fp-context {position:fixed;z-index:20010;min-width:220px;max-width:calc(100vw - 16px);}
+.fp-context button {display:flex;align-items:center;gap:8px;width:100%;border:0;background:transparent;color:var(--text);font:inherit;text-align:left;cursor:pointer;}
+.fp-context button:disabled {opacity:.4;cursor:not-allowed;}
+.fp-context .fp-context-note {padding:8px 12px;font-size:calc(11px * var(--type-scale,1));color:var(--text-dim);border-top:1px solid var(--border);}

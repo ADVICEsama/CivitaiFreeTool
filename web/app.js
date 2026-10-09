@@ -665,19 +665,26 @@ async function refreshDlTarget() {
 }
 
 // 从模型目录树里选文件夹（数据源与模型管理页同源：get_folders）
-async function pickFolderModal() {
+async function pickFolderModal(options = {}) {
+  if(document.querySelector(".folder-picker"))return "";
   let data = {};
   try { data = JSON.parse((await api.call("get_folders")) || "{}"); }
   catch (e) { setStatus("读取分类目录失败，请检查模型目录设置后重试"); return ""; }
-  const root = String(data.root || "");
-  const sep = root.includes("\\") || /^[a-z]:/i.test(root) ? "\\" : "/";
-  const rows = root ? [{ path: root, label: "模型目录根目录（直接放根下）", depth: 0 }] : [];
-  (function walk(nodes, depth) {
-    (nodes || []).forEach((n) => {
-      if (root) rows.push({ path: root.replace(/[\\/]$/, "") + sep + String(n.path || "").replace(/[\\/]/g, sep), label: n.name, depth: depth + 1 });
-      walk(n.children, depth + 1);
-    });
-  })(data.tree || [], 0);
+  const makeRows = info => {
+    const root=String(info.root||""),sep=root.includes("\\")||/^[a-z]:/i.test(root)?"\\":"/";
+    const out=root && info.exists!==false?[{path:root,label:"模型目录根目录（直接放根下）",depth:0}]:[];
+    const walk=(nodes,depth)=>(nodes||[]).forEach(n=>{if(out.length)out.push({path:root.replace(/[\\/]$/,"")+sep+String(n.path||"").replace(/[\\/]/g,sep),label:n.name,depth:depth+1});walk(n.children,depth+1);});
+    walk(info.tree||[],0);return out;
+  };
+  let rows=makeRows(data);
+  const key=path=>normalizedModelPath(path).replace(/\/$/,"");
+  const inside=(path,parent)=>key(path)===key(parent)||key(path).startsWith(key(parent)+"/");
+  const statuses=new Map();
+  const checkFolder=async path=>{
+    const result=await api.call("folder_picker_status",[path]);
+    if(Array.isArray(result))result.forEach(r=>statuses.set(key(r.path),r));
+    return statuses.get(key(path))||{exists:rows.some(r=>key(r.path)===key(path)),valid:rows.some(r=>key(r.path)===key(path))};
+  };
 
   const mask = document.createElement("div");
   mask.className = "rd-mask";
@@ -687,40 +694,40 @@ async function pickFolderModal() {
   dlg.setAttribute("aria-modal", "true");
   dlg.setAttribute("aria-labelledby", "fpTitle");
   dlg.innerHTML =
-    '<div class="fp-heading"><div class="rd-title" id="fpTitle">选择下载落地的文件夹</div><button class="btn btn-tiny" id="fpReset">重置尺寸</button></div>' +
+    '<div class="fp-heading"><div class="rd-title" id="fpTitle">' + esc(options.title||"选择下载落地的文件夹") + '</div><button class="btn btn-tiny" id="fpReset">重置尺寸</button></div>' +
     '<p class="fp-hint">模型与 json / 封面一起保存。窗口大小自动适配，也可拖动右下角调整。</p>' +
     '<div class="fp-toolbar"><input class="input" type="search" id="fpSearch" aria-label="搜索分类名称或路径" placeholder="搜索分类名称或路径…"/><span id="fpCount" aria-live="polite"></span></div>' +
-    '<div class="fp-view-options"><label><input type="checkbox" id="fpShowPaths"/>显示详细路径</label><span>星标目录会固定在顶部</span></div>' +
+    '<div class="fp-view-options"><label><input type="checkbox" id="fpShowPaths"/>显示详细路径</label><span>星标置顶；中键取消收藏，右键管理记录</span></div>' +
     '<div id="fpFavorites" class="fp-favorites" aria-label="收藏文件夹"></div>' +
     '<div id="fpList" role="listbox" aria-label="分类文件夹" tabindex="0"></div>' +
-    '<div class="fp-footer"><div class="fp-selected"><span>保存到</span><div id="fpSelected"></div></div>' +
-    '<div class="rd-actions"><button class="btn" id="fpCancel">取消</button><button class="btn btn-primary" id="fpOk">确定</button></div></div>';
+    '<div class="fp-footer"><div class="fp-selected"><span>' + (options.anyFolder?'移动到':'保存到') + '</span><div id="fpSelected"></div></div>' +
+    '<div class="rd-actions">' + (options.anyFolder?'<button class="btn" id="fpBrowse">其他文件夹…</button>':'') + '<button class="btn" id="fpCancel">取消</button><button class="btn btn-primary" id="fpOk">确定</button></div></div>';
   document.body.appendChild(mask);
   document.body.appendChild(dlg);
   const previousFocus = document.activeElement;
-  const currentTarget = state.cfg && state.cfg.download_target_dir;
+  const currentTarget = options.target || (state.cfg && state.cfg.download_target_dir);
   let sel = (rows.find((r) => r.path === currentTarget) || rows[0] || {}).path || "";
   const list = $("#fpList", dlg);
   const folded = new Set(Array.isArray(state.cfg.folder_picker_folded) ? state.cfg.folder_picker_folded : []);
   const favorites = new Set(Array.isArray(state.cfg.folder_picker_favorites) ? state.cfg.folder_picker_favorites : []);
   let showPaths = state.cfg.folder_picker_show_paths === true;
   dlg.dataset.showPaths = String(showPaths);
-  const savePicker = values => {
+  const savePicker = async values => {
     Object.assign(state.cfg, values);
     if('folder_picker_show_paths' in values){const input=$('[data-key="folder_picker_show_paths"]');if(input)input.checked=values.folder_picker_show_paths;}
-    api.call("save_config",values).then(ok => { if(!ok)setStatus("文件夹偏好保存失败"); }).catch(()=>setStatus("文件夹偏好保存失败"));
+    try{if(!await api.call("save_config",values))throw Error("save");return true;}catch(_){setStatus("文件夹偏好保存失败，请重试");return false;}
   };
   const folderName = path => String(path).replace(/[\\/]$/,"").split(/[\\/]/).pop() || "模型目录";
   const favoritesBar = $("#fpFavorites",dlg);
   const renderFavorites = () => {
-    favoritesBar.innerHTML = Array.from(favorites).map(path => '<button type="button" class="fp-favorite-chip' + (path===sel?' selected':'') + '" data-favorite-pick="' + esc(path) + '" title="' + esc(path) + '"' + (rows.some(r=>r.path===path) ? '' : ' disabled') + '>' + esc(folderName(path)) + '</button>').join('') || '<span class="fp-favorites-empty">点击目录后的星标，收藏常用角色文件夹</span>';
+    favoritesBar.innerHTML = Array.from(favorites).map(path => {
+      const status=statuses.get(key(path)),missing=status?!status.exists:!rows.some(r=>key(r.path)===key(path));
+      return '<button type="button" class="fp-favorite-chip'+(path===sel?' selected':'')+(missing?' is-missing':'')+'" data-favorite-pick="'+esc(path)+'" data-missing="'+missing+'" title="'+esc(path+(missing?' · 目录失效；中键取消收藏 / 右键删除记录':' · 中键取消收藏 / 右键管理'))+'">'+esc(folderName(path))+'</button>';
+    }).join('') || '<span class="fp-favorites-empty">点击目录后的星标，收藏常用角色文件夹</span>';
   };
   const parents = new Map(), branches = new Set(), stack = [];
-  rows.forEach(row => {
-    while (stack.length && stack[stack.length-1].depth >= row.depth) stack.pop();
-    if (stack.length) { parents.set(row.path, stack[stack.length-1].path); branches.add(stack[stack.length-1].path); }
-    stack.push(row);
-  });
+  const buildParents=()=>{parents.clear();branches.clear();stack.length=0;rows.forEach(row=>{while(stack.length&&stack.at(-1).depth>=row.depth)stack.pop();if(stack.length){parents.set(row.path,stack.at(-1).path);branches.add(stack.at(-1).path);}stack.push(row);});};
+  buildParents();
   let visible = rows;
   const mark = () => {
     list.querySelectorAll(".fp-item").forEach((d) => {
@@ -731,7 +738,7 @@ async function pickFolderModal() {
     $("#fpSelected", dlg).textContent = (showPaths ? sel : folderName(sel)) || "请先在设置中配置模型目录";
     $("#fpSelected", dlg).title = sel;
     renderFavorites();
-    $("#fpOk", dlg).disabled = !sel;
+    const status=statuses.get(key(sel));$("#fpOk", dlg).disabled = !sel || !!(status && (!status.exists || (!options.anyFolder && !status.valid)));
   };
   const render = () => {
     const q = $("#fpSearch", dlg).value.trim().toLocaleLowerCase();
@@ -754,11 +761,43 @@ async function pickFolderModal() {
   $("#fpShowPaths",dlg).addEventListener("change",e=>{
     showPaths=e.target.checked;dlg.dataset.showPaths=String(showPaths);savePicker({folder_picker_show_paths:showPaths});mark();
   });
-  favoritesBar.addEventListener("click",e=>{
-    const chip=e.target.closest("[data-favorite-pick]");if(!chip || chip.disabled)return;
-    sel=chip.dataset.favoritePick;mark();
-    list.querySelector('[data-path="'+CSS.escape(sel)+'"]')?.scrollIntoView({block:'nearest'});
+  const refreshRows=async()=>{try{data=JSON.parse((await api.call("get_folders"))||"{}");rows=makeRows(data);buildParents();if(dlg.isConnected)render();}catch(_){setStatus("目录刷新失败，请重试");}};
+  const removeRecord=async path=>{
+    try{
+      const result=await api.call("forget_folder_record",path);if(!result?.ok){setStatus(result?.msg||"记录删除失败，请重试");return;}
+      Object.assign(state.cfg,result.preferences||{});
+      if('download_target_dir' in (result.preferences||{})){const field=document.querySelector('[data-key="download_target_dir"]');if(field){field.value=state.cfg.download_target_dir;markSettingSaved('download_target_dir');}}
+      favorites.clear();(state.cfg.folder_picker_favorites||[]).forEach(p=>favorites.add(p));folded.clear();(state.cfg.folder_picker_folded||[]).forEach(p=>folded.add(p));
+      if(result.missing){rows=rows.filter(r=>!inside(r.path,path));buildParents();if(inside(sel,path))sel=rows[0]?.path||"";}
+      if(dlg.isConnected)render();refreshDlTarget();setStatus(result.msg||"已移除记录");
+    }catch(_){setStatus("记录删除失败，请重试");}
+  };
+  const unFavorite=async path=>{
+    const before=Array.from(favorites),scroll=list.scrollTop;favorites.delete(path);render();list.scrollTop=scroll;
+    if(!await savePicker({folder_picker_favorites:Array.from(favorites)})){favorites.clear();before.forEach(p=>favorites.add(p));state.cfg.folder_picker_favorites=before;if(dlg.isConnected)render();}
+  };
+  favoritesBar.addEventListener("pointerdown",e=>{if(e.button===1&&e.target.closest('[data-favorite-pick]'))e.preventDefault();});
+  favoritesBar.addEventListener("auxclick",e=>{const chip=e.target.closest('[data-favorite-pick]');if(e.button!==1||!chip)return;e.preventDefault();unFavorite(chip.dataset.favoritePick);});
+  favoritesBar.addEventListener("click",async e=>{
+    const chip=e.target.closest("[data-favorite-pick]");if(!chip)return;
+    try{const status=await checkFolder(chip.dataset.favoritePick);if(!dlg.isConnected)return;if(!status.exists||(!options.anyFolder&&!status.valid)){renderFavorites();setStatus("目录已失效；可以中键取消收藏，或右键删除记录");return;}
+      sel=chip.dataset.favoritePick;mark();list.querySelector('[data-path="'+CSS.escape(sel)+'"]')?.scrollIntoView({block:'nearest'});
+    }catch(_){setStatus("目录状态读取失败，请重试");}
   });
+  const menu=document.createElement('div');menu.id='fpContext';menu.className='ctx-menu fp-context';menu.setAttribute('role','menu');menu.style.display='none';document.body.appendChild(menu);
+  const hideMenu=()=>menu.style.display='none';
+  const outsideMenu=e=>{if(!e.target.closest('#fpContext'))hideMenu();};document.addEventListener('pointerdown',outsideMenu);
+  const context=async e=>{
+    const target=e.target.closest('[data-favorite-pick],.fp-item');if(!target)return;e.preventDefault();const path=target.dataset.favoritePick||target.dataset.path;
+    try{const status=await checkFolder(path);if(!dlg.isConnected)return;
+      menu.innerHTML='<button class="ctx-item" role="menuitem" data-fp-act="open">'+_icon('folder')+'打开文件夹所在位置</button><button class="ctx-item ctx-danger" role="menuitem" data-fp-act="remove" '+(!favorites.has(path)&&status.exists?'disabled':'')+'>'+_icon('trash')+'删除'+(status.exists?'收藏':'失效记录')+'</button><div class="fp-context-note">只清理记录，不删除磁盘目录或模型</div>';
+      menu.dataset.path=path;menu.style.display='block';const z=Number(document.documentElement.style.zoom)||1;menu.style.left=e.clientX/z+'px';menu.style.top=e.clientY/z+'px';const rect=menu.getBoundingClientRect();menu.style.left=Math.max(8,Math.min(e.clientX,innerWidth-rect.width-8))/z+'px';menu.style.top=Math.max(8,Math.min(e.clientY,innerHeight-rect.height-8))/z+'px';
+    }catch(_){setStatus("目录状态读取失败，请重试");}
+  };
+  favoritesBar.addEventListener('contextmenu',context);list.addEventListener('contextmenu',context);
+  menu.addEventListener('click',async e=>{const action=e.target.closest('[data-fp-act]');if(!action||action.disabled)return;const path=menu.dataset.path;hideMenu();if(action.dataset.fpAct==='remove')return removeRecord(path);try{const result=await api.call('open_folder_location',path);setStatus(result?.ok?'已打开目录所在位置':result?.msg||'目录打开失败');}catch(_){setStatus('目录打开失败，请重试');}});
+  window.addEventListener('resize',hideMenu);window.addEventListener('cft:zoom',hideMenu);
+  api.call('folder_picker_status',Array.from(new Set([...favorites,sel].filter(Boolean)))).then(result=>{if(Array.isArray(result)){result.forEach(r=>statuses.set(key(r.path),r));if(dlg.isConnected)render();}}).catch(()=>{});
   list.addEventListener("click", (e) => {
     const star=e.target.closest("[data-favorite]");
     if(star){
@@ -819,14 +858,15 @@ async function pickFolderModal() {
       window.removeEventListener("resize", fit);
       window.removeEventListener("cft:zoom", fit);
       document.removeEventListener("keydown", keydown, true);
+      document.removeEventListener("pointerdown",outsideMenu);window.removeEventListener("resize",hideMenu);window.removeEventListener("cft:zoom",hideMenu);menu.remove();
       mask.remove(); dlg.remove();
       if (previousFocus && previousFocus.isConnected) previousFocus.focus();
       resolve(value);
     };
     const keydown = (e) => {
-      if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(); }
+      if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); if(menu.style.display!=="none")hideMenu();else close(); }
       else if (e.key === "Tab") {
-        const buttons = Array.from(dlg.querySelectorAll("button:not(:disabled), input, [tabindex='0']"));
+        const buttons = [...dlg.querySelectorAll("button:not(:disabled), input, [tabindex='0']"),...menu.querySelectorAll("button:not(:disabled)")].filter(el=>el.getClientRects().length);
         const first = buttons[0], last = buttons[buttons.length - 1];
         if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
         else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
@@ -837,12 +877,15 @@ async function pickFolderModal() {
         mark();
         const selected = list.querySelector(".selected");
         if (selected) selected.scrollIntoView({ block: "nearest" });
-      } else if (e.key === "Enter" && document.activeElement === list && sel) { e.preventDefault(); close(sel); }
+      } else if (e.key === "Enter" && document.activeElement === list && sel) { e.preventDefault(); finishSelection(); }
     };
     document.addEventListener("keydown", keydown, true);
     mask.addEventListener("click", () => close());
     $("#fpCancel", dlg).addEventListener("click", () => close());
-    $("#fpOk", dlg).addEventListener("click", () => { if (sel) close(sel); });
+    let confirming=false;
+    const finishSelection=async()=>{if(!sel||confirming)return;confirming=true;$('#fpOk',dlg).disabled=true;try{const status=await checkFolder(sel);if(closed)return;if(!status.exists||(!options.anyFolder&&!status.valid)){setStatus('目标目录已失效，请重新选择；收藏仍可中键取消或右键删除');await refreshRows();return;}close(sel);}catch(_){setStatus('目录状态读取失败，请重试');}finally{confirming=false;if(!closed)mark();}};
+    $("#fpOk", dlg).addEventListener("click",finishSelection);
+    $('#fpBrowse',dlg)?.addEventListener('click',async()=>{const path=await api.call('pick_dir');if(path){sel=path;mark();}});
   });
 }
 
@@ -2720,6 +2763,31 @@ $$("#mmTable th[data-sort]").forEach((th) => {
     renderMm();
   });
 });
+
+let mmMoving=false;
+async function moveCheckedModels(){
+  if(mmMoving)return;
+  const paths=state.models.filter(r=>state.mmChecked.has(r.path)).map(r=>r.path);if(!paths.length){setStatus('请先勾选要批量移动的模型');return;}
+  mmMoving=true;$('#mmMoveTo').disabled=true;
+  try{
+    const operation=await api.call('get_mm_progress');if(operation?.running){setStatus('已有模型操作正在进行，请稍后批量移动');return;}
+    const dir=await pickFolderModal({title:'选择批量移动目标文件夹',anyFolder:true});if(!dir)return;
+    const confirmation=await confirmBoxRaw('<div>将 <b>'+paths.length+'</b> 个勾选模型移动到：</div><p>'+esc(dir)+'</p><p>模型及 JSON、封面、示例图一起移动；同名冲突会跳过，不覆盖。不会修改全局下载保存位置。</p>','批量移动模型');if(!confirmation)return;if(confirmation.root)confirmation.root.remove();
+    let done=0;const failed=[];let detailPath=detailRow?.path;
+    for(let i=0;i<paths.length;i++){
+      const path=paths[i];setStatus('批量移动 '+(i+1)+' / '+paths.length+'：'+path.replace(/\\/g,'/').split('/').pop());
+      try{const result=await api.call('move_file_to',path,dir);if(!result?.ok){failed.push({path,msg:result?.msg||'移动失败'});continue;}
+        const next=result.path||path;if(next!==path){for(const set of [state.mmChecked,state.mmSel])if(set.delete(path))set.add(next);const row=state.models.find(r=>r.path===path);if(row)row.path=next;if(state.coverCache.has(path)){state.coverCache.set(next,state.coverCache.get(path));state.coverCache.delete(path);}if(detailPath===path)detailPath=next;}done++;
+      }catch(_){failed.push({path,msg:'移动未完成，请检查文件位置后重试'});}
+    }
+    try{const cfg=await api.call('get_config');if(cfg.model_favorites)state.cfg.model_favorites=cfg.model_favorites;}catch(_){}
+    _mmFolderTree=null;renderMm();mmScan();if(detailPath && detailRow?.path!==detailPath)await showModelDetail(detailPath);
+    setStatus('批量移动完成：成功 '+done+'，失败/跳过 '+failed.length+'（共 '+paths.length+'）');
+    if(failed.length)infoBox(failed.map(r=>'<p>'+esc(r.path)+'<br/>'+esc(r.msg)+'</p>').join(''),'未移动的模型');
+  }catch(_){setStatus('批量移动未完成，请检查文件位置后重试');}
+  finally{mmMoving=false;$('#mmMoveTo').disabled=false;}
+}
+$('#mmMoveTo').addEventListener('click',moveCheckedModels);
 
 function mmCheckedPaths() {
   const checked = state.models.filter((r) => state.mmChecked.has(r.path)).map((r) => r.path);

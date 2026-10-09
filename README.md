@@ -2,13 +2,15 @@
 
 > 免费的 Civitai / HuggingFace 模型下载与本地模型管理工作台。
 
-![Version](https://img.shields.io/badge/version-2.6.12-blue) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-orange) ![CI](https://github.com/ADVICEsama/CivitaiFreeTool/workflows/tests/badge.svg)
+![Version](https://img.shields.io/badge/version-2.6.13-blue) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-orange) ![CI](https://github.com/ADVICEsama/CivitaiFreeTool/workflows/tests/badge.svg)
 
 [下载最新版](https://github.com/ADVICEsama/CivitaiFreeTool/releases/latest) · [更新日志](CHANGELOG.md) · [问题反馈](https://github.com/ADVICEsama/CivitaiFreeTool/issues) · [Linux / macOS](LINUX.md)
 
 ## 当前工作台
 
 - **左侧导航 + 常驻模型详情**：列表/瀑布流共用管理能力；单击仍选中模型，同时更新右侧详情；勾选格独立用于批量选择。打开详情不挤走模型卡片。无可见顶栏，右上角保留窗口按钮，顶部空白和页面标题可拖动。
+- **目录记录管理**：收藏胶囊中键取消收藏；右键打开所在位置或清理收藏/失效记录，绝不删除磁盘目录与模型。失效目录仍能清理，确认选择前重新检查。
+- **批量移动**：模型管理勾选多个模型 → 整理 → 批量移动到…文件夹，一次选择并确认。模型、JSON、封面和示例图一同移动，冲突跳过不覆盖，进度及失败单独报告。
 - **紧凑信息列**：勾选固定小列、名称按档位定宽，路径承担剩余空间；保留其余列手动宽度，避免勾选格占半行。
 - **三档模型列表**：完整为当前最大样式；紧凑同时收起封面和作者，保留本地文件名；极简精简为 C站名称与勾选格，但类型、基础模型、版本、更新、大小、下载时间与路径等信息列在三档中都保留。悬停“列表”按钮调节，设置自动保存，不改变全局缩放或瀑布流。
 - **当前模型立即识别**：详情按钮一次点击直接开始，不跳页、不启动其它排队模型；左下角显示进度，成功更新当前详情。
@@ -46,6 +48,12 @@
 极简（精简名称，保留基础、版本等信息列；窄窗可横向滚动）：
 
 ![极简列表](docs/screenshots/models-list-size-1.png)
+
+### 下载目录收藏与失效记录管理
+
+右键只清理记录，不删除磁盘文件；胶囊中键取消收藏。
+
+![目录记录菜单](docs/screenshots/folder-picker-records.png)
 
 ### 快捷键设置与底部状态胶囊
 

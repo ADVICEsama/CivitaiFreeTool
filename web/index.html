@@ -190,6 +190,7 @@
             <button class="btn" data-menu="mmOrganizeMenu">整理 <span class="car"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-chevron-down"/></svg></span></button>
             <div class="mm-menu" id="mmOrganizeMenu">
               <div class="mm-item" data-proxy="mmOrganize" data-icon="folder">整理模型</div>
+              <div class="mm-item" data-proxy="mmMoveTo" data-icon="folder">批量移动到…文件夹</div>
               <div class="mm-item" data-proxy="mmRestore" data-icon="refresh">恢复误整理</div>
             </div>
           </span>
@@ -270,6 +271,7 @@
         <button class="btn" id="mmSendRp" data-tip="把选中模型送去反向解析：从 C 站匹配名字/触发词/封面"><span class="emj">📤</span> 识别模型信息</button>
       </div>
       <div class="btn-row mm-legacy">
+        <button class="btn" id="mmMoveTo" data-tip="勾选多个模型后，一次选择目标目录">批量移动到…文件夹</button>
         <button class="btn" id="mmOrganize" data-tip="把选中的模型按规则移动到分类文件夹（需先在设置选 目标环境）"><span class="emj">📂</span> 整理模型</button>
         <button class="btn" id="mmRestore" style="display:none" data-tip="恢复误整理的模型到原位置（按移动日志回退）"><span class="emj">🔧</span> 恢复误整理</button>
         <button class="btn btn-danger" id="mmCleanup" data-tip="清理冗余文件：删除失效 info、孤儿封面等多余文件"><span class="emj">🗑️</span> 清理冗余文件</button>

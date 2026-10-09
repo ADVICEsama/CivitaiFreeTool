@@ -13,7 +13,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.6.12"
+APP_VERSION = "2.6.13"
 
 import civitai_api
 import config
@@ -196,28 +196,37 @@ class Api:
         """把模型（含 json/预览图等附属）移动到目标文件夹，并更新任务持久化"""
         path = (path or "").strip()
         dest_dir = (dest_dir or "").strip()
-        if not path or not os.path.exists(path):
+        if not path or not os.path.isfile(path):
             return {"ok": False, "msg": "文件不存在"}
         if not os.path.isdir(dest_dir):
             return {"ok": False, "msg": "目标目录无效"}
         if os.path.abspath(os.path.dirname(path)) == os.path.abspath(dest_dir):
             return {"ok": True, "msg": "文件已在目标目录"}
+        tasks=getattr(getattr(self,'dl',None),'tasks',[])
+        for task in tasks if isinstance(tasks,(list,tuple)) else []:
+            if (task.status==downloader.ST_DOWNLOADING or (isinstance(getattr(self.dl,'_active_ids',None),set) and task.id in self.dl._active_ids)) and task.filename==os.path.basename(path) and os.path.normcase(os.path.abspath(task.dest_dir or ''))==os.path.normcase(os.path.abspath(os.path.dirname(path))):
+                return {"ok":False,"msg":"该模型正在下载，请先暂停再移动"}
         base = os.path.splitext(os.path.basename(path))[0]
         src_dir = os.path.dirname(path)
         candidates = [path] + [os.path.join(src_dir, base + suffix) for suffix in
-            (".preview.png", ".preview.jpg", ".preview.webp", ".preview.gif", ".txt", ".json", ".civitai.info", ".images")]
+            (".preview.png", ".preview.jpg", ".preview.webp", ".preview.gif", ".txt", ".json", ".info.json", ".civitai.info", ".images")]
         if any(os.path.exists(os.path.join(dest_dir, os.path.basename(f))) for f in candidates if os.path.exists(f)):
             return {"ok": False, "msg": "目标存在同名模型或附属文件，请先处理冲突"}
         moved = []
         try:
             for f in [path] + [os.path.join(src_dir, base + s) for s in
                                (".preview.png", ".preview.jpg", ".preview.webp", ".preview.gif",
-                                ".txt", ".json", ".civitai.info", ".images")]:
+                                ".txt", ".json", ".info.json", ".civitai.info", ".images")]:
                 if os.path.exists(f):
                     shutil.move(f, os.path.join(dest_dir, os.path.basename(f)))
-                    moved.append(os.path.basename(f))
+                    moved.append((f,os.path.join(dest_dir,os.path.basename(f))))
         except Exception as e:
-            return {"ok": False, "msg": "移动失败: %s" % e}
+            rollback_errors=[]
+            for source,target in reversed(moved):
+                try:
+                    if os.path.exists(target) and not os.path.exists(source):shutil.move(target,source)
+                except Exception:rollback_errors.append(target)
+            return {"ok": False, "msg": ("移动失败，部分文件回退失败，请检查原目录与目标目录: " if rollback_errors else "移动失败，已回退已移动文件: ")+str(e)}
         self._relocate_model(path, os.path.join(dest_dir, os.path.basename(path)))
         # 更新任务持久化路径
         try:
@@ -2180,12 +2189,48 @@ class Api:
                 })
         return tree
 
+    def folder_picker_status(self, paths):
+        """只检查目录状态，不创建目录、不删除文件。"""
+        if not isinstance(paths, list): return []
+        return [{"path": p, "exists": os.path.isdir(p), "valid": os.path.isdir(p) and self._target_allowed(p)}
+                for p in paths[:10000] if isinstance(p,str) and p.strip()]
+
+    def forget_folder_record(self, path):
+        """删除收藏/失效记录；绝不删除磁盘目录或修改下载任务/历史。"""
+        if not isinstance(path,str) or not path.strip(): return {"ok":False,"msg":"目录记录无效"}
+        norm=lambda p:os.path.normcase(os.path.abspath(p))
+        parent=norm(path);missing=not os.path.isdir(path)
+        within=lambda p:isinstance(p,str) and (norm(p)==parent or (missing and norm(p).startswith(parent+os.sep)))
+        changes={"folder_picker_favorites":[p for p in self.cfg.get("folder_picker_favorites",[]) if not within(p)]}
+        if missing:
+            changes['folder_picker_folded']=[p for p in self.cfg.get('folder_picker_folded',[]) if not within(p)]
+            target=self.cfg.get('download_target_dir') or ''
+            if target and within(target): changes['download_target_dir']=''
+        if not self.save_config(changes):return {"ok":False,"msg":"记录保存失败，未移除，请重试"}
+        return {"ok":True,"missing":missing,"preferences":changes,"msg":"已删除失效目录记录（未删除磁盘文件）" if missing else "已取消该目录收藏（未删除磁盘文件）"}
+
+    def open_folder_location(self, path):
+        """打开目录所在的父目录；失效路径回退到最近仍存在的祖先目录。"""
+        if not isinstance(path,str) or not path.strip():return {"ok":False,"msg":"目录路径无效"}
+        folder=os.path.dirname(os.path.abspath(path))
+        while folder and not os.path.isdir(folder):
+            parent=os.path.dirname(folder)
+            if parent==folder:return {"ok":False,"msg":"找不到可打开的上级目录"}
+            folder=parent
+        if not folder:return {"ok":False,"msg":"找不到可打开的上级目录"}
+        return self.open_in_folder(folder)
+
     def get_folders(self):
         root = self.cfg.get("models_dir") or self.cfg.get("download_dir") or ""
+        if not root or not os.path.isdir(root):
+            roots=self._models_roots()
+            fallback=self.cfg.get('download_dir') or ''
+            root=roots[0] if roots else (fallback if os.path.isdir(fallback) else root)
         tree = self._collect_tree(root) if root and os.path.isdir(root) else []
         hidden = list(self.cfg.get("hidden_model_folders") or [])
         return json.dumps({
             "root": root,
+            "exists": bool(root and os.path.isdir(root)),
             "tree": tree,
             "hidden": hidden,
             "show_root": bool(self.cfg.get("show_root_models", True)),
