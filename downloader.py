@@ -30,6 +30,8 @@ class DownloadTask:
         self.dest_dir = dest_dir
         self.filename = filename
         self.expected_sha256 = expected_sha256 or ""
+        self.actual_sha256 = ""
+        self.verification_status = "unverified"
         self.info = info or {}
         self.status = ST_PENDING
         self.progress = 0.0          # 0-100
@@ -48,7 +50,8 @@ class DownloadTask:
             "id": self.id, "created_at": self.created_at, "updated_at": self.updated_at,
             "finished_at": self.finished_at, "error": self.error, "progress": self.progress,
             "url": self.url, "dest_dir": self.dest_dir, "filename": self.filename,
-            "expected_sha256": self.expected_sha256, "info": self.info,
+            "expected_sha256": self.expected_sha256, "actual_sha256": self.actual_sha256,
+            "verification_status": self.verification_status, "info": self.info,
             "status": self.status, "downloaded": self.downloaded, "total": self.total,
         }
 
@@ -57,6 +60,8 @@ class DownloadTask:
         t = cls(d.get("url", ""), d.get("dest_dir", ""), d.get("filename", ""),
                 d.get("expected_sha256", ""), d.get("info", {}))
         t.status = d.get("status", ST_PENDING)
+        t.actual_sha256 = str(d.get("actual_sha256") or "")
+        t.verification_status = str(d.get("verification_status") or "unverified")
         # 旧版没有保存 id：稳定生成一次，重启不再产生多份相同历史。
         t.id = str(d.get("id") or "legacy_" + hashlib.sha256(
             json.dumps([t.url, t.dest_dir, t.filename], ensure_ascii=False).encode("utf-8")).hexdigest()[:24])
@@ -246,6 +251,10 @@ class Downloader:
             "status": task.status, "downloaded": task.downloaded, "total": task.total,
             "error": task.error, "created_at": task.created_at, "updated_at": task.updated_at,
             "finished_at": task.finished_at,
+            "actual_sha256": task.actual_sha256, "expected_sha256": task.expected_sha256,
+            "verification_status": task.verification_status,
+            "manual_binding": (task.info or {}).get("manual_binding") if
+                ((task.info or {}).get("manual_binding") or {}).get('actual_sha256') == task.actual_sha256 and task.actual_sha256 else None,
             "modelName": (task.info or {}).get("modelName", ""),
             "versionName": (task.info or {}).get("versionName", ""),
         }
@@ -423,7 +432,9 @@ class Downloader:
                     with open(tmp, "rb") as f:
                         for b in iter(lambda: f.read(CHUNK), b""):
                             h.update(b)
-                    if h.hexdigest().lower() != task.expected_sha256.lower():
+                    task.actual_sha256 = h.hexdigest()
+                    task.verification_status = "verified" if task.actual_sha256 == task.expected_sha256.strip().lower() else "mismatch"
+                    if task.verification_status == "mismatch":
                         task.status = ST_ERROR
                         task.error = "SHA256 校验失败（文件已保留；可能为 C 站哈希不匹配或下载不完整）"
                         self._notify(task)
@@ -519,7 +530,9 @@ class Downloader:
                         if not b:
                             break
                         h.update(b)
-                if h.hexdigest().lower() != task.expected_sha256.lower():
+                task.actual_sha256 = h.hexdigest()
+                task.verification_status = "verified" if task.actual_sha256 == task.expected_sha256.strip().lower() else "mismatch"
+                if task.verification_status == "mismatch":
                     # 校验失败：保留文件（可能是 C 站 CDN 哈希不匹配而非损坏），重命名为最终名
                     try:
                         os.replace(tmp, dest)

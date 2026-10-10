@@ -1089,7 +1089,7 @@ async function dlRefresh() {
     const tbody = $("#dlTable tbody");
     const selPaths = new Set(Array.from(tbody.querySelectorAll("tr.sel-row")).map((tr) => tr.dataset.taskId));
     tbody.innerHTML = state.dlTasks.map((t) => {
-      const st = { pending: "等待中", downloading: "下载中", retrying: "等待重试", done: "已完成", paused: "已暂停", error: "失败", canceled: "已取消" }[t.status] || t.status;
+      const st = t.hash_mismatch ? (t.manual_binding ? "已关联 · 校验不一致" : "已下载 · 校验不一致") : { pending: "等待中", downloading: "下载中", retrying: "等待重试", done: "已完成", paused: "已暂停", error: "失败", canceled: "已取消" }[t.status] || t.status;
       const prog = t.status === "downloading" ? (Number(t.progress)||0).toFixed(1) + "%" : st;
       const speed = t.speed ? (t.speed / 1048576).toFixed(1) + " MB/s" : "";
       const size = t.total ? fmtSize(t.downloaded) + " / " + fmtSize(t.total) : fmtSize(t.downloaded);
@@ -1112,7 +1112,7 @@ async function dlRefresh() {
         '<td class="dl-check-col"><span class="dl-check-controls"><button type="button" class="dl-drag-handle" draggable="true" aria-label="拖动调整下载顺序" data-tip="拖动排序：前面的等待任务优先，不中断当前下载">'+ '<svg class="ic dl-grip" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="8" cy="6" r="1.7"/><circle cx="16" cy="6" r="1.7"/><circle cx="8" cy="12" r="1.7"/><circle cx="16" cy="12" r="1.7"/><circle cx="8" cy="18" r="1.7"/><circle cx="16" cy="18" r="1.7"/></svg>' +'</button><input type="checkbox" class="dl-task-check" aria-label="选择下载任务 ' + esc(t.filename) + '"'+(selPaths.has(t.id)?' checked':'')+'/></span></td>' + "<td class='c-thumb'>" + thumb + "</td><td class='c-file'><div>" + esc(t.filename) + "</div>" +
         (effFull ? '<div class="file-subpath" title="' + esc(effFull + (/[/\\]$/.test(effFull) ? "" : (effFull.includes("\\") || /^[a-z]:/i.test(effFull) ? "\\" : "/")) + t.filename) + '">' +
           esc(effFull + (/[/\\]$/.test(effFull) ? "" : (effFull.includes("\\") || /^[a-z]:/i.test(effFull) ? "\\" : "/")) + t.filename) + "</div>" : "") +
-        "</td>" + destCell + "<td class='dl-task-status'>" + esc(st) + (["done", "error", "canceled"].includes(t.status) ? '<button class="btn btn-tiny task-archive" data-archive-task="' + esc(t.id) + '">' + _icon("clock") + '移入历史</button>' : "") + "</td><td>" + esc(prog) + "</td>" +
+        "</td>" + destCell + "<td class='dl-task-status'>" + esc(st) + (t.hash_mismatch && !t.manual_binding ? '<button type="button" class="btn btn-tiny" data-bind-download="' + esc(t.id) + '" data-tip="仅关联已保存的 C站信息，不修改文件、不代表通过校验">' + _icon('file') + '关联模型信息</button>' : '') + (["done", "error", "canceled"].includes(t.status) ? '<button class="btn btn-tiny task-archive" data-archive-task="' + esc(t.id) + '">' + _icon("clock") + '移入历史</button>' : "") + "</td><td>" + esc(prog) + "</td>" +
         "<td>" + esc(speed) + "</td><td>" + esc(size) + "</td>" + errCell + "</tr>";
     }).join("");
     syncDlSelection();
@@ -1252,7 +1252,26 @@ function maybeAskMove(tasks) {
   });
 }
 
+async function bindDownloadInfo(taskId) {
+  setStatus('正在读取本地文件并核对哈希…');
+  const report = await api.call('inspect_download_binding',taskId);
+  if(!report?.ok){setStatus(report?.msg||'无法关联该文件');return;}
+  const html = '<p>将本地文件关联到 <b>'+esc(report.model_name)+'</b> · '+esc(report.version_name)+'</p>' +
+    '<p class="binding-warning">文件未通过官方 SHA256 校验。此操作仅保存名称、版本和封面等来源信息，不能保证它与官方模型一致，也不改变文件。</p>' +
+    '<dl class="binding-hashes"><dt>官方 SHA256</dt><dd>'+esc(report.expected_sha256)+'</dd><dt>本地实际 SHA256</dt><dd>'+esc(report.actual_sha256)+'</dd></dl>';
+  document.querySelectorAll('.tip-float').forEach(tip=>{tip.style.display='none';});
+  const accepted = await confirmBoxRaw(html,'仅关联信息（校验仍未通过）');
+  if(!accepted)return;
+  accepted.root.remove();
+  const result = await api.call('bind_download_metadata',taskId,report.actual_sha256,true);
+  setStatus(result?.msg||'关联失败');
+  await dlRefresh();await refreshDownloadHistory();
+  if(result?.ok)mmScan();
+}
+
 $("#dlTable tbody").addEventListener("click", async (e) => {
+  const binding = e.target.closest("[data-bind-download]");
+  if(binding){e.stopPropagation();try{await bindDownloadInfo(binding.dataset.bindDownload);}catch(_){setStatus('关联失败，请重新打开窗口检查；未更改校验结果');}return;}
   const archive = e.target.closest("[data-archive-task]");
   if (archive) {
     e.stopPropagation();
@@ -3155,6 +3174,7 @@ async function showModelDetail(path, historyId = "") {
     ).join("") + "</div></div>" +
     '<div class="detail-right">' +
     '<div class="detail-title">' + esc(info.name || d.name || "-") + "</div>" +
+    (info.association?.hash_verified === false ? '<p class="binding-warning">手动关联来源信息 · SHA256 校验不一致，不能据此确认文件与官方模型相同。</p>' : '') +
     (info.modelName && info.modelName !== info.name ? '<div class="detail-cname">' + esc(info.modelName) + "</div>" : "") +
     '<div class="dt-mrs">' +
       '<div class="dt-mr"><span class="k">类型</span><span class="v">' + esc(info.type || "-") + "</span></div>" +

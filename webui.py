@@ -13,7 +13,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.6.22"
+APP_VERSION = "2.6.23"
 
 import civitai_api
 import config
@@ -119,6 +119,17 @@ class Api:
                 return
             base = os.path.splitext(dest)[0]
             meta = (task.info or {}).get("meta") or {}
+            # A later strict, verified re-download is not the formerly associated mismatched file.
+            if task.verification_status == 'verified' and (task.info or {}).get('manual_binding'):
+                import copy
+                meta = copy.deepcopy(meta)
+                m = meta.get('info') or {}
+                m.pop('association', None); m.pop('localSha256', None)
+                for f in m.get('files') or []:
+                    if isinstance(f,dict) and 'civitaiHashes' in f:
+                        f['hashes'] = f.pop('civitaiHashes')
+                task.info['meta'] = meta
+                task.info.pop('manual_binding', None)
             # 1) metadata 文件（按配置）
             if self.cfg.get("gen_metadata", True):
                 fmt = self.cfg.get("metadata_format", "sd")
@@ -712,6 +723,7 @@ class Api:
     # ---------------- 下载管理 ----------------
     def get_tasks(self):
         """精简任务列表（不含 meta/info 大对象）"""
+        import download_binding
         with self.dl._lock:
             out = []
             for t in self.dl.tasks:
@@ -720,12 +732,46 @@ class Api:
                     "progress": t.progress, "speed": t.speed,
                     "downloaded": t.downloaded, "total": t.total,
                     "error": t.error, "dest_dir": t.dest_dir,
+                    "hash_mismatch": t.status == downloader.ST_ERROR and "SHA256 校验失败" in t.error,
+                    "manual_binding": download_binding.binding_matches(t),
                     "url": (t.info or {}).get("url", ""),
                     "modelName": (t.info or {}).get("modelName", ""),
                     "versionName": (t.info or {}).get("versionName", ""),
                     "created_at": t.created_at, "finished_at": t.finished_at,
                 })
             return out
+
+    def inspect_download_binding(self, task_id):
+        import download_binding
+        task = next((t for t in list(self.dl.tasks) if t.id == task_id), None)
+        if not task or task.id in self.dl._active_ids:
+            return {"ok": False, "msg": "任务不存在或仍在下载，不能关联"}
+        try: return download_binding.inspect(task)
+        except (OSError, ValueError, TypeError) as e: return {"ok": False, "msg": str(e)}
+
+    def bind_download_metadata(self, task_id, actual_sha256, confirmed=False):
+        """Only explicit association: not a successful-download callback, never delete old models."""
+        import download_binding
+        try:
+            with self.dl._lock:
+                task = next((t for t in self.dl.tasks if t.id == task_id), None)
+                if not task or task.id in self.dl._active_ids:
+                    return {"ok": False, "msg": "任务不存在或仍在下载，不能关联"}
+                result = download_binding.associate(task, actual_sha256, confirmed, self.cfg)
+            saved = self.dl.save_tasks()
+            result['record_saved'] = saved
+            if not saved: result['msg'] += '；下载记录保存失败，关联信息文件已写入'
+            # Reuse already downloaded history thumbnail. Never overwrite a custom cover.
+            source = self._history_asset(task.id, '.jpg')
+            cover = os.path.splitext(result['path'])[0] + '.preview.jpg'
+            if self.cfg.get('download_cover', True) and os.path.isfile(source) and not model_manager.find_cover(result['path']):
+                try:
+                    with open(source, 'rb') as inp, open(cover, 'xb') as out: shutil.copyfileobj(inp, out)
+                except OSError: pass
+            threading.Thread(target=self._cache_history_task, args=(task,), daemon=True).start()
+            return result
+        except (OSError, ValueError, TypeError) as e:
+            return {"ok": False, "msg": str(e)}
 
     def _prefetch_task_cover(self, task):
         """Fetch thumbnail before enqueuing model data. Never write into model folders."""

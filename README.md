@@ -2,11 +2,13 @@
 
 > 免费的 Civitai / HuggingFace 模型下载与本地模型管理工作台。
 
-![Version](https://img.shields.io/badge/version-2.6.22-blue) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-orange) ![CI](https://github.com/ADVICEsama/CivitaiFreeTool/workflows/tests/badge.svg)
+![Version](https://img.shields.io/badge/version-2.6.23-blue) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-orange) ![CI](https://github.com/ADVICEsama/CivitaiFreeTool/workflows/tests/badge.svg)
 
 [下载最新版](https://github.com/ADVICEsama/CivitaiFreeTool/releases/latest) · [更新日志](CHANGELOG.md) · [问题反馈](https://github.com/ADVICEsama/CivitaiFreeTool/issues) · [Linux / macOS](LINUX.md)
 
 ## 当前工作台
+
+- **校验不一致文件手动关联**：下载管理可明确确认后把已完整落盘的文件关联到来源 C站模型，保存名称/版本/封面信息。真实与官方 SHA256 分别保留，任务、历史和详情持续警告；不修改模型、不把关联当作校验成功、不覆盖已有信息。
 
 - **WeiLin 提示词兼容**：工作流分析与图片生成数据按实际采样器连接读取，支持 WeiLin 编辑器和链接文字，忽略禁用旧节点。负向条件清零明确说明；无法还原的外接触发词/随机输出不猜测。旧生成信息缓存自动重解析，已有原图缓存保留。
 
@@ -221,3 +223,9 @@ python -m venv .venv
 ## 反馈
 
 [GitHub Issues](https://github.com/ADVICEsama/CivitaiFreeTool/issues) · [作者 B 站](https://space.bilibili.com/273101122) · 粉丝群：909810278
+
+### 校验不一致文件的手动关联
+
+以下为合成文件与虚构模型示例。确认只关联来源信息，不代表该文件与官方模型相同。
+
+![手动关联确认示例](docs/screenshots/download-unverified-binding.png)

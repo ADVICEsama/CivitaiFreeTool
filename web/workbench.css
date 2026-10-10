@@ -558,3 +558,6 @@ html[data-masonry-info]:not([data-masonry-info=always])[data-masonry-overlay=ful
 
 html[data-masonry-info]:not([data-masonry-info=always])[data-masonry-overlay=full] .ms-titles[data-name-room=true] .ms-name{text-indent:0;}
 html[data-masonry-info]:not([data-masonry-info=always])[data-masonry-overlay=full] .ms-titles[data-name-room=true] .ms-name[data-civitai-name=false]{padding-left:12px;}
+
+.binding-warning { color: var(--warn,#d29922); border-left: 3px solid currentColor; padding: 8px 12px; background: color-mix(in srgb,var(--surface2) 60%,transparent); font-size: calc(13px * var(--type-scale,1)); line-height: 1.6; }
+.binding-hashes dd { margin: 5px 0 12px; font-family: ui-monospace,Consolas,monospace; overflow-wrap: anywhere; user-select: text; }
