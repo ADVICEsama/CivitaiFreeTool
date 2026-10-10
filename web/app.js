@@ -1310,9 +1310,10 @@ function dlSelectedIds(){return Array.from(document.querySelectorAll('#dlTable t
 function syncDlSelection(){const rows=Array.from(document.querySelectorAll('#dlTable tbody tr'));rows.forEach(r=>{const input=r.querySelector('.dl-task-check');if(input)input.checked=r.classList.contains('sel-row');});const count=rows.filter(r=>r.classList.contains('sel-row')).length;$('#dlSelectAll').checked=rows.length>0&&count===rows.length;$('#dlSelectAll').indeterminate=count>0&&count<rows.length;}
 $('#dlSelectAll').addEventListener('change',e=>{document.querySelectorAll('#dlTable tbody tr').forEach(r=>r.classList.toggle('sel-row',e.target.checked));syncDlSelection();});
 $('#dlPauseAll').addEventListener('click',()=>dlAct('pause_all'));
-$('#dlRemoveAll').addEventListener('click',async()=>{if(await confirmBox('移除全部下载任务？只收起任务并取消未完成下载，不删除模型文件或历史。'))dlAct('remove_all');});
+$('#dlRemoveAll').addEventListener('click',async()=>{if(await confirmBox('移除全部下载任务？取消未完成下载并清理其 .part 临时文件；不删除模型文件或历史。'))dlAct('remove_all');});
 async function dlAct(action) {
   if (["start","pause","retry","remove"].includes(action) && !dlSelectedIds().length) {setStatus("请先勾选下载任务");return;}
+  if(action==="remove" && !(await confirmBox("移除选中任务并清理未完成的 .part？已完成模型和历史保留。")))return;
   const result = await api.call("dl_action", action, null, ["start_all","pause_all","remove_all","clear_done","remove_completed","save"].includes(action) ? null : dlSelectedIds());
   if (action === "save") setStatus(result ? "任务及历史已保存" : "记录保存失败，请检查目录写入权限");
   dlRefresh();
@@ -1341,18 +1342,21 @@ $('#dlRemoveCompleted').addEventListener('click',()=>dlAct('remove_completed'));
 $("#dlClearDone").addEventListener("click", () => dlAct("clear_done"));
 $("#dlSave").addEventListener("click", () => dlAct("save"));
 
-// 下载管理行右键菜单：打开所在文件夹 / 复制文件名 / 打开C站（复用全局 ctxMenu，act 前缀 dl_）
+// Download context actions target the right-clicked task ID, never the previous selection.
+let dlContextTaskId = null;
 $("#dlTable tbody").addEventListener("contextmenu", (e) => {
   const tr = e.target.closest("tr");
   if (!tr) return;
-  const t = (state.dlTasks || []).find((x) => x.filename === tr.dataset.fn);
+  const t = (state.dlTasks || []).find((x) => x.id === tr.dataset.taskId);
   if (!t) return;
   e.preventDefault();
+  dlContextTaskId = t.id;
   const menu = $("#ctxMenu");
   menu.innerHTML =
     '<div class="ctx-item" data-act="dl_folder" data-tip="打开资源管理器并选中该文件">打开所在文件夹</div>' +
     '<div class="ctx-item" data-act="dl_copy" data-tip="复制当前文件名">复制文件名</div>' +
-    '<div class="ctx-item" data-act="dl_site" data-tip="在浏览器打开该模型在 C 站的主页">打开C站</div>';
+    '<div class="ctx-item" data-act="dl_site" data-tip="在浏览器打开该模型在 C 站的主页">打开C站</div>' +
+    '<hr class="ctx-sep"/><button class="ctx-item danger" data-act="dl_remove" data-tip="取消此任务，停止写入后清理未完成 .part；已完成模型与历史保留">' + _icon("trash") + '移除此任务</button>';
   menu.style.display = "block";
   const zf = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
   menu.style.left = (e.clientX / zf) + "px";
@@ -1364,12 +1368,15 @@ $("#dlTable tbody").addEventListener("contextmenu", (e) => {
 $("#ctxMenu").addEventListener("click", async (e) => {
   const item = e.target.closest("[data-act^=dl_]");
   if (!item) return;
-  const tr = document.querySelector("#dlTable tbody tr.sel-row");
-  const t = tr && (state.dlTasks || []).find((x) => x.filename === tr.dataset.fn);
+  const t = (state.dlTasks || []).find((x) => x.id === dlContextTaskId);
   $("#ctxMenu").style.display = "none";
   const act = item.dataset.act;
   if (!t) return;
-  if (act === "dl_copy") {
+  if (act === "dl_remove") {
+    if(!(await confirmBox("移除此任务："+t.filename+"？未完成的 .part 会在写入停止后清理；已完成模型与历史保留。")))return;
+    const result=await api.call("remove_download_task",t.id);
+    setStatus(result?.msg||"任务已移除");await dlRefresh();await refreshDownloadHistory();
+  } else if (act === "dl_copy") {
     await window.__copyText(t.filename);
     setStatus("文件名已复制: " + t.filename);
   } else if (act === "dl_folder") {

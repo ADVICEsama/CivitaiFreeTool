@@ -166,11 +166,18 @@ class CivitaiAPI:
 
     def model_files(self, version):
         """Only downloadable model variants, not training archives / config attachments."""
+        weights = {'.safetensors', '.ckpt', '.pt', '.pth', '.bin', '.gguf', '.onnx', '.sft'}
+        def downloadable(f):
+            kind = re.sub(r'[\s_-]', '', str(f.get('type', 'Model'))).lower()
+            if kind in ('trainingdata', 'config', 'archive', 'image', 'other'):
+                return False
+            ext = '.' + str(f.get('name', '')).rsplit('.', 1)[-1].lower()
+            return kind in ('model', 'negative', 'diffusionmodel', 'vae', 'textencoder', 'clip',
+                            'checkpoint', 'lora', 'locon', 'controlnet', 'embedding') or ext in weights
         candidates = [f for f in version.get("files", []) if isinstance(f, dict) and
-                      f.get("type", "Model") in ("Model", "Negative") and f.get("name")]
+                      f.get('name') and downloadable(f)]
         if not candidates:
-            f, _ = self.pick_file(version)
-            candidates = [f]
+            raise CivitaiError('该版本没有可下载的模型权重文件，未自动下载附件')
         return candidates
 
     def file_download_url(self, version, file):

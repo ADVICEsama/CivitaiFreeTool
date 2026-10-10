@@ -35,6 +35,15 @@ window.CftDownloadFiles = (() => {
       row.dialog.querySelector('.df-countdown').textContent = row.paused ? '已停止自动选择，请确认或取消' : (result?.msg || '停止倒计时失败，请尽快确认');
     } catch (_) { if (current === row) row.dialog.querySelector('.df-countdown').textContent = '连接失败，请尽快确认'; }
   }
+  async function acknowledgeVisible() {
+    if (!current || current.shown || current.ackBusy || document.visibilityState !== 'visible') return;
+    const row=current;row.ackBusy=true;
+    try {
+      const result=await api.call('acknowledge_download_file_choice',row.id);
+      if(current===row && result?.ok){row.shown=true;row.dialog.querySelector('.df-countdown').textContent='10 秒后默认下载第一个文件';}
+    } catch (_) { /* No acknowledgement means no invisible automatic download. */ }
+    finally {if(current===row)row.ackBusy=false;}
+  }
   function show(row) {
     close();
     lastFocus = document.activeElement;
@@ -52,7 +61,7 @@ window.CftDownloadFiles = (() => {
         else if (!e.shiftKey && document.activeElement===last) {e.preventDefault();first.focus();}
       }
     };
-    current = {id:row.id,dialog,paused:row.paused,busy:false,keydown};
+    current = {id:row.id,dialog,paused:row.paused,shown:row.shown!==false,ackBusy:false,busy:false,keydown};
     document.addEventListener('keydown',keydown,true);
     dialog.querySelectorAll('input').forEach(input=>input.addEventListener('change',()=>{
       pause();
@@ -62,11 +71,13 @@ window.CftDownloadFiles = (() => {
     dialog.querySelector('#dfConfirm').addEventListener('click',()=>submit([...dialog.querySelectorAll('input:checked')].map(i=>Number(i.value))));
     dialog.querySelector('input').focus();
     update(row);
+    acknowledgeVisible();
   }
   function update(row) {
     if (!current || current.id !== row.id) return;
     if (row.paused) current.paused = true;
-    current.dialog.querySelector('.df-countdown').textContent = current.paused ? '已停止自动选择，请确认或取消' : `${Math.ceil(row.seconds)} 秒后默认下载第一个文件`;
+    if (row.shown) current.shown = true;
+    current.dialog.querySelector('.df-countdown').textContent = current.paused ? '已停止自动选择，请确认或取消' : !current.shown ? '等待弹窗显示确认，尚未开始倒计时' : `${Math.ceil(row.seconds)} 秒后默认下载第一个文件`;
   }
   async function poll() {
     if (polling || !window.__ready) return;
@@ -75,10 +86,12 @@ window.CftDownloadFiles = (() => {
       const row = await api.call('get_download_file_choice');
       if (row?.id && Array.isArray(row.files)) {
         if (current?.id !== row.id) show(row); else update(row);
+        acknowledgeVisible();
       } else if (current && !current.busy) { close(); setStatus('文件选择结束，请查看下载队列'); }
     } catch (_) { /* Temporary bridge unavailability must not create duplicate dialogs. */ }
     finally { polling = false; }
   }
+  document.addEventListener('visibilitychange',acknowledgeVisible);
   setInterval(poll,300);
   return {poll};
 })();

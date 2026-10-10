@@ -2,11 +2,13 @@
 
 > 免费的 Civitai / HuggingFace 模型下载与本地模型管理工作台。
 
-![Version](https://img.shields.io/badge/version-2.6.23-blue) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-orange) ![CI](https://github.com/ADVICEsama/CivitaiFreeTool/workflows/tests/badge.svg)
+![Version](https://img.shields.io/badge/version-2.6.24-blue) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-orange) ![CI](https://github.com/ADVICEsama/CivitaiFreeTool/workflows/tests/badge.svg)
 
 [下载最新版](https://github.com/ADVICEsama/CivitaiFreeTool/releases/latest) · [更新日志](CHANGELOG.md) · [问题反馈](https://github.com/ADVICEsama/CivitaiFreeTool/issues) · [Linux / macOS](LINUX.md)
 
 ## 当前工作台
+
+- **多文件下载安全**：正确列出 Diffusion Model 等权重变体，弹窗可见后才开始 10 秒默认选择；显式 fileId 不退回第一项。下载列表右键按任务 ID 移除，停止写入后清理所属 .part，模型/历史保留，退出后继续未完成清理，不扫除旧历史断点。
 
 - **校验不一致文件手动关联**：下载管理可明确确认后把已完整落盘的文件关联到来源 C站模型，保存名称/版本/封面信息。真实与官方 SHA256 分别保留，任务、历史和详情持续警告；不修改模型、不把关联当作校验成功、不覆盖已有信息。
 
@@ -229,3 +231,9 @@ python -m venv .venv
 以下为合成文件与虚构模型示例。确认只关联来源信息，不代表该文件与官方模型相同。
 
 ![手动关联确认示例](docs/screenshots/download-unverified-binding.png)
+
+### 大模型多格式选择
+
+合成例图：仅勾选 bf16；未显示弹窗时不启动倒计时，勾选后停止自动选择。
+
+![多格式权重选择](docs/screenshots/diffusion-file-choice.png)

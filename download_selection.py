@@ -23,17 +23,17 @@ class FileChoiceBroker:
                 {'index': i, 'name': f.get('name', ''), 'sizeKB': f.get('sizeKB', 0),
                  'metadata': {k: (f.get('metadata') or {}).get(k, '') for k in ('format', 'fp', 'size')},
                  'primary': bool(f.get('primary'))} for i, f in enumerate(files)],
-                 'deadline': time.monotonic() + self.timeout, 'paused': False,
+                 'created': time.monotonic(), 'deadline': None, 'paused': False,
                  'result': None, 'event': threading.Event()}
             with self.lock:
                 self.pending = row
             while not row['event'].wait(.05):
                 with self.lock:
-                    if not row['paused'] and time.monotonic() >= row['deadline']:
+                    if row['deadline'] is not None and not row['paused'] and time.monotonic() >= row['deadline']:
                         row['result'] = [0]
                         row['event'].set()
                     # A lost UI after interaction must cancel, never unexpectedly download.
-                    elif row['paused'] and time.monotonic() >= row['deadline'] + 600:
+                    elif time.monotonic() >= (row['deadline'] or row['created']) + 600:
                         row['result'] = []
                         row['event'].set()
             with self.lock:
@@ -47,7 +47,18 @@ class FileChoiceBroker:
             if not row or row['event'].is_set():
                 return None
             return {k: row[k] for k in ('id', 'title', 'files', 'paused')} | {
-                'seconds': max(0, row['deadline'] - time.monotonic())}
+                'shown': row['deadline'] is not None,
+                'seconds': max(0, row['deadline'] - time.monotonic()) if row['deadline'] is not None else self.timeout}
+
+    def acknowledge(self, identity):
+        """Start the default timer only once the visible UI has actually shown the dialog."""
+        with self.lock:
+            row = self.pending
+            if not row or row['id'] != identity or row['event'].is_set():
+                return {'ok': False, 'msg': '选择已过期'}
+            if row['deadline'] is None:
+                row['deadline'] = time.monotonic() + self.timeout
+            return {'ok': True}
 
     def respond(self, identity, indices=None, pause=False):
         with self.lock:

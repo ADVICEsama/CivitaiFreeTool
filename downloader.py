@@ -44,6 +44,9 @@ class DownloadTask:
         self.updated_at = self.created_at
         self.finished_at = None
         self._last_notified_status = self.status
+        self._partial_path = None
+        self._removed = False
+        self.partial_cleanup_error = ''
 
     def to_dict(self):
         return {
@@ -76,6 +79,8 @@ class DownloadTask:
         t._last_notified_status = t.status
         # Restored terminal records are not fresh completion events.
         t._metadata_started = t.status == ST_DONE
+        if t.downloaded and t.dest_dir:
+            t._partial_path = os.path.abspath(os.path.join(t.dest_dir, t.filename)) + '.part'
         return t
 
 
@@ -92,6 +97,7 @@ class Downloader:
         self._stop = False
         self._active = 0
         self._active_ids = set()        # 正在下载的任务 id（防止 resume/retry 双写）
+        self._active_paths = {}         # Keep occupied paths even after an active task is removed.
         self._persist_lock = threading.Lock()
         self._last_persist = 0.0
         self._loaded = False
@@ -123,18 +129,53 @@ class Downloader:
                 if task.status==ST_PENDING and task.id not in self._active_ids:self._queue.put(task)
         self.save_tasks();self._ensure_workers();return True
 
-    def remove_task(self, task):
-        ev = self._cancel_events.get(task.id)
-        if ev:
-            ev.set()
-        if task.status not in (ST_DONE, ST_ERROR, ST_CANCELED):
-            task.status = ST_CANCELED
+    def remove_task(self, task, cleanup_partial=True):
         with self._lock:
-            if task in self.tasks:
-                self.tasks.remove(task)
-            self._pause_events.pop(task.id, None)
-            self._cancel_events.pop(task.id, None)
+            if task not in self.tasks:
+                return {'ok': False, 'msg': '任务已不存在'}
+            self._cancel_events.setdefault(task.id, threading.Event()).set()
+            task._removed = True
+            task._cleanup_partial = cleanup_partial
+            if task.status not in (ST_DONE, ST_ERROR, ST_CANCELED):
+                task.status = ST_CANCELED
+            self.tasks.remove(task)
+            active = task.id in self._active_ids
+            # Never drop cancellation tokens while a writer or retry wait still uses them.
+            if not active:
+                if cleanup_partial: self._cleanup_removed_part(task)
+                self._pause_events.pop(task.id, None)
+                self._cancel_events.pop(task.id, None)
         self._notify(task)
+        return {'ok': True, 'msg': '任务已移除；写入停止后清理未完成 .part，模型及历史保留' if active else
+                ('任务已移除；' + task.partial_cleanup_error if task.partial_cleanup_error else '任务已移除，未完成 .part 已清理或不存在；模型及历史保留')}
+
+    def _cleanup_removed_part(self, task):
+        """Called under _lock after the writer closes. Only unlink this task's owned .part."""
+        path = getattr(task, '_partial_path', None)
+        if not path:
+            if task.dest_dir and os.path.basename(task.filename) == task.filename and os.path.isfile(os.path.join(task.dest_dir,task.filename)+'.part'):
+                task.partial_cleanup_error = '临时文件无此任务的归属记录，已保留'
+            return
+        expected = os.path.abspath(os.path.join(task.dest_dir, task.filename)) + '.part'
+        if os.path.basename(task.filename) != task.filename or os.path.normcase(path) != os.path.normcase(expected):
+            task.partial_cleanup_error = '临时文件路径已变化，未删除'
+            return
+        norm = os.path.normcase(os.path.abspath(path[:-5]))
+        for other in self.tasks:
+            other_path = os.path.abspath(os.path.join(other.dest_dir or self._resolve_dest(other), other.filename))
+            if os.path.normcase(other_path) == norm:
+                task.partial_cleanup_error = '临时文件仍被其他任务引用，已保留'
+                return
+        if any(identity != task.id and value == norm for identity,value in self._active_paths.items()):
+            task.partial_cleanup_error = '临时文件仍有其他写入，已保留'
+            return
+        try:
+            if os.path.islink(path):
+                task.partial_cleanup_error = '临时文件是链接，未删除'
+            elif os.path.isfile(path):
+                os.unlink(path)
+        except OSError:
+            task.partial_cleanup_error = '临时文件清理失败（占用或权限），请在所在目录核对'
 
     def pause_task(self, task):
         ev = self._pause_events.get(task.id)
@@ -235,9 +276,22 @@ class Downloader:
                 self._cancel_events[t.id] = threading.Event()
             if t.status == ST_PENDING:
                 self._queue.put(t)
+        self._finish_pending_partial_cleanup()
         self.save_tasks()
         if resume:
             self._ensure_workers()
+
+    def _finish_pending_partial_cleanup(self):
+        """Resume only explicitly recorded removals, never sweep old canceled/history files."""
+        with self._lock:
+            for row in self.history.values():
+                if row.get('partial_cleanup_pending') is not True or not row.get('removed_partial_path'):
+                    continue
+                task = DownloadTask.from_dict(row)
+                task._partial_path = row['removed_partial_path']
+                self._cleanup_removed_part(task)
+                row['partial_cleanup_pending'] = False
+                row['partial_cleanup_error'] = task.partial_cleanup_error
 
     def _record_history(self, task):
         """调用时必须持有 _lock；不保存签名下载 URL 或大型元数据。"""
@@ -253,6 +307,9 @@ class Downloader:
             "finished_at": task.finished_at,
             "actual_sha256": task.actual_sha256, "expected_sha256": task.expected_sha256,
             "verification_status": task.verification_status,
+            "partial_cleanup_error": task.partial_cleanup_error,
+            "partial_cleanup_pending": bool(getattr(task,'_removed',False) and getattr(task,'_cleanup_partial',False) and task.id in self._active_ids),
+            "removed_partial_path": task._partial_path if getattr(task,'_removed',False) and getattr(task,'_cleanup_partial',False) else None,
             "manual_binding": (task.info or {}).get("manual_binding") if
                 ((task.info or {}).get("manual_binding") or {}).get('actual_sha256') == task.actual_sha256 and task.actual_sha256 else None,
             "modelName": (task.info or {}).get("modelName", ""),
@@ -335,7 +392,7 @@ class Downloader:
                 else:
                     wake=task
                     destination=lambda t:os.path.normcase(os.path.abspath(os.path.join(t.dest_dir if t.id in self._active_ids and t.dest_dir else self._resolve_dest(t),t.filename)))
-                    occupied={destination(t) for t in self.tasks if t.id in self._active_ids}
+                    occupied=set(self._active_paths.values()) | {destination(t) for t in self.tasks if t.id in self._active_ids}
                     task=next((t for t in self.tasks if t.status==ST_PENDING and t.id not in self._active_ids and not self._cancel_events.get(t.id,threading.Event()).is_set() and destination(t) not in occupied),None)
                     if task is None:
                         if any(t.status==ST_PENDING for t in self.tasks) and self._active_ids:self._queue.put(wake);limited=True
@@ -345,13 +402,20 @@ class Downloader:
                         task.dest_dir=task._claimed_dest
                         task.status=ST_DOWNLOADING
                         self._active_ids.add(task.id)
+                        self._active_paths[task.id]=destination(task)
             if limited:
                 time.sleep(.1);continue
             try:
                 self._download_impl(task)
             finally:
                 with self._lock:
+                    if getattr(task,'_removed',False):
+                        if getattr(task,'_cleanup_partial',False): self._cleanup_removed_part(task)
+                        self._pause_events.pop(task.id,None)
+                        self._cancel_events.pop(task.id,None)
+                    self._active_paths.pop(task.id,None)
                     self._active_ids.discard(task.id)
+                if getattr(task,'_removed',False):self._notify(task)
 
     def _download_impl(self, task):
         """带退避自动重试的下载包装。
@@ -368,6 +432,7 @@ class Downloader:
         except Exception:
             attempts = 5
         for attempt in range(attempts + 1):
+            if getattr(task,'_removed',False):task.status=ST_CANCELED;task.speed=0;self._notify(task);return
             if self._cancel_events.get(task.id,threading.Event()).is_set():task.status=ST_CANCELED;task.speed=0;self._notify(task);return
             if self._pause_events.get(task.id,threading.Event()).is_set():task.status=ST_PAUSED;task.speed=0;self._notify(task);return
             task.status=ST_DOWNLOADING
@@ -420,9 +485,13 @@ class Downloader:
         pause_ev = self._pause_events.get(task.id, threading.Event())
         cancel_ev = self._cancel_events.get(task.id, threading.Event())
 
+        if cancel_ev.is_set() or getattr(task,'_removed',False):
+            task.status=ST_CANCELED;task.speed=0;self._notify(task);return
+
         start_byte = 0
         if os.path.exists(tmp):
             start_byte = os.path.getsize(tmp)
+            task._partial_path = os.path.abspath(tmp)
         task.downloaded = start_byte
         # 收尾被掐断（数据其实已收全：字节数已达 Content-Length）→ 不重试也不发 416 请求，直接收尾
         if start_byte and task.total and start_byte >= task.total:
@@ -431,6 +500,10 @@ class Downloader:
                     h = hashlib.sha256()
                     with open(tmp, "rb") as f:
                         for b in iter(lambda: f.read(CHUNK), b""):
+                            if cancel_ev.is_set():
+                                task.status=ST_CANCELED;self._notify(task);return
+                            if pause_ev.is_set():
+                                task.status=ST_PAUSED;self._notify(task);return
                             h.update(b)
                     task.actual_sha256 = h.hexdigest()
                     task.verification_status = "verified" if task.actual_sha256 == task.expected_sha256.strip().lower() else "mismatch"
@@ -441,6 +514,8 @@ class Downloader:
                         return
                 except OSError:
                     pass
+            if cancel_ev.is_set() or pause_ev.is_set():
+                task.status=ST_CANCELED if cancel_ev.is_set() else ST_PAUSED;self._notify(task);return
             try:
                 os.replace(tmp, dest)
             except OSError:
@@ -485,6 +560,7 @@ class Downloader:
                 task.total = total
                 mode = "ab" if (resp.status == 206 and start_byte) else "wb"
                 with open(tmp, mode) as f:
+                    task._partial_path = os.path.abspath(tmp)
                     last = time.time()
                     last_bytes = start_byte
                     while True:

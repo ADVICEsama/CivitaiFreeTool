@@ -13,7 +13,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.6.23"
+APP_VERSION = "2.6.24"
 
 import civitai_api
 import config
@@ -630,6 +630,10 @@ class Api:
         broker = getattr(self, "_file_choices", None)
         return broker.respond(identity, indices, pause) if broker else {"ok": False, "msg": "没有待选择的下载"}
 
+    def acknowledge_download_file_choice(self, identity):
+        broker = getattr(self, '_file_choices', None)
+        return broker.acknowledge(identity) if broker else {'ok': False, 'msg': '没有待选择的下载'}
+
     def parse_urls(self, urls):
         """解析 URL 并加入下载队列（后台线程），返回任务 id 用于轮询进度"""
         urls = [u for u in (urls or []) if u and u.strip()]
@@ -1021,12 +1025,19 @@ class Api:
         path = row.get("file_path") or os.path.join(row.get("dest_dir", ""), row.get("filename", ""))
         return self.move_file_to(path, dest_dir)
 
+    def remove_download_task(self, task_id):
+        task = next((t for t in list(self.dl.tasks) if t.id == task_id), None)
+        if not task: return {'ok': False, 'msg': '任务已不存在'}
+        result = self.dl.remove_task(task)
+        if not self.dl.save_tasks(): result['msg'] += '；下载记录保存失败'
+        return result
+
     def archive_download_task(self, task_id):
         task = next((t for t in list(self.dl.tasks) if t.id == task_id),None)
         if not task: return {"ok":False,"msg":"任务不存在"}
         if task.status not in (downloader.ST_DONE,downloader.ST_ERROR,downloader.ST_CANCELED):
             return {"ok":False,"msg":"仅结束任务可以移入历史"}
-        self.dl.remove_task(task)
+        self.dl.remove_task(task, cleanup_partial=False)
         return {"ok":True,"msg":"已移入下载历史，模型文件保留"}
 
     def activate_browser_ui(self):
@@ -1773,8 +1784,18 @@ class Api:
                     return item
                 version_id = vs[0]["id"]
             version = _version if _version is not None else api.get_model_version(version_id)
-            if _file is None and not skip_if_exists:
-                files = self._choose_model_files(version)
+            if _file is None:
+                from urllib.parse import urlsplit, parse_qs
+                query = parse_qs(urlsplit(u).query, keep_blank_values=True)
+                explicit = [v for k, values in query.items() if k.lower() == 'fileid' for v in values]
+                if explicit:
+                    if len(set(explicit)) != 1 or not explicit[0].isdigit():
+                        raise civitai_api.CivitaiError('下载链接的文件 ID 无效，未退回下载主文件')
+                    files = [f for f in api.model_files(version) if str(f.get('id')) == explicit[0]]
+                    if not files:
+                        raise civitai_api.CivitaiError('指定文件不属于这个版本，未退回下载主文件')
+                else:
+                    files = self._choose_model_files(version)
                 if not files:
                     return {**item, "cancelled": True, "msg": "已取消文件下载"}
                 results = [self._enqueue_one(u, dest_dir, skip_if_exists, version, file, model_id) for file in files]
