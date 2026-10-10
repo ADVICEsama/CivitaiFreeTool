@@ -13,7 +13,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.6.21"
+APP_VERSION = "2.6.22"
 
 import civitai_api
 import config
@@ -2202,6 +2202,9 @@ class Api:
             model=forge_meta.get("Model")
             if isinstance(model,str) and model:models.add(model.strip())
             for name in re.findall(r'<(?:lora|lyco):([^:>]+):',pos_prompt,re.I):models.add(name.strip())
+        wobj = None
+        pobj = None
+        prompt_notes = ""
         try:
             if wf:
                 wobj = json.loads(wf)
@@ -2226,16 +2229,6 @@ class Api:
                     for wv in widgets:
                         if isinstance(wv, str) and wv.lower().endswith((".safetensors", ".ckpt", ".pt", ".pth", ".gguf", ".bin", ".onnx")):
                             models.add(wv)
-                # CLIPTextEncode 的提示词（ConnectTo 前的 inputs）
-                for n in wobj.get("nodes", []) or []:
-                    if n.get("type") == "CLIPTextEncode":
-                        ws = n.get("widgets_values") or []
-                        for wv in ws:
-                            if isinstance(wv, str) and len(wv) > 2:
-                                if not pos_prompt:
-                                    pos_prompt = wv
-                                elif "negative" in str(n.get("title", "")).lower() or not neg_prompt:
-                                    neg_prompt = wv
             if prompt:
                 pobj = json.loads(prompt)
                 if isinstance(pobj, dict) and isinstance(pobj.get("prompt"), dict): pobj = pobj["prompt"]
@@ -2252,15 +2245,14 @@ class Api:
                         else: nodes.append({"id": k, "type": cls, "title": (v.get("_meta") or {}).get("title", ""), "widgets": [], **detail})
                         for value in ins.values():
                             if isinstance(value, str) and value.lower().endswith((".safetensors", ".ckpt", ".pt", ".pth", ".gguf", ".bin", ".onnx")): models.add(value)
-                    if cls == "CLIPTextEncode":
-                        t = ((v or {}).get("inputs") or {}).get("text", "")
-                        if isinstance(t, str) and t.strip():
-                            if not pos_prompt:
-                                pos_prompt = t
-                            elif not neg_prompt:
-                                neg_prompt = t
         except Exception:
             pass
+        if not forge_meta:
+            from comfy_metadata import extract_prompts
+            extracted = extract_prompts(pobj, wobj)
+            pos_prompt = extracted.get("prompt", "")
+            neg_prompt = extracted.get("negativePrompt", "")
+            prompt_notes = extracted.get("promptExtractionNote", "")
         preview_b64 = ""
         if ext in (".png", ".webp"):
             try:
@@ -2284,6 +2276,7 @@ class Api:
             "models": sorted(models),
             "pos_prompt": pos_prompt,
             "neg_prompt": neg_prompt,
+            "prompt_notes": prompt_notes,
         }, ensure_ascii=False)
 
     def get_covers(self, paths, size=64):

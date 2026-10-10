@@ -73,7 +73,7 @@ window.CftWorkflow = (() => {
     const pos = r.positive || r.pos_prompt || '', neg = r.negative || r.neg_prompt || '';
     wfLastPromptText = [pos ? '正向:\n'+pos : '',neg ? '负向:\n'+neg : ''].filter(Boolean).join('\n\n');
     q('#wfCopy').style.display = pos || neg ? '' : 'none';
-    q('#wfPrompts').innerHTML = [['正向提示词',pos,'positive'],['负向提示词',neg,'negative']].map(([name,value,kind]) => `<article class="wf-prompt ${kind}"><header><strong>${name}</strong>${value ? `<button type="button" class="btn wf-prompt-copy" data-prompt="${kind}" aria-label="复制${name}">${icon('copy')}复制</button>` : ''}</header><div class="wf-prompt-text">${h(value || '文件未记录'+name)}</div></article>`).join('');
+    q('#wfPrompts').innerHTML = (r.prompt_notes ? `<p class="wf-hint">${h(r.prompt_notes)}</p>` : '') + [['正向提示词',pos,'positive'],['负向提示词',neg,'negative']].map(([name,value,kind]) => `<article class="wf-prompt ${kind}"><header><strong>${name}</strong>${value ? `<button type="button" class="btn wf-prompt-copy" data-prompt="${kind}" aria-label="复制${name}">${icon('copy')}复制</button>` : ''}</header><div class="wf-prompt-text">${h(value || '文件未记录'+name)}</div></article>`).join('');
     q('#wfPrompts').querySelectorAll('[data-prompt]').forEach(btn => btn.addEventListener('click', async () => {
       const ok = await window.__copyText(btn.dataset.prompt === 'positive' ? pos : neg);
       setStatus(ok ? '提示词已复制' : '复制失败，可选中文字手动复制');

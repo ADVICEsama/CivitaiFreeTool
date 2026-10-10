@@ -64,6 +64,7 @@
 #page-workflow .wf-model-path, #page-workflow .wf-model-sha { display: block; margin-top: 8px; font-size: calc(12px * var(--type-scale,1)); line-height: 1.6; overflow-wrap: anywhere; user-select: text; }
 #page-workflow .wf-model-sha { font-family: ui-monospace,Consolas,monospace; }
 #page-workflow .wf-prompts { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; max-height: none; }
+#page-workflow .wf-prompts > .wf-hint { grid-column: 1 / -1; margin: 0; white-space: pre-line; }
 #page-workflow .wf-prompt { margin: 0; padding: 12px; border: 1px solid var(--border); border-radius: 6px; min-width: 0; background: color-mix(in srgb,var(--surface2) 35%,var(--surface)); }
 #page-workflow .wf-prompt header { display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: calc(13px * var(--type-scale,1)); padding-bottom: 10px; }
 #page-workflow .wf-prompt-text { white-space: pre-wrap; overflow-wrap: anywhere; font-size: calc(14px * var(--type-scale,1)); line-height: 1.8; color: var(--text); max-height: 300px; overflow-y: auto; user-select: text; }

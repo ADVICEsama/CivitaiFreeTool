@@ -4,6 +4,8 @@ import json
 import re
 from urllib.parse import urlsplit
 
+from comfy_metadata import PARSER_REVISION, extract_prompts
+
 LIMIT = 25 * 1024 * 1024
 
 # 原图和生成数据为私有运行数据；不进入源码/发行包。缓存失败不得影响查看。
@@ -33,7 +35,7 @@ def cache_key(item, cfg, metadata=False):
             st=os.stat(item['local_path']);source=str(Path(item['local_path']).resolve())+':'+str(st.st_mtime_ns)+':'+str(st.st_size)
         except OSError:return None
     if not source:return None
-    if metadata:source += ':meta:'+hashlib.sha256(str(cfg.get('api_key','')).encode()).hexdigest()
+    if metadata:source += ':'+PARSER_REVISION+':meta:'+hashlib.sha256(str(cfg.get('api_key','')).encode()).hexdigest()
     import config
     return Path(config.APP_DIR)/'gallery_cache'/hashlib.sha256(source.encode()).hexdigest()
 
@@ -92,8 +94,8 @@ def clear_cache():
 def comfy_generation(graph):
     """只读解析标准 ComfyUI API 图中实际连接的节点，不执行或猜测未知节点。"""
     if not isinstance(graph,dict) or len(graph)>10000:return {}
-    sampler=next((n for n in graph.values() if isinstance(n,dict) and n.get('class_type') in ('KSampler','KSamplerAdvanced')),None)
-    if not sampler:return {}
+    sampler=next((n for n in graph.values() if isinstance(n,dict) and n.get('class_type') in ('KSampler','KSamplerAdvanced','SamplerCustom','SamplerCustomAdvanced')),None)
+    if not sampler:return extract_prompts(graph)
     inputs=sampler.get('inputs') or {}
     if not isinstance(inputs,dict):return {}
     def nodes(reference):
@@ -108,16 +110,7 @@ def comfy_generation(graph):
             out.append(node);values=node.get('inputs') or {}
             if isinstance(values,dict):pending.extend(v for v in values.values() if isinstance(v,list))
         return out
-    result={}
-    for side,label in [('positive','prompt'),('negative','negativePrompt')]:
-        texts=[]
-        for node in nodes(inputs.get(side)):
-            if not str(node.get('class_type','')).startswith('CLIPTextEncode'):continue
-            values=node.get('inputs') or {}
-            for field in ('text','text_g','text_l'):
-                text=values.get(field)
-                if isinstance(text,str) and text and text not in texts:texts.append(text)
-        if texts:result[label]='\n'.join(texts)
+    result=extract_prompts(graph)
     for key in ('seed','noise_seed','steps','cfg','sampler_name','scheduler','denoise'):
         value=inputs.get(key)
         if isinstance(value,(str,int,float)) and not isinstance(value,bool):result[{'cfg':'cfgScale','sampler_name':'sampler','noise_seed':'seed'}.get(key,key)]=value
@@ -198,11 +191,16 @@ def generation(image=None, local_path=None, saved=None):
                 if isinstance(fields,dict):meta.update(fields);source='原图内嵌 EXIF/Comment 元数据'
             except (ValueError,TypeError):pass
     if isinstance(meta.get('comfyPrompt'),dict):
-        for key,value in comfy_generation(meta['comfyPrompt']).items():meta.setdefault(key,value)
+        for key,value in comfy_generation(meta['comfyPrompt']).items():
+            if key in ('prompt','negativePrompt','promptExtractionNote'):meta[key]=value
+            else:meta.setdefault(key,value)
+    elif isinstance(meta.get('workflow'),dict):
+        meta.update(extract_prompts(workflow=meta['workflow']))
     resources=meta.get('civitaiResources') or image.get('resources') or meta.get('resources') or []
     if not isinstance(resources,list):resources=[]
     return {'meta':meta,'resources':[v for v in resources if isinstance(v,dict)],'metadata_source':source,
             'image_id':image.get('id') or image.get('image_id'),'width':image.get('width'),'height':image.get('height'),
+            'metadata_note':meta.get('promptExtractionNote',''),
             'orig_url':image.get('url') or image.get('orig_url') or '',
             'image_page':image.get('image_page') or ('https://civitai.com/images/'+str(image['id']) if str(image.get('id','')).isdigit() else '')}
 
@@ -267,7 +265,8 @@ def preview(item,cfg):
         mime='image/png' if im.mode=='RGBA' else 'image/jpeg'
     result={'ok':True,'b64':base64.b64encode(buf.getvalue()).decode(),'mime':mime,'width':w,'height':h,
             'original_available':original,'preview_limited':max(w,h)>4096,
-            'meta':fields['meta'],'resources':fields['resources'],'metadata_source':fields['metadata_source']}
+            'meta':fields['meta'],'resources':fields['resources'],'metadata_source':fields['metadata_source'],
+            'metadata_note':fields.get('metadata_note','')}
     if original:cache_store(item,cfg,'preview',result)
     return result
 

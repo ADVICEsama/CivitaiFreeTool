@@ -2,11 +2,13 @@
 
 > 免费的 Civitai / HuggingFace 模型下载与本地模型管理工作台。
 
-![Version](https://img.shields.io/badge/version-2.6.21-blue) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-orange) ![CI](https://github.com/ADVICEsama/CivitaiFreeTool/workflows/tests/badge.svg)
+![Version](https://img.shields.io/badge/version-2.6.22-blue) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-orange) ![CI](https://github.com/ADVICEsama/CivitaiFreeTool/workflows/tests/badge.svg)
 
 [下载最新版](https://github.com/ADVICEsama/CivitaiFreeTool/releases/latest) · [更新日志](CHANGELOG.md) · [问题反馈](https://github.com/ADVICEsama/CivitaiFreeTool/issues) · [Linux / macOS](LINUX.md)
 
 ## 当前工作台
+
+- **WeiLin 提示词兼容**：工作流分析与图片生成数据按实际采样器连接读取，支持 WeiLin 编辑器和链接文字，忽略禁用旧节点。负向条件清零明确说明；无法还原的外接触发词/随机输出不猜测。旧生成信息缓存自动重解析，已有原图缓存保留。
 
 - **名称显示与可调滚动**：整卡悬浮时 C站名称与本地文件名紧接为一组，在底部资料上方垂直居中。C站名优先换行、放不下才省略；本地名空间够就完整换行，不够才单行滚动。作者、类型、版本及大小置底。外观设置可调速度和首尾停顿，默认 70px/秒、350/250 毫秒。短单行名字不动，屏幕外暂停，不改变卡片和列宽。
 - **原生窗口恢复**：首次加载后核实窗口真的可见；重复打开按实例 PID 恢复窗口，不误认同名文件管理器，不擅自改浏览器模式。
