@@ -1,113 +1,82 @@
-// CivitaiFreeTool 一键下载 —— 确认小窗
-const BRIDGE = "http://127.0.0.1:47531";
-const CIVITAI_MODEL_RE = /^https?:\/\/(www\.)?civitai\.(red|com)\/(api\/download\/)?models\//i;
-
-const $ = (id) => document.getElementById(id);
-const views = {
-  loading: $("view-loading"),
-  bad: $("view-bad"),
-  offline: $("view-offline"),
-  ready: $("view-ready"),
-  done: $("view-done"),
-  error: $("view-error"),
-};
-function show(name) {
-  Object.entries(views).forEach(([k, el]) => el.classList.toggle("hidden", k !== name));
+const ext = typeof browser !== 'undefined' ? browser : chrome;
+const $ = id => document.getElementById(id);
+let tabs = [], rows = [], selected = new Set(), active = null, job = null, online = false, busy = false, seenJob = '', refreshSerial = 0;
+const blocked = () => new Set([...(job?.completedKeys || []),...(job?.items || []).filter(r => ['sent','sending','waiting','uncertain'].includes(r.status)).map(r => r.key)]);
+function updateButtons() {
+  const lock = busy || !!job?.running;
+  $('sendCurrent').disabled = lock || !online || !active || blocked().has(active.key);
+  const count = rows.filter(r => selected.has(r.key) && !blocked().has(r.key)).length;
+  $('sendBatch').disabled = lock || !online || !count;
+  $('sendBatch').textContent = `发送选中 ${count} 项到 CFT`;
+  $('selectionCount').textContent = `已选 ${count} / ${rows.length}`;
 }
-function cleanTitle(t) {
-  // C 站标题形如 "模型名 | Civitai" / "Civitai | 模型名"
-  let s = String(t || "").trim();
-  s = s.replace(/\s*[|\|]\s*Civitai\s*$/i, "").trim();
-  s = s.replace(/^Civitai\s*[|\|]\s*/i, "").trim();
-  return s || "Civitai 模型";
+function visibleRows() {const q = $('search').value.trim().toLowerCase();return rows.filter(r => !q || (r.title+' '+r.url).toLowerCase().includes(q));}
+function render() {
+  const list = $('tabList'), blockedKeys = blocked(); list.replaceChildren();
+  const shown = visibleRows();
+  for (const row of shown) {
+    const label = document.createElement('label'); label.className = 'tab-row';
+    const input = document.createElement('input'); input.type = 'checkbox'; input.dataset.key = row.key; input.checked = selected.has(row.key) && !blockedKeys.has(row.key); input.disabled = blockedKeys.has(row.key) || !!job?.running;
+    input.addEventListener('change', () => {if(input.checked)selected.add(row.key);else selected.delete(row.key);syncSelection();});
+    const text = document.createElement('span'), name = document.createElement('strong'), meta = document.createElement('small');
+    name.textContent = row.title;meta.textContent = `ID ${row.id}` + (row.version ? ` · 版本 ${row.version}` : '') + (row.copies > 1 ? ` · 合并 ${row.copies} 个标签` : '') + (blockedKeys.has(row.key) ? ' · 查看下方提交结果' : '');
+    label.title = row.url;text.append(name, meta);label.append(input,text);list.append(label);
+  }
+  if (!shown.length) {const p=document.createElement('p');p.className='empty';p.textContent=rows.length?'没有匹配的模型标签页':'没有打开的 C 站模型页';list.append(p);}
+  $('tabSummary').textContent = `${rows.length} 个不同模型 / 版本；只读取模型页标题和链接，不读取网页内容。`;
+  syncSelection();
 }
-
-async function getActiveTab() {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  return tab;
+function syncSelection() {
+  const enabled = visibleRows().filter(r => !blocked().has(r.key)), count=enabled.filter(r=>selected.has(r.key)).length;
+  $('selectAll').checked = enabled.length > 0 && count===enabled.length;$('selectAll').indeterminate=count>0&&count<enabled.length;$('selectAll').disabled=!enabled.length||!!job?.running;
+  updateButtons();
 }
-
-async function readPageTitle(tabId) {
+async function health() {
+  const c=new AbortController(),timer=setTimeout(()=>c.abort(),2500);
+  try {const r=await fetch('http://127.0.0.1:47531/api/health',{signal:c.signal});online=r.ok&&!!(await r.json()).ok;}catch(_){online=false;}finally{clearTimeout(timer);}
+  $('connection').textContent=online?'CFT 已连接':'请先打开 CFT';$('connection').classList.toggle('connected',online);updateButtons();
+}
+async function refresh() {
+  const serial=++refreshSerial;
   try {
-    const [r] = await chrome.scripting.executeScript({
-      target: { tabId },
-      func: () => document.title,
-    });
-    return r && r.result ? cleanTitle(r.result) : "";
-  } catch (e) {
-    return ""; // 无 host 权限（非模型页等）时忽略
-  }
+    const queried=await ext.tabs.query($('scope').value==='current'?{currentWindow:true}:{});
+    if(serial!==refreshSerial)return;
+    tabs=queried;rows=CftTabs.candidates(tabs);selected=new Set(rows.map(r=>r.key));render();
+  }catch(_){$('feedback').textContent='读取标签页失败，请重新加载扩展';}
 }
-
-async function checkBridge() {
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 2500);
-  try {
-    const res = await fetch(BRIDGE + "/api/health", { signal: ctrl.signal });
-    const data = await res.json().catch(() => ({}));
-    return !!(data && data.ok);
-  } catch (e) {
-    return false;
-  } finally {
-    clearTimeout(timer);
-  }
+function mode(batch) {
+  $('currentPanel').hidden=batch;$('batchPanel').hidden=!batch;
+  for (const [id,on] of [['modeBatch',batch],['modeCurrent',!batch]]) {$(id).classList.toggle('active',on);$(id).setAttribute('aria-pressed',String(on));}
 }
-
-async function init() {
-  show("loading");
-  const tab = await getActiveTab();
-  const url = tab && tab.url ? tab.url : "";
-  if (!CIVITAI_MODEL_RE.test(url)) {
-    show("bad");
-    return;
+function renderJob(next) {
+  const change = seenJob !== (next?.id||'') || JSON.stringify(job)!==JSON.stringify(next);
+  job=next;
+  if(!change){updateButtons();return;}
+  seenJob=job?.id||'';$('results').hidden=!job;$('clearResults').hidden=!job;$('clearResults').disabled=!!job?.running;
+  if(job){
+    const sent=job.items.filter(r=>r.status==='sent').length, uncertain=job.items.filter(r=>r.status==='uncertain').length;
+    $('resultSummary').textContent=`${job.running?'正在提交':'提交结果'}：已提交 ${sent}/${job.items.length}`+(uncertain?` · ${uncertain} 项待核对`:'');
+    $('resultList').replaceChildren();
+    for(const row of job.items){const p=document.createElement('p');p.className='result '+row.status;p.textContent=`ID ${row.id}：${({waiting:'等待提交',sending:'正在提交',sent:'已提交',failed:'未提交',uncertain:'待核对'})[row.status]} · ${row.msg||''}`;$('resultList').append(p);}
+    if(!job.running){$('results').open=true;$('feedback').textContent='“已提交”仅表示 CFT 接收链接，解析/文件选择结果请在软件内查看。';}
   }
-  const online = await checkBridge();
-  if (!online) {
-    show("offline");
-    return;
-  }
-  $("modelName").textContent = await readPageTitle(tab.id);
-  $("modelUrl").textContent = url;
-  $("modelMeta").textContent = "确认后提交给 CivitaiFreeTool，多文件版本在软件内选择";
-  show("ready");
+  render();
 }
-
-async function startDownload() {
-  const btn = $("btnDownload");
-  btn.disabled = true;
-  btn.textContent = "正在解析并下载…";
-  try {
-    const url = $("modelUrl").textContent;
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 15000);
-    let res;
-    try {
-      res = await fetch(BRIDGE + "/api/download", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url }),
-        signal: ctrl.signal,
-      });
-    } catch (e) {
-      show("offline");
-      return;
-    } finally {
-      clearTimeout(timer);
-    }
-    const data = await res.json().catch(() => ({}));
-    if (res.ok && data.ok) {
-      show("done");
-    } else {
-      $("errMsg").textContent = data.msg || "未知错误";
-      show("error");
-    }
-  } finally {
-    btn.disabled = false;
-    btn.textContent = "⬇️ 开始下载";
-  }
+async function status() {try {const r=await ext.runtime.sendMessage({type:'cft-batch-status'});if(r.ok)renderJob(r.job);}catch(_) {}}
+async function send(urls) {
+  if(busy||job?.running||!urls.length)return;busy=true;updateButtons();$('feedback').textContent='正在提交…';
+  try {const r=await ext.runtime.sendMessage({type:'cft-batch-start',urls});if(!r.ok){$('feedback').textContent=r.msg;return;}renderJob(r.job);$('results').open=true;}
+  catch(_){$('feedback').textContent='未收到扩展确认，请重新打开小窗核对提交结果，勿重复点击。';}
+  finally{busy=false;updateButtons();}
 }
-
-$("btnDownload").addEventListener("click", startDownload);
-$("btnClose").addEventListener("click", () => window.close());
-$("btnRetry").addEventListener("click", () => { show("loading"); init(); });
-document.addEventListener("DOMContentLoaded", init);
+$('clearResults').onclick=async()=>{if(!confirm('清除扩展提交记录后，这些页面可再次发送。请先核对 CFT，避免重复任务；不会删除 CFT 中的下载记录。'))return;try{const r=await ext.runtime.sendMessage({type:'cft-batch-clear'});if(r.ok){renderJob(null);$('feedback').textContent='扩展提交记录已清除；CFT 中的任务未改动';}else $('feedback').textContent=r.msg;}catch(_){$('feedback').textContent='清除失败，请重试';}};
+$('modeCurrent').onclick=()=>mode(false);$('modeBatch').onclick=()=>mode(true);
+$('scope').onchange=refresh;$('refresh').onclick=()=>{refresh();health();};$('search').oninput=render;
+$('selectAll').onchange=()=>{for(const r of visibleRows().filter(r=>!blocked().has(r.key))){if($('selectAll').checked)selected.add(r.key);else selected.delete(r.key);}render();};
+$('sendCurrent').onclick=()=>send(active?[active.url]:[]);
+$('sendBatch').onclick=()=>send(rows.filter(r=>selected.has(r.key)&&!blocked().has(r.key)).map(r=>r.url));
+document.addEventListener('DOMContentLoaded',async()=>{
+  try {const [tab]=await ext.tabs.query({active:true,currentWindow:true});active=CftTabs.modelLink(tab?.url);$('modelName').textContent=active?CftTabs.cleanTitle(tab.title):'当前页面不是 C 站模型页';$('modelUrl').textContent=active?active.url:'可以切换到“批量标签页”，发送其它已打开的模型页。';if(!active)mode(true);await status();await refresh();await health();}
+  catch(_){$('feedback').textContent='扩展初始化失败，请重新加载';}
+  setInterval(status,750);
+});

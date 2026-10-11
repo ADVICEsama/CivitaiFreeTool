@@ -6,7 +6,7 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 import config,webui,downloader,image_gallery
 class FeatureTests(unittest.TestCase):
     def api(self):
-        a=webui.Api.__new__(webui.Api);a.cfg=copy.deepcopy(config.DEFAULTS);a.model_rows=[];a.api=Mock();a._new_api=Mock(return_value=Mock());a.open_url=Mock();a.rp_rows=[];a._rp_state={'running':False};a._rp_launch_lock=threading.RLock();a._rp_stop_ev=threading.Event();a._rp_pause_ev=threading.Event();return a
+        a=webui.Api.__new__(webui.Api);a.cfg=copy.deepcopy(config.DEFAULTS);a.cfg["api_key"]="synthetic-test-key";a.model_rows=[];a.api=Mock();a._new_api=Mock(return_value=Mock());a.open_url=Mock();a.rp_rows=[];a._rp_state={'running':False};a._rp_launch_lock=threading.RLock();a._rp_stop_ev=threading.Event();a._rp_pause_ev=threading.Event();return a
     def wait(self,a):
         end=time.monotonic()+3
         while a._rp_state.get('running') and time.monotonic()<end:time.sleep(.01)

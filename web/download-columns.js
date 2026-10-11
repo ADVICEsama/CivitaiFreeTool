@@ -8,7 +8,7 @@ function bindPersistedTableColumns(tableId, defaults, skipColumns=[], key=null) 
   headers.forEach((th,i)=>{const col=document.createElement('col');col.dataset.dlColumn=String(i);group.appendChild(col);th.dataset.dlColumn=String(i);});
   table.prepend(group);
   const columns=[...group.children];
-  const stretch=["dlTable","updTable"].includes(tableId),primaryFlex=tableId==="updTable"?1:2,otherFlex=tableId==="updTable"?3:7;
+  const stretch=true, primaryFlex=({dlTable:2,updTable:1,rpTable:1,dlHistoryTable:0})[tableId]??0,otherFlex=({dlTable:7,updTable:3,rpTable:4,dlHistoryTable:4})[tableId]??(columns.length-1);
   let flexColumn=primaryFlex;
   function apply(){
     const scale=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--type-scale'))||1;
@@ -21,6 +21,11 @@ function bindPersistedTableColumns(tableId, defaults, skipColumns=[], key=null) 
     });
     if(stretch){
       const available=Math.max(0,table.parentElement.clientWidth);
+      // Default layout fits the viewport; explicitly dragged widths remain respected.
+      if(["rpTable","dlHistoryTable"].includes(tableId) && !Object.keys(saved).length && available>0 && total>available){
+        const mins=widths.map((_,i)=>skipColumns.includes(i)?defaults[i]*scale:60), minimum=mins.reduce((a,b)=>a+b,0);
+        if(available>=minimum){const factor=(available-minimum)/Math.max(1,total-minimum);widths.forEach((w,i)=>widths[i]=mins[i]+(w-mins[i])*factor);total=available;}
+      }
       widths[flexColumn]+=Math.max(0,available-total);total=Math.max(total,available);
       table.parentElement.style.overflowX=total>available+1?'auto':'hidden';
       if(tableId==='dlTable')headers[8].hidden=table.dataset.hasErrors==='false';
@@ -48,13 +53,15 @@ function bindPersistedTableColumns(tableId, defaults, skipColumns=[], key=null) 
   });
   new MutationObserver(apply).observe(table,{attributes:true,attributeFilter:['data-has-errors']});
   new MutationObserver(apply).observe(document.documentElement,{attributes:true,attributeFilter:['style']});
-  if(stretch)new ResizeObserver(apply).observe(table.parentElement);
+  let resizeFrame=0;
+  const onResize=()=>{if(!resizeFrame)resizeFrame=requestAnimationFrame(()=>{resizeFrame=0;apply();});};
+  if(stretch)new ResizeObserver(onResize).observe(table.parentElement);
   apply();
 }
 bindPersistedTableColumns('dlTable',[72,48,360,180,160,120,130,200,240],[0,1],'cft-download-column-widths-v1');
 bindPersistedTableColumns('dlHistoryTable',[420,130,150,180,400]);
 bindPersistedTableColumns('updTable',[36,380,180,250,180,160,200],[0]);
-bindPersistedTableColumns('rpTable',[380,330,160,260,130]);
+bindPersistedTableColumns('rpTable',[44,380,260,160,260,130],[0],'cft-columns-rpTable-v2');
 
 // Drag the handle, not the row checkbox / cover. Hold refresh while a drag is active.
 (()=>{

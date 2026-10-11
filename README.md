@@ -2,7 +2,7 @@
 
 > 免费的 Civitai / HuggingFace 模型下载与本地模型管理工作台。
 
-![Version](https://img.shields.io/badge/version-2.6.24-blue) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-orange) ![CI](https://github.com/ADVICEsama/CivitaiFreeTool/workflows/tests/badge.svg)
+![Version](https://img.shields.io/badge/version-2.6.25-blue) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-orange) ![CI](https://github.com/ADVICEsama/CivitaiFreeTool/workflows/tests/badge.svg)
 
 [下载最新版](https://github.com/ADVICEsama/CivitaiFreeTool/releases/latest) · [更新日志](CHANGELOG.md) · [问题反馈](https://github.com/ADVICEsama/CivitaiFreeTool/issues) · [Linux / macOS](LINUX.md)
 
@@ -188,13 +188,28 @@
 
 Mica / Mica Alt 是 Windows 原生**壁纸色调材质**，并不透视其他窗口；失焦、系统关闭透明、高对比度等条件下会回退纯色。内置效果需要支持的 Windows 11；外部模式配合 Mica For Everyone 需要另行安装/配置，框架切换需重启。参见 [微软 Mica 说明](https://learn.microsoft.com/en-us/windows/apps/design/style/mica)。
 
+## v2.6.25：批量标签页与反查指引
+
+- Chrome / Firefox 扩展更新到 **1.3.0**：保留当前页发送，新增所有窗口 / 当前窗口的模型页勾选列表、搜索、全选和批量发送；跨 red/com 重复页合并，不同版本与文件 ID 保留。提交由扩展后台执行，关闭小窗不会中断；仅向本机 CFT 发送勾选的模型链接，不发送其它标签页、Cookie 或 API Key。
+- **未填写并保存 Civitai API Key** 时，批量下载、下载管理、检查更新、反向解析显示半透明遮罩及账号配置指引。模型管理中的识别入口与扩展下载入口同样拒绝开始新的在线任务。本地模型浏览、移动和工作流分析可继续使用；不会删除模型或历史，也不强停已经运行的下载。
+- 反向解析提供五步教程：**模型管理 → 全选 → 信息处理 → 识别模型信息 → 开始反查**。教程只指导，用户点击才会提交和反查。
+- 反查列表支持行勾选、仅显示/反查失败、反查选中和移除选中。筛选后不会误操作隐藏勾选；移除仅清列表，不删磁盘文件，进行中的记录保留。
+- 反查与下载历史表格默认随窗口铺满，保留手动调列宽；自定义列宽过大时允许横向滚动。
+- 工作流分析识别 **LoRA Manager 的 `loras.__value__`**（含无后缀模型名 / JSON 字符串 / UI 数组）。启用模型加入引用，关闭或旁路模型单独显示，不把注释或旧 UI 状态当作实际引用；本地匹配覆盖全部已配置模型目录。
+
+以下为隔离测试生成的示例界面，不包含用户 Key 或真实下载记录：
+
+![标签页批量发送](docs/screenshots/extension-batch.png)
+![API Key 配置指引](docs/screenshots/api-key-gate.png)
+![反查列表选择](docs/screenshots/reverse-selection.png)
+
 ## Chrome / Firefox 扩展
 
 Release 同时附带两款扩展 ZIP，`manifest.json` 在压缩包根目录。
 
 - **Chrome / Edge**：解压 Chrome 包，在扩展管理页启用开发者模式，加载已解压目录。
 - **Firefox**：当前包未签名，通过 `about:debugging` 临时加载；长期安装需要 Mozilla 签名。不能把它当作已签名永久扩展。
-- 软件运行后，在 C站模型页点击扩展图标，确认模型与链接后添加下载。
+- 软件运行后，点击扩展图标，发送当前页，或切换“批量标签页”后全选 / 勾选并发送；当前页不是模型也能提交其它已打开的模型页。
 
 详细说明：[Chrome](chrome-extension/README.md) · [Firefox](firefox-extension/README.md)。
 

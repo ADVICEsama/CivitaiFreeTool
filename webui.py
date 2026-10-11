@@ -13,7 +13,24 @@ import time
 
 import webview
 
-APP_VERSION = "2.6.24"
+APP_VERSION = "2.6.25"
+
+from functools import wraps
+
+API_KEY_REQUIRED_MSG = "请先在设置 → 目录与账号填写并保存 Civitai API Key"
+
+def requires_civitai_key(kind="dict"):
+    """Block new online work without changing local models, histories or running tasks."""
+    def decorate(fn):
+        @wraps(fn)
+        def guarded(self, *args, **kwargs):
+            if not str((getattr(self, "cfg", None) or {}).get("api_key") or "").strip():
+                if kind == "bool": return False
+                result = {"ok": False, "started": False, "requires_api_key": True, "msg": API_KEY_REQUIRED_MSG}
+                return json.dumps(result, ensure_ascii=False) if kind == "json" else result
+            return fn(self, *args, **kwargs)
+        return guarded
+    return decorate
 
 import civitai_api
 import config
@@ -634,6 +651,7 @@ class Api:
         broker = getattr(self, '_file_choices', None)
         return broker.acknowledge(identity) if broker else {'ok': False, 'msg': '没有待选择的下载'}
 
+    @requires_civitai_key("dict")
     def parse_urls(self, urls):
         """解析 URL 并加入下载队列（后台线程），返回任务 id 用于轮询进度"""
         urls = [u for u in (urls or []) if u and u.strip()]
@@ -1187,6 +1205,7 @@ class Api:
         return {"ok":ok,"msg":"队列顺序已保存；前面的等待任务优先，正在下载的任务不中断" if ok else "排序请求无效，任务未改变"}
 
     def dl_action(self, action, filenames=None, task_ids=None):
+        if action in ("start", "start_all", "retry") and not str((getattr(self,"cfg",None) or {}).get("api_key") or "").strip(): return False
         tasks = [t for t in self.dl.tasks if (t.id in task_ids if task_ids is not None else t.filename in (filenames or []))]
         if action == "start_all":
             for t in list(self.dl.tasks):
@@ -1763,6 +1782,7 @@ class Api:
         st = getattr(self, "_img_dl_state", None)
         return json.dumps(st or {"total": 0, "done": 0})
 
+    @requires_civitai_key("dict")
     def _enqueue_one(self, url, dest_dir=None, skip_if_exists=False, _version=None, _file=None, _model_id=None):
         """同步解析单条 URL 并入队（忽略付费状态）。返回 item dict：{url, ok, msg, task_id?}
 
@@ -1873,6 +1893,7 @@ class Api:
             item["msg"] = str(e)[:200]
         return item
 
+    @requires_civitai_key("dict")
     def dl_enqueue_url(self, url):
         """强制解析单条 URL 并入队（忽略付费状态，用于「仍要下载」，后台执行）"""
         state = {"running": True, "total": 1, "done": 0, "items": [], "finished": False}
@@ -1888,12 +1909,14 @@ class Api:
         threading.Thread(target=work, daemon=True).start()
         return {"started": True}
 
+    @requires_civitai_key("dict")
     def dl_enqueue_url_sync(self, url):
         """Legacy synchronous caller; extension endpoint uses dl_submit_url to avoid timeout."""
         item = self._enqueue_one(url)
         if item.get("ok"): self._notify_ext_download_started()
         return item
 
+    @requires_civitai_key("dict")
     def dl_submit_url(self, url):
         """Extension bridge acknowledges submission immediately; selection continues in CFT."""
         try: self.api.resolve_url(url)
@@ -1973,6 +1996,7 @@ class Api:
                     return r
         return None
 
+    @requires_civitai_key("json")
     def download_image_models(self, url):
         """图片页全部模型批量入队：本地已存在同名文件则跳过"""
         import downloader
@@ -2169,23 +2193,26 @@ class Api:
     def workflow_model_matches(self, refs):
         """工作流引用的模型名 → 本地模型库匹配（返回路径 + SHA256 前缀）"""
         refs = refs or []
-        root = self.cfg.get("models_dir") or self.cfg.get("download_dir") or ""
+        roots = self.cfg.get("models_dirs") or [self.cfg.get("models_dir") or self.cfg.get("download_dir") or ""]
+        if isinstance(roots, str): roots = [roots]
+        roots = [r for r in roots if isinstance(r, str) and os.path.isdir(r)]
         out = []
-        if not root or not os.path.isdir(root) or not refs:
+        if not roots or not refs:
             return json.dumps([{"ref": str(ref), "local": False, "path": ""} for ref in refs], ensure_ascii=False)
         # 本地模型文件索引（名字 → 路径）
         index = {}
-        for dp, dn, fns in os.walk(root):
-            dn[:] = [d for d in dn if not d.lower().endswith(".images")]
-            for fn in fns:
-                if fn.lower().endswith((".safetensors", ".ckpt", ".pt", ".pth", ".gguf", ".bin", ".onnx")):
-                    index[fn.lower()] = os.path.join(dp, fn)
+        for root in roots:
+            for dp, dn, fns in os.walk(root):
+                dn[:] = [d for d in dn if not d.lower().endswith(".images")]
+                for fn in fns:
+                    if fn.lower().endswith((".safetensors", ".ckpt", ".pt", ".pth", ".gguf", ".bin", ".onnx")):
+                        index[fn.lower()] = os.path.join(dp, fn)
         import model_manager as _mm
         for ref in refs:
             base = os.path.basename(str(ref)).lower()
             base = base.replace("\\", "/").split("/")[-1]
             hit = index.get(base)
-            if not hit and not os.path.splitext(base)[1]:
+            if not hit and not base.endswith((".safetensors", ".ckpt", ".pt", ".pth", ".gguf", ".bin", ".onnx", ".sft")):
                 candidates = [p for name,p in index.items() if os.path.splitext(name)[0] == base]
                 if len(candidates)==1:hit=candidates[0]
             item = {"ref": str(ref), "local": bool(hit), "path": hit or ""}
@@ -2315,7 +2342,9 @@ class Api:
         except Exception:
             pass
         if not forge_meta:
-            from comfy_metadata import extract_prompts
+            from comfy_metadata import extract_prompts, extract_model_references
+            model_refs = extract_model_references(pobj, wobj)
+            models = set(model_refs["models"])
             extracted = extract_prompts(pobj, wobj)
             pos_prompt = extracted.get("prompt", "")
             neg_prompt = extracted.get("negativePrompt", "")
@@ -2341,6 +2370,7 @@ class Api:
             "nodes": nodes,
             "node_count": len(nodes),
             "models": sorted(models),
+            "disabled_models": model_refs["disabled_models"] if not forge_meta else [],
             "pos_prompt": pos_prompt,
             "neg_prompt": neg_prompt,
             "prompt_notes": prompt_notes,
@@ -3211,6 +3241,7 @@ class Api:
     def get_mm_update_state(self):
         return self._mm_upd_state
 
+    @requires_civitai_key("dict")
     def mm_check_updates(self, force=False, paths=None):
         """检查更新（后台，不会自动下载）。
 
@@ -3408,6 +3439,7 @@ class Api:
         threading.Thread(target=work, daemon=True).start()
         return {"started": True, "total": len(groups)}
 
+    @requires_civitai_key("dict")
     def mm_update_models(self, paths=None):
         """把「有新版」的模型加入下载队列（下载新版；默认落在旧版所在文件夹，不被全局目标搬走）。
 
@@ -3728,6 +3760,7 @@ class Api:
             return True
         return False
 
+    @requires_civitai_key("dict")
     def mm_check_update(self, paths=None):
         rows = self._selected_model_rows(paths)
         if not rows:return {"started":False,"msg":"当前选择没有可处理的模型，请刷新列表重新选择"}
@@ -4199,6 +4232,18 @@ class Api:
         self.rp_rows = [r for r in self.rp_rows if r["path"] not in (paths or []) or r["path"] in active]
         return True
 
+    def rp_remove_selected(self, paths):
+        """Only remove list entries; never delete models or remove an active lookup."""
+        if not isinstance(paths, list): return {"ok": False, "msg": "请选择列表记录"}
+        with self._rp_launch_lock:
+            before = len(self.rp_rows)
+            active = set(self._rp_state.get("active_paths") or []) if self._rp_state.get("running") else set()
+            targets = set(p for p in paths if isinstance(p, str))
+            skipped = sum(r["path"] in targets and r["path"] in active for r in self.rp_rows)
+            self.rp_remove(list(targets))
+            return {"ok": True, "removed": before - len(self.rp_rows), "skipped": skipped,
+                    "msg": "已移除 %d 条列表记录，保留 %d 条进行中的记录；模型文件不变" % (before-len(self.rp_rows), skipped)}
+
     def rp_clear(self):
         if self._rp_state.get("running"):return False
         self.rp_rows = []
@@ -4208,6 +4253,7 @@ class Api:
     def rp_get_rows(self):
         return self.rp_rows
 
+    @requires_civitai_key("dict")
     def rp_identify_model(self, path):
         """详情入口只启动当前模型，不启动队列中其它待反查模型。"""
         if not isinstance(path,str) or not os.path.isfile(path): return {'started':False,'msg':'当前模型文件不存在'}
@@ -4216,12 +4262,16 @@ class Api:
             self.rp_add_paths([path])
             return {'started':self.rp_start([path]),'path':path,'msg':'已开始识别当前模型'}
 
-    def rp_start(self, paths=None):
+    @requires_civitai_key("bool")
+    def rp_start(self, paths=None, only_failed=False):
         with self._rp_launch_lock:
             if self._rp_state["running"]:
                 return False
+            if paths is not None and not isinstance(paths, list): return False
             selected = {os.path.normcase(self._resolve_model_path(p)) for p in paths if isinstance(p,str)} if paths is not None else None
             tasks = [r for r in self.rp_rows if selected is None or os.path.normcase(os.path.abspath(r['path'])) in selected]
+            if only_failed:
+                tasks = [r for r in tasks if re.search(r"失败|错误|未收录|文件不存在", str(r.get("status", "")))]
             if not tasks:
                 return False
             self._rp_pause_ev.clear()

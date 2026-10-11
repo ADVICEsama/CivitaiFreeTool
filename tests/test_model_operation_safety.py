@@ -10,7 +10,7 @@ import config,model_manager,reverse_parse,webui,downloader
 
 class ModelOperationSafetyTests(unittest.TestCase):
     def api(self):
-        a=webui.Api.__new__(webui.Api);a.cfg=copy.deepcopy(config.DEFAULTS);a.model_rows=[];a.mm_scan_state={'rows':[]};a.mm_progress={'running':False};a.rp_rows=[];a.dl=Mock();a.dl.tasks=[];a.dl.get_history.return_value=[];a._updates={'items':{}};a._save_updates=Mock();a._new_api=Mock();a._rp_state={'running':False};a._rp_launch_lock=threading.RLock();a._rp_stop_ev=threading.Event();a._rp_pause_ev=threading.Event();return a
+        a=webui.Api.__new__(webui.Api);a.cfg=copy.deepcopy(config.DEFAULTS);a.cfg["api_key"]="synthetic-test-key";a.model_rows=[];a.mm_scan_state={'rows':[]};a.mm_progress={'running':False};a.rp_rows=[];a.dl=Mock();a.dl.tasks=[];a.dl.get_history.return_value=[];a._updates={'items':{}};a._save_updates=Mock();a._new_api=Mock();a._rp_state={'running':False};a._rp_launch_lock=threading.RLock();a._rp_stop_ev=threading.Event();a._rp_pause_ev=threading.Event();return a
 
     def bundle(self,root):
         p=Path(root)/'raw.safetensors';p.write_bytes(b'model contents');p.with_suffix('.info.json').write_text('{"name":"Title"}');images=Path(root)/'raw.images';images.mkdir();(images/'example.png').write_bytes(b'image contents');return p,images

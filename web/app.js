@@ -43,6 +43,7 @@ window.addEventListener("unhandledrejection", (e) => {
 
 const api = {
   call(method, ...args) {
+    if(typeof guardCivitaiAction === "function" && !guardCivitaiAction(method,args))return Promise.resolve(["rp_start","dl_action","rp_add_paths"].includes(method)?false:{ok:false,started:false,requires_api_key:true,msg:"请先填写并保存 Civitai API Key"});
     const result=window.pywebview.api[method](...args);
     if(method==='save_config')return Promise.resolve(result).then(ok=>{if(ok)window.dispatchEvent(new CustomEvent('cft:config-saved',{detail:args[0]}));return ok;});
     return result;
@@ -278,6 +279,7 @@ const state = {
 // ---------- 页面切换 ----------
 function switchPage(name) {
   if (name !== "settings" && typeof settingsHaveChanges === "function" && settingsHaveChanges()) {requestSettingsLeave(()=>switchPage(name));return;}
+  if(typeof refreshApiKeyGates === "function")refreshApiKeyGates();
   if (name !== "models") fmClose();
   if (name !== "models" && $("#detailMask").style.display === "flex") closeDetail();
   $$(".nav-tab").forEach((t) => t.classList.toggle("active", t.dataset.page === name));
@@ -4121,8 +4123,9 @@ $("#mmRenameSub").addEventListener("click", (e) => {
 $("#mmSendRp").addEventListener("click", async () => {
   const p = mmCheckedPaths();
   if (!p) { setStatus("请先勾选或选中模型"); return; }
-  await api.call("rp_add_paths", p);
-  setStatus("已发送 " + p.length + " 个到反向解析");
+  if(!await api.call("rp_add_paths", p))return;
+  switchPage("reverse");await rpRefresh();
+  setStatus("已发送 " + p.length + " 个到反向解析，请点击开始反查");
 });
 
 // 批量从 C 站同步：勾选模型 → 加入反向解析队列并立即开始 → 进度 → 汇总
@@ -4138,7 +4141,7 @@ async function mmSyncBatchRun() {
   _batchSyncBusy = true;
   try {
     await api.call("rp_add_paths", paths);
-    await api.call("rp_start", paths);
+    if(!await api.call("rp_start", paths)){setStatus("反查未开始，请检查 API Key 或已有任务");return;}
     const t0 = Date.now();
     let st = null;
     while (true) {
@@ -4171,7 +4174,7 @@ function rpStatusCls(st) {
   const t = String(st || "");
   if (/成功|完成|匹配到|已收录/.test(t)) return "ok";
   if (/反查中|进行|匹配中|处理中/.test(t)) return "run";
-  if (/失败|错误|未收录/.test(t)) return "err";
+  if (/失败|错误|未收录|文件不存在/.test(t)) return "err";
   return "wait";
 }
 function rpStatusGlyph(c) { return c === "ok" ? "\u2713 " : c === "run" ? "\u25cc " : c === "err" ? "\u00d7 " : ""; }
@@ -4192,76 +4195,67 @@ function rpProgRender(s2) {
     el.style.display = "none";
   }
 }
-async function rpRefresh() {
-  const rows = await api.call("rp_get_rows");
-  state.rpRows = rows || [];
-  const kw = $("#rpFilter").value.trim().toLowerCase();
-  const tbody = $("#rpTable tbody");
-  const shown = rows.filter((r) => !kw ||
-    String(r.path || "").toLowerCase().includes(kw) || (r.model || "").toLowerCase().includes(kw) || (r.status || "").toLowerCase().includes(kw));
-  tbody.innerHTML = shown.map((r) => {
-    const p = String(r.path || "");
-    const base = p.replace(/[\\/]+$/, "").split(/[\\/]/).pop() || p;
-    const dir = base.length < p.length ? p.slice(0, p.length - base.length) : "";
-    const st = rpStatusCls(r.status);
-    const sha = String(r.sha || "");
-    return '<tr data-path="' + esc(p) + '">' +
-      '<td class="c-file" title="' + esc(p) + '"><div class="rp-fname">' + esc(base) + '</div><div class="rp-fdir file-subpath">' + esc(dir) + '</div></td>' +
-      '<td class="c-sha"><span class="rp-sha" title="' + esc(sha) + '">' + esc(sha.length > 18 ? sha.slice(0, 18) + "\u2026" : sha) + '</span></td>' +
-      '<td><span class="rp-st ' + st + '">' + rpStatusGlyph(st) + esc(r.status || "") + '</span></td>' +
-      '<td class="c-name"><div class="rp-model" title="' + esc(r.model || "") + '">' + esc(r.model || "") + '</div></td>' +
-      '<td>' + (r.version ? '<span class="rp-ver">' + esc(r.version) + '</span>' : '') + '</td></tr>';
-  }).join("") || '<tr class="rp-empty"><td colspan="5">' + (rows.length ? "没有符合筛选的项目" : "暂无待反查任务") + '</td></tr>';
+const rpChecked = new Set();
+let rpShown = [], rpRenderSignature = "";
+function rpVisibleRows(rows) {
+  const kw = $("#rpFilter").value.trim().toLowerCase(), failed = $("#rpOnlyFailed").checked;
+  return rows.filter(r => (!failed || rpStatusCls(r.status) === "err") && (!kw || [r.path,r.model,r.status].some(v => String(v || "").toLowerCase().includes(kw))));
 }
-
-$("#rpFilter").addEventListener("input", rpRefresh);
-$("#rpFilterClear").addEventListener("click", () => { $("#rpFilter").value = ""; rpRefresh(); });
-
-// v2.2.1：入口已移除（模型统一在模型管理页添加/发起识别，反向解析页只做结果管理）
-// $("#rpAddFiles").addEventListener("click", async () => {
-//   const files = await api.call("pick_files");
-//   if (files && files.length) { await api.call("rp_add_paths", files); rpRefresh(); }
-// });
-// $("#rpAddDir").addEventListener("click", async () => {
-//   const d = await api.call("pick_dir");
-//   if (d) { await api.call("rp_add_dir", d); rpRefresh(); }
-// });
-$("#rpRemoveSel").addEventListener("click", async () => {
-  const paths = Array.from($$("#rpTable tbody tr.sel-row")).map((r) => r.dataset.path);
-  if (paths.length) { await api.call("rp_remove", paths); rpRefresh(); }
-});
-let rpLastSel = -1;
-$("#rpTable tbody").addEventListener("click", (e) => {
-  const tr = e.target.closest("tr");
-  if (!tr) return;
-  const rows = Array.from($$("#rpTable tbody tr"));
-  const idx = rows.indexOf(tr);
-  const ctrl = e.ctrlKey || e.metaKey;
-  if (e.shiftKey && rpLastSel >= 0) {
-    const a = Math.min(rpLastSel, idx), b = Math.max(rpLastSel, idx);
-    rows.slice(a, b + 1).forEach((r) => r.classList.add("sel-row"));
-  } else if (ctrl) {
-    tr.classList.toggle("sel-row");
-  } else {
-    rows.forEach((r) => r.classList.remove("sel-row"));
-    tr.classList.add("sel-row");
-  }
-  rpLastSel = idx;
-});
-$("#rpClearAll").addEventListener("click", async () => {
-  const ok = await confirmBox("确定清空反向解析列表的全部条目？");
-  if (!ok) return;
-  await api.call("rp_clear");
+function rpSelectionSync() {
+  const visible = new Set(rpShown.map(r => r.path));
+  for(const path of rpChecked)if(!visible.has(path))rpChecked.delete(path);
+  const count = rpChecked.size, all = $("#rpSelectAll");
+  all.checked = rpShown.length > 0 && count === rpShown.length;all.indeterminate = count > 0 && count < rpShown.length;
+  $("#rpSelectedCount").textContent = "已选 " + count + " 项";
+  $("#rpRemoveSel").disabled = !count;$("#rpStartSelected").disabled = !count || !!state.rpRunning;
+}
+async function rpRefresh() {
+  const rows = await api.call("rp_get_rows") || [];state.rpRows = rows;
+  rpShown = rpVisibleRows(rows);rpSelectionSync();
+  const signature = JSON.stringify([rpShown,Array.from(rpChecked)]);
+  if(signature === rpRenderSignature)return;rpRenderSignature = signature;
+  $("#rpTable tbody").innerHTML = rpShown.map(r => {
+    const p=String(r.path||""),base=p.replace(/[\\/]+$/,"").split(/[\\/]/).pop()||p;
+    const dir=base.length<p.length?p.slice(0,p.length-base.length):"",st=rpStatusCls(r.status),sha=String(r.sha||"");
+    return '<tr data-path="'+esc(p)+'"'+(rpChecked.has(p)?' class="sel-row"':'')+'><td class="rp-check-col"><input type="checkbox" class="rp-row-check" aria-label="勾选 '+esc(base)+'"'+(rpChecked.has(p)?' checked':'')+'/></td>'+
+      '<td class="c-file" title="'+esc(p)+'"><div class="rp-fname">'+esc(base)+'</div><div class="rp-fdir file-subpath">'+esc(dir)+'</div></td>'+
+      '<td class="c-sha"><span class="rp-sha" title="'+esc(sha)+'">'+esc(sha.length>18?sha.slice(0,18)+"…":sha)+'</span></td>'+
+      '<td><span class="rp-st '+st+'">'+rpStatusGlyph(st)+esc(r.status||"")+'</span></td>'+
+      '<td class="c-name"><div class="rp-model" title="'+esc(r.model||"")+'">'+esc(r.model||"")+'</div></td><td>'+esc(r.version||"")+'</td></tr>';
+  }).join("") || '<tr class="rp-empty"><td colspan="6">'+(rows.length?"没有符合筛选的项目":"暂无待反查任务；点击上方逐步教程")+'</td></tr>';
+}
+$("#rpFilter").addEventListener("input",rpRefresh);
+$("#rpOnlyFailed").addEventListener("change",rpRefresh);
+$("#rpFilterClear").addEventListener("click",()=>{$("#rpFilter").value="";$("#rpOnlyFailed").checked=false;rpRefresh();});
+$("#rpSelectAll").addEventListener("change",()=>{for(const r of rpShown){if($("#rpSelectAll").checked)rpChecked.add(r.path);else rpChecked.delete(r.path);}rpRefresh();});
+$("#rpTable tbody").addEventListener("click",e=>{
+  const row=e.target.closest('tr[data-path]');if(!row)return;
+  if(e.target.closest('button,a'))return;
+  if(e.target.matches('.rp-row-check')){if(e.target.checked)rpChecked.add(row.dataset.path);else rpChecked.delete(row.dataset.path);}
+  else{if(rpChecked.has(row.dataset.path))rpChecked.delete(row.dataset.path);else rpChecked.add(row.dataset.path);}
   rpRefresh();
-  $("#rpStart").disabled = false;
 });
-$("#rpStart").addEventListener("click", async () => {
-  await api.call("rp_start");
-  $("#rpStart").disabled = true;
-  $("#rpPause").disabled = false;
-  $("#rpStop").disabled = false;
-  pollRp();
+$("#rpRemoveSel").addEventListener("click",async()=>{
+  const paths=rpShown.filter(r=>rpChecked.has(r.path)).map(r=>r.path);if(!paths.length)return;
+  if(!await confirmBox("移除这 "+paths.length+" 条反查列表记录？不会删除模型文件；进行中的任务会保留。"))return;
+  const r=await api.call("rp_remove_selected",paths);setStatus(r?.msg||"列表移除未完成");await rpRefresh();
 });
+$("#rpClearAll").addEventListener("click",async()=>{
+  if(!await confirmBox("确定清空反向解析列表？只清列表记录，不删除模型文件。"))return;
+  if(!await api.call("rp_clear")){setStatus("反查进行中，请先停止后再清空");return;}rpChecked.clear();await rpRefresh();
+});
+async function rpStartScope(selected=false) {
+  if(state.rpRunning){setStatus("已有反查正在运行");return;}
+  const paths=rpShown.filter(r=>!selected||rpChecked.has(r.path)).map(r=>r.path);
+  if(!paths.length){setStatus(selected?"请先勾选要反查的模型":"没有符合筛选的待反查模型");return;}
+  const started=await api.call("rp_start",paths,$("#rpOnlyFailed").checked);
+  if(!started){setStatus("反查未开始：请检查 API Key、失败筛选或已有任务");return;}
+  state.rpRunning=true;$("#rpStart").disabled=true;$("#rpStartSelected").disabled=true;$("#rpPause").disabled=false;$("#rpStop").disabled=false;pollRp();
+}
+$("#rpStart").addEventListener("click",()=>rpStartScope(false));
+$("#rpStartSelected").addEventListener("click",()=>rpStartScope(true));
+$("#rpTutorial").addEventListener("click",startReverseTutorial);
+
 $("#rpPause").addEventListener("click", async () => {
   const paused = await api.call("rp_pause");
   $("#rpPause").textContent = paused ? "继续" : "暂停";
@@ -4279,7 +4273,7 @@ function pollRp() {
       s = await api.call("rp_state");
       await rpRefresh();
     } catch (e) { s = null; }
-    rpProgRender(s);
+    state.rpRunning=!!s?.running;rpSelectionSync();rpProgRender(s);
     if (s && s.running) setStatus("反向解析 " + s.done + "/" + s.total + (s.paused ? "（已暂停）" : ""));
     else if (s && !s.running && s.total > 0) {
       clearInterval(t);
@@ -4737,6 +4731,7 @@ $("#settingsForm").addEventListener("click", async (e) => {
 // ================= 启动 =================
 async function init() {
   state.cfg = await api.call("get_config");
+  refreshApiKeyGates();
   window.__ready = true;
   refreshDlTarget();
   // 应用主题（dark / light / modern）
@@ -4893,9 +4888,8 @@ function renderOnboarding() {
       '<div class="ob-actions2"><button class="btn btn-primary" id="obGoRp">立即体验（推荐）</button>' +
       '<button class="btn" id="obSkipRp">跳过（以后在 反向解析 页随时可用）</button></div>';
     $("#obGoRp").addEventListener("click", async () => {
-      await finishOnboarding();
-      document.querySelector(".nav-tab[data-page=\"reverse\"]").click();
-      setStatus("已进入反向解析页，拖入或选择模型文件即可开始");
+      if(await finishOnboarding()!==true)return;
+      startReverseTutorial();
     });
     $("#obSkipRp").addEventListener("click", async () => {
       await finishOnboarding();
@@ -4927,6 +4921,7 @@ async function finishOnboarding() {
   $("#obMask").style.display = "none";
   switchPage(obStartPage);
   setStatus('引导已完成。可在设置里随时重新打开。');
+  return true;
 }
 $("#obNext").addEventListener("click",async()=>{
   if(obStep===0){

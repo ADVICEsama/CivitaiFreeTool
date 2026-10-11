@@ -150,3 +150,67 @@ def extract_prompts(graph=None, workflow=None):
     if notes:
         result['promptExtractionNote'] = '\n'.join(notes)
     return result
+
+
+WEIGHT_SUFFIXES = (".safetensors", ".ckpt", ".pt", ".pth", ".gguf", ".bin", ".onnx", ".sft")
+
+
+def extract_model_references(graph=None, workflow=None):
+    """Read saved loader data only. No custom-node execution or prompt-name guesses.
+
+    LoraManager stores active entries in inputs.loras.__value__, or the last UI
+    widget. The API graph is authoritative for the same node; stale UI state is
+    never merged over it. Disabled entries remain visible separately.
+    """
+    enabled, disabled = set(), set()
+    if isinstance(graph, dict) and isinstance(graph.get("prompt"), dict): graph = graph["prompt"]
+    graph = graph if isinstance(graph, dict) else {}
+    graph = {str(k): v for k, v in graph.items() if isinstance(v, dict) and v.get("class_type")}
+    def entry(value):
+        if not isinstance(value, dict): return
+        name = value.get("name", value.get("lora", value.get("lora_name", "")))
+        if not isinstance(name, str) or not name.strip() or len(name) > 4096: return
+        active = value.get("active", value.get("on", value.get("enabled", True)))
+        off = active is False or active == 0 or (isinstance(active, str) and active.lower() in ("false", "off", "0"))
+        (disabled if off else enabled).add(name.strip())
+    def stack(value, depth=0):
+        if depth > 8: return
+        if isinstance(value, str):
+            if len(value) > 2_000_000: return
+            try: value = json.loads(value)
+            except (ValueError, TypeError): return
+        if isinstance(value, dict):
+            if "__value__" in value: stack(value["__value__"], depth+1)
+            else: entry(value)
+        elif isinstance(value, list):
+            for item in value[:10000]:
+                if isinstance(item, dict): entry(item)
+                elif isinstance(item, (list, str)): stack(item, depth+1)
+    def node(kind, inputs, widgets=None, active=True):
+        widgets = widgets if isinstance(widgets, list) else []
+        target = enabled if active else disabled
+        for field in ("ckpt_name", "lora_name", "vae_name", "unet_name", "clip_name", "clip_name1", "clip_name2", "clip_name3", "model_name"):
+            name = inputs.get(field)
+            if isinstance(name, str) and name.strip() and len(name) < 4096: target.add(name.strip())
+        if "lora" in str(kind).lower():
+            before = set(enabled)
+            for field in ("loras", "lora_stack"):
+                if field in inputs: stack(inputs[field])
+            for field, value in inputs.items():
+                if str(field).startswith("lora_") and isinstance(value, dict): entry(value)
+            if widgets is not None:
+                for widget in widgets if isinstance(widgets, list) else []:
+                    if isinstance(widget, (dict, list)): stack(widget)
+                    elif isinstance(widget, str) and widget.lstrip().startswith(("{", "[")): stack(widget)
+            if not active:
+                disabled.update(enabled-before);enabled.intersection_update(before)
+        if any(part in str(kind).lower() for part in ("loader", "load", "lora", "checkpoint", "vae", "unet", "diffusion")) and not str(kind).lower().startswith(("cliptextencode", "vaedecode", "vaeencode")):
+            for value in widgets or []:
+                if isinstance(value, str) and len(value) < 4096 and not any(c in value for c in ("\n", "\r")) and "://" not in value and value.lower().endswith(WEIGHT_SUFFIXES): target.add(value)
+    for value in list(graph.values())[:10000]:
+        inputs = value.get("inputs") or {}
+        if isinstance(inputs, dict): node(value.get("class_type", ""), inputs)
+    for value in (workflow.get("nodes") or [])[:10000] if isinstance(workflow, dict) and isinstance(workflow.get("nodes"), list) else []:
+        if not isinstance(value, dict) or str(value.get("id")) in graph: continue
+        node(value.get("type", ""), {}, value.get("widgets_values") or [], value.get("mode", 0) not in (2, 4))
+    return {"models": sorted(enabled), "disabled_models": sorted(disabled-enabled)}

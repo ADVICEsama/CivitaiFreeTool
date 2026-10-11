@@ -741,7 +741,7 @@ function ok(name) { passed++; console.log('OK ' + name); }
     await mode.selectOption('window');await page.waitForFunction(()=>window.fixtureCfg.ui_mode==='window');assert.equal(await page.locator('[data-key=browser_fallback_enabled]').isChecked(),true);ok('切回软件窗口仍保留默认开启的浏览器失败兜底');
     const unresolvedIcons=await page.evaluate(()=>Array.from(document.querySelectorAll('svg.ic use')).map(e=>e.getAttribute('href')).filter(ref=>!document.querySelector(ref)));
     assert.deepEqual(unresolvedIcons,[]); ok('全部可见与动态图标均有 sprite 定义');
-    assert.deepEqual(errors,[]);assert.equal(await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='log_ui_error').length),0); ok('无前端异常');
+    assert.deepEqual(errors,[]);assert.equal(await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='log_ui_error').length),0,JSON.stringify(await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='log_ui_error')))); ok('无前端异常');
     // 当前模型立即识别：单次点击、页内进度、不触发批量 rp_start。
     await page.evaluate(()=>{switchPage('models');state.cfg.shortcuts_enabled=false;state.models=state.display=Array.from({length:3},(_,i)=>({path:'D:/Fixture/command'+i+'.safetensors',name:'command'+i+'.safetensors',civitai_name:'Command model '+i,author:'Fixture',type:'LoRA'}));window.fixtureScanRows=state.models.slice();state.mmView='list';state.mmChecked.clear();state.mmSel.clear();$('#mmFilter').value='';state.mmBaseF=state.mmFolderF=state.mmAuthorF=state.mmStF='';state.mmUpdOnly=false;setModelListSize(3,false);renderMm();});
     await page.evaluate(()=>showModelDetail(state.models[0].path));const singlePath=await page.evaluate(()=>state.models[0].path),batchBefore=await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='rp_start').length);

@@ -1,11 +1,11 @@
 {
   "manifest_version": 3,
   "name": "CivitaiFreeTool 一键下载",
-  "version": "1.2.0",
-  "description": "点击图标弹出确认窗，一键把当前 Civitai 模型页下载到 CivitaiFreeTool（需先打开 CivitaiFreeTool.exe）",
+  "version": "1.3.0",
+  "description": "发送当前 C 站模型页，或勾选全部浏览器窗口的模型标签页，批量提交到 CivitaiFreeTool",
   "permissions": [
     "tabs",
-    "scripting",
+    "storage",
     "contextMenus"
   ],
   "host_permissions": [

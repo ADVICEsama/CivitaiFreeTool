@@ -97,7 +97,7 @@ class DownloadSelectionTests(unittest.TestCase):
         with self.assertRaises(civitai_api.CivitaiError):civitai_api.CivitaiAPI().file_download_url({'files':FILES},{'downloadUrl':'https://evil.example/file'})
 
     def api(self, policy):
-        a=webui.Api.__new__(webui.Api);a.cfg={**config.DEFAULTS,'multi_file_download':policy,'translate_filename':False};a.api=civitai_api.CivitaiAPI();a.api.get_model_version=Mock(return_value={'id':123,'name':'v1','files':copy.deepcopy(FILES)});a.api.get_model=Mock(return_value={'id':456,'name':'Demo'});a.dl=Mock();a._file_choices=FileChoiceBroker();return a
+        a=webui.Api.__new__(webui.Api);a.cfg={**config.DEFAULTS,'api_key':'synthetic-test-key','multi_file_download':policy,'translate_filename':False};a.api=civitai_api.CivitaiAPI();a.api.get_model_version=Mock(return_value={'id':123,'name':'v1','files':copy.deepcopy(FILES)});a.api.get_model=Mock(return_value={'id':456,'name':'Demo'});a.dl=Mock();a._file_choices=FileChoiceBroker();return a
 
     def test_enqueue_all_file_urls_hashes_and_names_unique(self):
         a=self.api('all');r=a._enqueue_one('https://civitai.red/models/456?modelVersionId=123')

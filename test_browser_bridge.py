@@ -143,7 +143,7 @@ class SyncEnqueueTest(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         root = self.temp.name
-        cfg = dict(config.DEFAULTS, download_dir=root, models_dir=root, models_dirs=[root],
+        cfg = dict(config.DEFAULTS, api_key="synthetic-test-key", download_dir=root, models_dir=root, models_dirs=[root],
                    download_target_dir="", download_cover=False, metadata_format="both")
         for item in (patch.object(config,"APP_DIR",root),patch.object(config,"TASKS_PATH",os.path.join(root,"tasks.json")),
                      patch.object(config,"HISTORY_PATH",os.path.join(root,"history.json")),patch.object(config,"load",return_value=cfg),
