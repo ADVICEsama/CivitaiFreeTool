@@ -13,7 +13,7 @@ import time
 
 import webview
 
-APP_VERSION = "2.6.25"
+APP_VERSION = "2.6.26"
 
 from functools import wraps
 

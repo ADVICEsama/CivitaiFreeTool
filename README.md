@@ -2,11 +2,13 @@
 
 > 免费的 Civitai / HuggingFace 模型下载与本地模型管理工作台。
 
-![Version](https://img.shields.io/badge/version-2.6.25-blue) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-orange) ![CI](https://github.com/ADVICEsama/CivitaiFreeTool/workflows/tests/badge.svg)
+![Version](https://img.shields.io/badge/version-2.6.26-blue) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-orange) ![CI](https://github.com/ADVICEsama/CivitaiFreeTool/workflows/tests/badge.svg)
 
 [下载最新版](https://github.com/ADVICEsama/CivitaiFreeTool/releases/latest) · [更新日志](CHANGELOG.md) · [问题反馈](https://github.com/ADVICEsama/CivitaiFreeTool/issues) · [Linux / macOS](LINUX.md)
 
 ## 当前工作台
+
+- **文件夹显示 / 排除（v2.6.26）**：首次默认显示全部。点父文件夹会统一显示或排除整个子树，覆盖之前的子目录选择；再单独点子目录可覆盖父目录。只想显示 A/B：先排除 A，再显示 B。勾选 A 后排除 B：只排除 B 子树，其它内容保留。只筛选显示，不移动 / 删除文件；选择立即保存。
 
 - **多文件下载安全**：正确列出 Diffusion Model 等权重变体，弹窗可见后才开始 10 秒默认选择；显式 fileId 不退回第一项。下载列表右键按任务 ID 移除，停止写入后清理所属 .part，模型/历史保留，退出后继续未完成清理，不扫除旧历史断点。
 

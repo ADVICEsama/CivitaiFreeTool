@@ -2875,22 +2875,34 @@ function fmDirectoryVisible(path) {
   while(key){if(Object.hasOwn(choices,key))return choices[key];key=key.includes('/')?key.slice(0,key.lastIndexOf('/')):'';}
   return true;
 }
+// Parent clicks are explicit subtree operations, not merely inherited defaults.
+function fmSubtreeChoices(path, visible) {
+  const normal=p=>String(p).replace(/\\/g,'/').replace(/^\/+|\/+$/g,'').toLowerCase();
+  const key=normal(path),choices={...(foldersState.visibility||{})};
+  if(!key)return choices;
+  const inside=p=>normal(p)===key||normal(p).startsWith(key+'/');
+  // Reset old descendant overrides too, even if that folder is no longer in the tree.
+  for(const p of Object.keys(choices))if(inside(p))choices[p]=visible;
+  choices[key]=visible;
+  (function walk(nodes){for(const node of nodes||[]){if(inside(node.path))choices[normal(node.path)]=visible;walk(node.children);}})(foldersState.tree);
+  return choices;
+}
 function fmTreeHtml(tree, depth) {
   return (tree||[]).map(n=>{
     const visible=fmDirectoryVisible(n.path);
     return '<div class="fm-item" role="checkbox" tabindex="0" aria-checked="'+visible+'" data-path="'+esc(n.path)+'" style="padding-left:'+(12+depth*18)+'px">'+
       '<input type="checkbox" tabindex="-1" aria-hidden="true"'+(visible?' checked':'')+'/>'+_icon('folder')+'<span class="fm-name">'+esc(n.name)+'</span>'+
-      '<span class="fm-state '+(visible?'on':'off')+'">'+(visible?'显示':'隐藏')+'</span></div>'+fmTreeHtml(n.children,depth+1);
+      '<span class="fm-state '+(visible?'on':'off')+'">'+(visible?'显示':'排除')+'</span></div>'+fmTreeHtml(n.children,depth+1);
   }).join('');
 }
 function fmRender() {
   const panel=$('#mmFoldersPanel');if(!foldersState)return;
   const showRoot=foldersState.show_root;
   panel.innerHTML='<div class="fm-title">模型文件夹显示</div><div class="fm-title">'+
-    (foldersState.include_subfolders===false?'仅显示所勾选文件夹直属的模型，不自动包含子目录。':'勾选包含子目录；子目录选择优先。隐藏 A 后仍可单独勾选 A/B；勾选 A、隐藏 B 即排除 B。')+
-    ' 不移动或删除文件。</div><div class="fm-toolbar"><button class="btn btn-tiny" id="fmAll">全部显示</button><button class="btn btn-tiny" id="fmNone">全部隐藏</button></div>'+
+    (foldersState.include_subfolders===false?'直属模式：点击父文件夹也会同步勾选或排除已列出的子文件夹。':'默认全部显示。点击父文件夹同步切换整个子树，再单独调整子文件夹。想只显示 A/B：先排除 A，再显示 A/B。显示 A、排除 B：仅排除 B 子树。')+
+    ' 不移动或删除文件。</div><div class="fm-toolbar"><button class="btn btn-tiny" id="fmAll">全部显示</button><button class="btn btn-tiny" id="fmNone">全部排除</button></div>'+
     '<div class="fm-item fm-top" role="checkbox" tabindex="0" aria-checked="'+showRoot+'" data-path="__root__"><input type="checkbox" tabindex="-1" aria-hidden="true"'+(showRoot?' checked':'')+'/>'+
-    '<span class="fm-name">根目录下的模型</span><span class="fm-state '+(showRoot?'on':'off')+'">'+(showRoot?'显示':'隐藏')+'</span></div><hr class="fp-sep"/>'+fmTreeHtml(foldersState.tree||[],0);
+    '<span class="fm-name">根目录下的模型</span><span class="fm-state '+(showRoot?'on':'off')+'">'+(showRoot?'显示':'排除')+'</span></div><hr class="fp-sep"/>'+fmTreeHtml(foldersState.tree||[],0);
 }
 // 独立弹层：锁定工具栏的 overflow 不再裁切文件夹菜单。
 let fmAnchor = null, fmRequest = 0, fmSaving = false;
@@ -2927,6 +2939,8 @@ async function fmSave(visibility, showRoot) {
     if (saved !== true) throw new Error("save_folders failed");
     foldersState.hidden = nextHidden; foldersState.visibility=visibility; foldersState.show_root = showRoot;
     Object.assign(state.cfg,{hidden_model_folders:nextHidden,model_folder_visibility:{...visibility},show_root_models:showRoot});
+    // A changed folder scope must not leave hidden models selected while the scan refreshes.
+    state.mmChecked.clear();state.mmSel.clear();state.mmLastSel=-1;renderMm();
     fmRender(); fmPosition();
     if(focusedPath)panel.querySelector('.fm-item[data-path="'+CSS.escape(focusedPath)+'"]')?.focus();
     setStatus("文件夹显示已保存（仅筛选显示，不移动或删除模型）");
@@ -2947,8 +2961,7 @@ $("#mmFoldersPanel").addEventListener("click", (e) => {
   const item = e.target.closest(".fm-item");
   if (!item || !foldersState) return;
   e.preventDefault();
-  const path=item.dataset.path, choices={...(foldersState.visibility||{})};
-  if(path!=="__root__")choices[path.replace(/\\/g,'/').toLowerCase()]=!fmDirectoryVisible(path);
+  const path=item.dataset.path, choices=path==="__root__"?{...(foldersState.visibility||{})}:fmSubtreeChoices(path,!fmDirectoryVisible(path));
   fmSave(choices,path==="__root__"?!foldersState.show_root:foldersState.show_root);
 });
 $("#mmFoldersPanel").addEventListener("keydown",e=>{if((e.key===' '||e.key==='Enter')&&e.target.matches('.fm-item')){e.preventDefault();e.target.click();}});

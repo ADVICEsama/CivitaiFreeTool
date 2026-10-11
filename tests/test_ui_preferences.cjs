@@ -636,9 +636,9 @@ function ok(name) { passed++; console.log('OK ' + name); }
     assert.equal(await page.evaluate(()=>$('#mmFoldersPanel').parentElement===document.body),true);ok('文件夹显隐脱离固定工具栏，不被 overflow 裁切');
     assert.equal(await page.locator('#mmFolders').getAttribute('aria-expanded'),'true');
     await page.locator('#mmFoldersPanel .fm-item[data-path="分类 0"]').click();
-    await page.waitForFunction(()=>window.fixtureCfg.hidden_model_folders?.includes('分类 0'));assert.equal(await page.locator('#mmFoldersPanel .fm-item[data-path="分类 0"] .fm-state').innerText(),'隐藏');ok('点击分类保存隐藏状态，菜单保持展开');
+    await page.waitForFunction(()=>window.fixtureCfg.hidden_model_folders?.includes('分类 0'));assert.equal(await page.locator('#mmFoldersPanel .fm-item[data-path="分类 0"] .fm-state').innerText(),'排除');ok('点击分类保存隐藏状态，菜单保持展开');
     await page.keyboard.press('Escape');assert.equal(await page.locator('#mmFoldersPanel').isVisible(),false);ok('Escape 关闭文件夹菜单');
-    await page.locator('#mmFolders').click();await page.locator('#fmAll').waitFor();assert.equal(await page.locator('#mmFoldersPanel .fm-item[data-path="分类 0"] .fm-state').innerText(),'隐藏');ok('重开读取已保存的文件夹显隐');
+    await page.locator('#mmFolders').click();await page.locator('#fmAll').waitFor();assert.equal(await page.locator('#mmFoldersPanel .fm-item[data-path="分类 0"] .fm-state').innerText(),'排除');ok('重开读取已保存的文件夹显隐');
     await page.locator('#mmFoldersPanel .fm-item[data-path="分类 0"]').click();await page.waitForFunction(()=>window.fixtureCfg.hidden_model_folders?.length===0);ok('隐藏的分类可以再次恢复显示');
     await page.locator('#fmNone').click();await page.waitForFunction(()=>window.fixtureCfg.show_root_models===false);assert.equal(await page.evaluate(()=>window.fixtureCfg.hidden_model_folders.length),160);ok('全部隐藏包含根目录和所有子文件夹');
     await page.locator('#fmAll').click();await page.waitForFunction(()=>window.fixtureCfg.show_root_models===true && window.fixtureCfg.hidden_model_folders.length===0);ok('全部显示恢复根目录和全部子文件夹');
