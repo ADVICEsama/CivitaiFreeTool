@@ -13,6 +13,10 @@ class PerformanceTests(unittest.TestCase):
  def test_profile_normalization_retains_old_explicit_preferences(self):
   c={'endfield_parallax':False,'effects_fps_limit':24,'performance_profile':'bad','performance_prompt_version':'bad','ui_animations':False}
   config.normalize_ui_preferences(c);self.assertEqual(c['performance_profile'],'custom');self.assertEqual(c['performance_prompt_version'],0);self.assertFalse(c['ui_animations']);self.assertFalse(c['endfield_parallax']);self.assertEqual(c['effects_fps_limit'],24)
+ def test_four_profiles_and_legacy_aliases(self):
+  for old,new in [('full','high'),('static','low'),('extreme','extreme'),('high','high'),('low','low')]:
+   c={'performance_profile':old,'effects_fps_limit':0};config.normalize_ui_preferences(c);self.assertEqual(c['performance_profile'],new);self.assertEqual(c['effects_fps_limit'],0)
+  c={'performance_profile':[]};config.normalize_ui_preferences(c);self.assertEqual(c['performance_profile'],'custom')
  def test_native_not_ready_does_not_start_drag(self):
   self.assertFalse(WindowAppearance(SimpleNamespace(native=None)).begin_move()['ok'])
 if __name__=='__main__':unittest.main()

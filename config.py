@@ -286,7 +286,9 @@ def normalize_model_card_styles(value):
 
 def normalize_ui_preferences(cfg):
     normalize_theme_preferences(cfg)
-    if cfg.get("performance_profile") not in ("full", "balanced", "static", "custom"): cfg["performance_profile"] = "custom"
+    profile = cfg.get("performance_profile")
+    cfg["performance_profile"] = {"full": "high", "static": "low"}.get(profile, profile) if isinstance(profile, str) else "custom"
+    if cfg.get("performance_profile") not in ("extreme", "high", "balanced", "low", "custom"): cfg["performance_profile"] = "custom"
     cfg["pause_effects_while_dragging"] = cfg.get("pause_effects_while_dragging", True) is not False
     cfg["ui_animations"] = cfg.get("ui_animations", True) is not False
     try: cfg["performance_prompt_version"] = max(0, min(1000, int(cfg.get("performance_prompt_version", 0))))

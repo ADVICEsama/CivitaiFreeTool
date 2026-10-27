@@ -4276,7 +4276,7 @@ const SETTING_FIELDS = [
   ["界面", "window_wait_seconds", "窗口模式等待秒数", "number"],
   ["界面", "browser_fallback_enabled", "软件窗口失败时自动浏览器兜底", "bool"],
   ["界面", "cache_detail_images", "缓存详情在线缩略图", "bool"],
-  ["界面", "performance_profile", "性能档位", "select", [["custom","自定义（保留当前设置）"],["full","完整动画"],["balanced","均衡 · 保留动画"],["static","静态省电 · 关闭界面动画"]]],
+  ["界面", "performance_profile", "性能档位", "select", [["custom","自定义（保留当前设置）"],["extreme","极致 · 跟随屏幕"],["high","高 · 60 FPS"],["balanced","均衡 · 30 FPS"],["low","低 · 关闭界面动画"]]],
   ["界面", "pause_effects_while_dragging", "拖动/缩放窗口时暂缓背景绘制（松手恢复）", "bool"],
   ["界面", "ui_animations", "界面动画", "bool"],
   ["界面", "show_fps", "左下角显示帧数", "bool"],

@@ -53,7 +53,7 @@
   if(typeof ResizeObserver==='function'){selectionResize=new ResizeObserver(()=>syncSelection(false));selectionResize.observe(nav);}
   nav.addEventListener('scroll',()=>{if(selectionNav===nav)syncSelection(false);},{passive:true});
  }
- const categoryIcons={appearance:['M2 3h20v14H2z M9 18h6v2h4v2H5v-2h4z'],shortcuts:['M8 1h8v10H8z M0 13h7v10H0z M8 13h8v10H8z M17 13h7v10h-7z']};
+ const categoryIcons={performance:['M5 5h14v14H5z M8 8v8h8V8z M8 0h3v4H8z M14 0h3v4h-3z M8 20h3v4H8z M14 20h3v4h-3z M0 8h4v3H0z M0 14h4v3H0z M20 8h4v3h-4z M20 14h4v3h-4z'],appearance:['M2 3h20v14H2z M9 18h6v2h4v2H5v-2h4z'],shortcuts:['M8 1h8v10H8z M0 13h7v10H0z M8 13h8v10H8z M17 13h7v10h-7z']};
  function refreshNavigation(animate=false){
   const nav=form?.querySelector('.settings-nav');if(!nav)return;
   nav.setAttribute('aria-orientation',active()?'horizontal':'vertical');

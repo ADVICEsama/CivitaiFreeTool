@@ -4,6 +4,7 @@ const SETTINGS_CATEGORIES = [
   { id: "general", label: "目录与账号", icon: "folder", description: "先配置存放位置和账号，其余选项可保持默认。" },
   { id: "download", label: "下载行为", icon: "download", description: "选择下载完成后生成哪些文件，以及旧版本如何处理。" },
   { id: "appearance", label: "外观与布局", icon: "sparkles", description: "配色、信息密度和路径显示可即时预览并保存。主题切换后请点保存。" },
+  { id: "performance", label: "性能", icon: "settings", description: "四档性能、动画与绘制帧率、GPU 兼容性及缓存；按设备调整，不改变模型文件。" },
   { id: "shortcuts", label: "快捷键", icon: "settings", description: "默认关闭。点击按钮绑定，修改后可单项重置到初始；Esc / 退格清除，删除模型仍需确认。" },
   { id: "network", label: "网络与代理", icon: "globe", description: "网络正常时无需改动。关闭证书验证会降低连接安全性。" },
   { id: "translation", label: "翻译服务", icon: "file", description: "配置百度翻译账号，决定简介和文件名是否汉化。" },
@@ -11,6 +12,7 @@ const SETTINGS_CATEGORIES = [
   { id: "advanced", label: "高级与启动", icon: "settings", description: "启动、窗口及兼容性选项。不确定用途时建议保留默认值。" },
   { id: "maintenance", label: "维护与帮助", icon: "shield", description: "缓存清理、日志和使用引导。清理缓存不删除模型主文件。" },
 ];
+const PERFORMANCE_SETTING_KEYS = new Set(["performance_profile","ui_animations","pause_effects_while_dragging","endfield_parallax","show_fps","effects_fps_limit","webview_disable_gpu","cache_detail_images","cache_original_images","gallery_cache_mb","download_hud_motion","ambient_bg","model_pagination","model_page_size"]);
 const ADVANCED_SETTING_KEYS = new Set(["ui_mode", "window_wait_seconds", "browser_fallback_enabled", "close_action", "webview_disable_gpu", "tray_icon", "exit_when_page_closed", "default_page", "confirm_buttons_flip", "rename_menu_default"]);
 const WORKBENCH_SETTING_HELP = {
   download_hud_enabled: "独立桌面小窗，不抢焦点。关闭小窗不会停止下载；重新显示请关闭再开启此项。当前需要 Windows 软件窗口模式。",
@@ -49,7 +51,7 @@ const WORKBENCH_SETTING_HELP = {
   masonry_card_width: "140–420 px；瀑布流采用原宽度，方格按比例缩小。模型页滑杆或 Alt + 滚轮都可调整，普通滚轮仍用于浏览模型。",
   folder_picker_show_paths: "仅控制分类选择窗口。默认只显示文件夹名字，也可在该窗口顶部临时切换并记住。",
   cache_detail_images: "把详情中已加载的在线缩略图缓存在本机，重复打开优先读取缓存。不下载原图；关闭后不写新缓存。",
-  performance_profile: "完整保留原有动效；均衡保留动效并限制背景帧率、拖动期间暂缓背景；静态关闭界面动效。只改界面，不改变下载或模型设置，立即保存。",
+  performance_profile: "极致跟随屏幕刷新率；高保留动画、背景 60 FPS；均衡保留动画、背景 30 FPS；低关闭界面动画。只改界面，不改变下载或模型设置，立即保存。",
   ui_animations: "控制界面 CSS 动画、窗口入场、文字滚动和工作流流动光点；不暂停视频或下载。",
   pause_effects_while_dragging: "仅在 Windows 正在拖动或缩放软件窗口时暂缓背景绘制和装饰动画，松手后恢复；普通浏览的动画不变。",
   show_fps: "在左下角显示 UI 动画帧率与地图实际绘制帧率。测量的是当前页面回调/绘制频率，不是 GPU 使用率；关闭后停止采样。",
@@ -67,6 +69,7 @@ let historyRenderSignature="";
 const historyThumbCache=new Map(),historyThumbRequests=new Map();
 
 function settingCategory(key, oldGroup) {
+  if(PERFORMANCE_SETTING_KEYS.has(key))return "performance";
   if(key.startsWith("shortcuts_"))return "shortcuts";
   if (ADVANCED_SETTING_KEYS.has(key)) return "advanced";
   return ({ "基本": "general", "下载": "download", "界面": "appearance", "网络": "network", "翻译": "translation" })[oldGroup] || "advanced";
@@ -74,7 +77,7 @@ function settingCategory(key, oldGroup) {
 // Fallback for older/sparse configs as well as the isolated preview. Keep in sync with config.DEFAULTS.
 const SETTING_NUMBER_DEFAULTS=Object.freeze({max_concurrent_downloads:3,download_timeout:300,download_retry:5,hash_threads:4,name_scroll_speed:70,name_scroll_start_pause:350,name_scroll_end_pause:250,window_wait_seconds:30,effects_fps_limit:60,gallery_cache_mb:1024});
 function settingRow(key, label, type, opts, tip) {
-  const value = state.cfg[key] ?? ({...SETTING_NUMBER_DEFAULTS,ui_text_size:"standard",window_appearance:"theme"})[key];
+  const value = state.cfg[key] ?? ({...SETTING_NUMBER_DEFAULTS,ui_text_size:"standard",window_appearance:"theme",performance_profile:"custom",ui_animations:true,pause_effects_while_dragging:true})[key];
   const numberDefault=SETTING_NUMBER_DEFAULTS[key];
   const numericHint=type==='number'&&numberDefault!==undefined?' data-default="'+numberDefault+'" placeholder="默认 '+numberDefault+'"':'';
   const id = "setting-" + key;
@@ -134,7 +137,7 @@ function buildWorkbenchSettings() {
     grouped[settingCategory(key, oldGroup)].push(settingRow(key, label, type, opts, WORKBENCH_SETTING_HELP[key] || SETTING_TIPS[key]));
   }
   grouped.general.push('<div class="setting-row storage-row" data-setting-search="数据 储存 存储 配置 历史 缓存 exe 位置 directory"><div class="setting-copy"><label for="storageNewPath">软件信息储存位置</label><p>默认在 EXE 旁。可迁移配置、任务、历史、图文缓存等软件数据；模型文件不会移动。原数据保留。目录含账号配置，请使用个人专用目录。</p><p id="storageCurrent">正在读取…</p><p id="storageWarning" role="status"></p></div><div class="setting-control"><input class="input" id="storageNewPath" placeholder="输入完整的专用目录路径" aria-label="软件数据新目录"/><div class="storage-actions"><button type="button" class="btn" id="storagePick">'+_icon('folder')+'选择目录</button><button type="button" class="btn" id="storageSuggested">个人数据目录</button><button type="button" class="btn" id="storageDefault">EXE 旁</button><button type="button" class="btn btn-primary" id="storageMigrate">'+_icon('check')+'迁移并使用</button></div><p id="storageResult" role="status"></p></div></div>');
-  grouped.appearance.push('<div class="setting-row"><div class="setting-copy"><label>已查看原图缓存</label><p>仅删除软件原图与生成信息缓存，不删除模型或已保存图片。</p></div><div class="setting-control"><button class="btn" id="clearGalleryCache" type="button">清理原图缓存</button></div></div>');
+  grouped.performance.push('<div class="setting-row"><div class="setting-copy"><label>已查看原图缓存</label><p>仅删除软件原图与生成信息缓存，不删除模型或已保存图片。</p></div><div class="setting-control"><button class="btn" id="clearGalleryCache" type="button">清理原图缓存</button></div></div>');
   grouped.advanced.push('<div class="setting-row" data-setting-search="浏览器 打开 软件页面 手动"><div class="setting-copy"><label>临时打开浏览器页面</label><p>只在本次另开同一后台的网页，不改长期启动方式。以后都用浏览器，请选择“启动界面 → 浏览器启动”。</p></div><div class="setting-control"><button type="button" class="btn" id="openBrowserPage">'+_icon('external')+'仅本次打开浏览器</button></div></div>');
   grouped.organize.push(settingRow("target_env", "目标部署环境", "select", [["", "请先选择环境"], ["webui", "WebUI / Forge"], ["comfyui", "ComfyUI"]], WORKBENCH_SETTING_HELP.target_env));
   grouped.organize.push(settingRow("organize_mode", "整理方式", "select", [["manual", "手动选文件夹（推荐新手）"], ["civitai", "按 C 站标签自动分类"], ["rules", "按关键词规则分类"]], WORKBENCH_SETTING_HELP.organize_mode));
@@ -143,6 +146,8 @@ function buildWorkbenchSettings() {
   const appearance = '<div class="appearance-preview"><span class="appearance-swatch"></span><span id="appearancePreview">实时预览</span><button class="btn" type="button" id="resetAppearance">恢复外观默认</button></div>';
   const translation = '<div class="bd-links"><h3>还没有百度翻译账号？</h3>' + BAIDU_LINKS.map(l => '<button type="button" class="btn bd-link" data-url="' + esc(l.url) + '">' + _icon("external") + '<span class="bd-link-label">' + esc(l.label) + '</span><span class="bd-link-desc">' + esc(l.desc) + '</span></button>').join("") + '</div>';
   const maintenance = '<div class="maintenance-grid"><div class="setting-row maintenance-item" data-setting-search="图片缓存 清理 删除 images"><h3>图片缓存</h3><p>仅删除模型旁的 .images 图片集。不会删除模型主文件和独立封面。执行前会列出范围并确认。</p><button class="btn" id="btnCleanImgCache">' + _icon("trash") + '清理图片缓存</button></div><div class="setting-row maintenance-item" data-setting-search="排查 日志 入门 帮助 引导"><h3>排查与入门</h3><p>遇到问题先查看日志；首次使用可重新打开配置引导。</p><button class="btn" type="button" data-workbench-proxy="openLogs">' + _icon("folder") + '打开日志</button><button class="btn" type="button" data-workbench-proxy="btnOnboarding">' + _icon("info") + '使用引导</button></div></div>';
+  const performanceOrder=[...PERFORMANCE_SETTING_KEYS];
+  grouped.performance.sort((a,b)=>{const rank=html=>{const key=html.match(/data-setting-key="([^"]+)"/)?.[1],i=performanceOrder.indexOf(key);return i<0?999:i;};return rank(a)-rank(b);});
   const form = $("#settingsForm");
   form.innerHTML = '<div class="settings-search"><label for="settingsSearch">' + _icon("search") + '</label><input class="input" id="settingsSearch" type="search" placeholder="搜索设置，例如：代理、路径、翻译" aria-label="搜索设置"/><span id="settingsSearchCount" aria-live="polite"></span><span id="settingsDirty" role="status">已保存</span></div><div class="settings-workspace"><div class="settings-nav" role="tablist" aria-label="设置分类" aria-orientation="vertical">' + SETTINGS_CATEGORIES.map(c => '<button class="settings-tab" type="button" role="tab" id="settings-tab-' + c.id + '" aria-controls="settings-' + c.id + '" data-settings-category="' + c.id + '">' + _icon(c.icon) + '<span>' + c.label + '</span></button>').join("") + '</div><div class="settings-panels">' + SETTINGS_CATEGORIES.map(c => '<section class="settings-category" role="tabpanel" id="settings-' + c.id + '" data-settings-panel="' + c.id + '" aria-labelledby="settings-tab-' + c.id + '"><header><h3>' + c.label + '</h3><p>' + c.description + '</p></header>' +
     (c.id === "appearance" ? appearance : "") + (c.id === "organize" ? '<div class="organize-layout"><div>' : "") + grouped[c.id].join("") + (c.id === "organize" ? '</div>' + guide + '</div>' : "") + (c.id === "translation" ? translation : "") + (c.id === "maintenance" ? maintenance : "") + '</section>').join("") + '<p class="settings-empty" id="settingsEmpty" hidden>没有匹配的设置，试试“下载”“路径”或“主题”。</p></div></div>';

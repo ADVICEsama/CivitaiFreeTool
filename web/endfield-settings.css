@@ -9,7 +9,7 @@ html[data-endfield=true] #settingsForm{display:flex;flex-direction:column;flex:1
 html[data-endfield=true] #settingsForm .settings-workspace{display:contents}
 /* Keep the original theme-aware category layout; only the active yellow
    instrument block uses the reference treatment. */
-html[data-endfield=true] #settingsForm .settings-nav{order:-2;position:relative;display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:0;flex:none;align-self:stretch;background:repeating-linear-gradient(130deg,transparent 0 3px,color-mix(in srgb,var(--text) 4%,transparent) 3px 4px);border-bottom:1px solid var(--border);margin:0 0 12px;isolation:isolate}
+html[data-endfield=true] #settingsForm .settings-nav{order:-2;position:relative;display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:0;flex:none;align-self:stretch;background:repeating-linear-gradient(130deg,transparent 0 3px,color-mix(in srgb,var(--text) 4%,transparent) 3px 4px);border-bottom:1px solid var(--border);margin:0 0 12px;isolation:isolate}
 html[data-endfield=true] #settingsForm .settings-tab{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:7px;min-height:77px;padding:9px 3px;position:relative;isolation:isolate;z-index:1;font-size:11px;color:var(--text-dim);border:0!important}
 html[data-endfield=true] #settingsForm .settings-tab .ic{width:26px;height:26px;stroke-width:2.3;color:inherit}
 html[data-endfield=true] #settingsForm .settings-tab.active{--ef-tab-cut:10px;background:#111713;color:#171c16;clip-path:polygon(10px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 10px);box-shadow:none}
