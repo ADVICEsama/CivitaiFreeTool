@@ -255,6 +255,8 @@ Mica / Mica Alt 是 Windows 原生**壁纸色调材质**，并不透视其他窗
 
 ## Chrome / Firefox 扩展
 
+**扩展 1.3.1**：弹窗更新为终末地风格，支持跟随系统亮暗配色；发送功能与权限不变。下载：[插件 1.3.1 发布页](https://github.com/ADVICEsama/CivitaiFreeTool/releases/tag/extension-v1.3.1)。
+
 Release 同时附带两款扩展 ZIP，`manifest.json` 在压缩包根目录。
 
 - **Chrome / Edge**：解压 Chrome 包，在扩展管理页启用开发者模式，加载已解压目录。

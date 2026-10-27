@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html lang="zh-CN"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><link rel="stylesheet" href="popup.css"/></head>
 <body><main class="card">
-<header><img src="icons/icon32.png" alt=""/><div><strong>CivitaiFreeTool</strong><small>一键发送 · 标签页批量下载</small></div><span id="connection" role="status">连接中…</span></header>
-<nav aria-label="发送模式"><button id="modeCurrent" class="active" aria-pressed="true">当前页面</button><button id="modeBatch" aria-pressed="false">批量标签页</button></nav>
-<section id="currentPanel"><h2 id="modelName">正在读取…</h2><p id="modelUrl" class="muted"></p><button id="sendCurrent" class="primary" disabled>发送当前页到 CFT</button></section>
-<section id="batchPanel" hidden><div class="tools"><label>范围 <select id="scope"><option value="all">所有浏览器窗口</option><option value="current">当前窗口</option></select></label><button id="refresh">刷新</button></div><input id="search" type="search" placeholder="搜索模型名或 ID" aria-label="搜索模型标签页"/><div class="tools"><label><input id="selectAll" type="checkbox"/> 全选当前列表</label><span id="selectionCount"></span></div><div id="tabList" aria-label="可发送的模型标签页"></div><p class="muted" id="tabSummary"></p><button id="sendBatch" class="primary" disabled>发送选中到 CFT</button></section>
+<header class="brand"><img src="icons/icon32.png" alt=""/><div class="brand-copy"><small>CFT / MODEL TRANSFER</small><strong>CivitaiFreeTool</strong></div><span id="connection" role="status">连接中…</span></header>
+<div class="hero"><div class="hero-eyebrow">// LINK TRANSMISSION <span>01 / CFT</span></div><h1>模型发送台<span aria-hidden="true">↗</span></h1><p>将 C 站模型链接发送到工作台</p></div>
+<nav aria-label="发送模式"><button id="modeCurrent" class="active" aria-pressed="true"><span class="nav-number">01</span>当前页面</button><button id="modeBatch" aria-pressed="false"><span class="nav-number">02</span>批量标签页</button></nav>
+<section id="currentPanel"><div class="section-label"><span>当前模型</span><small>CURRENT / MODEL</small></div><div class="current-model"><div class="model-mark" aria-hidden="true">↗</div><div class="current-copy"><h2 id="modelName">正在读取…</h2><p id="modelUrl" class="muted"></p></div></div><button id="sendCurrent" class="primary" disabled>发送当前页到 CFT</button></section>
+<section id="batchPanel" hidden><div class="section-label"><span>模型标签页</span><small>TRANSFER / LIST</small></div><div class="tools"><label>范围 <select id="scope"><option value="all">所有浏览器窗口</option><option value="current">当前窗口</option></select></label><button id="refresh">刷新</button></div><input id="search" type="search" placeholder="搜索模型名或 ID" aria-label="搜索模型标签页"/><div class="tools selection-tools"><label><input id="selectAll" type="checkbox"/> 全选当前列表</label><span id="selectionCount"></span></div><div id="tabList" aria-label="可发送的模型标签页"></div><p class="muted" id="tabSummary"></p><button id="sendBatch" class="primary" disabled>发送选中到 CFT</button></section>
 <p id="feedback" role="status" aria-live="polite"></p><details id="results" hidden><summary id="resultSummary"></summary><div id="resultList"></div></details>
 <button id="clearResults" hidden>清除提交记录（允许重新发送）</button>
-<footer>仅发送勾选的 C 站模型链接，重复页自动合并。<br/>提交后可关闭小窗；多文件选择和下载进度在 CFT 查看。</footer>
+<footer><span>仅发送勾选的 C 站模型链接，重复页自动合并。<br/>提交后可关闭小窗；多文件选择和下载进度在 CFT 查看。</span><small>CFT / 01</small></footer>
 </main><script src="tabs-common.js"></script><script src="popup.js"></script></body></html>

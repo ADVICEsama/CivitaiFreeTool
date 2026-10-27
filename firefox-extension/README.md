@@ -1,7 +1,10 @@
-# CivitaiFreeTool 扩展 1.3.0 · Firefox
+# CivitaiFreeTool 扩展 1.3.1 · Firefox
 
 ## 安装 / 更新
 本 ZIP 未签名：打开 about:debugging → 此 Firefox → 临时载入附加组件，选择 manifest.json。重启后需再次临时加载；永久安装需 Mozilla 签名。
+
+## 界面外观
+弹窗采用终末地风格，亮暗配色跟随系统；更新外观后请在扩展管理页重新加载。功能和权限不变。
 
 ## 发送当前页
 先打开 CFT（推荐 v2.6.25）并在设置填写保存 Civitai API Key。点击扩展图标，在“当前页面”确认模型标题与链接，点“发送当前页到 CFT”。多文件选择在软件内完成。
