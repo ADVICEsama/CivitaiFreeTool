@@ -37,16 +37,18 @@
   }
   const dots=[];for(let y=world.minY;y<=world.minY+world.h;y+=90)for(let x=world.minX;x<=world.minX+world.w;x+=90)dots.push([x,y,elevation(x,y)-3]);
   const routes=roads.map(([a,b])=>{const p=stations[a],q=stations[b],points=[];for(let i=0;i<=30;i++){const t=i/30,x=p.x+(q.x-p.x)*t,y=p.y+(q.y-p.y)*t;points.push([x,y,elevation(x,y)+1]);}return points;});
+  // Spatial batches retain every original segment; cull only wholly offscreen batches.
+  for(const line of lines){const tiles=new Map();for(const seg of line.segments){const key=Math.floor((seg[0]+seg[2])/800)+':'+Math.floor((seg[1]+seg[3])/800);let tile=tiles.get(key);if(!tile){tile={segments:[],minX:Infinity,maxX:-Infinity,minY:Infinity,maxY:-Infinity};tiles.set(key,tile);}tile.segments.push(seg);tile.minX=Math.min(tile.minX,seg[0],seg[2]);tile.maxX=Math.max(tile.maxX,seg[0],seg[2]);tile.minY=Math.min(tile.minY,seg[1],seg[3]);tile.maxY=Math.max(tile.maxY,seg[1],seg[3]);}line.tiles=[...tiles.values()];}
   return sharedGeometry={lines,dots,routes};
  }
- function mount(host,{strength=.23,interactive=true,flow=true,fps=60}={}){
+ function mount(host,{strength=.23,interactive=true,flow=true,fps=60,culling=true}={}){
   const canvas=document.createElement('canvas');canvas.className='ef-terrain-canvas';canvas.setAttribute('aria-hidden','true');canvas.dataset.mapStations=String(stations.length);host.append(canvas);
   const ctx=canvas.getContext('2d'),motion=matchMedia('(prefers-reduced-motion: reduce)'),scene=geometry();
   let width=0,height=0,frame=0,lastFrame=0,enabled=true,disposed=false,draws=0,x=0,y=0,tx=0,ty=0,current='',trip=null;
   let workflowDetail=false,workflowHeld=false,workflowYaw=0,workflowTilt=51;
   let camera={x:1740,y:1260,z:elevation(1740,1260),zoom:1,reveal:0},target={...camera};
-  let sy=0,cy=1,st=0,ct=1,scale=1,tide=0;
-  const dark=()=>document.documentElement.dataset.theme!=='light_endfield',canAnimate=()=>flow&&!motion.matches;
+  let sy=0,cy=1,st=0,ct=1,scale=1,tide=0,pixelRatio=1.5;
+  const dark=()=>document.documentElement.dataset.theme!=='light_endfield',canAnimate=()=>flow&&!(motion.matches||window.CFTMotion?.reduced());
   const ease=t=>1-Math.pow(1-t,3);
   function advance(now){if(!trip)return false;const t=Math.min(1,Math.max(0,(now-trip.at)/trip.duration)),v=ease(t);for(const k of ['x','y','z','zoom','reveal'])camera[k]=trip.start[k]+(target[k]-trip.start[k])*v;camera.zoom-=Math.sin(Math.PI*t)*.09;if(t===1){camera={...target};trip=null;}return !!trip;}
   function focusPage(id,{animate=true}={}){
@@ -64,6 +66,14 @@
    const a=X*cy-Y*sy,b=X*sy+Y*cy,depth=b*st+Z*ct,p=2200/Math.max(620,2200-depth);
    return [width*(width<650?.61:.69)+a*p*scale,height*.74+(b*ct-Z*st)*p*scale,p];
   }
+  function tileVisible(tile,z){
+   if(!culling)return true;
+   const corners=[[tile.minX,tile.minY],[tile.maxX,tile.minY],[tile.maxX,tile.maxY],[tile.minX,tile.maxY]];
+   const depths=corners.map(([X,Y])=>((X-camera.x)*sy+(Y-camera.y)*cy)*st+(z-camera.z+tide)*ct);
+   if(Math.min(...depths)<1580&&Math.max(...depths)>1580)return true;
+   const points=corners.map(([X,Y])=>project(X,Y,z));
+   return !(points.every(p=>p[0]<-85)||points.every(p=>p[0]>width+85)||points.every(p=>p[1]<-85)||points.every(p=>p[1]>height+85));
+  }
   const inView=(p,margin=40)=>p[0]>-margin&&p[0]<width+margin&&p[1]>-margin&&p[1]<height+margin;
   function draw(now=performance.now()){
    if(!width||!height||disposed||!enabled||document.hidden)return;
@@ -75,7 +85,7 @@
    if(current!=='workflow'||camera.reveal<1){
    ctx.fillStyle=`rgba(${rgb},${strength*.13})`;
    ctx.beginPath();for(const d of scene.dots){const p=project(...d);if(!inView(p,3))continue;const r=Math.max(.38,Math.min(.85,p[2]*.6));ctx.moveTo(p[0]+r,p[1]);ctx.arc(p[0],p[1],r,0,Math.PI*2);}ctx.fill();
-   for(const line of scene.lines){ctx.beginPath();for(const [a,b,c,d] of line.segments){const p=project(a,b,line.z),q=project(c,d,line.z);if((p[0]<-80&&q[0]<-80)||(p[0]>width+80&&q[0]>width+80)||(p[1]<-80&&q[1]<-80)||(p[1]>height+80&&q[1]>height+80))continue;ctx.moveTo(p[0],p[1]);ctx.lineTo(q[0],q[1]);}ctx.strokeStyle=`rgba(${rgb},${strength*(line.major?.75:.37)})`;ctx.lineWidth=line.major?1.1:.6;ctx.stroke();}
+   for(const line of scene.lines){ctx.beginPath();for(const tile of line.tiles){if(!tileVisible(tile,line.z))continue;for(const [a,b,c,d] of tile.segments){const p=project(a,b,line.z),q=project(c,d,line.z);if((p[0]<-80&&q[0]<-80)||(p[0]>width+80&&q[0]>width+80)||(p[1]<-80&&q[1]<-80)||(p[1]>height+80&&q[1]>height+80))continue;ctx.moveTo(p[0],p[1]);ctx.lineTo(q[0],q[1]);}}ctx.strokeStyle=`rgba(${rgb},${strength*(line.major?.75:.37)})`;ctx.lineWidth=line.major?1.1:.6;ctx.stroke();}
    }
    // Survey links follow actual surface elevation; they are not lines on the UI.
    ctx.strokeStyle=gold;ctx.globalAlpha=strength*.48*(current==='workflow'?1-Math.min(1,camera.reveal/.65):1);ctx.lineWidth=.8;
@@ -93,23 +103,25 @@
    if(current==='workflow'&&(workflowDetail||window.CftWorkflowGraph?.isFlat()&&window.CftWorkflowGraph?.isFull()))window.CftWorkflowGraph?.paintTerrain?.({project,reference,elevation:()=>elevation(stations[5].x,stations[5].y)-50,station:stations[5],zoom:camera.zoom,reveal:camera.reveal,yaw:workflowYaw,tilt:workflowTilt,cameraX:camera.x,cameraY:camera.y,ctx,width,height});
    canvas.dataset.workflowYaw=String(workflowYaw);canvas.dataset.workflowTilt=String(workflowTilt);canvas.dataset.draws=String(draws);canvas.dataset.ready='true';canvas.dataset.cameraX=camera.x.toFixed(2);canvas.dataset.cameraY=camera.y.toFixed(2);canvas.dataset.cameraZoom=camera.zoom.toFixed(3);canvas.dataset.mapSettled=String(!trip);canvas.dataset.yaw=x.toFixed(4);canvas.dataset.tilt=(51+y*7).toFixed(3);canvas.dataset.drawMs=(performance.now()-before).toFixed(1);
   }
-  function request(){if(!frame&&!disposed&&enabled&&!document.hidden)frame=requestAnimationFrame(tick);}
-  function tick(now){frame=0;if(disposed||!enabled||document.hidden)return;const budget=fps>0?1000/fps:0;if(budget&&now-lastFrame<budget-.6){request();return;}lastFrame=budget?now-(now-lastFrame)%budget:now;const delta=Math.min(80,Math.max(1,now-(tick.at||now-40)));tick.at=now;
+  function request(){if(!frame&&!disposed&&enabled&&!document.hidden&&!window.CFTMotion?.paused())frame=requestAnimationFrame(tick);}
+  function tick(now){frame=0;if(disposed||!enabled||document.hidden||window.CFTMotion?.paused())return;const budget=fps>0?1000/fps:0;if(budget&&now-lastFrame<budget-.6){request();return;}lastFrame=budget?now-(now-lastFrame)%budget:now;const delta=Math.min(80,Math.max(1,now-(tick.at||now-40)));tick.at=now;
    const travelling=advance(now),amount=1-Math.pow(.78,delta/(1000/24));x+=(tx-x)*amount;y+=(ty-y)*amount;const moving=Math.abs(tx-x)+Math.abs(ty-y)>.001;if(!moving){x=tx;y=ty;}draw(now);if(travelling||moving||canAnimate())request();
   }
   function settle(){camera={...target};trip=null;canvas.dataset.mapSettled='true';}
   function reset(){tx=ty=x=y=0;if(frame)cancelAnimationFrame(frame);frame=0;tick.at=0;if(!canAnimate())settle();if(enabled&&!document.hidden){draw();if(trip||canAnimate())request();}}
-  function pointer(e){if(workflowHeld||current==='workflow'&&workflowDetail||!interactive||motion.matches||!enabled||disposed||document.hidden||e.pointerType==='touch')return;const r=host.getBoundingClientRect();tx=Math.max(-1,Math.min(1,(e.clientX-r.left)/Math.max(r.width,1)*2-1));ty=Math.max(-1,Math.min(1,(e.clientY-r.top)/Math.max(r.height,1)*2-1));request();}
-  function resize(){const r=host.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,1.5);width=Math.round(r.width);height=Math.round(r.height);canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);request();}
+  function pointer(e){if(workflowHeld||current==='workflow'&&workflowDetail||!interactive||(motion.matches||window.CFTMotion?.reduced())||!enabled||disposed||document.hidden||e.pointerType==='touch')return;const r=host.getBoundingClientRect();tx=Math.max(-1,Math.min(1,(e.clientX-r.left)/Math.max(r.width,1)*2-1));ty=Math.max(-1,Math.min(1,(e.clientY-r.top)/Math.max(r.height,1)*2-1));request();}
+  function resize(){const r=host.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,pixelRatio);width=Math.round(r.width);height=Math.round(r.height);canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);request();}
   function visibility(){if(document.hidden){if(frame)cancelAnimationFrame(frame);frame=0;settle();}else reset();}
+  function moveState(){if(window.CFTMotion?.paused()){cancelAnimationFrame(frame);frame=0;}else request();}
+  window.addEventListener('cft:window-moving',moveState);
   const sizeObserver=new ResizeObserver(resize);sizeObserver.observe(host);
   const themeObserver=new MutationObserver(request);themeObserver.observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
   document.addEventListener('pointermove',pointer,{passive:true});document.documentElement.addEventListener('pointerleave',reset);document.addEventListener('visibilitychange',visibility);motion.addEventListener('change',reset);
   resize();
   return {focusPage,setWorkflowDetail(value){workflowDetail=!!value;if(workflowDetail){tx=ty=x=y=0;}if(current!=='workflow')return;const now=performance.now();advance(now);const station=stations[5],zoom=workflowDetail?2.2:1,reveal=workflowDetail?1:0;if(target.zoom===zoom&&target.reveal===reveal){request();return;}target={x:station.x,y:station.y,z:elevation(station.x,station.y),zoom,reveal};if(canAnimate()&&enabled&&!document.hidden)trip={start:{...camera},at:now,duration:860};else settle();request();},
    holdWorkflow(value){workflowHeld=!!value;if(workflowHeld){tx=x;ty=y;}request();},moveWorkflow({factor=1,dx=0,dy=0,fit=false,rotate=0,tilt=0}={}){if(current!=='workflow'||!workflowDetail)return;advance(performance.now());const n=stations[5];if(fit){workflowYaw=0;workflowTilt=51;camera={x:n.x,y:n.y,z:elevation(n.x,n.y),zoom:2.2,reveal:1};}else{workflowYaw=((workflowYaw+rotate+180)%360+360)%360-180;workflowTilt=Math.max(25,Math.min(70,workflowTilt+tilt));const a=project(camera.x,camera.y,camera.z),b=project(camera.x+1,camera.y,camera.z),c=project(camera.x,camera.y+1,camera.z),ux=b[0]-a[0],uy=b[1]-a[1],vx=c[0]-a[0],vy=c[1]-a[1],det=ux*vy-uy*vx;if(Math.abs(det)>.001){camera.x-=(dx*vy-dy*vx)/det;camera.y-=(dy*ux-dx*uy)/det;}camera.zoom=Math.max(.8,Math.min(6,camera.zoom*factor));camera.reveal=1;}target={...camera};trip=null;request();},redraw:request,
-   reset,setFlow(value){value=!!value;if(flow===value)return;flow=value;reset();},setInteractive(value){value=!!value;if(interactive===value)return;interactive=value;reset();},setFps(value){fps=Number(value)===0?0:Math.max(15,Math.min(360,Number(value)||60));canvas.dataset.frameLimit=String(fps);},setEnabled(value){value=!!value;if(enabled===value)return;enabled=value;if(!enabled){if(frame)cancelAnimationFrame(frame);frame=0;settle();}else{settle();resize();reset();}},
-   destroy(){disposed=true;cancelAnimationFrame(frame);sizeObserver.disconnect();themeObserver.disconnect();document.removeEventListener('pointermove',pointer);document.documentElement.removeEventListener('pointerleave',reset);document.removeEventListener('visibilitychange',visibility);motion.removeEventListener('change',reset);canvas.remove();}};
+   reset,setPixelRatio(value){const next=Math.max(1,Math.min(2,Number(value)||1.5));if(next===pixelRatio)return;pixelRatio=next;resize();},setFlow(value){value=!!value;if(flow===value)return;flow=value;reset();},setInteractive(value){value=!!value;if(interactive===value)return;interactive=value;reset();},setFps(value){fps=Number(value)===0?0:Math.max(15,Math.min(360,Number(value)||60));canvas.dataset.frameLimit=String(fps);},setEnabled(value){value=!!value;if(enabled===value)return;enabled=value;if(!enabled){if(frame)cancelAnimationFrame(frame);frame=0;settle();}else{settle();resize();reset();}},
+   destroy(){disposed=true;cancelAnimationFrame(frame);sizeObserver.disconnect();window.removeEventListener('cft:window-moving',moveState);themeObserver.disconnect();document.removeEventListener('pointermove',pointer);document.documentElement.removeEventListener('pointerleave',reset);document.removeEventListener('visibilitychange',visibility);motion.removeEventListener('change',reset);canvas.remove();}};
  }
  window.CFTTerrainMap={mount,stations};
 })();

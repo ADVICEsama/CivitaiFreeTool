@@ -17,6 +17,7 @@ namespace CftNative {
     [DllImport("user32.dll")] static extern IntPtr MonitorFromWindow(IntPtr h,int f);
     [DllImport("user32.dll")] static extern bool GetMonitorInfo(IntPtr h,ref MONITOR m);
     [DllImport("user32.dll")] static extern bool ReleaseCapture();
+    [DllImport("user32.dll")] static extern short GetAsyncKeyState(int key);
     [DllImport("user32.dll")] static extern IntPtr SendMessage(IntPtr h,int m,IntPtr w,IntPtr l);
     [DllImport("user32.dll")] static extern bool RedrawWindow(IntPtr h,IntPtr r,IntPtr region,uint flags);
     public void Repaint(){RedrawWindow(Handle,IntPtr.Zero,IntPtr.Zero,0x485);}
@@ -26,6 +27,14 @@ namespace CftNative {
       int style=GetWindowLong(Handle,-16);SetWindowLong(Handle,-16,style|0x00040000);Refresh();
       try{ReleaseCapture();SendMessage(Handle,0x112,(IntPtr)(0xf000|edge),IntPtr.Zero);}
       finally{if(Handle!=IntPtr.Zero){SetWindowLong(Handle,-16,GetWindowLong(Handle,-16)&~0x00040000);Refresh();Repaint();}}
+    }
+    public bool InSizeMove { get; private set; }
+    public event EventHandler SizeMoveChanged;
+    public void BeginMove(){
+      if(Handle==IntPtr.Zero||(GetAsyncKeyState(1)&0x8000)==0)return;
+      ReleaseCapture();
+      // Let Windows own the drag loop and Snap/DPI handling. Never move via JS mousemove RPCs.
+      SendMessage(Handle,0x112,(IntPtr)0xf012,IntPtr.Zero);
     }
     public int TitleHeight=48, Edge=6, ControlsWidth=138;
     int oldStyle;
@@ -41,6 +50,10 @@ namespace CftNative {
       return y<TitleHeight && x<r.R-r.L-ControlsWidth ? 2 : 1;
     }
     protected override void WndProc(ref Message m) {
+      if(m.Msg==0x231 || m.Msg==0x232){ // WM_ENTERSIZEMOVE / WM_EXITSIZEMOVE
+        InSizeMove=m.Msg==0x231;
+        if(SizeMoveChanged!=null)SizeMoveChanged(this,EventArgs.Empty);
+      }
       if(m.Msg==0x83 && m.WParam!=IntPtr.Zero) { // WM_NCCALCSIZE: 内容扩展到整个窗体。
         // 不把监视器绝对坐标写进 NCCALCSIZE，最大化工作区在 GETMINMAXINFO 管理。
         m.Result=IntPtr.Zero;return;

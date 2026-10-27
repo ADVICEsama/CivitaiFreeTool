@@ -12,10 +12,11 @@
  const names={download:'ACQUISITION / DOWNLOAD',dlmanager:'TRANSFER CONTROL',models:'MODEL ARCHIVE',updates:'VERSION INTELLIGENCE',reverse:'RESOURCE IDENTIFICATION',workflow:'WORKFLOW ENGINEERING',settings:'SYSTEM PREFERENCES'};
  for(const [id,label] of Object.entries(names)){const h=document.querySelector('#page-'+id+' .page-title');if(h)h.dataset.efLabel=label;}
  function reset(){
-  const enabled=typeof state==='undefined'||state.cfg?.endfield_parallax!==false;
+  const enabled=typeof state==='undefined'||state.cfg?.endfield_parallax!==false&&!window.CFTMotion?.reduced();
   root.dataset.efMotion=String(enabled);
   terrainScene.setInteractive(enabled);terrainScene.setFlow(enabled);
   terrainScene.setFps(typeof state==='undefined'?60:state.cfg?.effects_fps_limit);
+  terrainScene.setPixelRatio?.(typeof state==='undefined'?1.5:state.cfg?.terrain_pixel_ratio||1.5);
  }
  function followPage(){const id=document.querySelector('.page.active')?.id?.replace('page-','');if(id)terrainScene.focusPage(id);}
  window.addEventListener('cft:page-changed',followPage);

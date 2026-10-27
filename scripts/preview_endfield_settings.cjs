@@ -7,7 +7,7 @@ const fixture='('+source.slice(begin,end)+')();';
 const demoCover=fs.readFileSync(path.join(web,'about-character-v1.png')).toString('base64');
 const realWorkflow=process.env.CFT_WORKFLOW_FIXTURE?JSON.parse(fs.readFileSync(process.env.CFT_WORKFLOW_FIXTURE,'utf8')):null;
 const boot=fixture+`
-Object.assign(window.fixtureCfg,{theme:window.fixtureCfg.theme||'dark_endfield',default_page:'settings',endfield_parallax:true,download_hud_scale:'100',download_hud_dock:true,download_hud_motion:true,ui_zoom:100,api_key:'',window_appearance:'theme',masonry_card_width:220});
+Object.assign(window.fixtureCfg,{performance_prompt_version:new URL(location.href).searchParams.has('performance')&&!localStorage.getItem('cft-test-config')?0:(fixtureCfg.performance_prompt_version||1),ui_animations:true,terrain_pixel_ratio:1.5,performance_profile:'custom',theme:window.fixtureCfg.theme||'dark_endfield',default_page:'settings',endfield_parallax:true,download_hud_scale:'100',download_hud_dock:true,download_hud_motion:true,ui_zoom:100,api_key:'',window_appearance:'theme',masonry_card_width:220});
 window.fixtureTasks=[];window.fixtureScanRows=[];
 const transferPreview=new URL(location.href).searchParams.get('transfer');
 const modelPreview=new URL(location.href).searchParams.get('models');

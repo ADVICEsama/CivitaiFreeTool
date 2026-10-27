@@ -13,12 +13,28 @@ class IntegratedChrome:
         self.form, self.window = form, window
         self.webview = form.browser.webview
         self.frame = Frame(form.Handle)
+        self.move_handler = self.on_size_move
+        self.frame.SizeMoveChanged += self.move_handler
         self.maximized = False
         self.last_bounds = None
         self.webview.Dock = getattr(DockStyle, 'None')
         self.layout_handler = lambda *_: self.layout()
         form.Resize += self.layout_handler
         self.layout()
+
+    def on_size_move(self, *_):
+        # Already on the WinForms UI thread: fire-and-forget IPC only. Synchronous
+        # evaluate_js here would block the modal Windows move/resize message loop.
+        try:
+            moving = "true" if self.frame.InSizeMove else "false"
+            core = self.webview.CoreWebView2
+            if core is not None:
+                core.ExecuteScriptAsync("document.documentElement.dataset.nativeWindowMoving="
+                                        + ("'true'" if self.frame.InSizeMove else "'false'")
+                                        + ";window.dispatchEvent(new CustomEvent('cft:window-moving',{detail:{moving:"
+                                        + moving + "}}));")
+        except Exception:
+            pass  # Dragging must remain usable even before WebView is ready.
 
     def layout(self):
         from System.Windows.Forms import FormWindowState
@@ -45,6 +61,7 @@ class IntegratedChrome:
     def close(self):
         from System.Windows.Forms import DockStyle, FormBorderStyle
         self.form.Resize -= self.layout_handler
+        self.frame.SizeMoveChanged -= self.move_handler
         self.frame.RestoreFrame()
         self.form.FormBorderStyle=FormBorderStyle.Sizable
         self.window.frameless=False

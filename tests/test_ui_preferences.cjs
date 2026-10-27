@@ -29,7 +29,7 @@ function ok(name) { passed++; console.log('OK ' + name); }
     page.on('pageerror', e => errors.push(e.message));
     await page.addInitScript(() => {
       const key = 'cft-test-config';
-      const defaults = { theme:'dark_graphite', ui_zoom:100, ui_scheme:'light', metro_accent:'#0078D4',
+      const defaults = { performance_prompt_version:1,theme:'dark_graphite', ui_zoom:100, ui_scheme:'light', metro_accent:'#0078D4',
         model_folder_include_subfolders:true, model_folder_visibility:{}, cache_original_images:false, api_key:'test-fixture-not-a-real-key', default_page:'dlmanager', default_view:'list',
         show_file_paths:true, custom_accent_enabled:false, custom_accent:'#60A5FA', ui_density:'standard', ui_corners:'theme',
         models_dir:'D:\\AI\\models', download_dir:'D:\\AI\\downloads', models_dirs:[],

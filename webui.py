@@ -15,7 +15,7 @@ import uuid
 
 import webview
 
-APP_VERSION = "3.0.6"
+APP_VERSION = "3.0.7"
 
 from functools import wraps
 
@@ -452,6 +452,10 @@ class Api:
     def window_control(self, action):
         controller = getattr(self, "_window_appearance_controller", None)
         return controller.control(action) if controller else {"ok": False, "msg": "当前无原生窗口"}
+
+    def window_begin_move(self):
+        controller = getattr(self, "_window_appearance_controller", None)
+        return controller.begin_move() if controller else {"ok": False, "msg": "当前无原生窗口"}
 
     def window_resize(self, direction):
         controller=getattr(self,"_window_appearance_controller",None)

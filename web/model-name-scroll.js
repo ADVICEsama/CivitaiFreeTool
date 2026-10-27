@@ -66,8 +66,8 @@
       if(r.signature!==prefs.signature){const changed=r.signature!==undefined;r.animation?.cancel();r.animation=null;r.signature=prefs.signature;if(changed)phases.delete(r.key);r.viewport.classList.remove('running');}
       if(!nearNames.has(el)||!r.visible||document.hidden){r.animation?.pause();continue;}
       const distance=Math.max(0,Math.ceil(r.text.getBoundingClientRect().width/zoom-r.viewport.clientWidth));
-      if(distance!==r.distance||motion.matches){r.animation?.cancel();r.animation=null;r.distance=distance;r.viewport.classList.remove('running');}
-      if(distance<=2||motion.matches||!r.visible||document.hidden){r.animation?.pause();continue;}
+      if(distance!==r.distance||(motion.matches||window.CFTMotion?.reduced())){r.animation?.cancel();r.animation=null;r.distance=distance;r.viewport.classList.remove('running');}
+      if(distance<=2||(motion.matches||window.CFTMotion?.reduced())||!r.visible||document.hidden){r.animation?.pause();continue;}
       if(!r.animation){
         r.viewport.classList.add('running');const duration=Math.max(1,prefs.start+distance/prefs.speed*1000+prefs.end);
         r.animation=r.text.animate([{transform:'translateX(0)',offset:0},{transform:'translateX(0)',offset:prefs.start/duration},{transform:`translateX(-${distance}px)`,offset:1-prefs.end/duration},{transform:`translateX(-${distance}px)`,offset:1}],{duration,iterations:Infinity,easing:'linear'});const phase=phases.get(r.key);if(phase&&phase.signature===prefs.signature&&performance.now()-phase.when<5000)r.animation.currentTime=phase.time+performance.now()-phase.when;phases.delete(r.key);

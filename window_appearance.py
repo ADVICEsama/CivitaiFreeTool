@@ -86,6 +86,18 @@ class WindowAppearance:
         except Exception:
             return {"ok": False, "msg": "窗口操作暂不可用"}
 
+    def begin_move(self):
+        form = getattr(self.window, "native", None)
+        if sys.platform != "win32" or form is None or self.chrome is None:
+            return {"ok": False, "msg": "原生拖动尚未就绪"}
+        try:
+            from System import Action
+            # Return to the WebView bridge before entering the OS modal move loop.
+            form.BeginInvoke(Action(lambda: self.chrome.frame.BeginMove() if self.chrome else None))
+            return {"ok": True, "queued": True}
+        except Exception:
+            return {"ok": False, "msg": "原生窗口拖动暂不可用"}
+
     def resize(self, direction):
         edge={"left":1,"right":2,"top":3,"top-left":4,"top-right":5,"bottom":6,"bottom-left":7,"bottom-right":8}.get(direction)
         form=getattr(self.window,"native",None)

@@ -27,12 +27,12 @@
   position();
   if(visible){avoid();return;}
   clearTimeout(hideTimer);clearTimeout(arriveTimer);visible=true;notice.hidden=false;notice.classList.remove('is-leaving','is-arriving');void notice.offsetWidth;notice.classList.add('is-arriving');avoid();
-  arriveTimer=setTimeout(()=>notice.classList.remove('is-arriving'),reduced.matches?0:210);
+  arriveTimer=setTimeout(()=>notice.classList.remove('is-arriving'),(reduced.matches||window.CFTMotion?.reduced())?0:210);
  }
  function hide(immediate=false){
   if(!visible&&notice.hidden)return;
   visible=false;clearTimeout(hideTimer);clearTimeout(arriveTimer);notice.classList.remove('is-arriving','is-avoiding');
-  if(immediate||reduced.matches){notice.hidden=true;notice.classList.remove('is-leaving');return;}
+  if(immediate||(reduced.matches||window.CFTMotion?.reduced())){notice.hidden=true;notice.classList.remove('is-leaving');return;}
   notice.classList.add('is-leaving');hideTimer=setTimeout(()=>{if(!visible){notice.hidden=true;notice.classList.remove('is-leaving');}},160);
  }
  const badgeObserver=new MutationObserver(()=>schedule());

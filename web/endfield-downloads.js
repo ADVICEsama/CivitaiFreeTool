@@ -59,7 +59,7 @@
   if(!active())return tasks;const ids=new Set(tasks.map(t=>t.id));
   for(const t of tasks){let r=records.get(t.id);const previous=r?.status;if(!r){r={status:t.status,phase:'active',timers:[]};records.set(t.id,r);}
    if(!done(t)){if(r.phase!=='active'){cancelTimers(r);r.phase='active';r.requested=false;}r.status=t.status;continue;}
-   r.status='done';if(r.phase==='active')enterGold(t.id,r,previous!==undefined&&previous!=='done'&&!reduced.matches&&!document.hidden&&manager.classList.contains('active')&&!queue.hidden);
+   r.status='done';if(r.phase==='active')enterGold(t.id,r,previous!==undefined&&previous!=='done'&&!(reduced.matches||window.CFTMotion?.reduced())&&!document.hidden&&manager.classList.contains('active')&&!queue.hidden);
   }
   if(records.size>1500)for(const [id,r] of records)if(!ids.has(id)&&r.phase==='archived'){cancelTimers(r);records.delete(id);}
   return tasks.filter(t=>!['archiving','archived'].includes(records.get(t.id)?.phase));
@@ -67,7 +67,7 @@
  const groupKey=row=>{const raw=Number(row.batch_started_at||row.created_at||row.finished_at),valid=Number.isFinite(raw)&&raw>0,date=valid?new Date(raw*1000):null;const day=date?date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0')+'-'+String(date.getDate()).padStart(2,'0'):'时间未记录';return {timestamp:valid?raw:0,key:day+'|'+(row.batch_id||'legacy'),day,time:date?date.toLocaleTimeString('zh-CN',{hour12:false}):'',timeLabel:row.batch_started_at?'提交于':row.created_at?'创建于':'结束于',known:!!row.batch_id};};
  window.CFTDownloadPresentation={prepareTasks,completionTiming,includeHistory:row=>!staged.includes(records.get(row.id)?.phase),groupKey,isGroupCollapsed:key=>collapsedGroups.has(key),groupSignature:()=>[...collapsedGroups].join('|')};
  document.addEventListener('visibilitychange',()=>{if(document.hidden)for(const [id,r] of records)if(staged.includes(r.phase)&&r.phase!=='archiving'){cancelTimers(r);archive(id,r);}});
- reduced.addEventListener('change',()=>{if(reduced.matches)for(const [id,r] of records)if(staged.includes(r.phase)&&r.phase!=='archiving'){cancelTimers(r);archive(id,r);}});
+ reduced.addEventListener('change',()=>{if((reduced.matches||window.CFTMotion?.reduced()))for(const [id,r] of records)if(staged.includes(r.phase)&&r.phase!=='archiving'){cancelTimers(r);archive(id,r);}});
  function setText(el,text){if(el.textContent!==text)el.textContent=text;}
  function decorateUrls(){[...urls.children].forEach((row,i)=>{let number=row.querySelector('.ef-url-order');if(!number){number=document.createElement('span');number.className='ef-url-order';number.setAttribute('aria-hidden','true');row.prepend(number);}setText(number,String(i+1).padStart(2,'0'));row.querySelector('input').setAttribute('aria-label','下载链接 '+(i+1));row.querySelectorAll('.icon-btn').forEach((button,j)=>button.setAttribute('aria-label',j?'删除下载链接 '+(i+1):'新建下载链接'));});}
 
@@ -91,7 +91,7 @@
  function toggleBatch(button){
   const key=button.dataset.historyBatch,collapse=!collapsedGroups.has(key);if(collapse)collapsedGroups.add(key);else collapsedGroups.delete(key);
   const previous=foldMotions.get(key);previous?.animations.forEach(a=>a.cancel());
-  if(reduced.matches){renderDownloadHistory();return;}
+  if((reduced.matches||window.CFTMotion?.reduced())){renderDownloadHistory();return;}
   if(!collapse)renderDownloadHistory();
   const rows=[...document.querySelectorAll('#dlHistoryTable [data-history-id]')].filter(row=>row.dataset.historyGroup===key);
   const motion={animations:[]};foldMotions.set(key,motion);button.setAttribute('aria-expanded',String(!collapse));
@@ -100,9 +100,9 @@
   Promise.all(motion.animations.map(a=>a.finished.catch(()=>{}))).then(()=>{if(foldMotions.get(key)!==motion)return;foldMotions.delete(key);renderDownloadHistory();});
  }
  let viewMotions=[];
- reduced.addEventListener('change',()=>{if(!reduced.matches)return;for(const motion of foldMotions.values())motion.animations.forEach(a=>a.cancel());foldMotions.clear();viewMotions.forEach(a=>a.cancel());viewMotions=[];renderDownloadHistory();});
+ reduced.addEventListener('change',()=>{if(!(reduced.matches||window.CFTMotion?.reduced()))return;for(const motion of foldMotions.values())motion.animations.forEach(a=>a.cancel());foldMotions.clear();viewMotions.forEach(a=>a.cancel());viewMotions=[];renderDownloadHistory();});
  function revealTransfer(bookmark){
-  viewMotions.forEach(a=>a.cancel());viewMotions=[];if(!active()||reduced.matches)return;
+  viewMotions.forEach(a=>a.cancel());viewMotions=[];if(!active()||(reduced.matches||window.CFTMotion?.reduced()))return;
   const panel=add.classList.contains('active')?workspace:queue.hidden?document.querySelector('#dlHistoryPanel'):queue;
   if(panel){const a=panel.animate([{opacity:.25,transform:'scale(.975)'},{opacity:1,transform:'scale(1)'}],{duration:210,easing:'cubic-bezier(.2,.75,.25,1)'});a.id='ef-transfer-view';viewMotions.push(a);}
   const a=bookmark.animate([{transform:'scale(.94)'},{transform:'scale(1.012)',offset:.72},{transform:'scale(1)'}],{duration:210,easing:'cubic-bezier(.2,.75,.25,1)'});a.id='ef-transfer-tab';viewMotions.push(a);

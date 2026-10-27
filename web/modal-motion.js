@@ -5,7 +5,7 @@
   const roots = '.rd-mask:not(.font-picker-mask),.df-mask,.model-style-mask,.update-whitelist-mask,.key-prompt-mask,.ob-mask,.rename-dialog,.reverse-tour-card';
   const panels = '.rename-dialog,.df-dialog,.model-style-dialog,.update-whitelist-dialog,.settings-exit-dialog,.key-setup-card,.ob-card,[role="dialog"]';
   const running = new WeakMap(), leaving = new WeakMap();
-  const reduced = () => !doc || root.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  const reduced = () => !doc || root.CFTMotion?.reduced() || root.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const usable = element => element && typeof element === 'object' && typeof element.remove === 'function';
   function cancel(element) {
     const animations = running.get(element) || [];

@@ -3640,7 +3640,7 @@ async function showAbout() {
   document.body.appendChild(dlg);
   const contributorsRequest=new AbortController(),entryAnimations=[];let closed=false;
   const close = () => {if(closed)return;closed=true;contributorsRequest.abort();entryAnimations.forEach(a=>a.cancel());document.removeEventListener('keydown',onKey,true);CFTModalMotion.remove(mask);CFTModalMotion.remove(dlg);if(previousFocus?.isConnected)previousFocus.focus();};
-  if(document.documentElement.dataset.endfield==='true'&&!matchMedia('(prefers-reduced-motion: reduce)').matches){
+  if(document.documentElement.dataset.endfield==='true'&&!(window.CFTMotion?.reduced()||matchMedia('(prefers-reduced-motion: reduce)').matches)){
     dlg.querySelectorAll('.about-poster-head,.about-poster-copy,.about-stage,.about-poster-caption').forEach((el,i)=>{const a=el.animate([{opacity:0,transform:'translateY(-14px)'},{opacity:1,transform:'translateY(0)'}],{duration:230,delay:i*18,easing:'cubic-bezier(.2,.75,.25,1)',fill:'backwards'});a.id='ef-about-enter';entryAnimations.push(a);});
   }
   function onKey(e){if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();close();return;}if(e.key!=='Tab')return;const controls=[...dlg.querySelectorAll('button,a[href],summary,[tabindex]')].filter(el=>!el.disabled&&el.getClientRects().length);if(!controls.length)return;const first=controls[0],last=controls.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}
@@ -4276,6 +4276,9 @@ const SETTING_FIELDS = [
   ["界面", "window_wait_seconds", "窗口模式等待秒数", "number"],
   ["界面", "browser_fallback_enabled", "软件窗口失败时自动浏览器兜底", "bool"],
   ["界面", "cache_detail_images", "缓存详情在线缩略图", "bool"],
+  ["界面", "performance_profile", "性能档位", "select", [["custom","自定义（保留当前设置）"],["full","完整动画"],["balanced","均衡 · 保留动画"],["static","静态省电 · 关闭界面动画"]]],
+  ["界面", "pause_effects_while_dragging", "拖动/缩放窗口时暂缓背景绘制（松手恢复）", "bool"],
+  ["界面", "ui_animations", "界面动画", "bool"],
   ["界面", "show_fps", "左下角显示帧数", "bool"],
   ["界面", "effects_fps_limit", "动画帧率上限（0 = 跟随屏幕）", "number"],
   ["界面", "cache_original_images", "缓存已查看原图和生成数据", "bool"],
@@ -4332,6 +4335,7 @@ function applyCustomUi() {
   window.CFTModelManagement?.setGridSize(cfg.model_grid_size,false);
   root.dataset.masonryInfo=["slide","fade"].includes(cfg.masonry_info_mode)?cfg.masonry_info_mode:"always";
   window.CFTPerformance?.sync(cfg);
+  window.CFTMotion?.sync(cfg);
   root.style.setProperty("--model-glow-opacity",Math.max(0,Math.min(100,Number(cfg.model_glow_opacity ?? 100)))/100);
   root.dataset.masonryOverlay=cfg.masonry_overlay_size==="full"?"full":"partial";
   window.dispatchEvent(new Event("cft:name-scroll-options"));
@@ -4555,7 +4559,11 @@ $("#settingsForm").addEventListener("change", (e) => {
   if(key==="model_pagination"||key==="model_page_size"){state.cfg[key]=key==='model_pagination'?!!val:Number(val);state.mmPage=1;window.CFTModelManagement?.refresh();}
   if(key==="name_scroll_speed"){val=Math.max(10,Math.min(240,Math.round(Number.isFinite(Number(val))?Number(val):70)));el.value=val;}
   if(["name_scroll_start_pause","name_scroll_end_pause"].includes(key)){val=Math.max(0,Math.min(5000,Math.round(Number(val)||0)));el.value=val;}
-  if(key==="effects_fps_limit"){val=val===0?0:Math.max(15,Math.min(360,Math.round(Number(val)||60)));el.value=val;}
+  if(key==="performance_profile"){window.CFTMotion?.applyProfile(val);return;}
+  if(key==="pause_effects_while_dragging"){window.CFTMotion?.applyPatch({pause_effects_while_dragging:!!val,performance_profile:"custom"});return;}
+  if(key==="ui_animations"){window.CFTMotion?.applyPatch({ui_animations:!!val,performance_profile:"custom"});return;}
+  if(key==="endfield_parallax"){window.CFTMotion?.applyPatch({endfield_parallax:!!val,performance_profile:"custom"});return;}
+  if(key==="effects_fps_limit"){val=val===0?0:Math.max(15,Math.min(360,Math.round(Number(val)||60)));el.value=val;window.CFTMotion?.applyPatch({effects_fps_limit:val,performance_profile:"custom"});return;}
   if(key==="gallery_cache_mb"){val=Math.max(64,Math.min(8192,Math.round(Number(val)||1024)));el.value=val;}
   if(key==="endfield_parallax"){state.cfg[key]=val;window.CFTEndfield?.reset();api.call("save_config",{[key]:val}).catch(()=>setStatus("视差设置保存失败"));
   } else if(key.startsWith('download_hud_')){

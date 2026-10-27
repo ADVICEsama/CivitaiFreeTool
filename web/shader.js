@@ -153,21 +153,16 @@
   window.addEventListener("resize", resize);
   resize();
 
-  let rafId = 0, lastDraw = 0;
+  let rafId = 0, lastDraw = 0, running=false;
   function draw(ts) {
-    // 窗口最小化/切后台、或氛围背景被关掉时，跳过绘制（软渲染下全屏动画很吃 CPU，跳过立刻凉）
-    const hidden = document.hidden || canvas.style.display === "none" || canvas.offsetParent === null;
+    rafId=0;if(!running)return;
     const cap=Number(window.cftEffectsFpsLimit ?? 60);
-    if (!hidden && !document.getElementById("imageViewer") && (!cap || ts-lastDraw >= 1000/cap-.5)) {
-      lastDraw=ts;
-      gl.uniform1f(uTime, ts * 0.001);
-      gl.uniform2f(uRes, canvas.width, canvas.height);
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-    }
-    rafId = requestAnimationFrame(draw);
+    if(!cap||ts-lastDraw>=1000/cap-.5){lastDraw=ts;gl.uniform1f(uTime,ts*.001);gl.uniform2f(uRes,canvas.width,canvas.height);gl.drawArrays(gl.TRIANGLE_STRIP,0,4);}
+    rafId=requestAnimationFrame(draw);
   }
-  function startLoop() { if (!rafId) rafId = requestAnimationFrame(draw); }
-  function stopLoop() { if (rafId) { cancelAnimationFrame(rafId); rafId = 0; } }
-  document.addEventListener("visibilitychange", () => { (document.hidden ? stopLoop : startLoop)(); });
-  if (!document.hidden) startLoop();
+  function syncLoop(){running=!document.hidden&&!window.CFTMotion?.reduced()&&!window.CFTMotion?.paused()&&canvas.offsetParent!==null&&getComputedStyle(canvas).display!=='none'&&!document.getElementById('imageViewer');if(!running&&rafId){cancelAnimationFrame(rafId);rafId=0;}if(running&&!rafId)rafId=requestAnimationFrame(draw);canvas.dataset.loopRunning=String(running);}
+  document.addEventListener('visibilitychange',syncLoop);window.addEventListener('cft:window-moving',syncLoop);window.addEventListener('cft:config-saved',syncLoop);window.addEventListener('cft:page-changed',syncLoop);
+  new MutationObserver(syncLoop).observe(canvas,{attributes:true,attributeFilter:['style']});
+  new MutationObserver(syncLoop).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme','data-ui-animations']});
+  new MutationObserver(syncLoop).observe(document.body,{attributes:true,attributeFilter:['class'],childList:true});syncLoop();
 })();

@@ -75,6 +75,11 @@ DEFAULTS = {
     "window_wait_seconds": 30,           # 窗口启动至少等待 30 秒，检测到进展可继续宽限
     "browser_fallback_enabled": True,   # 原生窗口仍是默认；失败时允许浏览器兜底
     "cache_detail_images": True,        # 详情在线缩略图本地缓存；不下载原图
+    "performance_profile": "custom",
+    "performance_prompt_version": 0,
+    "ui_animations": True,
+    "pause_effects_while_dragging": True,
+    "terrain_pixel_ratio": 1.5,
     "show_fps": False,                 # 左下角显示 UI 帧率与地图实际绘制帧率
     "effects_fps_limit": 60,            # 0 跟随屏幕刷新；15–360 自定义上限
     "cache_original_images": True,      # 已查看原图与生成数据保存到软件数据目录
@@ -281,6 +286,13 @@ def normalize_model_card_styles(value):
 
 def normalize_ui_preferences(cfg):
     normalize_theme_preferences(cfg)
+    if cfg.get("performance_profile") not in ("full", "balanced", "static", "custom"): cfg["performance_profile"] = "custom"
+    cfg["pause_effects_while_dragging"] = cfg.get("pause_effects_while_dragging", True) is not False
+    cfg["ui_animations"] = cfg.get("ui_animations", True) is not False
+    try: cfg["performance_prompt_version"] = max(0, min(1000, int(cfg.get("performance_prompt_version", 0))))
+    except (ValueError, TypeError, OverflowError): cfg["performance_prompt_version"] = 0
+    try: cfg["terrain_pixel_ratio"] = max(1.0, min(2.0, float(cfg.get("terrain_pixel_ratio", 1.5))))
+    except (ValueError, TypeError): cfg["terrain_pixel_ratio"] = 1.5
     cfg.pop("pointer_effects", None)
     cfg.pop("pointer_effect_quality", None)
     cfg["model_card_styles"] = normalize_model_card_styles(cfg.get("model_card_styles"))

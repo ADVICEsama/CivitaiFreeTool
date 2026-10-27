@@ -40,7 +40,7 @@
   stopSelection();selectionTarget=target;layer.hidden=false;nav.classList.add('ef-selection-ready');
   const to=`translate(${target.x}px,${target.y}px)`;
   Object.assign(layer.style,{width:target.width+'px',height:target.height+'px',transform:to});
-  if(animate&&previous&&!wasHidden&&!reduced.matches&&Math.abs(previous.x-target.x)>.2){
+  if(animate&&previous&&!wasHidden&&!(reduced.matches||window.CFTMotion?.reduced())&&Math.abs(previous.x-target.x)>.2){
    const motion=layer.animate([{transform:from==='none'?`translate(${previous.x}px,${previous.y}px)`:from},{transform:to}],{duration:130,easing:'cubic-bezier(.2,.8,.2,1)'});
    selectionAnimation=motion;motion.finished.then(()=>{if(selectionAnimation===motion)selectionAnimation=null;},()=>{});
   }
@@ -85,7 +85,7 @@
  // Use the actual final stagger (230–352ms) as the sidebar finish time too.
  function reveal(container){
   entryAnimations.forEach(a=>a.cancel());entryAnimations=[];
-  if(!active()||reduced.matches||!container)return;
+  if(!active()||(reduced.matches||window.CFTMotion?.reduced())||!container)return;
   const selector=container===form?'.settings-category:not([hidden]) > header,.settings-category:not([hidden]) > .setting-row,.settings-category:not([hidden]) > .appearance-preview,.settings-category:not([hidden]) > .organize-guide,.settings-category:not([hidden]) > .bd-links,.settings-category:not([hidden]) .shortcut-group':':scope > .card > *, :scope > .api-key-gate > .key-setup-card';
   const rows=[...container.querySelectorAll(selector)].filter(el=>!el.hidden&&el.getClientRects().length);
   const visibleRows=rows.slice(0,14);
@@ -104,6 +104,6 @@
   if(page?.id==='page-settings')syncSelection(false);
  });
  for(const page of document.querySelectorAll('.page'))pageEntryObserver.observe(page,{attributes:true,attributeFilter:['class']});
- reduced.addEventListener('change',()=>{if(reduced.matches)entryAnimations.forEach(a=>a.cancel());syncSelection(false);});
+ reduced.addEventListener('change',()=>{if((reduced.matches||window.CFTMotion?.reduced()))entryAnimations.forEach(a=>a.cancel());syncSelection(false);});
  window.CFTEndfieldSettings={refresh,categoryChanged(){close();const panels=form?.querySelector('.settings-panels');if(panels)panels.scrollTop=0;refreshKeys();refreshNavigation(true);reveal(form);}};refresh();
 })();
