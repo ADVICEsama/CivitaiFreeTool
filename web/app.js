@@ -1649,7 +1649,7 @@ function modelCardHtml(r,i,options={}){
     const _sub = (_cn && _cn !== r.name) ? String(r.name || "") : "";
     const _meta = [r.base, r.type].filter(Boolean).map((x) => short(String(x), 16)).join(" · ");
     const _meta2 = options.selectionOnly&&!r.path?'未在本地模型库中':[r.ver ? short(String(r.ver), 16) : "", fmtSize(r.size)].filter(Boolean).join(" · ");
-    return '<div class="ms-card' + (checked ? " checked" : "") + (!options.selectionOnly&&normalizedModelPath(state.historyFocusPath)===normalizedModelPath(r.path)?' history-focus':'') + '" '+(window.CFTModelCards?.cardAttributes(r)||'')+' role="'+(options.role||'option')+'" aria-'+(options.role==='checkbox'?'checked':'selected')+'="'+!!checked+'" tabindex="0" data-idx="' + i + '" data-path="' + esc(r.path) + '" title="' + esc(String(r.name || "") + " · " + String(r.path || "")) + '">' +
+    return '<div class="ms-card' + (checked ? " checked" : "") + (!options.selectionOnly&&normalizedModelPath(state.historyFocusPath)===normalizedModelPath(r.path)?' history-focus':'') + '" '+(window.CFTModelCards?.cardAttributes(r)||'')+' role="'+(options.role||'option')+'" aria-'+(options.role==='checkbox'?'checked':'selected')+'="'+!!checked+'" tabindex="0" data-idx="' + i + '" data-path="' + esc(r.path) + '" aria-label="' + esc(String(r.name || "") + " · " + String(r.path || "")) + '">' +
       (options.decoration??(window.CFTModelCards?.cardDecoration(r)||'')) +
       _msTag(r) +
       (!options.selectionOnly && r.upd && r.upd.has_update ? '<a href="#" class="ms-upd" data-url="' + esc(r.upd.url || "") + '" title="' + esc(updTip(r.upd)) + '">' + _icon("alert") + '</a>' : "") +
@@ -2021,7 +2021,8 @@ function _updRowHtml(x) {
     '<td class="c-act"><div class="upd-acts2">' +
       ((!historical && !selIsCurrent && sel) ? '<button class="btn btn-tiny upd-go' + (isDown ? " is-down" : " btn-primary") + '" data-path="' + esc(x.path) + '" data-vid="' + esc(sel) + '" data-tip="' + actTip + '">' + actLabel + "</button>" : "") +
       (it.url ? '<a href="#" class="upd-site" data-url="' + esc(it.url) + '" data-tip="在浏览器打开 C 站页面"><img class="thumb upd-cov" data-path="' + esc(x.path) + '" alt=""/></a>' : "") +
-      '<button class="icon-btn upd-more" data-path="' + esc(x.path) + '" data-tip="更多：打开文件夹 / 复制路径 / 不再提醒">···</button>' +
+      '<button type="button" class="icon-btn upd-detail" aria-label="查看模型信息" data-path="' + esc(x.path) + '">' + _icon('info') + '</button>' +
+      '<button type="button" class="icon-btn upd-more" aria-label="更多模型操作" data-path="' + esc(x.path) + '" data-tip="更多：打开文件夹 / 复制路径 / 不再提醒">···</button>' +
     "</div></td></tr>";
 }
 
@@ -2235,10 +2236,11 @@ function _updSyncRowButton(tr, path, vid) {
 function _updBind(tbody) {
   (tbody.matches('tr[data-path]')?[tbody]:tbody.querySelectorAll('tr[data-path]')).forEach(tr=>{
     const info=tr.querySelector('.upd-info');if(!info)return;
-    info.tabIndex=0;info.setAttribute('role','button');info.setAttribute('aria-label','查看模型信息');
+    info.tabIndex=0;info.setAttribute('role','button');info.setAttribute('aria-label','选择模型');
     const open=()=>showModelDetail(tr.dataset.path);
-    tr.addEventListener('click',e=>{if(e.target.closest('button,a,input,select,.vbox'))return;if(!_updHistorical()){const path=tr.dataset.path;state.updSel.has(path)?state.updSel.delete(path):state.updSel.add(path);tr.classList.toggle('is-sel',state.updSel.has(path));tr.setAttribute('aria-selected',String(state.updSel.has(path)));_updSyncSel();}open();});
-    info.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open();}});
+    const toggle=()=>{if(_updHistorical())return;const path=tr.dataset.path;state.updSel.has(path)?state.updSel.delete(path):state.updSel.add(path);tr.classList.toggle('is-sel',state.updSel.has(path));tr.setAttribute('aria-selected',String(state.updSel.has(path)));_updSyncSel();};
+    tr.addEventListener('click',e=>{if(e.target.closest('button,a,input,select,.vbox'))return;toggle();});
+    info.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle();}});
   });
 
   tbody.querySelectorAll(".upd-cb").forEach((cb) => cb.addEventListener("change", () => {
@@ -2275,6 +2277,7 @@ function _updBind(tbody) {
     e.preventDefault();
     if (a.dataset.url) api.call("open_url", a.dataset.url);
   }));
+  tbody.querySelectorAll('.upd-detail').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();showModelDetail(b.dataset.path);}));
   tbody.querySelectorAll(".upd-more").forEach((b) => b.addEventListener("click", (e) => {
     e.stopPropagation();
     _updCtxMenu(b.dataset.path, b);
@@ -2289,12 +2292,14 @@ function _updCtxMenu(path, anchor, cx, cy) {
   const it = _updActiveItems()[path] || {};
   state.updCtxPath = path;
   const menu = $("#ctxMenu");
+  document.body.append(menu);
   menu.innerHTML =
-    (!_updHistorical() && it.has_update ? '<div class="ctx-item" data-act="upd_dl" data-tip="把下拉里选中的版本加入下载队列">更新到选中版本</div>' : "") +
-    '<div class="ctx-item" data-act="upd_wl" data-tip="以后不再提示这个模型的更新（按模型记入白名单；对已最新的模型也有效）">不再提醒更新（加入白名单）</div>' +
-    (it.url ? '<div class="ctx-item" data-act="upd_site2" data-tip="在浏览器打开 C 站页面">打开 C 站页面</div>' : "") +
-    '<div class="ctx-item" data-act="upd_folder" data-tip="打开资源管理器并选中该文件">打开所在文件夹</div>' +
-    '<div class="ctx-item" data-act="upd_copy" data-tip="复制文件完整路径">复制文件路径</div>';
+    '<button type="button" class="ctx-item" data-act="upd_detail">查看模型信息</button>' +
+    (!_updHistorical() && it.has_update ? '<button type="button" class="ctx-item" data-act="upd_dl" data-tip="把下拉里选中的版本加入下载队列">更新到选中版本</button>' : "") +
+    '<button type="button" class="ctx-item" data-act="upd_wl" data-tip="以后不再提示这个模型的更新（按模型记入白名单；对已最新的模型也有效）">不再提醒更新（加入白名单）</button>' +
+    (it.url ? '<button type="button" class="ctx-item" data-act="upd_site2" data-tip="在浏览器打开 C 站页面">打开 C 站页面</button>' : "") +
+    '<button type="button" class="ctx-item" data-act="upd_folder" data-tip="打开资源管理器并选中该文件">打开所在文件夹</button>' +
+    '<button type="button" class="ctx-item" data-act="upd_copy" data-tip="复制文件完整路径">复制文件路径</button>';
   if(_updHistorical())menu.querySelector('[data-act="upd_wl"]')?.remove();
   menu.style.display = "block";
   const zf = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
@@ -2307,8 +2312,8 @@ function _updCtxMenu(path, anchor, cx, cy) {
     menu.style.top = ((cy || 0) / zf) + "px";
   }
   const mr = menu.getBoundingClientRect();
-  if (mr.right > window.innerWidth) menu.style.left = Math.max(0, window.innerWidth - mr.width) + "px";
-  if (mr.bottom > window.innerHeight) menu.style.top = Math.max(0, window.innerHeight - mr.height) + "px";
+  if (mr.right > window.innerWidth) menu.style.left = Math.max(8, (window.innerWidth - mr.width - 8) / zf) + "px";
+  if (mr.bottom > window.innerHeight) menu.style.top = Math.max(8, (window.innerHeight - mr.height - 8) / zf) + "px";
 }
 
 $("#ctxMenu").addEventListener("click", async (e) => {
@@ -2318,7 +2323,9 @@ $("#ctxMenu").addEventListener("click", async (e) => {
   const p = state.updCtxPath || "";
   const it = _updActiveItems()[p] || {};
   const act = item.dataset.act;
-  if (act === "upd_dl") {
+  if (act === "upd_detail") {
+    showModelDetail(p);
+  } else if (act === "upd_dl") {
     if(_updHistorical())return;
     const { rec } = _updVers({ path: p, it });
     const vid = state.updPick[p] || rec;
@@ -3682,6 +3689,9 @@ if (_logoEl) _logoEl.addEventListener("click", showAbout);
   tip.style.display = "none";
   document.body.appendChild(tip);
   document.addEventListener("mousemove", (e) => {
+    const imageHost=e.target?.closest?.('img,.ms-img-wrap,.upd-info,.dt-cover,.dt-gallery,.iv-filmstrip');
+    const imageCell=e.target?.closest?.('td');
+    if(imageHost||imageCell?.querySelector('img')){tip.style.display='none';return;}
     const t = e.target && e.target.closest ? e.target.closest("[data-tip], td") : null;
     if (!t) { tip.style.display = "none"; return; }
     if(t.closest("#mmTable tbody")&&!["text","both"].includes(state.cfg.model_list_hover||"thumbnail")){tip.style.display="none";return;}

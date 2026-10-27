@@ -59,3 +59,19 @@ html[data-endfield=true] body #page-settings>.card>.title-row{position:relative!
 html[data-endfield=true][data-window-buttons=true] body #page-settings>.card>.title-row{padding-right:140px!important}
 html[data-endfield=true] body #page-settings #settingsForm .settings-nav{margin-left:0!important;margin-right:0!important}
 html[data-endfield=true] body #page-settings #openLogs{position:relative!important;inset:auto!important;margin-left:auto!important;flex:0 0 auto;width:auto;max-width:48%}
+/* Update selection and external detail dialogs share the Endfield visual hierarchy. */
+.ef-update-selection{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:10px 0 14px}.ef-update-selection .btn{min-width:126px}
+html[data-endfield=true] #updTable .upd-info:hover .upd-nm{color:inherit}
+html[data-endfield=true] #updTable .upd-acts2{grid-template-columns:minmax(100px,116px) 24px 24px}
+html[data-endfield=true] #updTable .upd-detail{grid-column:2;display:grid;place-items:center;width:24px;min-width:24px;height:26px;padding:4px;color:var(--text);border:0;background:none}
+html[data-endfield=true] #updTable .upd-more{grid-column:3;height:26px;display:grid;place-items:center;font-size:20px}
+html[data-endfield=true] #updTable :is(.upd-more,.upd-detail):hover{color:var(--ef-yellow);outline:1px solid var(--ef-yellow)}
+html[data-endfield=true] #updTable tr.is-sel{outline:1px solid var(--ef-yellow);outline-offset:-1px;box-shadow:inset 3px 0 var(--ef-yellow),0 0 15px #e7ce1833}
+html[data-endfield=true] body.external-model-detail-open #detailPanel{position:relative;isolation:isolate;border-top:0;box-shadow:0 15px 55px #0007}
+html[data-endfield=true] body.external-model-detail-open #detailPanel:before{content:'';position:absolute;inset:0 0 auto;height:3px;z-index:10;background:linear-gradient(90deg,#fff000 0 50%,#00c8df 50% 75%,#ed39df 75%);pointer-events:none}
+html[data-endfield=true] body.external-model-detail-open #detailPanel:after{content:'';position:absolute;inset:3px 0 0;z-index:-1;pointer-events:none;background:url('terrain-contours.svg') right center/650px 650px no-repeat;opacity:.1;mask-image:linear-gradient(90deg,transparent 30%,#000)}
+html[data-theme=dark_endfield] body.external-model-detail-open #detailPanel:after{filter:invert(1)}
+html[data-endfield=true] body.external-model-detail-open #detailPanel .detail-title{padding:8px 0 12px;border-bottom:1px solid var(--border)}
+html[data-endfield=true] body.external-model-detail-open #detailPanel .dt-desc-cn{border-radius:0;background:color-mix(in srgb,var(--text) 6%,transparent);border-left:3px solid var(--ef-yellow)}
+/* An image opened from model information must cover its parent dialog. */
+html body .image-viewer{z-index:200000}
