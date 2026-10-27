@@ -1,0 +1,288 @@
+/* Compact two-position switch, never a pair of unrelated yellow buttons. */
+#page-workflow .wf-view-switch{position:relative;isolation:isolate;display:grid;grid-template-columns:1fr 1fr;width:182px;flex:none;padding:0;gap:0;height:36px;border-radius:999px;background:#515653;overflow:hidden}
+#page-workflow .wf-view-switch:before{content:'';position:absolute;inset:0 auto 0 0;width:50%;border-radius:inherit;background:#eceeeb;z-index:-1;transform:translateX(0);transition:transform 180ms cubic-bezier(.2,.8,.2,1)}
+#page-workflow .wf-view-switch[data-view=full]:before{transform:translateX(100%)}
+#page-workflow .wf-view-option{display:grid;place-items:center;min-width:0;padding:0;border:0;background:none;color:#c0c5c0;font:500 13px var(--font);cursor:pointer;border-radius:999px}
+#page-workflow .wf-view-option[aria-selected=true]{color:#303630}
+#page-workflow .wf-view-option:focus-visible{outline:2px solid var(--ef-yellow);outline-offset:-3px}
+html[data-endfield=true] body #page-workflow>.wf-workspace{background:transparent;border:0;box-shadow:none;padding:6px 8px 12px;min-width:0}
+html[data-endfield=true] #page-workflow .title-row{align-items:center;margin-bottom:14px}
+html[data-endfield=true] #page-workflow .page-title{padding:0;border:0;font-size:25px}
+html[data-endfield=true] #page-workflow .wf-drop{background:color-mix(in srgb,var(--surface) 30%,transparent);border:1px dashed var(--border);border-radius:0}
+/* In Full mode nodes sit directly over the terrain, with floating prompt windows. */
+html[data-endfield=true] #page-workflow:has([data-wf-view=full].has-result){height:100%;min-height:0;overflow:auto}
+html[data-endfield=true] body #page-workflow>.wf-workspace[data-wf-view=full].has-result{display:flex;flex-direction:column;height:100%;min-height:0}
+#page-workflow [data-wf-view=full].has-result #wfResult{display:flex!important;flex:1;flex-direction:column;min-width:0;min-height:0;gap:7px}
+#page-workflow [data-wf-view=full] .wf-grid{display:none}
+#page-workflow [data-wf-view=full] .wf-file{padding:6px 0;border:0;border-radius:0;background:none;gap:9px}
+#page-workflow [data-wf-view=full] .wf-file-name{flex-basis:160px;font-size:11px}
+#page-workflow [data-wf-view=full] .wf-file-preview{width:25px;height:28px;border-radius:0}
+#page-workflow [data-wf-view=full] .wf-overview{padding:4px 0;gap:7px 14px;font-size:10px}
+#page-workflow [data-wf-view=full] .wf-overview strong{font-size:13px}
+#page-workflow [data-wf-view=full] .wf-alert{font-size:10px;padding:5px 10px;margin:0;min-height:0;border-radius:0}
+.wf-atlas-stage{position:relative;isolation:isolate;flex:1;min-height:390px;min-width:0}
+.wf-atlas-stage[hidden],.wf-atlas-bottom[hidden]{display:none!important}
+#page-workflow .wf-atlas-stage #wfGraphSection{position:absolute;inset:0;margin:0;border:0;overflow:visible;border-radius:0;background:none}
+.wf-atlas-stage .wf-graph-toolbar{position:absolute;z-index:8;left:0;right:0;top:0;display:flex;align-items:center;gap:7px;min-height:34px;padding:0;border:0;background:none;pointer-events:none}
+.wf-atlas-stage .wf-graph-toolbar>button{pointer-events:auto}
+.wf-atlas-stage .wf-graph-toolbar>strong{display:none}
+.wf-atlas-stage .wf-graph-toolbar .hint{margin-left:auto;flex:0 1 43%;font-size:9px!important;text-align:right;line-height:1.5}
+#page-workflow .wf-atlas-stage .wf-graph-viewport{height:100%;max-height:none;min-height:0;border:0;background:transparent;position:absolute;inset:0;outline:none}
+#page-workflow .wf-atlas-stage .wf-graph-node>rect:first-of-type{fill:color-mix(in srgb,var(--surface) 90%,transparent);stroke:color-mix(in srgb,var(--text) 36%,transparent);stroke-width:1.2}
+#page-workflow .wf-atlas-stage .wf-graph-node .wf-graph-node-head{fill:color-mix(in srgb,var(--surface2) 94%,transparent);stroke:none}
+#page-workflow .wf-atlas-stage .wf-graph-node.selected>rect:first-of-type{stroke:var(--ef-yellow);stroke-width:2.5}
+#page-workflow .wf-atlas-stage .wf-graph-node text{font-size:12px;font-family:var(--font);fill:var(--text)}
+#page-workflow .wf-atlas-stage .wf-graph-node text.wf-node-id,#page-workflow .wf-atlas-stage .wf-graph-node text.wf-port-label{font-size:10px;fill:var(--text-dim)}
+#page-workflow .wf-atlas-stage .wf-wire{stroke:var(--wire-color,var(--ef-yellow));stroke-width:2;opacity:.8}
+#page-workflow .wf-atlas-stage .wf-summary-node>rect:first-of-type{stroke-dasharray:4 3}
+.wf-atlas-left,.wf-atlas-right{position:absolute;z-index:5;top:48px;width:224px;max-height:calc(100% - 58px);display:flex;flex-direction:column;gap:10px;pointer-events:none;min-width:0}
+.wf-atlas-left{left:0}.wf-atlas-right{right:0}
+#page-workflow .wf-atlas-stage .wf-prompt,#page-workflow .wf-atlas-stage .wf-detail-section{pointer-events:auto;background:color-mix(in srgb,var(--surface) 87%,transparent);border:1px solid color-mix(in srgb,var(--text) 20%,transparent);border-top:2px solid var(--ef-yellow);border-radius:0;backdrop-filter:blur(5px);padding:12px;margin:0;min-height:0;overflow:auto;scrollbar-width:thin;box-shadow:0 5px 16px #0002}
+#page-workflow .wf-atlas-stage .wf-prompt header{font-size:12px;padding-bottom:8px;gap:6px}
+#page-workflow .wf-atlas-stage .wf-prompt-text{font-size:12px;line-height:1.8;max-height:220px;min-height:30px}
+#page-workflow .wf-atlas-stage .wf-prompt.negative{border-top-color:var(--text-dim);flex:0 1 auto;max-height:45%}
+#page-workflow .wf-atlas-stage .wf-detail-section{flex:1;max-height:280px}
+#page-workflow .wf-atlas-stage .wf-node-detail{max-height:210px;overflow:auto;font-size:11px;scrollbar-width:thin}
+#page-workflow .wf-atlas-stage .wf-section-title{font-size:12px;gap:6px;margin:0 0 10px;display:flex;align-items:center;flex-wrap:wrap}
+#page-workflow .wf-atlas-stage .wf-section-title .wf-count{font-size:9px}
+#page-workflow .wf-atlas-stage .wf-detail-title{font-size:13px}
+#page-workflow .wf-atlas-stage .wf-detail-type{font-size:10px}
+#page-workflow .wf-atlas-stage .wf-values>div{font-size:11px;padding:7px 0;gap:7px;grid-template-columns:minmax(50px,35%) minmax(0,1fr)}
+.wf-map-directory{position:absolute;left:0;top:40px;z-index:20;width:min(300px,calc(100% - 16px));max-height:calc(100% - 50px);overflow:auto;background:var(--surface);border:1px solid var(--border);box-shadow:0 8px 24px #0005;scrollbar-width:thin}
+#page-workflow .wf-map-directory .wf-node-section{border:0;border-radius:0;background:none;padding:12px}
+#page-workflow .wf-map-directory .wf-nodes{max-height:260px}
+.wf-atlas-bottom{flex:none;max-height:190px;min-height:45px;overflow:auto;scrollbar-width:thin}
+#page-workflow .wf-atlas-bottom .wf-model-section{padding:8px 0 0;border:0;border-top:1px solid var(--border);border-radius:0;background:linear-gradient(color-mix(in srgb,var(--surface) 45%,transparent),transparent);box-shadow:none}
+#page-workflow .wf-atlas-bottom .wf-section-title{font-size:12px;line-height:1.6;margin:0 0 7px}
+#page-workflow .wf-atlas-bottom .wf-models{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,245px),1fr));gap:6px 12px;max-height:none;overflow:visible}
+#page-workflow .wf-atlas-bottom .wf-resource-head{display:none}
+#page-workflow .wf-atlas-bottom .wf-resource{padding:7px 10px;border:0;border-left:2px solid var(--border);background:color-mix(in srgb,var(--surface2) 45%,transparent)}
+#page-workflow .wf-atlas-bottom .wf-resource-row{display:flex;gap:8px;flex-wrap:wrap}
+#page-workflow .wf-atlas-bottom .wf-resource-title{flex:1 1 100%;font-size:11px}
+#page-workflow .wf-atlas-bottom .wf-resource-name{font-size:11px}
+#page-workflow .wf-atlas-bottom .wf-badge{font-size:10px;flex:1}
+#page-workflow .wf-atlas-bottom .wf-model-cover{width:28px;height:34px;border-radius:0}
+#page-workflow .wf-atlas-bottom .wf-resource-details summary{font-size:9px}
+#page-workflow .wf-atlas-stage .btn,#page-workflow .wf-atlas-bottom .btn{min-height:25px;font-size:10px;padding-block:4px}
+@media(max-width:1100px){.wf-atlas-left,.wf-atlas-right{width:190px}#page-workflow .wf-atlas-stage .wf-prompt-text{font-size:11px}.wf-atlas-stage{min-height:430px}.wf-atlas-stage .wf-graph-toolbar .hint{max-width:40%;font-size:8px!important}}
+@media(max-width:900px){html[data-endfield=true] body #page-workflow>.wf-workspace[data-wf-view=full].has-result{height:auto;min-height:100%}.wf-atlas-stage{flex:none;min-height:720px}#page-workflow .wf-atlas-stage .wf-graph-viewport{top:190px;height:380px}.wf-atlas-left,.wf-atlas-right{width:calc(50% - 6px);top:44px;max-height:150px}.wf-atlas-right{display:contents}#page-workflow .wf-atlas-stage .negative{position:absolute;right:0;top:44px;width:calc(50% - 6px);height:145px;max-height:none}#page-workflow .wf-atlas-stage .positive{height:145px}#page-workflow .wf-atlas-stage .wf-detail-section{position:absolute;top:590px;left:0;right:0;width:100%;max-height:140px}#page-workflow .wf-atlas-stage .wf-node-detail{max-height:85px}.wf-atlas-stage .wf-graph-toolbar .hint{display:none}.wf-atlas-bottom{max-height:260px}#page-workflow .wf-atlas-stage .wf-prompt-text{max-height:88px}.wf-map-directory{top:44px}}
+@media(max-width:500px){#page-workflow .wf-view-switch{width:142px;height:32px}#page-workflow .wf-view-option{font-size:11px}#page-workflow .wf-file-name{flex-basis:120px}.wf-atlas-stage{min-height:750px}#page-workflow .wf-atlas-stage .wf-graph-viewport{top:215px;height:355px}#page-workflow .wf-atlas-stage .wf-prompt header{font-size:10px;flex-wrap:wrap}#page-workflow .wf-atlas-stage .positive,#page-workflow .wf-atlas-stage .negative{height:165px}.wf-atlas-stage .wf-graph-toolbar{gap:4px;flex-wrap:wrap}.wf-atlas-stage .wf-graph-toolbar button{max-width:90px}}
+@media(prefers-reduced-motion:reduce){#page-workflow .wf-view-switch:before{transition:none}}
+.wf-atlas-note{margin:0;color:var(--text-dim);font-size:11px;line-height:1.5}
+#page-workflow .wf-map-tool{pointer-events:auto;min-width:28px;height:28px;padding:0 9px;font:500 11px var(--font);color:var(--text);background:color-mix(in srgb,var(--surface) 75%,transparent);border:1px solid var(--border);cursor:pointer}
+#page-workflow .wf-map-tool:hover,#page-workflow .wf-map-tool:focus-visible{border-color:var(--ef-yellow);outline:none}
+#page-workflow .wf-map-tool:disabled{opacity:.4;cursor:default}
+@media(max-width:500px){.wf-atlas-stage .wf-graph-toolbar{justify-content:center}.wf-atlas-stage .wf-graph-toolbar #wfMapCopy{display:none}}
+#page-workflow .title-row>*{min-width:0}
+#page-workflow .wf-status{max-width:100%;white-space:normal;overflow-wrap:anywhere}
+#page-workflow .wf-file-actions{max-width:100%;flex-wrap:wrap}
+#page-workflow .wf-file-actions>.btn{min-width:0}
+#page-workflow .wf-atlas-stage #wfNodeDetail .wf-values{display:block}
+html[data-theme=light_endfield] #page-workflow .wf-ok,html[data-theme=light_endfield] #page-workflow .wf-badge.hit{color:#6c6200}
+html[data-theme=light_endfield] #page-workflow .wf-atlas-stage .wf-graph-node.selected>rect:first-of-type{stroke:#968000}
+.wf-atlas-enter{animation:wf-atlas-reveal 460ms cubic-bezier(.2,.7,.2,1) both}
+.wf-atlas-enter .wf-atlas-left{animation:wf-prompt-left 360ms 100ms both}
+.wf-atlas-enter .wf-atlas-right{animation:wf-prompt-right 360ms 100ms both}
+@keyframes wf-atlas-reveal{from{opacity:0;transform:scale(.98)}to{opacity:1;transform:none}}
+@keyframes wf-prompt-left{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:none}}
+@keyframes wf-prompt-right{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.wf-atlas-enter,.wf-atlas-enter .wf-atlas-left,.wf-atlas-enter .wf-atlas-right{animation:none}}
+/* Perspective survey markers, not flat workflow cards. The projector is shared with the terrain. */
+#page-workflow{--wf-survey-gold:#e8d955;--wf-label-paper:#171b1b}
+html[data-theme=light_endfield] #page-workflow{--wf-survey-gold:#756200;--wf-label-paper:#edeee7}
+#page-workflow .wf-atlas-stage #wfGraphCanvas{position:absolute;inset:0;width:100%;height:100%;transform:none!important}
+#page-workflow .wf-survey-scene{display:block;width:100%;height:100%;overflow:visible;fill:none}
+#page-workflow .wf-atlas-stage .wf-survey-scene .wf-wire{fill:none;stroke:var(--wf-survey-gold);stroke-width:1.2;opacity:.65;pointer-events:none}
+#page-workflow .wf-survey-stem,#page-workflow .wf-survey-ring{fill:none;stroke:var(--wf-survey-gold);stroke-width:1.3;opacity:.9}
+#page-workflow .wf-survey-cap{fill:var(--wf-survey-gold);stroke:none}
+#page-workflow .wf-survey-hit{stroke:transparent;stroke-width:26;fill:none;cursor:pointer}
+#page-workflow .wf-survey-label{fill:var(--wf-survey-gold);font:600 12px var(--font);paint-order:stroke;stroke:var(--wf-label-paper);stroke-width:3;stroke-linejoin:round;cursor:pointer}
+#page-workflow .wf-survey-id{fill:var(--text-dim);font:500 9px var(--font);paint-order:stroke;stroke:var(--wf-label-paper);stroke-width:2;pointer-events:none}
+#page-workflow .wf-survey-node{cursor:pointer;outline:none}
+#page-workflow .wf-survey-node:is(.selected,:focus-visible,:hover) .wf-survey-ring{stroke-width:2;fill:color-mix(in srgb,var(--wf-survey-gold) 14%,transparent)}
+#page-workflow .wf-survey-node:is(.selected,:focus-visible,:hover) .wf-survey-label{font-weight:800}
+#page-workflow .wf-survey-leader{fill:none;stroke:var(--wf-survey-gold);stroke-width:1;stroke-dasharray:4 5;opacity:.5;pointer-events:none}
+#page-workflow .wf-atlas-enter{animation:wf-survey-arrive 400ms both}
+@keyframes wf-survey-arrive{from{opacity:0}to{opacity:1}}
+#page-workflow .wf-zoom-stepper{pointer-events:auto;display:flex;align-items:center;gap:3px;width:176px;height:34px;flex:none;background:#4b4e4b;border-radius:22px;padding:3px;box-shadow:inset 0 0 0 1px #ffffff35}
+#page-workflow .wf-zoom-stepper button{border:0;box-shadow:none;min-width:0;padding:0;display:grid;place-items:center;cursor:pointer;font-family:var(--font)}
+#page-workflow .wf-zoom-stepper #wfGraphFit{flex:1;height:28px;background:transparent;color:#f0f1eb;font-size:15px;font-weight:700}
+#page-workflow .wf-zoom-stepper :is(#wfGraphMinus,#wfGraphPlus){width:28px;height:28px;flex:none;border-radius:50%;background:#f0f1eb;color:#40453f}
+#page-workflow .wf-zoom-stepper svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.8}
+#page-workflow .wf-zoom-stepper button:focus-visible{outline:2px solid #fff200;outline-offset:1px}
+#page-workflow .wf-view-option{outline:none!important;box-shadow:none!important;border:0!important}
+#page-workflow .wf-view-option:focus-visible{outline:none!important}
+#page-workflow .wf-view-switch:has(:focus-visible){outline:1px dashed var(--text-dim);outline-offset:3px}
+#page-workflow .wf-quick-drop{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:2px 0}
+#page-workflow .wf-source-pick{display:flex;align-items:center;gap:12px;min-width:0;width:min(500px,100%);background:color-mix(in srgb,var(--surface) 25%,transparent);border:1px dashed var(--border);color:var(--text);text-align:left;padding:7px 12px;cursor:pointer}
+#page-workflow .wf-source-pick:hover,.wf-workspace.over .wf-source-pick{border-color:var(--wf-survey-gold)}
+#page-workflow .wf-source-copy{display:flex;flex-direction:column;gap:6px;min-width:0}
+#page-workflow .wf-source-copy .wf-file-name{flex:none;font:600 13px var(--font);overflow-wrap:anywhere;white-space:normal}
+#page-workflow .wf-source-copy small{font:11px var(--font);color:var(--text-dim)}
+#page-workflow .wf-source-pick .wf-file-preview,#page-workflow .wf-file-placeholder{width:44px;height:50px;flex:none;object-fit:contain;background:color-mix(in srgb,var(--surface2) 65%,transparent);display:grid;place-items:center;border-radius:0}
+#page-workflow .wf-file-placeholder .ic{width:24px;height:24px}
+html[data-theme=light_endfield] #page-workflow .wf-overview>.ic,html[data-theme=light_endfield] #page-workflow .wf-badge.hit{color:#655b00!important}
+#page-workflow .wf-atlas-bottom button,#page-workflow .wf-atlas-bottom .ef-action-caption{text-decoration:none!important}
+@media(max-width:500px){#page-workflow .wf-zoom-stepper{width:144px}.wf-atlas-stage .wf-graph-toolbar button{max-width:none}.wf-atlas-stage .wf-graph-toolbar{justify-content:space-between}#page-workflow .wf-tags{flex-wrap:wrap}.wf-survey-label{font-size:11px}}
+@media(prefers-reduced-motion:reduce){#page-workflow .wf-atlas-enter{animation:none}}
+#page-workflow .wf-survey-association{fill:none;stroke:var(--wf-survey-gold);stroke-width:1;stroke-dasharray:6 5;opacity:.6;pointer-events:none}
+#page-workflow .wf-image-island{pointer-events:none}
+#page-workflow .wf-image-ground{fill:var(--wf-survey-gold);opacity:.08;stroke:var(--wf-survey-gold);stroke-width:1}
+#page-workflow .wf-image-risers{fill:none;stroke:var(--wf-survey-gold);stroke-width:.7;stroke-dasharray:2 4;opacity:.4}
+#page-workflow .wf-image-frame{fill:none;stroke:var(--wf-survey-gold);stroke-width:.6}
+#page-workflow .wf-image-island image{opacity:.86}
+#page-workflow .wf-atlas-bottom .ef-action-caption{border:0!important}
+
+/* Dense workflows keep the map legible: IDs at rest, full titles on inspection. */
+#page-workflow .wf-survey-scene.dense .wf-survey-label{opacity:0;pointer-events:none}
+#page-workflow .wf-survey-scene.dense .wf-survey-node:hover .wf-survey-label,
+#page-workflow .wf-survey-scene.dense .wf-survey-node.selected .wf-survey-label{opacity:1;font-size:11px}
+#page-workflow .wf-survey-scene.dense .wf-survey-id{font-size:11px;opacity:.9}
+#page-workflow .wf-survey-scene.dense .wf-wire{opacity:.12;stroke-width:.8}
+#page-workflow .wf-survey-scene.dense .wf-wire.related{opacity:.85;stroke-width:1.5}
+#page-workflow .wf-survey-scene.dense .wf-survey-stem{opacity:.38}
+#page-workflow .wf-survey-scene.dense .wf-survey-ring{opacity:.35}
+
+#page-workflow .wf-survey-scene.dense .wf-survey-label{opacity:.92;font-size:10px}
+
+/* The revealed workflow is a city diorama, not the seven-station terrain map. */
+#page-workflow .wf-city-scene .wf-survey-ring{fill:#111715;stroke:#d7dfd3;stroke-width:.7;opacity:.95}
+html[data-theme=light_endfield] #page-workflow .wf-city-scene .wf-survey-ring{fill:#303b36;stroke:#6b786d}
+#page-workflow .wf-city-scene .wf-survey-stem{stroke:#e8eee3;stroke-width:1.2;opacity:.85}
+#page-workflow .wf-city-scene .wf-survey-cap{fill:#ffed00}
+#page-workflow .wf-city-scene .wf-survey-label{fill:#fff5b2;stroke:#18201d;stroke-width:5px;font-size:11px}
+html[data-theme=light_endfield] #page-workflow .wf-city-scene .wf-survey-label{fill:#15201b;stroke:#f3f5ef}
+#page-workflow .wf-city-scene .wf-wire{stroke:#e6eee4;opacity:.28;stroke-width:1}
+#page-workflow .wf-city-scene .wf-wire.related{stroke:#ffed00;opacity:1;stroke-width:1.8}
+html[data-theme=light_endfield] #page-workflow .wf-city-scene .wf-wire{stroke:#35453b}
+html[data-theme=light_endfield] #page-workflow .wf-city-scene .wf-wire.related{stroke:#806600}
+#page-workflow .wf-city-scene .wf-survey-id{fill:#dae5d9;stroke:#18201d;font-size:10px}
+#page-workflow .wf-graph-viewport{touch-action:none;cursor:grab;user-select:none}
+#page-workflow .wf-graph-viewport.dragging{cursor:grabbing}
+#page-workflow .wf-atlas-stage .wf-prompt,#page-workflow .wf-atlas-stage .wf-detail-section{background:color-mix(in srgb,var(--surface) 95%,transparent)}
+
+#page-workflow [data-wf-view=full].has-result #wfResult{margin-top:4px}
+#page-workflow [data-wf-view=full] #wfResultTitle{margin-bottom:0}
+#page-workflow .wf-source-pick{padding:4px 9px}
+#page-workflow .wf-source-pick .wf-file-preview{height:40px;width:36px}
+#page-workflow .wf-source-copy{gap:3px}
+#page-workflow .wf-city-scene .wf-survey-id{opacity:.8}
+#page-workflow .wf-city-scene .wf-survey-ring{opacity:.6!important}
+#page-workflow .wf-city-scene .wf-survey-node.selected .wf-survey-ring{opacity:1!important;stroke:#ffed00;stroke-width:1.5}
+
+#page-workflow .wf-city-label-back{fill:#18201df2;stroke:#a3b0a044;stroke-width:.7;pointer-events:none}
+#page-workflow .wf-city-scene .wf-survey-node.selected .wf-city-label-back{stroke:#ffed00;stroke-width:1}
+#page-workflow .wf-city-scene .wf-survey-label{stroke-width:0}
+html[data-theme=light_endfield] #page-workflow .wf-city-label-back{fill:#f1f4ecf5;stroke:#64736166}
+html[data-theme=light_endfield] #page-workflow .wf-city-scene .wf-survey-id{fill:#54624e;stroke:none}
+
+#page-workflow .wf-city-scene{overflow:hidden;clip-path:inset(40px 0 0)}
+
+#page-workflow [data-wf-view=full] :is(.wf-overview,.wf-alert,.wf-atlas-note,#wfResultTitle){flex:none}
+
+/* Nodes, not the scenery, carry visual priority. Billboard names are never ellipsized. */
+#page-workflow .wf-city-scene .wf-survey-label{font:600 12px var(--font);fill:#f3f5ef;stroke:none!important;opacity:1!important}
+#page-workflow .wf-city-scene .wf-survey-id{font-size:10px;opacity:.7}
+#page-workflow .wf-city-label-back{fill:#18201dfc;stroke:#647566;stroke-width:1}
+#page-workflow .wf-city-scene .wf-survey-node.selected .wf-city-label-back{fill:#293126;stroke:#fff000;stroke-width:1.5}
+html[data-theme=light_endfield] #page-workflow .wf-city-scene .wf-survey-label{fill:#263426}
+html[data-theme=light_endfield] #page-workflow .wf-city-scene .wf-survey-node.selected .wf-city-label-back{fill:#f7f8dd;stroke:#887700}
+#page-workflow .wf-city-scene .wf-survey-ring{stroke-width:1!important;vector-effect:non-scaling-stroke}
+#page-workflow .wf-rotation-tools{display:flex;align-items:center;gap:3px;pointer-events:auto;flex:none;color:var(--text);font:11px var(--font)}
+#page-workflow .wf-rotation-tools button{height:28px;min-width:27px;padding:0 5px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:16px;display:grid;place-items:center}
+#page-workflow .wf-rotation-tools button:hover{border-color:var(--wf-survey-gold);color:var(--wf-survey-gold)}
+#page-workflow #wfGraphReset{font-size:11px;padding:0 7px}
+#page-workflow #wfGraphOrientation{min-width:65px;text-align:center}
+#page-workflow .wf-graph-toolbar .hint{display:none}
+@media(max-width:800px){#page-workflow .wf-atlas-stage .wf-graph-toolbar{flex-wrap:wrap;justify-content:flex-start;gap:4px}#page-workflow .wf-rotation-tools{gap:1px}#page-workflow .wf-atlas-left,#page-workflow .wf-atlas-right{top:82px}#page-workflow .wf-city-scene{clip-path:inset(76px 0 0)}}
+
+@media(max-width:500px){#page-workflow .wf-rotation-tools{flex-wrap:wrap;max-width:100%;min-width:0;box-sizing:border-box}#page-workflow .wf-atlas-stage .wf-graph-toolbar{max-width:100%;box-sizing:border-box}#page-workflow .wf-rotation-tools button{min-width:24px;padding:0 3px}#page-workflow #wfGraphOrientation{min-width:58px}}
+
+#page-workflow .wf-graph-viewport{cursor:all-scroll}#page-workflow .wf-graph-viewport.rotating{cursor:all-scroll}#page-workflow .wf-graph-viewport.space-pan{cursor:grab}#page-workflow .wf-graph-viewport.space-pan.dragging{cursor:grabbing}
+
+/* Always-visible real ComfyUI connections; the under-stroke survives bright roofs and dark plazas. */
+#page-workflow .wf-atlas-stage .wf-survey-scene.wf-city-scene .wf-wire{stroke:var(--wf-wire-color,#d5dfd7);stroke-width:1.9;opacity:.94;vector-effect:non-scaling-stroke}
+#page-workflow .wf-atlas-stage .wf-survey-scene.wf-city-scene .wf-wire.related{stroke:#ffed00;stroke-width:2.7;opacity:1}
+#page-workflow .wf-atlas-stage .wf-city-scene .wf-wire-outline{fill:none;stroke:#15201b;stroke-width:4.6;opacity:.88;pointer-events:none;vector-effect:non-scaling-stroke}
+html[data-theme=light_endfield] #page-workflow .wf-atlas-stage .wf-survey-scene.wf-city-scene .wf-wire.related{stroke:#e6c400}
+
+/* Single unoutlined wires. Light mode uses deeper socket colours instead of pale ink on pale roofs. */
+#page-workflow .wf-atlas-stage .wf-survey-scene.wf-city-scene .wf-wire{stroke:var(--wf-wire-color,#d5dfd7);stroke-width:2;opacity:1}
+#page-workflow .wf-atlas-stage .wf-survey-scene.wf-city-scene .wf-wire.related{stroke:#ffed00;stroke-width:2.7}
+html[data-theme=light_endfield] #page-workflow .wf-atlas-stage .wf-survey-scene.wf-city-scene .wf-wire{stroke:var(--wf-wire-light,#344c3c);opacity:1}
+html[data-theme=light_endfield] #page-workflow .wf-atlas-stage .wf-survey-scene.wf-city-scene .wf-wire.related{stroke:#705000}
+#page-workflow .wf-flow-dot{color:var(--wf-wire-color,#d5dfd7);pointer-events:none}
+#page-workflow .wf-flow-dot.related{color:#fff260}
+html[data-theme=light_endfield] #page-workflow .wf-flow-dot{color:var(--wf-wire-light,#344c3c)}
+html[data-theme=light_endfield] #page-workflow .wf-flow-dot.related{color:#745400}
+html[data-theme=light_endfield] #page-workflow .wf-city-label-back{fill:#f8fbf5;stroke:#63745c}
+html[data-theme=light_endfield] #page-workflow .wf-city-scene .wf-survey-label{fill:#142817}
+html[data-theme=light_endfield] #page-workflow .wf-city-scene .wf-survey-id{fill:#3a503c;opacity:1}
+html[data-theme=light_endfield] #page-workflow .wf-atlas-stage :is(.wf-prompt,.wf-detail-section){background:#f5f8f0f7;color:#233425;border-color:#82907c}
+html[data-theme=light_endfield] #page-workflow .wf-city-scene .wf-survey-stem{stroke:#516345;opacity:.8}
+#page-workflow .wf-projection-toggle{position:absolute;right:6px;bottom:8px;z-index:9;min-width:155px;pointer-events:auto}
+#page-workflow .wf-flat-scene .wf-survey-stem,#page-workflow .wf-flat-scene .wf-survey-ring,#page-workflow .wf-flat-scene .wf-survey-cap{display:none}
+#page-workflow .wf-is-flat .wf-graph-viewport{background:#1c2521;cursor:grab}
+html[data-theme=light_endfield] #page-workflow .wf-is-flat .wf-graph-viewport{background:#e6eddf}
+#page-workflow .wf-flat-scene .wf-city-label-back{stroke-width:1.5}
+#page-workflow .wf-is-flat .wf-rotation-tools button:disabled{opacity:.35;cursor:default}
+@media(prefers-reduced-motion:reduce){#page-workflow .wf-flow-dot{display:none}}
+html[data-ef-motion=false] #page-workflow .wf-flow-dot{display:none}
+
+#page-workflow .wf-city-scene.dense .wf-survey-label{pointer-events:auto;cursor:pointer}
+
+html[data-theme=light_endfield] #page-workflow .wf-city-scene .wf-survey-cap{fill:#795700}
+html[data-theme=light_endfield] #page-workflow .wf-city-scene .wf-survey-node.selected .wf-survey-ring{stroke:#795700!important}
+#page-workflow #wfProjectionToggle{min-height:36px;min-width:170px;font-size:12px}
+#page-workflow #wfProjectionToggle .ef-action-caption{font-size:12px}
+
+/* Broad, unified hover targets: title, card surface, cap and pillar all belong to one node. */
+#page-workflow .wf-city-label-back{pointer-events:all;cursor:pointer}
+#page-workflow .wf-card-contours{opacity:.23;pointer-events:none}
+#page-workflow .wf-node-contour-ink{fill:none;stroke:#c0d0b7;stroke-width:.7}
+html[data-theme=light_endfield] #page-workflow .wf-node-contour-ink{stroke:#5f7458}
+html[data-theme=light_endfield] #page-workflow .wf-card-contours{opacity:.16}
+#page-workflow .wf-survey-hit{stroke-width:32;pointer-events:all}
+#page-workflow .wf-survey-stem{pointer-events:stroke}
+#page-workflow .wf-left-actions{display:flex;align-items:center;gap:0;border:1px solid var(--border);pointer-events:auto;flex:none}
+#page-workflow .wf-left-actions button{height:28px;padding:0 9px;border:0;background:var(--surface);color:var(--text);font-size:11px;cursor:pointer}
+#page-workflow .wf-left-actions button[aria-pressed=true]{background:#fff000;color:#222b20;font-weight:700}
+#page-workflow .wf-left-actions button:disabled{opacity:.35;cursor:default}
+#page-workflow .wf-graph-viewport[data-left-action=pan]{cursor:grab}
+#page-workflow .wf-graph-viewport[data-left-action=select]{cursor:default}
+#page-workflow .wf-graph-viewport[data-left-action=rotate],#page-workflow .wf-graph-viewport.space-rotate{cursor:all-scroll}
+#page-workflow .wf-graph-viewport.dragging{cursor:grabbing}
+#page-workflow .wf-flat-scene .wf-city-label-back,#page-workflow .wf-flat-scene .wf-survey-label{cursor:grab}
+#page-workflow .wf-atlas-stage .wf-graph-toolbar{flex-wrap:wrap}
+
+/* Flat graph is a local grid; the unzoomed seven-station terrain remains behind the workspace. */
+#page-workflow .wf-is-flat .wf-graph-viewport{background-color:#19211eee;background-image:linear-gradient(#bccdc413 1px,transparent 1px),linear-gradient(90deg,#bccdc413 1px,transparent 1px),linear-gradient(#bccdc409 1px,transparent 1px),linear-gradient(90deg,#bccdc409 1px,transparent 1px);background-size:100px 100px,100px 100px,20px 20px,20px 20px}
+html[data-theme=light_endfield] #page-workflow .wf-is-flat .wf-graph-viewport{background-color:#e9eee5f2;background-image:linear-gradient(#34483826 1px,transparent 1px),linear-gradient(90deg,#34483826 1px,transparent 1px),linear-gradient(#3448380d 1px,transparent 1px),linear-gradient(90deg,#3448380d 1px,transparent 1px)}
+#page-workflow .wf-card-contours{opacity:.4}
+html[data-theme=light_endfield] #page-workflow .wf-card-contours{opacity:.28}
+#page-workflow .wf-atlas-right{width:290px}
+#page-workflow .wf-atlas-stage .wf-detail-section{max-height:440px;min-height:240px}
+#page-workflow .wf-atlas-stage .wf-node-detail{max-height:none;min-height:0;flex:1;overflow:auto}
+#page-workflow .wf-atlas-stage .wf-floating-card{position:relative;display:flex;flex-direction:column;min-width:0;isolation:isolate}
+#page-workflow .wf-atlas-stage .wf-floating-card .wf-card-handle{cursor:move;touch-action:none;flex:none;user-select:none;padding-right:2px}
+#page-workflow .wf-atlas-stage .wf-card-floating{position:absolute;right:auto;bottom:auto;max-height:none;max-width:100%;margin:0;box-sizing:border-box;min-height:110px;pointer-events:auto;overflow:hidden}
+#page-workflow .wf-atlas-stage .wf-card-floating .wf-prompt-text{min-height:0;max-height:none;overflow:auto;flex:1}
+#page-workflow .wf-atlas-stage .wf-pinned-card{background:var(--surface);color:var(--text);border:1px solid var(--border);border-top:2px solid var(--ef-yellow);padding:12px;box-shadow:0 8px 24px #0004}
+#page-workflow .wf-card-resizer{position:absolute;width:18px;height:18px;bottom:0;right:0;z-index:3;cursor:nwse-resize;touch-action:none;background:repeating-linear-gradient(135deg,transparent 0 3px,var(--text-dim) 3px 4px);clip-path:polygon(100% 0,100% 100%,0 100%);opacity:.6}
+#page-workflow .wf-pin-node{width:26px;min-width:26px;padding:4px}
+#page-workflow .wf-pin-node svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2}
+#page-workflow .wf-pinned-card .wf-section-title{justify-content:space-between;flex-wrap:nowrap}
+@media(max-width:1100px){#page-workflow .wf-atlas-right{width:245px}}
+@media(max-width:900px){#page-workflow .wf-atlas-right{width:auto}#page-workflow .wf-atlas-stage .wf-detail-section:not(.wf-card-floating){min-height:140px;max-height:180px}}
+
+html[data-theme=light_endfield] #page-workflow .wf-card-contours{filter:brightness(.42);opacity:.35}
+
+#page-workflow .wf-atlas-stage .wf-pinned-card{border-radius:0}
+
+/* Card geometry is expressed in the stage's unzoomed coordinate system. */
+#page-workflow .wf-card-interacting{transition:none!important;animation:none!important;will-change:width,height,left,top}
+#page-workflow .wf-card-interacting *{transition:none!important}
+#page-workflow .wf-atlas-stage .wf-pinned-card .wf-node-detail{max-height:none;min-height:0;flex:1;overflow:auto;scrollbar-width:thin;font-size:11px}
+#page-workflow .wf-pin-node[aria-pressed=true]{color:var(--ef-yellow);background:color-mix(in srgb,var(--ef-yellow) 12%,var(--surface));border-color:var(--ef-yellow)}
+#page-workflow .wf-pinned-close{margin-left:auto}
+#page-workflow .wf-pinned-card .wf-section-title{justify-content:flex-start;gap:6px}

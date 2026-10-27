@@ -1,0 +1,95 @@
+/* Same full-width industrial information band as the transactional font chooser. */
+html[data-endfield=true] .ef-folder-mask{z-index:100100;background:#070b0dc7;backdrop-filter:blur(12px)}
+html[data-endfield=true] body .folder-picker.ef-folder-band{--fp-bg:var(--surface);--fp-face:48px;--fp-base:60px;--fp-inset:4px;position:fixed;left:0!important;right:0!important;top:50%!important;transform:translateY(-50%);z-index:100101;isolation:isolate;display:flex;flex-direction:column;gap:10px;width:100%!important;max-width:none!important;min-width:0!important;height:min(640px,82dvh)!important;min-height:260px!important;max-height:calc(100dvh - 120px)!important;padding:28px max(28px,calc((100vw - 1320px)/2)) 40px!important;margin:0;border:0!important;border-block:1px solid var(--border)!important;border-radius:0!important;background:var(--fp-bg);color:var(--text);resize:none!important;overflow:visible!important;box-shadow:0 8px 30px #0006,0 -6px 24px #0004}
+html[data-endfield=true] .ef-folder-band:before{content:'';position:absolute;left:0;right:0;top:-1px;height:3px;background:var(--ef-band-stripe);pointer-events:none}
+html[data-endfield=true] .ef-folder-band .fp-heading{display:flex;justify-content:space-between;align-items:center;gap:18px;flex:none;min-width:0}
+html[data-endfield=true] .ef-folder-band .rd-title{padding:0;margin:0;border:0;font-size:23px;font-weight:700;line-height:1.4}
+html[data-endfield=true] .ef-folder-band .fp-hint{margin:0;flex:none;font-size:12px;line-height:1.7;color:var(--text-dim)}
+html[data-endfield=true] .ef-folder-band .fp-layout{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:28px;flex:1;min-height:0;overflow:hidden}
+html[data-endfield=true] .ef-folder-band .fp-browser{display:flex;flex-direction:column;min-width:0;min-height:0;gap:10px}
+html[data-endfield=true] .ef-folder-band .fp-list-heading,html[data-endfield=true] .ef-folder-band .fp-choice h3{font-size:14px;font-weight:600;margin:0}
+html[data-endfield=true] .ef-folder-band .fp-toolbar{display:flex;gap:10px;align-items:center;margin:0;flex:none}
+html[data-endfield=true] .ef-folder-band #fpSearch{width:100%;min-width:0;height:34px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:0!important;font-size:12px}
+html[data-endfield=true] .ef-folder-band #fpCount{font-size:10px;white-space:nowrap;color:var(--text-dim)}
+html[data-endfield=true] .ef-folder-band .fp-view-options{font-size:10px;color:var(--text-dim);line-height:1.5;flex:none;margin:0}
+html[data-endfield=true] .ef-folder-band .fp-view-options>span{display:none}
+html[data-endfield=true] .ef-folder-band #fpList{flex:1;min-height:0;min-width:0;max-height:none!important;overflow:auto;overflow-x:hidden;border:1px solid var(--border);background:color-mix(in srgb,var(--bg) 40%,transparent);border-radius:0}
+html[data-endfield=true] .ef-folder-band .fp-item{border-radius:0;padding-block:9px;color:var(--text);overflow:hidden}
+html[data-endfield=true] .ef-folder-band .fp-item.selected{background:color-mix(in srgb,var(--ef-yellow) 14%,var(--surface));box-shadow:inset 3px 0 var(--ef-yellow)}
+html[data-endfield=true] .ef-folder-band .fp-folder-label{font-size:13px;min-width:0;white-space:normal;overflow-wrap:anywhere}
+html[data-endfield=true] .ef-folder-band .fp-path{font-size:10px;line-height:1.5;white-space:normal;overflow-wrap:anywhere}
+html[data-endfield=true] .ef-folder-band .fp-choice{display:flex;flex-direction:column;min-width:0;min-height:0;gap:12px;padding:16px 18px;border:1px solid var(--border);background:color-mix(in srgb,var(--surface) 75%,transparent);overflow:hidden}
+html[data-endfield=true] .ef-folder-band .fp-choice-kicker{font-size:9px;letter-spacing:.12em;color:var(--text-dim)}
+html[data-endfield=true] .ef-folder-band .fp-selected{display:flex;flex-direction:column;gap:8px;min-width:0;padding:12px 0 18px;border-bottom:1px solid var(--border);font-size:12px;color:var(--text-dim)}
+html[data-endfield=true] .ef-folder-band #fpSelected{font-size:15px;line-height:1.7;color:var(--text);overflow-wrap:anywhere;white-space:normal}
+html[data-endfield=true] .ef-folder-band .fp-favorites{display:flex;flex-direction:row;flex-wrap:wrap;align-content:flex-start;align-items:flex-start;gap:6px;min-height:0;overflow:auto;max-height:none;margin:0;flex:1}
+html[data-endfield=true] .ef-folder-band .fp-favorite-chip{border-radius:999px;max-width:100%;overflow-wrap:anywhere;white-space:normal;font-size:11px;padding:3px 10px;min-height:24px;line-height:16px;flex:0 0 auto;align-self:flex-start}
+html[data-endfield=true] .ef-folder-band .fp-favorites-empty{font-size:11px;line-height:1.7;color:var(--text-dim)}
+html[data-endfield=true] body .ef-folder-band .fp-footer{display:block;position:absolute;bottom:-.5px;left:50%;transform:translate(-50%,calc((var(--fp-base) - var(--fp-face)/2 - var(--fp-inset))/2));width:min(650px,calc(100% - 28px));padding:0;margin:0;border:0;background:none;overflow:visible}
+html[data-endfield=true] .ef-folder-band .fp-footer .rd-actions{display:flex;justify-content:center;gap:20px;margin:0;padding:0;background:none}
+html[data-endfield=true] .ef-folder-band .fp-action-base{position:relative;flex:1;max-width:270px;min-width:0;height:var(--fp-base);padding:var(--fp-inset) 5px 8px;border-radius:999px;background:var(--fp-bg);isolation:isolate;overflow:hidden;box-shadow:none}
+html[data-endfield=true] body .ef-folder-band .fp-action-base>.ef-footer-action{width:100%;min-width:0!important;height:var(--fp-face);min-height:var(--fp-face);font-size:15px;grid-template-columns:minmax(26px,1fr) auto minmax(26px,1fr);gap:8px;padding:5px 9px!important;box-shadow:0 3px 5px #0008,inset 0 0 0 1px #ffffff60}
+html[data-endfield=true] .fp-context{z-index:100105!important}
+html[data-endfield=true] body:has(.ef-folder-band) :is(#toast,.tip-float,#efUnsavedNotice){display:none!important}
+@media(max-width:700px){html[data-endfield=true] body .folder-picker.ef-folder-band{gap:9px;padding:18px 16px 34px!important;height:82dvh!important;--fp-face:42px;--fp-base:54px}html[data-endfield=true] .ef-folder-band .rd-title{font-size:19px}html[data-endfield=true] .ef-folder-band .fp-hint{font-size:10px}html[data-endfield=true] .ef-folder-band .fp-layout{grid-template-columns:minmax(0,1fr);gap:12px}html[data-endfield=true] .ef-folder-band .fp-choice{max-height:135px;padding:10px 12px;gap:7px}html[data-endfield=true] .ef-folder-band .fp-selected{padding:0;border:0;gap:3px}html[data-endfield=true] .ef-folder-band .fp-choice-kicker{display:none}html[data-endfield=true] .ef-folder-band .fp-favorites{flex-direction:row;flex-wrap:wrap;gap:4px}html[data-endfield=true] .ef-folder-band .fp-footer .rd-actions{gap:8px}html[data-endfield=true] body .ef-folder-band .fp-action-base>.ef-footer-action{font-size:13px;grid-template-columns:minmax(20px,1fr) auto minmax(20px,1fr);gap:4px}}
+@media(max-height:550px){html[data-endfield=true] body .folder-picker.ef-folder-band{height:calc(100dvh - 90px)!important;padding-block:12px 32px!important;gap:7px}html[data-endfield=true] .ef-folder-band .fp-hint{display:none}html[data-endfield=true] .ef-folder-band .fp-choice{max-height:none}html[data-endfield=true] .ef-folder-band .fp-layout{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)}html[data-endfield=true] .ef-folder-band .fp-view-options{display:none}}
+html[data-endfield=true] body .ef-folder-band .fp-action-base>:is(#fpOk,#fpCancel,#fpBrowse).ef-footer-action{height:var(--fp-face)!important;min-height:var(--fp-face)!important;width:100%!important;grid-template-columns:minmax(26px,1fr) auto minmax(26px,1fr)!important}
+
+html[data-endfield=true] .ef-folder-band .fp-heading .rd-title{min-width:0;flex:1;overflow-wrap:anywhere}
+html[data-endfield=true] .ef-folder-band .fp-heading #fpReset{flex:none}
+
+html[data-endfield=true] .ef-folder-band .fp-terrain{position:absolute;inset:0;z-index:-1;overflow:hidden;pointer-events:none;mask-image:linear-gradient(90deg,#000,transparent 44%,transparent 56%,#000)}
+html[data-endfield=true] .ef-folder-band .fp-terrain>.ef-terrain-canvas{width:100%;height:100%;display:block}
+html[data-endfield=true] .ef-folder-band .fp-layout{padding-bottom:8px}
+
+html[data-endfield=true] .ef-folder-band>.fp-path-summary{display:flex;flex-direction:row;align-items:baseline;justify-content:center;gap:12px;flex:none;transform:translateY(-4px);padding:0;margin:0;border:0;min-height:24px;font-size:11px}
+html[data-endfield=true] .ef-folder-band>.fp-path-summary>span{white-space:nowrap}
+html[data-endfield=true] .ef-folder-band>.fp-path-summary #fpSelected{font-size:12px;line-height:1.6;min-width:0;max-height:3.2em;overflow:auto;flex:0 1 auto;text-align:center;}
+html[data-endfield=true] .ef-folder-band .fp-choice>h3{flex:none;margin:0;font-size:14px}
+html[data-endfield=true] .ef-folder-band .fp-choice .fp-favorites{flex:1;min-height:0}
+@media(max-width:700px){html[data-endfield=true] .ef-folder-band .fp-choice{max-height:150px}html[data-endfield=true] .ef-folder-band>.fp-path-summary{gap:7px}html[data-endfield=true] .ef-folder-band>.fp-path-summary #fpSelected{font-size:10px}}
+/* Yellow outlines alone disappear on paper; keep the icon ink readable in the light palette. */
+
+/* Distinct technical tree marks: equal-weight outlines, deliberately inset inside their controls. */
+html[data-endfield=true] .ef-folder-band .fp-name{align-items:center;min-height:28px;gap:8px}
+html[data-endfield=true] .ef-folder-band .fp-fold,html[data-endfield=true] .ef-folder-band .fp-star{display:grid;place-items:center;padding:0!important;line-height:0;flex:none;width:28px;height:28px;border:1px solid #8c978463}
+html[data-endfield=true] .ef-folder-band :is(.fp-fold,.fp-star)>.ic{display:block;width:16px!important;height:16px!important;margin:0!important;vertical-align:0;transform:none;fill:none!important;stroke:currentColor!important;stroke-width:2.4!important}
+html[data-endfield=true] .ef-folder-band .fp-name>.ic{display:block;width:20px;height:20px;flex:none;fill:none!important;stroke:currentColor!important;stroke-width:2.3!important}
+html[data-endfield=true] .ef-folder-band .fp-star[aria-pressed=true]>.ic{fill:currentColor!important}
+html[data-theme=light_endfield] .ef-folder-band :is(.fp-fold,.fp-star,.fp-name>.ic){color:#48563a!important;background:#eef1e8}
+html[data-theme=light_endfield] .ef-folder-band .fp-name>.ic{background:none}
+html[data-theme=light_endfield] .ef-folder-band .fp-item.selected{background:#414c3b;color:#f5f7ef;box-shadow:inset 3px 0 #ffef01,inset 0 0 0 1px #78856b}
+html[data-theme=light_endfield] .ef-folder-band .fp-item.selected :is(.fp-fold,.fp-star,.fp-name>.ic){color:#f0f4e7!important;background:transparent}
+html[data-theme=light_endfield] .ef-folder-band .fp-item.selected .fp-star[aria-pressed=true]{color:#ffef01!important}
+html[data-theme=light_endfield] .ef-folder-band .fp-path{color:inherit;opacity:.8}
+html[data-theme=light_endfield] .ef-folder-band .fp-favorite-chip{background:#f0f3e9;color:#35422b;border-color:#9da98d;font-weight:500}
+html[data-theme=light_endfield] .ef-folder-band .fp-favorite-chip.selected{background:#424e39;color:#fffceb;border-color:#778560;box-shadow:inset 3px 0 #ffef01}
+html[data-endfield=true] .ef-folder-band .fp-favorite-chip:hover{outline:2px solid var(--ef-yellow);outline-offset:1px}
+html[data-endfield=true] .ef-folder-band :is(.fp-fold,.fp-star)>.ic{color:inherit!important}
+
+/* The right column has a compact shortcut shelf and a real model/cover preview below it. */
+html[data-endfield=true] .ef-folder-band .fp-right{display:flex;flex-direction:column;gap:12px;min-width:0;min-height:0}
+html[data-endfield=true] .ef-folder-band .fp-choice{flex:0 0 auto;max-height:150px;min-height:90px;padding:12px 16px;gap:10px}
+html[data-endfield=true] .ef-folder-band .fp-choice .fp-favorites{max-height:94px;min-height:24px;flex:0 1 auto}
+html[data-endfield=true] .ef-folder-band .fp-model-card{display:grid;grid-template-columns:minmax(0,1fr) minmax(88px,.8fr);gap:12px;flex:1;min-width:0;min-height:100px;padding:14px;border:1px solid var(--border);background:color-mix(in srgb,var(--surface) 72%,transparent);overflow:hidden}
+html[data-endfield=true] .ef-folder-band .fp-model-copy{min-width:0;overflow:auto;scrollbar-width:thin}
+html[data-endfield=true] .ef-folder-band .fp-model-copy>small{font-size:9px;color:var(--text-dim);letter-spacing:.08em}
+html[data-endfield=true] .ef-folder-band .fp-model-copy h3{margin:10px 0 14px;font-size:15px;line-height:1.5;overflow-wrap:anywhere}
+html[data-endfield=true] .ef-folder-band .fp-model-copy dl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 10px;font-size:11px;line-height:1.5}
+html[data-endfield=true] .ef-folder-band .fp-model-copy dt{color:var(--text-dim)}
+html[data-endfield=true] .ef-folder-band .fp-model-copy dd{margin:0;overflow-wrap:anywhere}
+html[data-endfield=true] .ef-folder-band .fp-model-cover{display:grid;place-items:center;min-width:0;min-height:0;background:color-mix(in srgb,var(--bg) 55%,transparent);border:1px solid var(--border);overflow:hidden;font-size:11px;color:var(--text-dim);text-align:center}
+html[data-endfield=true] .ef-folder-band .fp-model-cover img{display:block;width:100%;height:100%;min-height:0;object-fit:contain}
+html[data-endfield=true] .ef-folder-band .fp-item{padding-block:5px}
+html[data-endfield=true] .ef-folder-band .fp-name{min-height:24px}
+html[data-endfield=true] .ef-folder-band :is(.fp-fold,.fp-star){width:26px;height:26px}
+html[data-endfield=true] .ef-folder-band>.fp-path-summary{transform:translateY(-6px)}
+@media(max-width:700px){html[data-endfield=true] .ef-folder-band .fp-right{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:8px;max-height:160px;min-height:110px}html[data-endfield=true] .ef-folder-band .fp-model-card{padding:9px;gap:7px;grid-template-columns:minmax(0,1fr)}html[data-endfield=true] .ef-folder-band .fp-model-cover{display:none}html[data-endfield=true] .ef-folder-band .fp-choice{min-height:0;max-height:160px;padding:10px}html[data-endfield=true] .ef-folder-band .fp-model-copy h3{margin:4px 0 6px;font-size:12px}html[data-endfield=true] .ef-folder-band .fp-model-copy dl{font-size:10px;gap:4px}}
+@media(max-height:550px){html[data-endfield=true] .ef-folder-band .fp-choice{max-height:74px;min-height:0}html[data-endfield=true] .ef-folder-band .fp-model-card{min-height:70px;padding:8px}html[data-endfield=true] .ef-folder-band .fp-model-copy h3{margin:4px 0 6px}}
+
+/* Center the path itself, with a symmetric reserved gutter for its label. */
+html[data-endfield=true] .ef-folder-band>.fp-path-summary{display:grid;grid-template-columns:48px minmax(0,max-content) 48px;align-items:baseline;justify-content:center;gap:12px;transform:translateY(-12px)}
+html[data-endfield=true] .ef-folder-band>.fp-path-summary:after{content:''}
+html[data-endfield=true] .ef-folder-band>.fp-path-summary>span{text-align:right}
+html[data-endfield=true] .ef-folder-band>.fp-path-summary #fpSelected{margin:0;text-align:center}
+@media(max-width:700px){html[data-endfield=true] .ef-folder-band>.fp-path-summary{grid-template-columns:34px minmax(0,max-content) 34px;gap:7px}}

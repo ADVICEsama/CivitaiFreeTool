@@ -1,0 +1,241 @@
+.ef-transfer-material,.ef-transfer-result{display:none}
+/* One continuous terrain scene: the workspace never paints a second rectangular page. */
+.ef-transfer-tabs,.ef-transfer-kicker,.ef-transfer-code,.ef-transfer-symbol,.ef-transfer-empty,.ef-url-heading,.ef-url-order,.ef-url-source,.ef-acquisition-art{display:none}
+html[data-endfield=true] :is(#page-download,#page-dlmanager){--transfer-face:#262d2b;--transfer-ink:#f1f3ec;--transfer-dim:#d0d8cd;--transfer-line:#c6d4c326;min-width:0}
+html[data-endfield=true] body :is(#page-download,#page-dlmanager)>.card{display:flex;flex-direction:column;gap:0;isolation:isolate;position:relative;min-width:0;width:100%;min-height:calc(100dvh - 40px);padding:0;border:0;background:transparent;box-shadow:none;overflow:visible}
+html[data-endfield=true] body #page-dlmanager>.card{height:calc(100dvh - 40px);min-height:390px}
+html[data-endfield=true] .ef-transfer-head{position:relative;isolation:isolate;flex:none;min-height:152px;padding:18px 14px 82px;background:radial-gradient(ellipse at 94% 0,color-mix(in srgb,var(--ef-cyan) 10%,transparent),transparent 65%);color:var(--text);overflow:hidden}
+html[data-endfield=true] .ef-transfer-head:before{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;background:url('transfer-cubes.svg') right top/280px 194px;opacity:.10;mask-image:linear-gradient(180deg,#000,transparent 95%)}
+html[data-endfield=true] .ef-transfer-kicker{display:block;font-size:10px;letter-spacing:.12em;color:var(--text-dim);margin-bottom:8px}
+html[data-endfield=true] body .ef-transfer-head .page-title{font-size:24px;line-height:1.4;margin:0;padding:0;border:0;color:inherit}
+html[data-endfield=true] .ef-transfer-head .page-title:before{display:none}
+html[data-endfield=true] .ef-transfer-code{display:block;position:absolute;right:14px;top:20px;max-width:40%;border-left:3px solid var(--ef-yellow);padding-left:9px;font-size:10px;line-height:1.5;letter-spacing:.06em;color:var(--text-dim)}
+/* Bookmarks: stepped shoulder, raised paper face and diagonal industrial overprint. */
+html[data-endfield=true] :is(.ef-transfer-tabs,.download-tabs){display:flex;align-items:flex-end;justify-content:center;gap:0;flex:none;min-width:0;margin:-72px 0 0;padding:0 14px;background:none;border:0;position:relative;z-index:3;isolation:isolate}
+html[data-endfield=true] body :is(.ef-transfer-tabs,.download-tabs)>.ef-transfer-bookmark{position:relative;isolation:isolate;display:flex;align-items:center;justify-content:flex-start;flex:0 1 225px;gap:11px;min-width:0;min-height:64px;height:64px;padding:12px 18px;margin:0;border:0!important;border-right:1px solid #a9b5aa35!important;border-radius:0!important;clip-path:polygon(0 6px,calc(100% - 13px) 6px,100% 19px,100% 100%,0 100%);background:#454c48!important;color:#eef1e9!important;font-size:17px;line-height:1.2;font-weight:700;text-align:left;box-shadow:none;overflow:hidden;transition:height 140ms ease,padding 140ms ease}
+html[data-endfield=true] body :is(.ef-transfer-tabs,.download-tabs)>.ef-transfer-bookmark.active{height:76px;min-height:76px;background:#e9ebe5!important;color:#30382d!important;clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,0 100%);padding-bottom:17px;border-right:0!important}
+html[data-endfield=true] .ef-transfer-bookmark>span{position:relative;z-index:2;min-width:0;overflow-wrap:anywhere}
+html[data-endfield=true] .ef-transfer-bookmark small{display:block;font-size:6px;line-height:1.3;letter-spacing:.1em;margin-top:5px;font-weight:500;opacity:.65;white-space:nowrap}
+html[data-endfield=true] .ef-transfer-bookmark.active:before{content:'';position:absolute;inset:0 0 0 66%;z-index:0;background:repeating-linear-gradient(150deg,#68706635 0 16px,transparent 16px 35px);mask-image:linear-gradient(90deg,transparent,#000)}
+html[data-endfield=true] .ef-transfer-symbol{display:block;width:30px;height:30px;flex:none;fill:currentColor;stroke:none}
+html[data-endfield=true] .ef-transfer-bookmark.active>.ef-transfer-symbol{width:34px;height:34px}
+html[data-endfield=true] .download-tabs .ef-transfer-bookmark[data-count]:after{content:attr(data-count);position:absolute;right:9px;top:10px;display:block;min-width:24px;height:20px;padding:0 5px;font-size:11px;font-weight:700;line-height:20px;text-align:center;background:transparent;border-radius:0;border-left:2px solid currentColor;color:inherit;font-variant-numeric:tabular-nums;z-index:2}
+html[data-endfield=true] body .download-tabs>#dlShowHud{flex:none;align-self:center;margin-left:auto;max-width:170px;min-height:30px;font-size:10px}
+html[data-endfield=true] .download-retention{display:none}
+html[data-endfield=true] body #dlQueuePanel{display:flex;flex:1;flex-direction:column;gap:0;min-width:0;min-height:0;padding:15px 0 0;position:relative}
+html[data-endfield=true] :is(#dlQueuePanel,#dlHistoryPanel,.ef-transfer-empty)[hidden]{display:none!important}
+html[data-endfield=true] #dlQueuePanel>.table-wrap,html[data-endfield=true] #dlHistoryPanel>.table-wrap{flex:1;min-width:0;min-height:90px;max-height:none;overflow-y:auto!important;overflow-x:hidden!important;border:0;background:transparent;scrollbar-width:thin;overscroll-behavior:contain}
+html[data-endfield=true] :is(#dlTable,#dlHistoryTable){display:block;width:100%!important;min-width:0!important;max-width:100%!important;border:0;background:transparent;table-layout:auto}
+html[data-endfield=true] :is(#dlTable,#dlHistoryTable) colgroup{display:none}
+html[data-endfield=true] #dlTable thead{display:block;position:sticky;top:0;z-index:7;background:transparent;backdrop-filter:none}
+html[data-endfield=true] #dlTable tr{display:grid;grid-template-columns:26px minmax(0,1.85fr) minmax(0,.9fr) minmax(0,1fr) minmax(0,1.3fr) 68px;align-items:center;gap:0 12px;width:100%;min-width:0}
+html[data-endfield=true] #dlTable thead tr{min-height:31px;padding:0 10px 0 5px;border-left:3px solid transparent;background:transparent}
+html[data-endfield=true] #dlTable thead th{display:block;width:auto!important;min-width:0;padding:7px 0;border:0;background:none;text-align:center;font-size:13px;line-height:1.5;font-weight:700;color:var(--text)}
+html[data-endfield=true] #dlTable thead th:is(.c-err,.c-thumb,:nth-child(6),:nth-child(7)){display:none}
+html[data-endfield=true] #dlTable thead th:first-child{grid-column:1;grid-row:1}
+html[data-endfield=true] #dlTable thead .c-file{grid-column:2;grid-row:1;text-align:center}
+html[data-endfield=true] #dlTable thead .c-dest{grid-column:4;grid-row:1}
+html[data-endfield=true] #dlTable thead th:nth-child(5){grid-column:5;grid-row:1}
+html[data-endfield=true] #dlTable thead th:nth-child(8){grid-column:3;grid-row:1}
+html[data-endfield=true] #dlTable thead .dl-col-resize,html[data-endfield=true] #dlHistoryTable .dl-col-resize{display:none}
+html[data-endfield=true] #dlTable tbody{display:flex;flex-direction:column;gap:8px;padding:12px 3px 24px;min-width:0;overflow:hidden}
+html[data-endfield=true] body #dlTable tbody tr{position:relative;isolation:isolate;flex:none;min-height:104px;padding:11px 10px 11px 5px;border:0;border-left:3px solid transparent;border-radius:3px;background:var(--transfer-face)!important;color:var(--transfer-ink);box-shadow:0 1px 0 #0002;overflow:hidden;--ef-cyan:#7ce9ff;--danger:#ffb4aa;--energy-hot:#51dfff90;--energy-soft:#34bce629}
+html[data-endfield=true] #dlTable td{display:block;min-width:0;max-width:100%;width:auto!important;padding:0;border:0;background:none;white-space:normal;overflow-wrap:anywhere;color:inherit;text-align:center;z-index:2}
+html[data-endfield=true] #dlTable .dl-check-col{grid-column:1;grid-row:1/4}
+html[data-endfield=true] #dlTable .c-file{grid-column:2;grid-row:1/4;text-align:left}
+/* The chosen model cover becomes a full-height left wash, not a poster/thumbnail tile. */
+html[data-endfield=true] #dlTable .c-thumb{position:absolute;left:0;top:0;bottom:0;width:36%!important;height:100%;max-width:none;overflow:hidden;z-index:-2;pointer-events:auto;mask-image:linear-gradient(90deg,#000 0 36%,#000b 60%,transparent 100%)}
+html[data-endfield=true] #dlTable .c-thumb .thumb{display:block;width:100%;height:100%;object-fit:cover;object-position:50% 38%;border-radius:0;background:none;opacity:.86}
+html[data-endfield=true] #dlTable .c-thumb:after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,#131b1b05,#1c252477 50%,#26302be6);pointer-events:none}
+html[data-endfield=true] #dlTable .thumb-empty{display:none!important}
+html[data-endfield=true] #dlTable .c-file>div:first-child{font-size:17px;line-height:1.5;font-weight:700;color:#fff;text-shadow:0 1px 3px #000b}
+html[data-endfield=true] #dlTable .file-subpath{font-size:10px;line-height:1.6;color:#e1e6dd;margin-top:5px;min-width:0;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 3px #000}
+html[data-endfield=true] #dlTable .c-dest{grid-column:4;grid-row:1/4}
+html[data-endfield=true] #dlTable .dl-task-status{grid-column:5;grid-row:1;align-self:end;font-size:12px;font-weight:600}
+html[data-endfield=true] #dlTable td:nth-child(6){grid-column:5;grid-row:2;font-size:12px;line-height:1.5}
+html[data-endfield=true] #dlTable td:nth-child(6):after{content:none}
+html[data-endfield=true] #dlTable td:nth-child(7){grid-column:5;grid-row:3;align-self:start;font-size:10px;line-height:1.5;color:#dae7e0}
+html[data-endfield=true] #dlTable td:nth-child(8){grid-column:3;grid-row:1/4;font-size:11px;line-height:1.7;color:#e1e6df}
+html[data-endfield=true] #dlTable .c-err{grid-column:2/6;grid-row:4;margin-top:8px;padding:6px 8px;max-height:90px;overflow:auto;text-align:left;font-size:11px;color:#ffd0c8;background:#5f292c80;white-space:normal;text-overflow:clip}
+html[data-endfield=true] #dlTable .c-err:empty{display:none}
+html[data-endfield=true] #dlTable .dl-check-controls{display:flex;align-items:center;flex-direction:column;gap:8px}
+html[data-endfield=true] #dlTable .dl-drag-handle{width:23px;height:20px;min-height:0;padding:0;background:none;border:0;color:#dde8dd}
+html[data-endfield=true] #dlTable .dl-task-check{width:16px;height:16px;accent-color:var(--ef-yellow)}
+html[data-endfield=true] #dlTable .dest-def{display:block;font-size:9px;line-height:1.5;color:#d5ddd3;margin-top:5px}
+html[data-endfield=true] #dlTable .dest-picker{max-width:100%}
+html[data-endfield=true] #dlTable .task-archive{position:absolute;right:7px;bottom:7px;max-width:75px;font-size:8px;min-height:22px;opacity:.9}
+html[data-endfield=true] #dlTable .ef-transfer-flood .task-archive,html[data-endfield=true] #dlTable .ef-transfer-gold .task-archive,html[data-endfield=true] #dlTable .ef-transfer-leaving .task-archive{display:none!important}
+/* A textured ray-field originates on the right and opens toward the cover. */
+html[data-endfield=true] #dlTable tbody tr:before{content:'';position:absolute;inset:0 0 0 auto;width:0;z-index:-1;pointer-events:none;opacity:1;mask-image:linear-gradient(90deg,transparent,#000 28px);transition:width 440ms cubic-bezier(.2,.75,.25,1)}
+html[data-endfield=true] #dlTable tbody tr:is([data-ef-status=downloading],[data-ef-status=retrying],[data-ef-status=paused],[data-ef-status=error]):before,html[data-endfield=true] #dlTable tbody tr.ef-transfer-flood:before{width:var(--ef-progress,0%);background:url('transfer-ripples.svg') 0 center/640px 220px repeat-x,linear-gradient(90deg,#35bff321,#39c7f190 38%,#32c9f3d9);animation:none}
+html[data-endfield=true] #dlTable tbody tr:is([data-ef-status=downloading],[data-ef-status=paused],[data-ef-status=retrying]):before,html[data-endfield=true] #dlTable tbody tr.ef-transfer-flood:before{animation:ef-transfer-blue 4800ms linear infinite}
+html[data-endfield=true] #dlTable tbody tr.ef-transfer-flood:before{width:100%;mask-image:none;transition:width 160ms linear}
+html[data-endfield=true] #dlTable tbody tr:after{content:none;position:absolute;right:8px;top:50%;width:61px;height:61px;transform:translateY(-50%);z-index:1;pointer-events:none;mask-position:center;mask-size:contain;mask-repeat:no-repeat}
+html[data-endfield=true] #dlTable tbody tr.ef-transfer-gold:before,html[data-endfield=true] #dlTable tbody tr.ef-transfer-leaving:before{width:100%;mask-image:none;transition:none;background-image:linear-gradient(95deg,transparent 20%,#c5b91b38 48%,#ffef01d9 86%,#ffef01 100%);opacity:1;animation:ef-transfer-gold 900ms cubic-bezier(.2,.75,.25,1) both;animation-delay:var(--gold-delay,0ms)}
+html[data-endfield=true] #dlTable tbody tr.ef-transfer-leaving{animation:ef-transfer-leave 420ms cubic-bezier(.4,0,.8,.4) both;animation-delay:var(--leave-delay,0ms)}
+html[data-endfield=true] #dlTable tbody tr:is(.ef-transfer-gold,.ef-transfer-leaving) :is(.dl-task-status,td:nth-child(6),td:nth-child(7)){color:#303807!important;text-shadow:0 1px 1px #ffffff40}
+html[data-endfield=true] #dlTable tbody tr:is(.ef-transfer-gold,.ef-transfer-leaving) td:nth-child(6):after{background:#64700c55}
+html[data-endfield=true] #dlTable tbody tr:is(:hover,:focus-within,.sel-row){border-left-color:var(--ef-yellow);box-shadow:inset 0 0 0 1px #ffef0180}
+html[data-endfield=true] #dlTable .dl-drop-target{outline:2px dashed var(--ef-yellow);outline-offset:-3px}
+html[data-endfield=true] #dlTable .ef-transfer-archive-error{border-left-color:#ffd189}
+html[data-endfield=true] #dlTable .ef-transfer-archive-error .dl-task-status:after{content:'归档失败，可手动重试';display:block;font-size:10px;color:#ffd189}
+html[data-endfield=true] #dlInfo{flex:none;font-size:11px;line-height:1.6;padding:0 6px;color:var(--text-dim)}
+html[data-endfield=true] #dlInfo:empty{display:none}
+@keyframes ef-transfer-blue{from{background-position:0 center,0 0}to{background-position:-640px center,0 0}}
+@keyframes ef-transfer-gold{from{filter:hue-rotate(140deg) brightness(1.1)}to{filter:hue-rotate(0deg) brightness(1)}}
+@keyframes ef-transfer-leave{from{transform:translateX(0);opacity:1}to{transform:translateX(105%);opacity:0}}
+/* Actions emerge from the same terrain instead of a boxed/striped footer. */
+html[data-endfield=true] body .ef-transfer-footer{order:20;position:sticky;bottom:0;z-index:9;display:flex;flex:none;align-items:center;justify-content:center;flex-wrap:wrap;gap:12px;min-width:0;margin:0;padding:18px 7px 2px;min-height:73px;border:0;box-shadow:none;background:linear-gradient(180deg,transparent,color-mix(in srgb,var(--bg) 32%,transparent) 65%,color-mix(in srgb,var(--bg) 60%,transparent))}
+html[data-endfield=true] .ef-transfer-note{flex:1 1 100%;text-align:center;font-size:11px;line-height:1.6;color:var(--text-dim)}
+html[data-endfield=true] .ef-transfer-actions-main{display:flex;justify-content:center;gap:7px;flex-wrap:wrap;min-width:0}
+html[data-endfield=true] .ef-transfer-actions-main:empty{display:none}
+html[data-endfield=true] body .ef-transfer-primary{display:block;flex:0 0 auto;width:auto;min-width:0;padding:0;margin:0}
+html[data-endfield=true] body .ef-transfer-primary>.ef-footer-action{width:190px;max-width:100%;min-width:0;height:42px;min-height:42px;font-size:13px}
+html[data-endfield=true] body #btnParse.ef-footer-action{width:270px;min-width:0}
+html[data-endfield=true] .ef-transfer-empty{position:absolute;inset:80px 15px 105px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:13px;color:var(--text-dim);text-align:center;pointer-events:none}
+html[data-endfield=true] .ef-transfer-empty>.ef-transfer-symbol{width:44px;height:44px;opacity:.35}
+html[data-endfield=true] .ef-transfer-empty h3{font-size:20px;color:var(--text);font-weight:500}
+html[data-endfield=true] .ef-transfer-empty p{font-size:12px;line-height:1.8}
+html[data-endfield=true] .ef-transfer-empty button{pointer-events:auto}
+/* Acquisition: links on the left, the supplied vector wordmark on the open right. */
+html[data-endfield=true] .ef-acquisition-workspace{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:28px;flex:1;min-height:0;padding:22px 14px;position:relative}
+html[data-endfield=true] .ef-acquisition-editor{min-width:0;display:flex;flex-direction:column;gap:14px}
+html[data-endfield=true] #page-download .hint{font-size:11px;line-height:1.8;color:var(--text-dim);margin:0;padding:0}
+html[data-endfield=true] #dlTargetRow{display:flex;flex-wrap:wrap;gap:8px;min-width:0;margin:0;padding:10px 0 10px 12px;border:0;border-left:3px solid var(--ef-yellow);border-radius:0;background:color-mix(in srgb,var(--surface) 45%,transparent);font-size:11px}
+html[data-endfield=true] #dlTargetPath{min-width:0;overflow-wrap:anywhere;white-space:normal;flex:1 1 180px;color:var(--text)}
+html[data-endfield=true] .ef-url-heading{display:grid;grid-template-columns:25px minmax(0,1fr) 61px;gap:8px;padding:7px 9px;font-size:10px;color:var(--text-dim);background:color-mix(in srgb,var(--surface) 45%,transparent)}
+html[data-endfield=true] #urlRows{display:flex;flex-direction:column;gap:9px;max-height:none;overflow:visible;min-width:0;margin:0;min-height:130px}
+html[data-endfield=true] #urlRows .url-row{display:grid;grid-template-columns:25px minmax(0,1fr) 30px 30px;gap:8px;min-width:0;min-height:76px;padding:11px 9px;border-left:3px solid transparent;background:color-mix(in srgb,var(--surface) 72%,transparent);box-shadow:0 1px 0 var(--border)}
+html[data-endfield=true] #urlRows .url-row:focus-within{border-left-color:var(--ef-yellow);box-shadow:inset 0 0 0 1px #ffef0170}
+html[data-endfield=true] .ef-url-order{display:block;font-size:19px;font-weight:600;color:var(--text-dim)}
+html[data-endfield=true] .ef-url-source{display:block;font-size:8px;letter-spacing:.03em;color:var(--text-dim);text-align:center;overflow-wrap:anywhere}
+html[data-endfield=true] #urlRows .input{width:100%;min-width:0;background:transparent;color:var(--text);border:0;border-bottom:1px solid var(--border);border-radius:0;padding:9px 0;font-size:12px;box-shadow:none}
+html[data-endfield=true] #urlRows .icon-btn{display:grid;place-items:center;width:30px;height:30px;min-width:0;align-self:center;justify-self:center;line-height:0;padding:0}
+html[data-endfield=true] #parseLog{margin:0;min-height:0;max-height:180px;font-size:11px;line-height:1.7;background:color-mix(in srgb,var(--surface) 65%,transparent);color:var(--text);border:0}
+html[data-endfield=true] #parseLog:empty{display:none}
+html[data-endfield=true] .ef-acquisition-art{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;position:relative;min-width:0;align-self:stretch;max-height:650px;padding:25px;pointer-events:none;color:var(--text-dim);mask-image:linear-gradient(180deg,transparent,#000 12%,#000 82%,transparent)}
+html[data-endfield=true] .ef-acquisition-art img{display:block;width:100%;height:auto;max-width:360px;opacity:.18}
+html[data-theme=dark_endfield] .ef-acquisition-art img{filter:invert(1)}
+html[data-endfield=true] .ef-acquisition-art svg{width:80%;max-width:250px;fill:none;stroke:var(--text-dim);stroke-width:1;opacity:.19}
+html[data-endfield=true] .ef-acquisition-art .ef-acquisition-arrow{fill:var(--ef-yellow);stroke:none;opacity:.8}
+html[data-endfield=true] .ef-acquisition-art span{font-size:10px;line-height:1.8;text-align:center;letter-spacing:.08em;opacity:.6}
+/* History is a set of dated request batches, never an undifferentiated wall. */
+html[data-endfield=true] #dlHistoryPanel{display:flex;flex-direction:column;flex:1;gap:12px;min-height:0;min-width:0;padding:16px 0 0}
+html[data-endfield=true] #dlHistoryPanel .history-toolbar{flex:none;display:flex;gap:12px;align-items:center;flex-wrap:wrap;min-width:0;margin:0}
+html[data-endfield=true] #dlHistorySearch{flex:1 1 230px;max-width:470px;min-width:0;background:color-mix(in srgb,var(--surface) 65%,transparent);color:var(--text);border:1px solid var(--border);font-size:12px}
+html[data-endfield=true] #dlHistoryCount{font-size:11px;line-height:1.7;color:var(--text-dim)}
+html[data-endfield=true] #dlHistoryTable thead{display:block;position:sticky;top:0;z-index:4;background:transparent;backdrop-filter:none}
+html[data-endfield=true] #dlHistoryTable tr{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,.85fr) minmax(0,.55fr) minmax(0,.85fr) minmax(0,1.45fr);gap:12px;align-items:center;width:100%;min-width:0;padding:9px 12px}
+html[data-endfield=true] #dlHistoryTable th{display:block;width:auto!important;min-width:0;padding:7px 0;border:0;background:none;text-align:center;color:var(--text);font-size:13px;font-weight:700}
+html[data-endfield=true] #dlHistoryTable tbody{display:flex;flex-direction:column;gap:9px;padding:0 3px 24px;min-width:0;overflow:hidden}
+html[data-endfield=true] body #dlHistoryTable tbody tr[data-history-id]{position:relative;isolation:isolate;min-height:110px;border:0;border-left:3px solid transparent;border-radius:3px;background:var(--transfer-face)!important;color:var(--transfer-ink);overflow:hidden}
+html[data-endfield=true] #dlHistoryTable td{display:block;width:auto!important;min-width:0;max-width:100%;border:0;background:none;padding:3px 0;align-self:center;text-align:center;white-space:normal;overflow-wrap:anywhere;font-size:11px;line-height:1.7;z-index:1;color:inherit}
+html[data-endfield=true] #dlHistoryTable .history-thumb{position:absolute;inset:0 auto 0 0;width:32%;height:100%;margin:0;border:0;border-radius:0;overflow:hidden;pointer-events:auto;z-index:-2;mask-image:linear-gradient(90deg,#0008,transparent)}
+html[data-endfield=true] #dlHistoryTable .history-thumb img{width:100%;height:100%;object-fit:cover;object-position:center 38%}
+html[data-endfield=true] #dlHistoryTable .history-thumb>.ic{display:none}
+html[data-endfield=true] #dlHistoryTable .history-file-name{font-size:14px;font-weight:600;color:#fff;text-shadow:0 1px 3px #000}
+html[data-endfield=true] #dlHistoryTable .file-subpath,html[data-endfield=true] #dlHistoryTable .history-model{font-size:10px;line-height:1.6;color:#d9e2d5;margin-top:4px;overflow-wrap:anywhere}
+html[data-endfield=true] #dlHistoryTable .history-result{color:#f0f3e7;font-weight:600}
+html[data-endfield=true] #dlHistoryTable .history-result.error,html[data-endfield=true] #dlHistoryTable .history-error{color:#ffc1b4}
+html[data-endfield=true] #dlHistoryTable .history-error{font-size:10px;white-space:normal;overflow-wrap:anywhere}
+html[data-endfield=true] #dlHistoryTable td:last-child{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px;min-width:0}
+html[data-endfield=true] #dlHistoryTable tbody tr[data-history-id]:before{content:'';position:absolute;inset:0;z-index:-1;background:url('transfer-grain.svg') center/420px 160px;opacity:.25;pointer-events:none}
+html[data-endfield=true] #dlHistoryTable tbody tr[data-ef-complete=true]:before{background:radial-gradient(ellipse 85% 180% at 112% 50%,#ffef0150,#d8c93c12 55%,transparent 80%),url('transfer-grain.svg') center/420px 160px}
+html[data-endfield=true] #dlHistoryTable .history-batch{display:block;padding:13px 0 3px;border:0;background:none!important;min-height:0}
+html[data-endfield=true] #dlHistoryTable .history-batch td{display:block;padding:0;width:100%!important}
+html[data-endfield=true] #dlHistoryTable .history-batch-toggle{display:flex;align-items:center;flex-wrap:wrap;gap:8px 18px;width:100%;padding:8px 10px;background:color-mix(in srgb,var(--surface) 58%,transparent);color:var(--text);border:0;border-left:3px solid var(--ef-yellow);text-align:left;cursor:pointer;font:500 12px var(--font)}
+html[data-endfield=true] .history-batch-toggle b{font-weight:700;font-size:14px}
+html[data-endfield=true] .history-batch-toggle small{font-size:10px;line-height:1.5;color:var(--text-dim)}
+html[data-endfield=true] .history-batch-toggle>span:last-child{margin-left:auto;color:var(--text-dim)}
+html[data-endfield=true] #dlHistoryTable tr[hidden]{display:none!important}
+html[data-endfield=true] #dlHistoryTable tr:has(.history-empty){display:block;text-align:center;min-height:150px;padding:25px;background:none!important;color:var(--text-dim)}
+html[data-endfield=true] #dlHistoryTable tr:has(.history-empty) td{display:block}
+html[data-endfield=true] #dlHistoryPanel .history-pagination{flex:none;display:flex;justify-content:center;gap:12px;align-items:center;padding:12px 6px;margin:0;border:0;background:linear-gradient(transparent,color-mix(in srgb,var(--bg) 40%,transparent));font-size:11px}
+@media(max-width:1150px){html[data-endfield=true] body :is(.ef-transfer-tabs,.download-tabs)>.ef-transfer-bookmark{flex:0 1 225px;padding-inline:12px;font-size:14px;gap:7px}html[data-endfield=true] .ef-transfer-symbol{width:25px;height:25px}html[data-endfield=true] .ef-transfer-bookmark.active>.ef-transfer-symbol{width:28px;height:28px}html[data-endfield=true] #dlTable tr{grid-template-columns:23px minmax(0,1.6fr) minmax(0,.85fr) minmax(0,.95fr) minmax(0,1.2fr) 52px;gap:0 9px}html[data-endfield=true] #dlTable .c-file>div:first-child{font-size:14px}html[data-endfield=true] #dlTable tbody tr:after{width:48px;height:48px;right:4px}html[data-endfield=true] .ef-transfer-note{flex-basis:100%}html[data-endfield=true] .ef-acquisition-workspace{grid-template-columns:minmax(0,1.8fr) minmax(0,1fr);gap:14px;padding-inline:8px}html[data-endfield=true] .ef-acquisition-art{padding:10px}html[data-endfield=true] #dlHistoryTable tr{gap:8px;padding-inline:8px}}
+@media(max-width:800px){html[data-endfield=true] .ef-transfer-head{min-height:139px;padding-inline:8px}html[data-endfield=true] .ef-transfer-code{font-size:8px;right:8px;max-width:38%}html[data-endfield=true] .ef-transfer-kicker{font-size:8px}html[data-endfield=true] :is(.ef-transfer-tabs,.download-tabs){padding:0 5px;flex-wrap:wrap;margin-top:-66px}html[data-endfield=true] body :is(.ef-transfer-tabs,.download-tabs)>.ef-transfer-bookmark{font-size:12px;gap:6px;padding:9px 8px;flex:1 1 30%;min-height:57px;height:57px}html[data-endfield=true] body :is(.ef-transfer-tabs,.download-tabs)>.ef-transfer-bookmark.active{height:66px;min-height:66px;padding-bottom:13px}html[data-endfield=true] .ef-transfer-bookmark small{font-size:5px;letter-spacing:0}html[data-endfield=true] .ef-transfer-symbol{width:21px;height:21px}html[data-endfield=true] .ef-transfer-bookmark.active>.ef-transfer-symbol{width:24px;height:24px}html[data-endfield=true] body .download-tabs>#dlShowHud{margin:7px 0 0 auto;max-width:100%;flex-basis:100%;width:fit-content}html[data-endfield=true] .ef-acquisition-workspace{grid-template-columns:minmax(0,1fr);padding-inline:6px}html[data-endfield=true] .ef-acquisition-art{display:none}html[data-endfield=true] #dlTable thead{display:none}html[data-endfield=true] #dlTable tbody{padding-top:4px}html[data-endfield=true] #dlTable tr{grid-template-columns:23px minmax(0,1fr) minmax(0,.85fr) 40px;gap:5px 7px}html[data-endfield=true] body #dlTable tbody tr{padding:12px 7px;min-height:145px}html[data-endfield=true] #dlTable .dl-check-col{grid-column:1;grid-row:1/5}html[data-endfield=true] #dlTable .c-file{grid-column:2/4;grid-row:1}html[data-endfield=true] #dlTable .c-thumb{width:55%!important}html[data-endfield=true] #dlTable .c-dest{grid-column:3;grid-row:2}html[data-endfield=true] #dlTable td:nth-child(8){grid-column:2;grid-row:2;text-align:left;font-size:10px}html[data-endfield=true] #dlTable .dl-task-status{grid-column:2;grid-row:3;text-align:left;align-self:center}html[data-endfield=true] #dlTable td:nth-child(6){grid-column:3;grid-row:3}html[data-endfield=true] #dlTable td:nth-child(7){grid-column:3;grid-row:4}html[data-endfield=true] #dlTable .c-err{grid-column:2/5;grid-row:5}html[data-endfield=true] #dlTable tbody tr:after{width:40px;height:40px;right:2px;top:47%}html[data-endfield=true] #dlTable .task-archive{right:4px;bottom:5px;max-width:70px}html[data-endfield=true] #dlTable .file-subpath{font-size:8px}html[data-endfield=true] #dlHistoryTable thead{display:none}html[data-endfield=true] #dlHistoryTable tr[data-history-id]{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:7px 12px;padding:13px}html[data-endfield=true] #dlHistoryTable tr[data-history-id]>.c-file{grid-column:1/-1;grid-row:1}html[data-endfield=true] #dlHistoryTable tr[data-history-id]>td:nth-child(2){grid-column:1;grid-row:2}html[data-endfield=true] #dlHistoryTable tr[data-history-id]>td:nth-child(3){grid-column:2;grid-row:2}html[data-endfield=true] #dlHistoryTable tr[data-history-id]>td:nth-child(4){grid-column:1/-1;grid-row:3}html[data-endfield=true] #dlHistoryTable tr[data-history-id]>td:last-child{grid-column:1/-1;grid-row:4}html[data-endfield=true] #dlHistoryTable .history-thumb{width:55%}html[data-endfield=true] .ef-transfer-footer{padding-top:18px;gap:9px}html[data-endfield=true] .ef-transfer-actions-main{width:100%}html[data-endfield=true] .ef-transfer-primary{margin-left:0!important}html[data-endfield=true] .ef-transfer-menu{position:fixed;transform:none;left:calc(var(--sidebar-width) + 12px);right:12px;bottom:76px;width:auto;max-width:none;max-height:65dvh}html[data-endfield=true] #page-download .ef-transfer-primary{width:100%}html[data-endfield=true] body #btnParse.ef-footer-action{width:100%}html[data-endfield=true] .ef-url-heading{display:none}html[data-endfield=true] #urlRows .url-row{grid-template-columns:22px minmax(0,1fr) 26px 26px;gap:7px;padding:10px 7px}html[data-endfield=true] .ef-url-source{grid-column:2;grid-row:2;text-align:left}html[data-endfield=true] #urlRows .icon-btn{grid-row:1}html[data-endfield=true] .ef-transfer-empty{inset:100px 10px 130px}html[data-endfield=true] .ef-transfer-empty h3{font-size:17px}html[data-endfield=true] .ef-transfer-empty p{font-size:11px}}
+@media(max-width:420px){html[data-endfield=true] body :is(.ef-transfer-tabs,.download-tabs)>.ef-transfer-bookmark{gap:4px;padding-inline:5px;font-size:10px}html[data-endfield=true] .ef-transfer-bookmark small{display:none}html[data-endfield=true] .ef-transfer-symbol{width:16px;height:16px}html[data-endfield=true] .ef-transfer-bookmark.active>.ef-transfer-symbol{width:18px;height:18px}html[data-endfield=true] .ef-transfer-head .page-title{font-size:21px!important}html[data-endfield=true] body .ef-transfer-primary>.ef-footer-action{width:154px;font-size:12px}}
+@media(prefers-reduced-motion:reduce){html[data-endfield=true] body #dlTable tbody tr,html[data-endfield=true] #dlTable tbody tr:before{animation:none!important;transition:none!important}html[data-endfield=true] .ef-transfer-bookmark{transition:none!important}}
+
+/* Accent links need a readable ink color on paper, not yellow text on white. */
+html[data-theme=light_endfield] #page-download .hint a{color:#535e0b;text-decoration-color:#a7a91c;text-underline-offset:2px}
+
+/* Zero is genuinely empty: no idle cyan edge, pulse, or minimum-width glow. */
+html[data-endfield=true] #dlTable tbody tr[data-ef-progress="0"]:before{width:0;min-width:0;background:none;animation:none;transition:none}
+
+
+/* One operation set for one or many selected tasks, never two competing all/selected toolbars. */
+html[data-endfield=true] body #dlQueueActions.ef-transfer-toolbar{order:0;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:10px;padding:14px 6px 12px;margin:0;background:none;border:0;flex:none}
+html[data-endfield=true] #dlQueueActions.ef-transfer-toolbar>.btn{flex:0 1 142px;min-width:110px;min-height:36px}
+html[data-endfield=true] .ef-transfer-selection-hint{flex:1 1 100%;font-size:11px;text-align:center;color:var(--text-dim);line-height:1.6}
+html[data-endfield=true] #dlTable .dl-check-col{align-self:stretch;display:grid;place-items:center}
+html[data-endfield=true] #dlTable .dl-check-controls{display:grid;place-items:center;width:100%;height:100%;gap:0}
+html[data-endfield=true] #dlTable .dl-drag-handle{display:grid;place-items:center;width:26px;height:32px;padding:0;line-height:0;cursor:grab}
+html[data-endfield=true] #dlTable .dl-drag-handle .dl-grip{display:block;width:22px;height:22px;fill:currentColor;stroke:none}
+html[data-endfield=true] #dlTable tr[aria-selected=true]{border-left-color:var(--ef-yellow);box-shadow:inset 0 0 0 1px #ffef0180}
+html[data-endfield=true] #urlRows .icon-btn>svg{display:block;width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:butt;stroke-linejoin:miter}
+html[data-endfield=true] #page-download .ef-transfer-footer{gap:12px}
+@media(max-width:800px){html[data-endfield=true] body #dlQueueActions.ef-transfer-toolbar{gap:8px;padding-top:10px}html[data-endfield=true] #dlQueueActions.ef-transfer-toolbar>.btn{flex:1 1 calc(50% - 8px);min-width:0}}
+html[data-endfield=true] #dlTable .dl-check-col{padding:0!important;min-width:0!important}
+
+/* Paper needs a distinct control shelf and a translucent reading surface, not yellow-on-paper hints. */
+html[data-theme=light_endfield] body :is(.ef-transfer-tabs,.download-tabs)>.ef-transfer-bookmark.active{background:#cdd3c6!important;color:#202a1d!important;box-shadow:inset 0 -2px #68745d}
+html[data-theme=light_endfield] body #dlQueueActions.ef-transfer-toolbar{background:none;box-shadow:none}
+html[data-theme=light_endfield] .ef-transfer-selection-hint{color:#46513d;font-weight:600}
+html[data-theme=light_endfield] #dlQueuePanel>.table-wrap,html[data-theme=light_endfield] #dlHistoryPanel>.table-wrap{background:linear-gradient(180deg,#d5dbcdba,#e4e8dd91)!important;backdrop-filter:blur(12px) saturate(.75);-webkit-backdrop-filter:blur(12px) saturate(.75)}
+
+html[data-theme=light_endfield] :is(#dlTable,#dlHistoryTable) thead th{color:#3f4a36;font-weight:700;font-size:13px}
+html[data-theme=light_endfield] #dlTable tbody tr[aria-selected=true]{border-left-color:#ffef01;box-shadow:inset 0 0 0 2px #ffef01,0 0 0 1px #354023!important}
+html[data-theme=light_endfield] #dlTable tbody tr[aria-selected=true] .dl-drag-handle{color:#ffef01}
+
+html[data-theme=light_endfield] #dlQueueActions>.ef-pill-action:disabled{opacity:1!important;background:#d5dbce!important;color:#3d4b32!important;border-color:#909d81!important}
+html[data-theme=light_endfield] #dlQueueActions>.ef-pill-action:disabled>.ef-action-circle{color:#536247}
+
+/* Completion is deliberately staged; the icon is drawn only after the gold beat settles. */
+html[data-endfield=true] #dlTable .ef-transfer-result{display:block;position:absolute;right:3px;top:50%;transform:translateY(-50%);width:76px;height:76px;z-index:2;pointer-events:none;visibility:hidden;fill:none;stroke:#59660c;stroke-width:6;stroke-linecap:butt;stroke-linejoin:miter}
+html[data-endfield=true] #dlTable .ef-transfer-check>.ef-transfer-result{visibility:visible}
+html[data-endfield=true] #dlTable .ef-transfer-result path{stroke-dasharray:1;stroke-dashoffset:1}
+html[data-endfield=true] #dlTable .ef-transfer-check .ef-result-arc{animation:ef-result-draw 360ms ease-out both;animation-delay:var(--check-delay,0ms)}
+html[data-endfield=true] #dlTable .ef-transfer-check .ef-result-tick{animation:ef-result-draw 340ms cubic-bezier(.2,.75,.25,1) both;animation-delay:calc(var(--check-delay,0ms) + 260ms)}
+@keyframes ef-result-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+/* Slow material drift is separate from progress or water, so paused rows retain a living backdrop. */
+html[data-endfield=true] #dlTable .ef-transfer-material{display:block;position:absolute;inset:0;z-index:-1;background:url('transfer-grain.svg') 0 center/420px 160px repeat;opacity:.65;pointer-events:none;animation:ef-transfer-grain 14000ms linear infinite}
+@keyframes ef-transfer-grain{from{background-position:0 center}to{background-position:-420px center}}
+/* Join the raised bookmarks directly into their operation shelf. No extra pane around empty space. */
+html[data-endfield=true] body #dlQueuePanel{padding-top:0}
+html[data-endfield=true] #page-dlmanager .download-tabs:before{content:none}
+
+html[data-theme=light_endfield] #dlQueuePanel>.table-wrap,html[data-theme=light_endfield] #dlHistoryPanel>.table-wrap{background:transparent!important;backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:none;outline:0;border:0}
+/* A genuine paper version of the task face, rather than charcoal rows pasted onto a light page. */
+html[data-theme=light_endfield] :is(#page-download,#page-dlmanager){--transfer-face:#e4e9dd;--transfer-ink:#25321e;--transfer-dim:#4e5b45}
+html[data-theme=light_endfield] body #dlTable tbody tr{background:#e4e9dd!important;background-blend-mode:multiply;--ef-cyan:#0c4059;--danger:#a12e3d;color:#25321e}
+html[data-theme=light_endfield] #dlTable .c-thumb .thumb{opacity:.44}
+html[data-theme=light_endfield] #dlTable .c-thumb:after{background:linear-gradient(90deg,#f2f5e955,#e6ecdaac 55%,#e4e9ddf2)}
+html[data-theme=light_endfield] #dlTable .c-file>div:first-child,html[data-theme=light_endfield] #dlHistoryTable .history-file-name{color:#22301c;text-shadow:none}
+html[data-theme=light_endfield] #dlTable :is(.file-subpath,.dest-def,td:nth-child(7),td:nth-child(8)),html[data-theme=light_endfield] #dlHistoryTable :is(.file-subpath,.history-model,.history-result){color:#47563b;text-shadow:none}
+html[data-theme=light_endfield] #dlTable .c-err{color:#9b2939;background:#f4d9d3}
+html[data-theme=light_endfield] #dlTable .dl-drag-handle{color:#57674a}
+html[data-theme=light_endfield] body #dlHistoryTable tbody tr[data-history-id]{background:#e4e9dd!important;color:#25321e}
+html[data-theme=light_endfield] #dlHistoryTable .history-thumb img{opacity:.48}
+html[data-theme=light_endfield] #dlHistoryTable :is(.history-result.error,.history-error){color:#9b2939}
+/* Flat chooser-style context menus: hover/focus darkens one complete row with a white locator tick. */
+html[data-endfield=true] body .ctx-menu{padding:0;border-radius:0!important;background:#d4d2d2;color:#222b25;border:1px solid #9ea29b;min-width:240px;max-width:calc(100vw - 16px);box-shadow:0 7px 18px #0005}
+html[data-endfield=true] body .ctx-menu :is(.ctx-item,.ctx-group-label){position:relative;display:flex;align-items:center;min-height:42px;padding:10px 18px;margin:0;border:0;border-bottom:1px solid #b4b7af;border-radius:0!important;background:transparent;color:#222b25;font-size:13px;line-height:1.5;outline:0;clip-path:none;gap:10px}
+html[data-endfield=true] body .ctx-menu :is(.ctx-item,.ctx-group-label):is(:hover,:focus-visible){background:#59615b!important;color:#fff!important;outline:0!important}
+html[data-endfield=true] body .ctx-menu :is(.ctx-item,.ctx-group-label):is(:hover,:focus-visible):before{content:'';position:absolute;left:4px;top:10px;bottom:10px;width:2px;background:#fff}
+html[data-endfield=true] body .ctx-menu .ctx-item.danger{color:#923441}
+html[data-endfield=true] body .ctx-menu .ctx-sep{margin:0;border:0;border-top:2px solid #acb0a6}
+html[data-endfield=true] body .ctx-menu .ctx-item .ic{margin:0;width:17px;height:17px;flex:none;color:inherit;stroke:currentColor}
+@media(max-width:800px){html[data-endfield=true] #dlTable .ef-transfer-result{width:42px;height:42px;right:2px}}
+@media(prefers-reduced-motion:reduce){html[data-endfield=true] #dlTable .ef-transfer-result path{animation:none!important;stroke-dashoffset:0}}
+
+@media(prefers-reduced-motion:reduce){html[data-endfield=true] #dlTable .ef-transfer-material{animation:none!important}}
+
+/* State changes tint the same percentage-bound field, never an always-on edge. */
+html[data-endfield=true] #dlTable tbody tr:is([data-ef-status=retrying],[data-ef-status=error]):not([data-ef-progress="0"]):not(.ef-transfer-gold):not(.ef-transfer-leaving):before{background-image:url('transfer-ripples-neutral.svg'),linear-gradient(90deg,#ed413521,#e84b4190 38%,#ef4438d9)}
+html[data-endfield=true] #dlTable tbody tr[data-ef-status=paused]:not([data-ef-progress="0"]):before{background-image:url('transfer-ripples-neutral.svg'),linear-gradient(90deg,#54b96421,#53b76a90 38%,#59c575d9)}
+/* Anchor the primary filename on the status centerline; metadata sits below it. */
+html[data-endfield=true] #dlHistoryTable .history-file-copy{position:relative;min-width:0}
+html[data-endfield=true] #dlHistoryTable .history-file-meta{position:absolute;top:100%;left:0;right:0}
+@media(max-width:800px){html[data-endfield=true] #dlHistoryTable .history-file-meta{position:static}}
+
+html[data-endfield=true] #dlHistoryTable td.c-file{overflow:visible}

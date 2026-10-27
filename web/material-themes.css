@@ -1,0 +1,16 @@
+/* Original CFT palettes; no external artwork, fonts or render hooks. */
+[data-theme="dark_endfield"]{--bg:#17191b;--surface:#24272a;--surface2:#303438;--border:#484e52;--text:#f2f3ed;--text-dim:#b2b8ba;--primary:#ffef01;--primary-hover:#fff22a;--primary-fg:#20230a;--danger:#ff8578;--radius:5px;--radius-sm:3px;--shadow:none;--shadow-hover:none;color-scheme:dark}
+[data-theme="light_endfield"]{--bg:#eaece6;--surface:#f7f8f2;--surface2:#e3e6dc;--border:#bcc2b5;--text:#202520;--text-dim:#555e53;--primary:#ffef01;--primary-hover:#fff22a;--primary-fg:#252619;--danger:#b52b35;--radius:5px;--radius-sm:3px;--shadow:none;--shadow-hover:none;color-scheme:light}
+[data-theme$="endfield"] .card{border:1px solid var(--border);border-top:2px solid var(--primary);box-shadow:none}
+[data-theme$="endfield"] .nav-tab.active .ic{color:var(--primary-fg)!important}
+[data-theme$="endfield"] #btnSaveSettings{background:var(--primary);color:var(--primary-fg)!important;box-shadow:none}
+[data-theme$="endfield"] .btn{transition:background .12s ease-out,transform .12s ease-out;border-radius:3px}
+[data-theme$="endfield"] .btn:active{transform:translateY(1px)}
+[data-theme$="endfield"] h2{font-weight:700;letter-spacing:.025em}
+[data-theme$="endfield"] .btn-primary{border-left:4px solid var(--primary-fg)}
+[data-theme$="endfield"] table.grid{color:var(--text)}
+[data-theme$="endfield"] table.grid tbody tr:nth-child(even){background:color-mix(in srgb,var(--surface2) 60%,transparent)}
+[data-theme$="endfield"] table.grid tbody tr:hover{background:var(--surface2)!important}
+[data-theme$="endfield"] table.grid tbody tr.selected,[data-theme$="endfield"] table.grid tbody tr.sel-row{background:color-mix(in srgb,var(--primary) 22%,var(--surface))!important}
+[data-theme$="endfield"] .btn-primary{background:var(--primary)!important;color:var(--primary-fg)!important}
+@media(prefers-reduced-motion:reduce){[data-theme$="endfield"] .btn{transition:none;transform:none}}

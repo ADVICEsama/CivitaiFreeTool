@@ -73,7 +73,7 @@ class CivitaiFreeGUI(tk.Tk):
         self.cfg = config.load()
         # 主题（深/浅色，默认深色配合 Mica）
         self.style = ttk.Style(self)
-        self.theme = self.cfg.get("theme", "dark")
+        self.theme = self.cfg.get("theme", "dark_endfield")
         ui.apply_theme(self, self.style, self.theme)
         self.api = civitai_api.CivitaiAPI(
             self.cfg.get("api_key", ""), self.API_TIMEOUT,
@@ -96,7 +96,7 @@ class CivitaiFreeGUI(tk.Tk):
             self.frameless_bar = frameless.enable_frameless(self)
         # 应用窗口背景风格（Mica/亚克力）
         self.update_idletasks()
-        theme.apply_backdrop(self.winfo_id(), self.cfg.get("window_style", "mica"))
+        theme.apply_backdrop(self.winfo_id(), "none")
 
     def _site_url(self, model_id, version_id=None):
         """按配置的站点域名生成模型页链接（默认 civitai.red）"""
@@ -2092,7 +2092,7 @@ class CivitaiFreeGUI(tk.Tk):
         self.var_auto_translate = tk.BooleanVar(value=bool(self.cfg.get("auto_translate", True)))
         ttk.Checkbutton(frm, text="反向解析时自动翻译描述为中文", variable=self.var_auto_translate).grid(row=7, column=0, columnspan=2, sticky="w", padx=6, pady=3)
         ttk.Label(frm, text="窗口风格").grid(row=8, column=0, sticky="w", padx=6, pady=3)
-        self.var_window_style = tk.StringVar(value=self.cfg.get("window_style", "mica"))
+        self.var_window_style = tk.StringVar(value="none")
         style_cb = ttk.Combobox(frm, textvariable=self.var_window_style, state="readonly", width=12)
         style_cb["values"] = ["mica", "acrylic", "none"]
         style_cb.grid(row=8, column=1, sticky="w", padx=6)
@@ -2109,7 +2109,7 @@ class CivitaiFreeGUI(tk.Tk):
                   foreground="#888").grid(row=10, column=2, columnspan=2, sticky="w")
         ttk.Label(frm, text="界面主题").grid(row=11, column=0, sticky="w", padx=6, pady=3)
         ttk.Label(frm, text="界面主题").grid(row=11, column=0, sticky="w", padx=6, pady=3)
-        self.var_theme = tk.StringVar(value=ui.THEME_LABELS.get(self.cfg.get("theme", "dark"), "深色"))
+        self.var_theme = tk.StringVar(value=ui.THEME_LABELS.get(self.cfg.get("theme", "dark_endfield"), "终末地主题-暗"))
         theme_cb = ttk.Combobox(frm, textvariable=self.var_theme, state="readonly", width=10)
         theme_cb["values"] = list(ui.THEME_LABELS.values())
         theme_cb.grid(row=11, column=1, sticky="w", padx=6)
@@ -2173,7 +2173,7 @@ class CivitaiFreeGUI(tk.Tk):
         self.cfg["ask_move_after_download"] = self.var_ask_move.get()
         self.cfg["metadata_format"] = self.var_meta_fmt.get()
         label2key = {v: k for k, v in ui.THEME_LABELS.items()}
-        self.cfg["theme"] = label2key.get(self.var_theme.get(), "dark")
+        self.cfg["theme"] = label2key.get(self.var_theme.get(), "dark_endfield")
         self.cfg["frameless"] = self.var_frameless.get()
         self.cfg["site_domain"] = self.var_site_domain.get()
         self.cfg["baidu_appid"] = self.var_baidu_appid.get().strip()
@@ -2190,9 +2190,9 @@ class CivitaiFreeGUI(tk.Tk):
                 self.cfg.get("proxy_address") if self.cfg.get("proxy_enabled") else None)
             self.dl.cfg = self.cfg
             # 应用窗口风格
-            theme.apply_backdrop(self.winfo_id(), self.cfg.get("window_style", "mica"))
+            theme.apply_backdrop(self.winfo_id(), "none")
             # 应用主题（深/浅/现代浅色）并刷新动效组件
-            theme_key = self.cfg.get("theme", "dark")
+            theme_key = self.cfg.get("theme", "dark_endfield")
             if theme_key != self.theme:
                 self.theme = theme_key
                 ui.apply_theme(self, self.style, theme_key)

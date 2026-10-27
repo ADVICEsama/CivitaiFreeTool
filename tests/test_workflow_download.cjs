@@ -16,7 +16,7 @@ let passed=0;function ok(s){console.log('OK '+s);passed++;}
   const page=await browser.newPage({viewport:{width:1920,height:1080}}),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.addInitScript(init);
   await page.goto('http://127.0.0.1:'+server.address().port);await page.waitForFunction(()=>window.__ready);
   await page.evaluate(async()=>{
-   window.settingsHaveChanges=()=>false;switchPage('workflow');state.cfg.theme='dark_blue';state.cfg.ui_text_size='standard';state.cfg.ui_font='';document.documentElement.dataset.theme='dark_blue';applyUiAppearance();
+   window.settingsHaveChanges=()=>false;switchPage('workflow');CftWorkflowGraph.mode(false);state.cfg.theme='dark_blue';state.cfg.ui_text_size='standard';state.cfg.ui_font='';document.documentElement.dataset.theme='dark_blue';applyUiAppearance();
    const original=api.call.bind(api);api.call=async(method,...args)=>{
     if(method==='workflow_model_matches'){if(window.wfMatchFail)throw Error('fixture');if(window.wfDelay)await new Promise(r=>setTimeout(r,window.wfDelay));return JSON.stringify(args[0].map((ref,i)=>({ref,local:i<2,path:'D:/Demo/models/'+ref,sha256:'abcdef0123456789'})));}
     if(method==='get_download_file_choice')return window.dfFixture||null;

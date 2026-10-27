@@ -649,6 +649,12 @@ def main():
     import browser_bridge
     browser_bridge.set_api(api, os.path.join(BASE_DIR, "web"))
     api._browser_ui_handler = lambda: _activate_browser_ui(api)
+    from window_appearance import WindowAppearance, effective_appearance_options
+    initial_appearance = effective_appearance_options({
+        "mode": api.cfg.get("window_appearance", "theme"),
+        "theme": api.cfg.get("theme"),
+        "integrated": api.cfg.get("integrated_titlebar", True),
+    })
     webview.settings["DRAG_REGION_DIRECT_TARGET_ONLY"] = True
     window = webview.create_window(
         "CivitaiFreeTool",
@@ -659,12 +665,14 @@ def main():
         min_size=(980, 640),
         background_color="#1c1c1e",
         easy_drag=False,  # 只允许显式拖动区；全窗 easy_drag 会抢走 select/字体菜单的鼠标。
-        frameless=bool(api.cfg.get("integrated_titlebar",True)) and api.cfg.get("window_appearance","theme") not in ("system","external"),
+        frameless=bool(initial_appearance["integrated"]) and initial_appearance["mode"] not in ("system","external"),
     )
-    from window_appearance import WindowAppearance
     window_appearance = WindowAppearance(window)
     api._window_appearance_handler = window_appearance.request
     api._window_appearance_controller = window_appearance
+    from download_hud import DownloadHud
+    api._download_hud = DownloadHud(api, window, BASE_DIR)
+    window.events.closed += api._download_hud.close
     # Linux: force the Qt backend (QWebEngineView + QWebChannel, PySide6/PyQt6
     # bindings via qtpy). Best fit for KDE Plasma; GTK stack not needed.
     # Windows keeps the default EdgeChromium (WebView2) backend.
@@ -739,7 +747,7 @@ def main():
     def after_shown():
         _startup_log("native window shown")
         browser_bridge.set_ui_state(mode="window", window=_self_visible_window())
-        window_appearance.request({"mode": api.cfg.get("window_appearance", "theme"), "integrated": api.cfg.get("integrated_titlebar", True)})
+        window_appearance.request({"mode": api.cfg.get("window_appearance", "theme"), "theme": api.cfg.get("theme"), "integrated": api.cfg.get("integrated_titlebar", True)})
         set_window_icon()
     window.events.shown += after_shown
     initial_load = [True]
@@ -747,6 +755,8 @@ def main():
         if initial_load[0]:
             initial_load[0] = False
             _reveal_initial_window(window)
+            if posix_compat.IS_WINDOWS and api.cfg.get("download_hud_enabled"):
+                api._download_hud.show()
         _startup_log("native page loaded")
         browser_bridge.set_ui_state(loaded=True, window=_self_visible_window() if posix_compat.IS_WINDOWS else True)
     window.events.loaded += after_loaded
@@ -757,5 +767,51 @@ def main():
     _startup_log("app exited")
 
 
+def verify_bundle(output_path):
+    """Offline release self-check. Does not create Api, windows, queues or watchdogs."""
+    import hashlib
+    import importlib
+    import json
+    from pathlib import Path
+
+    root = Path(getattr(sys, '_MEIPASS', Path(__file__).resolve().parent))
+    report = {'ok': False, 'frozen': bool(getattr(sys, 'frozen', False))}
+    try:
+        for module in ('webview', 'PIL.Image', 'clr', 'pystray', 'webui'):
+            importlib.import_module(module)
+        import ssl
+        import civitai_api
+        # Importing ssl alone does not exercise SSLContext runtime file dependencies.
+        # This stays offline but follows the same initialization path as Api._new_api.
+        context = ssl.create_default_context()
+        if context.verify_mode != ssl.CERT_REQUIRED or not context.check_hostname:
+            raise RuntimeError('Strict TLS verification was not enabled')
+        for proxy in (None, 'http://127.0.0.1:9'):
+            client = civitai_api.CivitaiAPI(proxy=proxy, verify=True)
+            if not any(isinstance(h, __import__('urllib.request', fromlist=['HTTPSHandler']).HTTPSHandler) for h in client.opener.handlers):
+                raise RuntimeError('HTTPS handler unavailable')
+        report['tls_context_initialized'] = True
+        report['tls_verify_required'] = True
+        from webui import APP_VERSION
+        required = ('index.html', 'app.js', 'workflow.js', 'workflow-graph.js',
+                    'workflow-atlas.js', 'workflow-atlas.css', 'terrain-map.js')
+        for name in required:
+            if not (root / 'web' / name).is_file():
+                raise RuntimeError('Missing web resource: ' + name)
+        files = {p.relative_to(root / 'web').as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
+                 for p in (root / 'web').rglob('*') if p.is_file()}
+        native = root / 'native' / 'CftChrome.dll'
+        if sys.platform == 'win32' and not native.is_file():
+            raise RuntimeError('Missing native window library')
+        report.update(ok=True, version=APP_VERSION, web_sha256=files,
+                      native_included=native.is_file(), runtime_imports=True)
+    except Exception as error:
+        report.update(error_type=type(error).__name__, error=str(error)[:200])
+    Path(output_path).write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')
+    return 0 if report['ok'] else 1
+
+
 if __name__ == "__main__":
+    if len(sys.argv) == 3 and sys.argv[1] == '--verify-bundle':
+        raise SystemExit(verify_bundle(sys.argv[2]))
     main()

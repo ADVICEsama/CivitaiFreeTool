@@ -1,8 +1,29 @@
 # CivitaiFreeTool
 
+## v3.0.6 · 终末地工作台与工作流沙盘
+
+- 统一终末地亮/暗主题与各页面的导航、卡片、胶囊按钮及弹窗。
+- 工作流分析支持 3D 建筑沙盘 / 2D 平面图、真实 ComfyUI 连接和流动光点；读取参数，不执行工作流。
+- 左键默认拖动，空格 + 左键旋转；顶部可切换拖动、旋转、选择。2D 节点拖动只影响当前会话，不写回原文件。
+- 远景使用分级细节、区域缓存与屏幕外剔除，停止运动后恢复清晰建筑；尊重减少动画设置。
+- 最新修复：[v3.0.6](docs/releases/v3.0.6.md)：更新页启动门禁解锁、日志入口布局、工作流节点选择图标。
+- 下载 Windows 安装包与浏览器扩展：[GitHub Releases](https://github.com/ADVICEsama/CivitaiFreeTool/releases/latest)。源码与完整历史修复同步提供。
+
+## 历史说明（v2.6.27）
+
+以下为旧版说明；3.0.0 只保留终末地亮/暗两套主题。
+
+- **终末地主题-亮 / 暗**：独立顶部导航、几何图标、层级字重、常驻详情重点区、极简设置与等高线点阵视差；仅改变表示层，不改变模型筛选或批量选择语义。
+- **液体玻璃-亮 / 暗**：独立圆角与柔和材质配色；界面内材质不是桌面实时折射，系统材质不可用时明确回退。
+- **桌面下载悬浮窗**：下载管理点击“桌面悬浮窗”，或设置 → 外观与布局启用。终末地细长胶囊；玻璃较大面板。支持真实字节进度、展开任务、暂停/继续指定任务、拖动定位、左右贴边收起和独立缩放。关闭只隐藏，不停止下载。当前支持 **Windows 原生窗口模式**，浏览器模式不会伪装成桌面窗口。
+- **统一对齐**：所有主题共用控件对齐规范；加载阶段不伪造百分比，新增主题仍保留原有工具栏与操作。
+- **字体**：界面只随包使用鸿蒙黑体和圆构黑体 Alt；不安装或修改系统字体。详见 [字体声明](docs/FONT-NOTICES.md)。
+- **参考致谢**：[zmd-charge-plus](https://github.com/GlacierGlimmer/zmd-charge-plus)、[imgui-liquid-glass](https://github.com/SoyBeanMilkx/imgui-liquid-glass)、[endfield-ui-skill](https://github.com/hhikr/endfield-ui-skill)。仅参考视觉和交互思路，未复制其代码、游戏素材或标志；本项目并非官方联名。
+
+
 > 免费的 Civitai / HuggingFace 模型下载与本地模型管理工作台。
 
-![Version](https://img.shields.io/badge/version-2.6.26-blue) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-orange) ![CI](https://github.com/ADVICEsama/CivitaiFreeTool/workflows/tests/badge.svg)
+![Version](https://img.shields.io/badge/version-3.0.4-blue) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-orange) ![CI](https://github.com/ADVICEsama/CivitaiFreeTool/workflows/tests/badge.svg)
 
 [下载最新版](https://github.com/ADVICEsama/CivitaiFreeTool/releases/latest) · [更新日志](CHANGELOG.md) · [问题反馈](https://github.com/ADVICEsama/CivitaiFreeTool/issues) · [Linux / macOS](LINUX.md)
 
@@ -50,11 +71,37 @@
 - **本地原图缓存**：只保存打开过的原图和来源生成数据，已缓存的在线示例图可在详情中提前恢复高清与信息，不预下载未查看的在线图；同一会话重开直接复用已解码图片，重启后首次查看仍需读磁盘与解码；默认 1 GB，可关闭、调容量或清理，随软件数据迁移。不含任何运行缓存的源码/便携包。
 - **滚轮导航**：鼠标停在左侧菜单，滚轮上下切换页面；Ctrl + 滚轮仍用于全局缩放，首尾不循环。
 - **分组设置**：常用、外观、下载、目录、分类整理、网络、翻译、维护；跨分类搜索，分类规则旁直接提供步骤与示例。
-- **自由外观**：14 套配色、本地字体名称即预览、五档独立字号与图标尺寸、强调色、密度、圆角和局部画布交互特效；动画上限可输入 15–360，0 跟随屏幕（不保证达到指定帧率）。瀑布流按钮悬停展开竖向图片大小滑条。
+- **自由外观**：18 套主题、本地字体名称即预览、五档独立字号与图标尺寸、强调色、密度、圆角和局部画布交互特效；动画上限可输入 15–360，0 跟随屏幕（不保证达到指定帧率）。瀑布流按钮悬停展开竖向图片大小滑条。
 
 ## 界面示例
 
 下面是 **当前前端的演示截图**：使用虚构模型、文件路径及程序绘制的风景；不包含用户 API Key、私有模型或真实下载任务。它们用于展示界面，不代表下载或生成结果。
+
+### v2.6.27 新主题与桌面 HUD
+
+终末地亮 / 暗使用独立工程布局，玻璃主题保留柔和的圆角层次。以下截图均来自实际前端和虚构数据，不是效果图。
+
+| 终末地主题-亮 | 终末地主题-暗 |
+| --- | --- |
+| ![终末地亮](docs/screenshots/hud/models-light_endfield.png) | ![终末地暗](docs/screenshots/hud/models-dark_endfield.png) |
+
+| 液体玻璃-亮 | 液体玻璃-暗 |
+| --- | --- |
+| ![玻璃亮](docs/screenshots/hud/models-light_glass.png) | ![玻璃暗](docs/screenshots/hud/models-dark_glass.png) |
+
+**桌面下载 HUD**（终末地细条 / 玻璃面板；显示的是演示进度）：
+
+![终末地下载悬浮窗](docs/screenshots/hud/dark_endfield.png)
+![玻璃下载悬浮窗](docs/screenshots/hud/dark_glass.png)
+
+<details>
+<summary>极简设置、大图和字体出处</summary>
+
+![极简设置](docs/screenshots/hud/app-light_endfield.png)
+![大图与生成数据](docs/screenshots/hud/endfield-viewer.png)
+![关于页](docs/screenshots/hud/endfield-about.png)
+
+</details>
 
 ### 瀑布流：只看封面，悬停显示大号介绍
 
@@ -254,3 +301,19 @@ python -m venv .venv
 合成例图：仅勾选 bf16；未显示弹窗时不启动倒计时，勾选后停止自动选择。
 
 ![多格式权重选择](docs/screenshots/diffusion-file-choice.png)
+
+### 字体与外观设置入口
+
+- 界面字体统一在“设置 → 外观与布局 → 界面字体与回退顺序”选择；右侧按顺序缺字回退，确定后保存。内置品牌字标保持独立，不再提供本地 TTF / OTF 路径覆盖入口，旧路径配置加载时丢弃，不访问原文件。
+- 终末地主题自动关闭原生 Mica，使用等高线背景；强调色统一为黄色并保留其他主题的自定义色，暂时收起自定义色、原生材质、顶部氛围背景设置，切换主题后恢复入口和原配置。
+- Metro 主题色在全局自定义强调色开启时收起，避免两个颜色入口互相覆盖。关闭自定义强调色后恢复。
+- 全局字号、界面缩放、模型列表信息档位和局部图片大小作用不同，保留独立设置；模型页快捷调整与设置页共享配置。
+
+#### 按文字用途分配字库
+
+字体窗口右上角“字库分配”可切换默认回退、中文简体、数字、英文/拉丁、日语、中文繁体和韩语。每组都是独立的有序字体列表，沿用双击添加/移除、长按拖动和上下移动；未分配的组回退到默认字体列表。所有组均在点击“确定并应用”时一起保存，取消不改动。
+
+数字、拉丁字母、假名与韩文通过本地字体的 Unicode 范围在同一段文字中分别选用，不需要更改系统字体。汉字编码由简体、繁体及日语共用，不能仅凭编码推断语言：带 `lang="ja"` 的文本使用日语汉字字体，`zh-Hant` / `zh-TW` / `zh-HK` / `zh-MO` 使用繁体字体；无标记的汉字使用中文简体组。软件不会自动猜测或翻译模型名称的语言。字体渲染失败或缺字时继续向后回退。
+
+
+终末地英数默认字体采用 [圆构黑体 Alt / howlingFounts](https://github.com/howlingFounts/GeourceSans/)，Alt 版数字等宽、英文字母不是等宽，随包包含 SIL OFL 1.1 许可；不是声称它就是游戏原字体。用户自选字体及独立字库仍优先。数字输入保留真实输入框，支持点数字打字、两侧圆形加减按钮和原有键盘操作。二级下拉菜单隐藏原生滚动条，但保留滚轮和键盘滚动。

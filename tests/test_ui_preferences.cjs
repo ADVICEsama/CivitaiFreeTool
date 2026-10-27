@@ -90,7 +90,7 @@ function ok(name) { passed++; console.log('OK ' + name); }
         if(method==='rp_get_rows' && window.fixtureRpPath)return [{path:window.fixtureRpPath,status:window.fixtureRpPoll>=2?'成功':'反查中',model:'Fixture identified model'}];
         if (method === 'rp_get_rows') return [{path:'D:\\AI\\models\\example.safetensors',status:'待反查',sha:''}];
         if (method === 'get_download_target') return JSON.stringify({default:window.fixtureCfg.download_dir});
-        if (method === 'get_version') return JSON.stringify({ok:true,version:'2.3.1'});
+        if (method === 'get_version') return JSON.stringify({ok:true,version:'3.0.2'});
         if (method === 'get_scan_rows') return JSON.stringify(window.fixtureScanRows||[]);
         if (method === 'get_scan_state') return {running:false};
         if (method === 'get_covers') return '{}';
@@ -114,7 +114,7 @@ function ok(name) { passed++; console.log('OK ' + name); }
     assert.equal(sidebar.x,0); assert(content.x >= sidebar.width); ok('左侧导航与主内容左右分区');
     assert.equal(await page.locator('.nav-tab .ic').count(),7); ok('七个页面导航图标完整');
     assert.equal(await page.locator('#dlPauseSel .ic').isVisible(),true); ok('经典主题不再隐藏已有图标');
-    const logoThemes = ['dark','dark_purple','dark_blue','dark_green','dark_red','dark_graphite','dark_pink','dark_rose','light','light_blue','light_pink','light_green','modern','metro'];
+    const logoThemes = ['dark','dark_purple','dark_blue','dark_green','dark_red','dark_graphite','dark_pink','dark_rose','light','light_blue','light_pink','light_green','modern','metro','dark_endfield','light_endfield','dark_glass','light_glass'];
     for (const theme of logoThemes) {
       const logo=await page.evaluate(t=>{
         document.documentElement.dataset.theme=t;
@@ -408,7 +408,7 @@ function ok(name) { passed++; console.log('OK ' + name); }
     await (await settingControl("ui_density")).selectOption('compact');
     await (await settingControl("ui_corners")).selectOption('square');
     assert.equal(await page.evaluate(()=>getComputedStyle(document.querySelector('#dlTable td')).paddingTop),'4px');
-    assert.equal(await page.evaluate(()=>getComputedStyle(document.querySelector('#dlStartAll')).borderRadius),'0px'); ok('密度与圆角生效');
+    assert(parseFloat(await page.evaluate(()=>getComputedStyle(document.querySelector('#dlStartSel')).borderRadius))>=16); ok('密度与圆角生效');
     for (const theme of ['dark','light','modern','metro','dark_pink','dark_graphite']) {
       await (await settingControl("theme")).selectOption(theme);
       assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--primary').trim()),'#000000'); ok(theme+' 兼容自选色');
@@ -425,18 +425,11 @@ function ok(name) { passed++; console.log('OK ' + name); }
     assert.equal(await page.evaluate(()=>document.documentElement.dataset.zebra),'true'); ok('斑马纹默认状态与实际一致');
     await (await settingControl("zebra_rows")).uncheck();
     assert.equal(await page.evaluate(()=>document.documentElement.dataset.zebra),'false'); ok('斑马纹可关闭');
-    await (await settingControl("pointer_effects")).selectOption('trail');
-    await page.mouse.move(430,210); await page.mouse.down(); await page.mouse.up();
-    await page.waitForFunction(()=>document.querySelector('#pointerEffects')?.dataset.running==='true');
-    await page.waitForTimeout(850);
-    assert.equal(await page.locator('#pointerEffects').getAttribute('data-running'),'false'); ok('拖尾点击特效空闲自动停止');
-    await (await settingControl("pointer_effects")).selectOption('off');
-    await page.mouse.click(500,210);
-    assert.equal(await page.locator('#pointerEffects').isVisible(),false); ok('关闭特效没有画布遮挡');
+    assert.equal(await page.locator('[data-key=pointer_effects],[data-key=pointer_effect_quality],#pointerEffects').count(),0);ok('已移除鼠标交互特效入口和运行画布');
     await page.evaluate(()=>{state.cfg.custom_accent_enabled=false;});
     for (const theme of logoThemes) {
       await (await settingControl("theme")).selectOption(theme);
-      const colors=await page.evaluate(()=>['#dlStartAll','[data-proxy="mmScan"]'].map(selector=>{const c=getComputedStyle(document.querySelector(selector));return [c.color,c.backgroundColor]}));
+      const colors=await page.evaluate(()=>['#dlStartSel','[data-proxy="mmScan"]'].map(selector=>{const c=getComputedStyle(document.querySelector(selector));return [c.color,c.backgroundColor]}));
       for(const [fg,bg] of colors) {
         assert.notEqual(fg,bg);
         const lum=value=>{const c=value.match(/[\d.]+/g).slice(0,3).map(Number).map(n=>n/255).map(n=>n<=.04045?n/12.92:Math.pow((n+.055)/1.055,2.4));return .2126*c[0]+.7152*c[1]+.0722*c[2]};
@@ -505,7 +498,7 @@ function ok(name) { passed++; console.log('OK ' + name); }
     await page.evaluate(()=>{window.fixtureOriginalMetadata={meta:{originalSteps:26},metadata_source:'原图 PNG 演示数据'};window.fixtureOnlineMetadata={ok:true,online_metadata:true,meta:{onlineSteps:24},metadata_source:'C站图片接口演示'};});
     await page.locator('#dMain').click();await page.locator('#imageViewer').waitFor();
     await page.waitForFunction(()=>document.querySelector('.iv-generation').textContent.includes('onlineSteps'));assert((await page.locator('.iv-generation').innerText()).includes('originalSteps'));ok('原图和 withMeta 接口元数据加载后实际刷新生成数据');
-    const overlay=await page.locator('#imageViewer').evaluate(e=>({background:getComputedStyle(e).backgroundColor,blur:getComputedStyle(e).backdropFilter}));assert(overlay.background.includes('0.58'));ok('大图遮罩半透明，模型管理页面保留在后方');
+    const overlay=await page.locator('#imageViewer').evaluate(e=>({background:getComputedStyle(e).backgroundColor,blur:getComputedStyle(e).backdropFilter}));assert(overlay.background!=='rgba(0, 0, 0, 0)');ok('大图遮罩半透明，模型管理页面保留在后方');
     assert((await page.locator('.iv-generation').innerText()).includes('watercolor mountains'));assert((await page.locator('.iv-generation').innerText()).includes('steps'));assert.equal(await page.locator('#imageViewer script').count(),0);ok('图片点击放大并显示生成参数，提示词只按文本展示');
     await page.locator('[data-iv-copy=prompt]').click();assert.equal((await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='copy_text').at(-1))).args[0],'watercolor mountains <script>not executed</script>');ok('生成数据正面提示词可单独复制');
     await page.locator('[data-iv-copy=all]').click();assert((await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='copy_text').at(-1))).args[0].includes('cfgScale'));ok('复制全部包含采样参数与资源列表');
@@ -519,7 +512,7 @@ function ok(name) { passed++; console.log('OK ' + name); }
     await page.locator('#ivImage').click();assert.equal(await page.locator('#imageViewer').isVisible(),true);ok('点击图片本身不关闭图片查看器');
     await page.locator('#ivImage').click({button:'right'});await page.keyboard.press('Escape');assert.equal(await page.locator('#ivContext').isVisible(),false);assert.equal(await page.locator('#imageViewer').isVisible(),true);ok('Escape 先关闭图片右键菜单');
     await page.locator('#ivSave').click();assert((await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='save_gallery_image').at(-1))).args[0].includes('gallery.safetensors'));ok('图片保存请求指定当前模型与图片索引');
-    await page.locator('#ivPlus').click();await page.waitForFunction(()=>imageViewer.zoom===imageViewer.targetZoom);assert((await page.locator('#ivFit').innerText()).includes('120'));ok('图片放大按钮只调整当前图片');
+    await page.locator('#ivPlus').click();await page.waitForFunction(()=>imageViewer.zoom===imageViewer.targetZoom);assert.equal(await page.locator('#ivFit').getAttribute('aria-pressed'),'false');assert((await page.locator('#ivActual').innerText()).includes('%'));ok('图片放大按钮只调整当前图片');
     await page.evaluate(()=>setViewerZoom(3,null,true));
     const panBefore=await page.locator('.iv-image-scroll').evaluate(e=>({x:e.scrollLeft,y:e.scrollTop,w:e.clientWidth,h:e.clientHeight,sw:e.scrollWidth,sh:e.scrollHeight}));assert(panBefore.sw>panBefore.w && panBefore.sh>panBefore.h);ok('超大图片有可访问的横向和纵向画布，不负溢出截掉边缘');
     const stage=await page.locator('.iv-image-scroll').boundingBox();await page.mouse.move(stage.x+stage.width/2,stage.y+stage.height/2);await page.mouse.down();await page.mouse.move(stage.x+stage.width/2-80,stage.y+stage.height/2-65,{steps:10});await page.mouse.up();
@@ -664,7 +657,7 @@ function ok(name) { passed++; console.log('OK ' + name); }
       await rows.nth(1).locator(view==='masonry'?'.ms-name':'.ml-1').click();await page.waitForFunction(p=>detailRow?.path===p,second);
       assert.equal(await page.evaluate(()=>state.mmChecked.size),2);ok(view+' 再单击另一模型继续选中并切换右侧信息');
       const count=await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='get_model_detail').length);
-      await rows.nth(0).locator(view==='masonry'?'.ms-check':'.cell-sel').click();assert.equal(await page.evaluate(p=>state.mmChecked.has(p),first),false);assert.equal(await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='get_model_detail').length),count);assert.equal(await page.evaluate(()=>detailRow.path),second);ok(view+' 勾选格只调整批量选择，不切换正在查看的详情');
+      if(view==='masonry'){await rows.nth(0).focus();await page.keyboard.press('Space');}else await rows.nth(0).locator('.cell-sel').click();assert.equal(await page.evaluate(p=>state.mmChecked.has(p),first),false);assert.equal(await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='get_model_detail').length),count);assert.equal(await page.evaluate(()=>detailRow.path),second);ok(view+' 勾选格只调整批量选择，不切换正在查看的详情');
       await rows.nth(0).locator(view==='masonry'?'.ms-name':'.ml-1').dblclick();await page.waitForFunction(p=>detailRow?.path===p,first);assert.equal(await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='get_model_detail').length),count+1);assert.equal(await page.evaluate(p=>state.mmChecked.has(p),first),true);ok(view+' 双击不重复请求详情或抵消第一次选中');
     }
     await page.evaluate(()=>{state.mmView='masonry';state.mmChecked.clear();state.mmSel.clear();renderMm();});
@@ -689,19 +682,15 @@ function ok(name) { passed++; console.log('OK ' + name); }
     await page.evaluate(()=>setViewerZoom(9.41));await page.waitForFunction(()=>imageViewer.zoom===9.41);ok('连续缩放支持超过旧 800% 限制');
     await page.evaluate(()=>setViewerZoom(1,null,true));
     const imgBox=await page.locator('#ivImage').boundingBox();await page.mouse.move(imgBox.x+imgBox.width/2,imgBox.y+imgBox.height/2);const z0=await page.evaluate(()=>imageViewer.targetZoom);await page.mouse.wheel(0,-7);const z1=await page.evaluate(()=>imageViewer.targetZoom);assert(Math.abs(z1-z0*Math.exp(.014))<.000001);assert.equal(await page.evaluate(()=>imageViewer.zoom),z1);assert.equal(await page.evaluate(()=>imageViewer.zoomRaf),0);ok('滚轮按实际 delta 连续缩放，细小触控板输入不会跳一档');
-    const overlayStyle=await page.locator('#imageViewer').evaluate(e=>({filter:getComputedStyle(e).backdropFilter,bg:getComputedStyle(e).backgroundColor}));assert.equal(overlayStyle.filter,'none');assert(overlayStyle.bg.includes('0.58'));ok('大图保留半透明背景，移除昂贵的整屏背景模糊');
-    await page.evaluate(()=>{state.cfg.pointer_effects='trail';state.cfg.pointer_effect_quality='low';state.cfg.effects_fps_limit=144;applyUiAppearance();});
-    await page.mouse.move(500,300);await page.mouse.down();await page.mouse.up();await page.waitForFunction(()=>document.querySelector('#pointerEffects')?.dataset.running==='true');
-    const effect=await page.locator('#pointerEffects').evaluate(e=>({w:e.width,h:e.height,cap:e.dataset.fpsLimit}));assert.equal(effect.cap,'144');assert(effect.w*effect.h<1280*820/4,JSON.stringify(effect));ok('大图打开时拖尾仍运行，仅使用局部画布并接受 144 帧上限');
-    await page.evaluate(()=>{state.cfg.effects_fps_limit=0;applyUiAppearance();});assert.equal(await page.evaluate(()=>window.cftEffectsFpsLimit),0);ok('0 帧上限跟随显示刷新，不锁 30/60');
-    await page.evaluate(()=>{state.cfg.pointer_effects='off';applyUiAppearance();closeImageViewer();showOnboarding();obStep=1;renderOnboarding();});
-    assert.equal(await page.locator('.ob-brand-logo').count(),1);ok('页面介绍保留圆形 Logo');
+    const overlayStyle=await page.locator('#imageViewer').evaluate(e=>({filter:getComputedStyle(e).backdropFilter,bg:getComputedStyle(e).backgroundColor}));assert.equal(overlayStyle.filter,'none');assert(overlayStyle.bg!=='rgba(0, 0, 0, 0)');ok('大图保留半透明背景，移除昂贵的整屏背景模糊');
+    assert.equal(await page.locator('#pointerEffects').count(),0);ok('大图界面也不再创建鼠标拖尾画布');await page.evaluate(()=>{closeImageViewer();showOnboarding();obStep=1;renderOnboarding();});
+    assert.equal(await page.locator('.ob-wordmark').count(),1);ok('页面介绍使用关于页同款字标与角色构图');
     assert.equal(await page.locator('#obSteps .ob-step').count(),6);assert.equal(await page.locator('.ob-page-card').count(),7);ok('恢复六步教程与七个页面的具体介绍');
     await page.screenshot({style:'#toast{visibility:hidden!important;}',path:path.join(docsShots,'onboarding.png')});
     for(const route of ['download','dlmanager','models','updates','reverse','workflow','settings']){
       await page.locator('.ob-page-card[data-page='+route+']').click();assert.equal(await page.locator('#page-'+route).getAttribute('class'),'page active');assert((await page.locator('#obMask').getAttribute('class')).includes('mini'));ok('教程 '+route+' 页面卡片立即进入并保留迷你引导');await page.locator('#obMiniContinue').click();assert.equal(await page.locator('.ob-page-card').first().isVisible(),true);
     }
-    await page.locator('#obNext').click();assert.equal(await page.locator('.ob-theme').count(),14);ok('原主题引导保留全部十四套主题');
+    await page.locator('#obNext').click();assert.equal(await page.locator('.ob-theme').count(),18);ok('主题引导包含全部十八套主题');
     await page.locator('#obNext').click();await page.locator('#obDir').fill('D:/Example/newdownloads');ok('下载目录步骤仍独立保留');
     await page.locator('#obNext').click();await page.locator('#obModelDirs').fill('D:/Example/first\nD:/Example/second');await page.locator('#obNext').click();assert.equal(await page.locator('#obGoRp').isVisible(),true);ok('恢复多目录选择和反向解析介绍');
     await page.locator('#obPrev').click();assert((await page.locator('#obModelDirs').inputValue()).includes('D:/Example/second'));ok('页面式教程回退不丢已填写目录');await page.locator('#obSkipAll').click();await page.waitForFunction(()=>document.querySelector('#obMask').style.display==='none');assert.equal(await page.evaluate(()=>state.cfg.onboarding_done),true);ok('跳过页面式引导仍保存完成标记');
@@ -749,14 +738,13 @@ function ok(name) { passed++; console.log('OK ' + name); }
     await page.waitForFunction(()=>detailRpPath===null);assert.equal((await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='rp_identify_model').at(-1))).args[0],singlePath);assert.equal(await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='rp_start').length),batchBefore);assert((await page.locator('#statusText').innerText()).includes('识别完成'));ok('单模型反查进度在左下角结束，不触发批量队列');
     await page.evaluate(()=>window.fixtureRpReject=true);await page.locator('#dRp').click();await page.waitForFunction(()=>detailRpPath===null);assert((await page.locator('#statusText').innerText()).includes('busy'));await page.evaluate(()=>window.fixtureRpReject=false);ok('已有反查时提示忙碌，不跳页或重复启动');
     // 下载选择以任务 ID 为单位，同名文件不连带操作。
-    await page.evaluate(()=>{window.fixtureTasks=[{id:'task-a',filename:'same.safetensors',status:'pending',progress:0,downloaded:0},{id:'task-b',filename:'same.safetensors',status:'done',progress:100,downloaded:1}];switchPage('dlmanager');});await page.locator('#dlQueueTab').click();await page.evaluate(()=>dlRefresh());
-    await page.locator('#dlTable tbody tr').nth(0).locator('.dl-task-check').check();assert.equal(await page.locator('#dlTable tbody tr.sel-row').count(),1);ok('下载任务前有可独立多选的勾选框');
-    await page.locator('#dlTable tbody tr').nth(1).locator('.c-file').click();assert.equal(await page.locator('#dlTable tbody tr.sel-row').count(),1);assert.equal(await page.locator('#dlTable tbody tr').nth(1).locator('.dl-task-check').isChecked(),true);ok('单击下载任务选中并同步勾选框');
-    await page.locator('#dlPauseSel').click();assert.deepEqual((await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='dl_action').at(-1))).args,['pause',null,['task-b']]);ok('同名任务按 ID 暂停选中项，不误操作另一项');
-    await page.locator('#dlSelectAll').check();assert.equal(await page.locator('#dlTable tbody tr.sel-row').count(),2);await page.evaluate(()=>dlRefresh());assert.equal(await page.locator('#dlTable tbody .dl-task-check:checked').count(),2);ok('下载全选及定时刷新保留勾选状态');
-    await page.locator('#dlPauseAll').click();assert.equal((await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='dl_action').at(-1))).args[0],'pause_all');ok('下载管理提供全部暂停入口');
-    const removeBefore=await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='dl_action'&&c.args[0]==='remove_all').length);await page.locator('#dlRemoveAll').click();await page.locator('#cfCancel').click();assert.equal(await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='dl_action'&&c.args[0]==='remove_all').length),removeBefore);ok('全部移除需确认，取消不操作任务');
-    await page.locator('#dlRemoveAll').click();await page.locator('#cfOk').click();await page.waitForFunction(()=>window.fixtureCalls.some(c=>c.method==='dl_action'&&c.args[0]==='remove_all'));ok('全部移除使用队列操作，不调用模型文件删除');await page.locator('#dlClearDone').click();assert.equal((await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='dl_action').at(-1))).args[0],'clear_done');ok('全部移入历史入口只使用已结束任务归档接口');
+    await page.evaluate(()=>{window.fixtureTasks=[{id:'task-a',filename:'same.safetensors',status:'pending',progress:0,downloaded:0},{id:'task-b',filename:'same.safetensors',status:'paused',progress:100,downloaded:1}];switchPage('dlmanager');});await page.locator('#dlQueueTab').click();await page.evaluate(()=>dlRefresh());
+    await page.locator('#dlTable tbody tr').nth(0).locator('.c-file').click();assert.equal(await page.locator('#dlTable tbody tr.sel-row').count(),1);ok('点击下载任务可直接切换多选');
+    await page.locator('#dlTable tbody tr').nth(1).locator('.c-file').click();assert.equal(await page.locator('#dlTable tbody tr.sel-row').count(),2);ok('点击另一任务保留之前选择');
+    await page.locator('#dlTable tbody tr').nth(0).locator('.c-file').click();await page.locator('#dlPauseSel').click();assert.deepEqual((await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='dl_action').at(-1))).args,['pause',null,['task-b']]);ok('同名任务按 ID 暂停，不误操作另一项');
+    await page.evaluate(()=>commandRegistry.get('download:select-all').run());assert.equal(await page.locator('#dlTable tbody tr.sel-row').count(),2);await page.evaluate(()=>dlRefresh());assert.equal(await page.locator('#dlTable [aria-selected=true]').count(),2);ok('全选命令及定时刷新保留选择');
+    const removeBefore=await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='dl_action'&&c.args[0]==='remove').length);await page.locator('#dlRemoveSel').click();await page.locator('#cfCancel').click();assert.equal(await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='dl_action'&&c.args[0]==='remove').length),removeBefore);ok('移除需确认，取消不操作任务');
+    assert.equal(await page.locator('#dlClearDone,#dlRemoveAll,#dlPauseAll').count(),0);ok('只保留统一四按钮，不重复设置全部/选中入口');
     // API Key 必须是引导第一步，空值无法跳过。
     await page.evaluate(()=>{state.cfg.api_key='';showOnboarding();});assert.equal(await page.locator('#obKey').getAttribute('type'),'password');assert.equal(await page.locator('#obNext').isDisabled(),true);assert.equal(await page.locator('#obSkipAll').isDisabled(),true);ok('教程第一步申请 Key，空值不能继续或跳过');
     await page.locator('#obOpenApi').click();assert.equal((await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='open_url').at(-1))).args[0],'https://civitai.red/user/account');ok('API 申请默认打开 civitai.red');await page.locator('#obKey').fill('tutorial-fixture-not-a-real-key');await page.locator('#obNext').click();await page.locator('.ob-page-card').first().waitFor();assert.equal(await page.evaluate(()=>window.fixtureCfg.api_key),'tutorial-fixture-not-a-real-key');ok('Key 先保存到本地配置，再进入页面介绍');await page.locator('#obSkipAll').click();await page.waitForFunction(()=>$('#obMask').style.display==='none');

@@ -1,0 +1,426 @@
+/* An open inventory on the shared terrain, not a panel pasted onto the sidebar. */
+html[data-endfield=true] body #page-models>.card{background:transparent!important;border:0;box-shadow:none;padding:4px 0 20px;min-width:0}
+html[data-endfield=true] body #mmToolbar{background:transparent!important;border:0;box-shadow:none;padding:0 0 16px;overflow:visible;max-height:none;position:relative;z-index:12}
+html[data-endfield=true] #mmToolbar .mm-metro{display:contents}
+html[data-endfield=true] .ef-model-kicker{font-size:10px;letter-spacing:.12em;color:var(--text-dim);margin:4px 0 8px}
+html[data-endfield=true] #mmToolbar .title-row{display:flex;align-items:center;gap:12px;margin:0 0 18px;flex-wrap:wrap}
+html[data-endfield=true] #mmToolbar .page-title{margin:0;font-size:27px!important}
+html[data-endfield=true] #mmCount{padding:0 0 0 9px;border:0;border-left:3px solid var(--ef-yellow);background:none;color:var(--text-dim);font-size:11px;border-radius:0}
+html[data-endfield=true] #mmToolbarLock{margin-left:auto}
+html[data-endfield=true] #mmToolbar .ef-model-tools{display:flex;flex-direction:column;gap:8px;margin-bottom:13px}
+html[data-endfield=true] #mmToolbar .mm-row{padding:0;border:0;background:transparent!important;margin:0;display:flex;flex-wrap:wrap;align-items:center;gap:7px;min-width:0}
+html[data-endfield=true] #mmToolbar .mm-row1{gap:9px}
+html[data-endfield=true] #mmToolbar :is(.btn,.input){font-size:11px}
+html[data-endfield=true] #mmToolbar .ef-pill-action{min-height:31px;padding-block:3px;padding-inline:10px;min-width:80px}
+html[data-endfield=true] #mmToolbar .ef-pill-action>.ef-action-circle{width:21px;height:21px}
+html[data-endfield=true] #mmToolbar :is(.mm-spacer,.mm-sep){display:none}
+html[data-endfield=true] #mmToolbar .mm-legacy{display:none!important}
+html[data-endfield=true] #mmViewSeg{margin-left:auto;display:flex;align-items:center;gap:0;border:0;padding:0;flex-wrap:wrap;min-width:0;background:none}
+html[data-endfield=true] #mmViewSeg>.seg{position:relative;display:inline-flex;justify-content:center;gap:5px;min-width:65px;min-height:31px;padding:5px 9px;border-radius:0!important;border:0;border-bottom:2px solid transparent;background:none;color:var(--text-dim);box-shadow:none;clip-path:none;white-space:nowrap}
+html[data-endfield=true] #mmViewSeg>.seg.on{color:var(--text);border-color:var(--ef-yellow);background:color-mix(in srgb,var(--text) 6%,transparent)}
+html[data-endfield=true] #mmViewSeg>.seg>.ic{width:14px;height:14px}
+html[data-endfield=true] #mmViewSeg>.seg>.ef-action-caption{position:static;min-width:0;overflow:visible;text-align:center;grid-column:auto}
+html[data-endfield=true] #mmViewSeg>.seg>:is(.ef-action-circle,.ef-action-texture,.ef-action-stem){display:none}
+html[data-endfield=true] .ef-model-filters{display:flex;flex-direction:column;gap:9px}
+html[data-endfield=true] #mmToolbar .mm-filter{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:0;padding:0;border:0;background:none}
+html[data-endfield=true] #mmToolbar .mm-search-field{flex:1;min-width:150px;max-width:none}
+html[data-endfield=true] #mmToolbar #mmFilter{width:100%;height:34px;background:color-mix(in srgb,var(--surface) 48%,transparent);border:0;border-bottom:1px solid var(--border);border-radius:0!important;min-width:0;padding-right:32px}
+html[data-endfield=true] #mmToolbar .mm-row3{display:grid;grid-template-columns:repeat(5,minmax(0,1fr)) auto;gap:7px}
+html[data-endfield=true] #mmToolbar .mm-row3 .input{min-width:0;width:100%;height:29px;max-width:100%;padding:3px 24px 3px 10px;border-radius:18px!important;background:color-mix(in srgb,var(--surface) 60%,transparent)}
+html[data-endfield=true] .ef-model-selection{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:10px;color:var(--text-dim)}
+html[data-endfield=true] #mmToolbar .ef-model-selection>.btn{min-width:66px;min-height:25px;font-size:10px}
+html[data-endfield=true] #mmToolbar .ef-model-selection>.btn>.ef-action-circle{width:17px;height:17px}
+html[data-endfield=true] #mmCheckLabel{margin-left:auto;background:none;border:0;font-size:10px;color:var(--text-dim);padding:0}
+html[data-endfield=true] #mmToolbar .mm-menu{max-width:min(300px,calc(100vw - var(--sidebar-width) - 36px));color:var(--text);background:var(--surface);z-index:40}
+html[data-endfield=true] #mmToolbar .mm-menu .mm-item{font-size:12px}
+/* Narrow, square-edged cards; keep native image heights in the masonry view. */
+html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery){padding:4px 3px 30px;column-gap:10px;min-width:0;overflow-x:hidden}
+html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery) .ms-card{position:relative;isolation:isolate;border-radius:2px!important;border:1px solid color-mix(in srgb,var(--text) 12%,transparent);margin-bottom:10px;background:color-mix(in srgb,var(--surface) 86%,transparent);box-shadow:none;transition:box-shadow 160ms,transform 160ms;overflow:hidden}
+html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery) .ms-card:hover{transform:translateY(-1px);box-shadow:0 0 0 1px var(--text-dim)}
+html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery) .ms-card.checked{border-color:var(--ef-yellow);box-shadow:0 0 0 2px var(--ef-yellow)}
+html[data-endfield=true] :is(#mmMasonry,.model-card-gallery) .ms-card .ms-img{height:auto;min-height:90px;background:var(--surface2)}
+html[data-endfield=true] :is(#mmMasonry,.model-card-gallery) .ms-name{font-weight:650}
+html[data-endfield=true] .model-underlight{position:absolute;inset:auto 0 0;height:38px;z-index:5;pointer-events:none;background:linear-gradient(0deg,var(--model-glow),transparent 95%);opacity:.55;mask-image:linear-gradient(0deg,#000 0 5px,#0009 6px,transparent 100%)}
+html[data-endfield=true] .model-underlight:after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(110deg,transparent 0 22px,#ffffffad 30px,transparent 47px 80px);background-size:160px 100%;mix-blend-mode:screen;animation:ef-model-underlight 4800ms linear infinite;mask-image:linear-gradient(0deg,#000,transparent)}
+html[data-endfield=true] .ms-card[data-model-glow=none] .model-underlight{display:none}
+@keyframes ef-model-underlight{to{background-position:-160px 0}}
+html[data-model-motion=paused] .model-underlight:after{animation-play-state:paused}
+html[data-endfield=true] .model-shell{display:none;pointer-events:none}
+html[data-endfield=true] .ef-model-favorite-icon{display:inline-block;width:20px;height:20px;vertical-align:middle;object-fit:contain;margin-right:5px;flex:none}
+html[data-endfield=true] .model-fav-toggle{position:absolute;z-index:9;top:7px;left:7px;width:28px;height:28px;border:0;border-radius:2px;background:transparent;padding:0;cursor:pointer;opacity:0;transition:opacity 120ms}
+html[data-endfield=true] .model-fav-toggle .ef-model-favorite-icon{width:100%;height:100%;margin:0}
+html[data-endfield=true] .model-fav-toggle[aria-pressed=true],html[data-endfield=true] .ms-card:is(:hover,:focus-within)>.model-fav-toggle{opacity:1}
+html[data-endfield=true] .model-fav-toggle:focus-visible{opacity:1;outline:2px solid var(--ef-yellow);outline-offset:2px}
+html[data-endfield=true] .ms-card .ms-name>.model-star{display:none}
+html[data-endfield=true] .ms-card>.ms-check{top:7px;right:7px;left:auto;border-radius:2px;width:23px;height:23px;background:#202621b3;z-index:9}
+html[data-endfield=true] .ms-card>.ms-upd{top:35px;right:7px;z-index:9}
+/* An inventory tile is a genuine square, not a masonry column with a fixed-height crop. */
+html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery)[data-model-view=grid]{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(min(100%,clamp(100px,calc(var(--model-card-width,220px)*.6),252px)),1fr));gap:10px;column-width:auto;align-content:start;overflow:visible}
+html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery)[data-model-view=grid]>.ms-card{aspect-ratio:1;min-width:0;margin:0;background:var(--surface2);overflow:hidden}
+html[data-endfield=true] :is(#mmMasonry,.model-card-gallery)[data-model-view=grid] .ms-img-wrap{position:absolute;inset:0;width:100%;height:100%;background:var(--surface2)}
+html[data-endfield=true] :is(#mmMasonry,.model-card-gallery)[data-model-view=grid] .ms-img{width:100%;height:100%;min-height:0;object-fit:cover}
+html[data-endfield=true] :is(#mmMasonry,.model-card-gallery)[data-model-view=grid] .ms-img-wrap:after{font-size:11px}
+html[data-endfield=true] :is(#mmMasonry,.model-card-gallery)[data-model-view=grid] .model-shell{display:block;position:absolute;inset:0;width:100%;height:100%;object-fit:fill;z-index:7}
+html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery)[data-model-view=grid] .ms-info{position:absolute!important;inset:auto 0 0!important;min-height:0;padding:24px 7px 8px!important;opacity:1!important;transform:none!important;pointer-events:auto;overflow:hidden;background:linear-gradient(transparent,#111918e8 55%);color:#f3f4eb;z-index:4;display:block!important}
+html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery)[data-model-view=grid] .ms-titles{display:block!important;min-height:0!important;overflow:hidden}
+html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery)[data-model-view=grid] .ms-name{display:block!important;white-space:nowrap!important;margin:0;padding:0!important;min-height:0;line-height:1.5;font-size:12px!important;text-indent:0!important;color:inherit;text-shadow:0 1px 2px #0007;overflow:hidden;text-overflow:ellipsis}
+html[data-endfield=true] :is(#mmMasonry,.model-card-gallery)[data-model-view=grid] :is(.ms-sub,.ms-author,.ms-size){display:none!important}
+html[data-endfield=true] :is(#mmMasonry,.model-card-gallery)[data-model-view=grid] .ms-meta{display:block;min-width:0;padding:0!important;font-size:9px!important;line-height:1.5;color:inherit;opacity:.8}
+html[data-theme=light_endfield] body :is(#mmMasonry,.model-card-gallery)[data-model-view=grid] .ms-info{background:linear-gradient(transparent,#f0f2e8ed 55%);color:#252e22}
+html[data-theme=light_endfield] body :is(#mmMasonry,.model-card-gallery)[data-model-view=grid] .ms-name{text-shadow:none}
+/* Quiet right-hand inspector: real model metadata and an open background. */
+html[data-endfield=true] body.models-workspace{--inspector-width:clamp(250px,24vw,340px)}
+html[data-endfield=true] body.models-workspace #detailMask{padding:18px 14px 18px 0}
+html[data-endfield=true] body.models-workspace #detailPanel{background:linear-gradient(180deg,color-mix(in srgb,var(--surface) 45%,transparent),transparent)!important;border:0;border-top:2px solid var(--ef-yellow);box-shadow:none}
+html[data-endfield=true] body #detailPanel .dt-head{background:none;color:var(--text);padding:14px 12px;gap:8px}
+html[data-endfield=true] body #detailPanel .dt-head :is(.dt-head-t,.dt-author,.icon-btn){background:none;color:var(--text)}
+html[data-endfield=true] #detailPanel .dt-head-t{font-size:12px;letter-spacing:.08em;color:var(--text-dim)!important}
+html[data-endfield=true] body #detailPanel .detail-left{background:none;padding:4px 12px 12px}
+html[data-endfield=true] body #detailPanel .detail-main-img{max-height:220px;min-height:0;background:none;border-radius:0;object-fit:contain}
+html[data-endfield=true] #detailPanel .detail-thumbs:empty{display:none}
+html[data-endfield=true] #detailPanel .detail-title{font-size:21px;font-weight:700}
+html[data-endfield=true] #detailPanel .dt-mrs{background:none;border:0;padding:9px 0}
+html[data-endfield=true] #detailPanel .dt-mr{border-bottom:1px solid var(--border);padding:8px 0;font-size:11px;grid-template-columns:42px minmax(0,1fr)}
+html[data-endfield=true] #detailPanel .dt-sec{padding-block:12px;border-color:var(--border)}
+html[data-endfield=true] #dFavorite[aria-pressed=true]{background:url('model-favorite.svg') center/26px no-repeat!important;color:transparent!important}
+html[data-endfield=true] #dFavorite[aria-pressed=true]>.ic{visibility:hidden}
+.ef-model-detail-close{display:none}
+/* Appearance editor: compact per-type rows, expandable real shell thumbnails. */
+html body .setting-row.model-card-settings{display:block;min-width:0}
+.model-style-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:16px}
+.model-style-type{padding:11px 12px;border:1px solid var(--border);min-width:0;background:color-mix(in srgb,var(--surface) 40%,transparent)}
+.model-style-type>header{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0}
+.model-style-type h4{font-size:12px;font-weight:600;display:flex;align-items:center;gap:8px;min-width:0;overflow-wrap:anywhere}
+.model-style-swatch{width:3px;height:20px;background:var(--model-glow);box-shadow:0 0 9px var(--model-glow);flex:none}
+.model-glow-label{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--text-dim);flex:none}
+html body .model-glow-label .input{width:92px!important;min-width:0;height:28px;padding:3px 20px 3px 8px;font-size:11px}
+.model-frame-picker{margin-top:10px;font-size:11px;min-width:0}
+.model-frame-picker>summary{cursor:pointer;padding:4px 0;list-style-position:inside;outline-offset:2px}
+.model-frame-count{color:var(--text-dim);margin-left:8px;font-size:10px}
+.model-frame-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(65px,1fr));gap:6px;margin-top:10px;max-height:320px;overflow:auto;padding:3px}
+.model-frame-choice{display:flex;position:relative;flex-direction:column;align-items:center;min-width:0;padding:5px 3px;background:color-mix(in srgb,var(--text) 9%,var(--surface));border:1px solid transparent;cursor:pointer;overflow:hidden}
+.model-frame-choice:has(input:checked){border-color:var(--ef-yellow);background:color-mix(in srgb,var(--ef-yellow) 12%,var(--surface))}
+.model-frame-choice>input{position:absolute;top:4px;left:4px;width:13px;height:13px;accent-color:#b7a800;z-index:1}
+.model-frame-choice>img{width:100%;aspect-ratio:1;object-fit:contain;max-width:96px;pointer-events:none}
+.model-frame-choice>span{font-size:8px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:1100px){html[data-endfield=true] #mmToolbar .mm-row3{grid-template-columns:repeat(3,minmax(0,1fr))}html[data-endfield=true] #mmViewSeg{margin-left:0}html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery)[data-model-view=grid]{grid-template-columns:repeat(auto-fill,minmax(min(100%,clamp(100px,calc(var(--model-card-width,220px)*.5),210px)),1fr))}.model-style-list{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:900px){html[data-endfield=true] body.models-workspace .content{width:calc(100% - var(--sidebar-width))}html[data-endfield=true] body.models-workspace:not(.model-detail-open) #detailMask{display:none!important}html[data-endfield=true] body.models-workspace.model-detail-open #detailMask{width:min(360px,calc(100vw - var(--sidebar-width)));padding:0;z-index:80}html[data-endfield=true] body.models-workspace.model-detail-open #detailPanel{background:var(--surface)!important;box-shadow:-12px 0 30px #0005}html[data-endfield=true] .ef-model-detail-close{display:inline-flex}}
+@media(max-width:520px){html[data-endfield=true] #mmToolbar .mm-row3{grid-template-columns:repeat(2,minmax(0,1fr))}html[data-endfield=true] #mmToolbar .title-row{gap:8px}html[data-endfield=true] #mmToolbar .page-title{font-size:22px!important}html[data-endfield=true] #mmToolbarLock{margin-left:0}html[data-endfield=true] #mmToolbar .ef-pill-action{font-size:10px;min-width:68px}html[data-endfield=true] #mmToolbar .mm-row1>.btn-group{margin-left:0}html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery)[data-model-view=grid]{gap:7px;grid-template-columns:repeat(auto-fill,minmax(min(100%,clamp(90px,calc(var(--model-card-width,220px)*.45),189px)),1fr))}}
+@media(prefers-reduced-motion:reduce){html[data-endfield=true] .model-underlight:after{animation:none!important}html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery) .ms-card{transition:none}}
+
+/* Neutralize the old Metro tool shelf, including its empty trailing container. */
+html[data-endfield=true] #mmToolbar .ef-model-tools{padding:0;margin:0 0 13px;background:transparent!important;border:0;box-shadow:none}
+html[data-endfield=true] #mmToolbar>.mm-metro:empty,html[data-endfield=true] body #mmViewToggle,html[data-endfield=true] #mmDetail:empty{display:none!important}
+html[data-endfield=true] #mmToolbar .page-title:before{display:none}
+html[data-endfield=true] #mmToolbar #mmViewSeg>.seg{background:transparent!important;border:0!important;border-bottom:2px solid transparent!important;color:var(--text-dim)!important}
+html[data-endfield=true] #mmToolbar #mmViewSeg>.seg.on{background:color-mix(in srgb,var(--text) 6%,transparent)!important;border-bottom-color:var(--ef-yellow)!important;color:var(--text)!important}
+html[data-endfield=true] #mmToolbar .sp-caret{min-width:25px;width:25px;padding:0;background:none!important;border:0!important}
+html[data-endfield=true] #mmToolbar .sp-caret>:is(.ef-action-circle,.ef-action-stem,.ef-action-texture){display:none}
+html[data-endfield=true] #mmToolbar .sp-caret:before{content:'';width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg);grid-area:1/1}
+html body #settingsForm .setting-row.model-card-settings{display:block}
+
+.model-style-list{align-items:start}
+.model-style-type:has(details[open]){grid-column:1/-1}
+html body #settingsForm .model-style-type>header{padding:0 0 8px;margin:0;border-bottom:1px solid var(--border)}
+html[data-endfield=true] .ef-model-subtools{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+html[data-endfield=true] .ef-model-toolbox{min-width:0;flex:1}
+html[data-endfield=true] .ef-model-toolbox>summary{display:none}
+html[data-endfield=true] .ms-card[data-model-visible=false] .model-underlight:after{animation-play-state:paused}
+.ml-summary{display:none}
+@media(max-width:900px){
+ html[data-endfield=true] .ef-model-toolbox{flex:0 0 auto;max-width:100%}
+ html[data-endfield=true] .ef-model-toolbox>summary{display:block;list-style:none;cursor:pointer;padding:6px 12px;border:1px solid var(--border);border-radius:18px;font-size:11px;color:var(--text)}
+ html[data-endfield=true] .ef-model-toolbox>summary:after{content:' ＋';color:var(--text-dim)}
+ html[data-endfield=true] .ef-model-toolbox[open]>summary:after{content:' −'}
+ html[data-endfield=true] #mmToolbar .ef-model-toolbox:not([open])>.mm-row2{display:none}
+ html[data-endfield=true] #mmToolbar .ef-model-toolbox[open]>.mm-row2{margin-top:9px}
+ html[data-endfield=true] #mmViewSeg{margin-left:auto}
+ html[data-endfield=true] body #mmTable{width:100%!important;min-width:0!important;table-layout:auto;display:block}
+ html[data-endfield=true] #mmTable colgroup{display:none}
+ html[data-endfield=true] #mmTable :is(thead,tbody){display:block;width:100%}
+ html[data-endfield=true] #mmTable tr{display:grid;grid-template-columns:28px minmax(0,1fr);width:100%;align-items:center}
+ html[data-endfield=true] #mmTable :is(th,td){min-width:0;width:auto!important;max-width:100%;border:0!important}
+ html[data-endfield=true] #mmTable :is(th,td):not([data-col=sel]):not([data-col=name]){display:none!important}
+ html[data-endfield=true] #mmTable .ml-wrap{gap:8px;min-width:0}
+ html[data-endfield=true] #mmTable .ml-thumb{width:42px;height:54px;flex:none;object-fit:cover}
+ html[data-endfield=true] #mmTable .ml-txt{min-width:0}
+ html[data-endfield=true] #mmTable .ml-summary{display:block;white-space:normal;font-size:10px;color:var(--text-dim);margin-top:4px}
+ html[data-endfield=true][data-model-list-size="1"] #mmTable .ml-summary{display:none}
+ html[data-endfield=true] #mmTable :is(.ml-1,.ml-2,.ml-3){font-size:12px;min-width:0}
+}
+/* Model toolbar is a navigation/tool surface, deliberately not the global action-capsule style. */
+html[data-endfield=true] body #mmToolbar .ef-model-tool-button{display:inline-flex!important;align-items:center;justify-content:center;gap:6px;min-width:0;min-height:30px;padding:5px 9px!important;border:0!important;border-radius:0!important;background:transparent!important;color:var(--text)!important;box-shadow:none!important;outline-offset:1px;clip-path:none}
+html[data-endfield=true] body #mmToolbar .ef-model-tool-button:hover{background:color-mix(in srgb,var(--text) 10%,transparent)!important}
+html[data-endfield=true] body #mmToolbar .ef-model-tool-button.btn-primary{background:var(--ef-yellow)!important;color:#252d16!important}
+html[data-endfield=true] body #mmToolbar .ef-model-tool-button>.ic{width:16px;height:16px}
+html[data-endfield=true] #mmToolbar .title-row{margin-bottom:12px}
+html[data-endfield=true] #mmToolbar{padding-bottom:4px!important}
+html[data-endfield=true] .ef-model-inventory-label{display:flex;align-items:center;gap:10px;margin:5px 3px 12px;font-size:12px;flex:none;min-width:0}
+html[data-endfield=true] .ef-model-inventory-label strong{color:var(--ef-yellow);border-left:4px solid var(--ef-yellow);padding-left:7px;font-size:13px;line-height:23px}
+html[data-theme=light_endfield] .ef-model-inventory-label strong{color:#505812}
+html[data-endfield=true] .ef-model-inventory-label small{font-size:11px;color:var(--text-dim)}
+html[data-endfield=true] .ef-model-inventory-label>span{height:1px;flex:1;min-width:0;background:var(--border)}
+html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery){padding-bottom:72px}
+html[data-endfield=true] body #mmTableWrap{margin-bottom:70px}
+html[data-endfield=true] .ef-model-filters{position:fixed;left:calc(var(--sidebar-width) + 24px);right:calc(var(--inspector-width) + 20px);bottom:26px;z-index:30;display:flex;flex-direction:row;align-items:center;gap:12px;flex-wrap:nowrap;padding:8px 0 0;min-width:0;background:linear-gradient(transparent,color-mix(in srgb,var(--bg) 80%,transparent));border:0}
+html[data-endfield=true] .ef-model-sort{display:flex;align-items:center;min-width:0;height:34px;background:#e9eae5;color:#3b4138;border-radius:24px;overflow:hidden;flex:none;max-width:70%}
+html[data-endfield=true] .ef-model-sort #mmSortF{border:0;border-right:1px solid #899083;background:transparent!important;color:#3b4138!important;height:24px;min-width:0;width:135px;font-size:12px;padding:2px 22px 2px 14px;border-radius:0!important}
+html[data-endfield=true] body .ef-model-sort #mmSortDir{display:inline-flex;align-items:center;gap:5px;min-width:64px;min-height:32px;border:0;background:none;color:#3b4138;border-radius:0!important;font-size:12px;padding:3px 12px!important;box-shadow:none}
+html[data-endfield=true] .ef-model-sort #mmSortDir .ic{width:14px;height:14px}
+html[data-endfield=true] .ef-model-filter-popup{position:relative;flex:none}
+html[data-endfield=true] .ef-model-filter-popup>summary{list-style:none;display:grid;place-items:center;width:33px;height:33px;border-radius:50%;background:#e9eae5;color:#3b4138;cursor:pointer}
+html[data-endfield=true] .ef-model-filter-popup>summary::-webkit-details-marker{display:none}
+html[data-endfield=true] .ef-model-filter-popup>summary>svg{width:19px;height:19px;fill:currentColor}
+html[data-endfield=true] .ef-model-filter-panel{position:absolute;left:0;bottom:45px;width:min(550px,calc(100vw - var(--sidebar-width) - 48px));max-height:65dvh;overflow:auto;background:var(--surface);color:var(--text);padding:16px;border:1px solid var(--border);box-shadow:0 8px 25px #0005;display:flex;flex-direction:column;gap:13px}
+html[data-endfield=true] .ef-model-filters #mmCheckLabel{margin:0 0 0 auto;white-space:nowrap;min-width:0;max-width:30%;overflow:hidden;text-overflow:ellipsis;font-size:10px}
+html[data-endfield=true] .ef-model-filter-panel .mm-filter{display:flex;flex-wrap:wrap;gap:8px}
+html[data-endfield=true] .ef-model-filter-panel .mm-search-field{flex:1 1 100%;min-width:0}
+html[data-endfield=true] .ef-model-filter-panel .mm-row3{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+html[data-endfield=true] .ef-model-filter-panel select{width:100%;min-width:0;max-width:100%;font-size:12px}
+html[data-endfield=true] .ef-model-filter-panel .ef-model-tool-button{padding:5px 9px;min-height:28px;border:1px solid var(--border);border-radius:0;background:none;color:var(--text);font-size:11px}
+html[data-endfield=true] .ef-model-filter-panel .ef-model-tool-button>.ic{width:15px;height:15px}
+html[data-endfield=true] .ef-model-favorite-icon{color:var(--ef-yellow);fill:currentColor;filter:drop-shadow(0 1px 1px #2d3515b3);background:none!important;border:0}
+html[data-endfield=true] .model-fav-toggle{background:none!important;box-shadow:none!important}
+html[data-endfield=true] #dFavorite[aria-pressed=true]{background:none!important;color:var(--ef-yellow)!important}
+html[data-endfield=true] #dFavorite[aria-pressed=true]>.ef-model-favorite-icon{visibility:visible}
+html[data-endfield=true] #dFavorite:not([aria-pressed=true])>.ef-model-favorite-icon{color:var(--text-dim)}
+html[data-endfield=true] :is(#mmMasonry,.model-card-gallery)[data-model-view=grid] .ms-card:has(.model-shell) .ms-img-wrap{inset:18%;width:auto;height:auto;overflow:hidden}
+html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery)[data-model-view=grid] .ms-card:has(.model-shell) .ms-info{left:18%!important;right:18%!important;bottom:18%!important;padding:16px 4px 4px!important}
+/* Full-width transactional appearance chooser, matching the font chooser rather than a settings subsection. */
+html body .setting-row.model-card-settings{display:grid!important}
+.model-style-mask{position:fixed;inset:0;z-index:100100;display:flex;align-items:center;justify-content:center;background:#070b0dc7;backdrop-filter:blur(12px);padding:55px 0}
+.model-style-dialog{position:relative;width:100%;height:min(700px,84dvh);min-height:280px;display:flex;flex-direction:column;gap:17px;padding:27px max(28px,calc((100vw - 1320px)/2)) 46px;background:var(--surface);color:var(--text);border-block:1px solid var(--border);box-shadow:0 7px 25px #0006;outline:0}
+.model-style-dialog:before{content:'';position:absolute;left:0;right:0;top:-1px;height:3px;background:var(--ef-band-stripe)}
+.model-style-dialog>header{display:flex;align-items:center;justify-content:space-between;gap:20px;flex:none}
+.model-style-dialog h2{font-size:23px;font-weight:700;margin:0 0 6px}
+.model-style-dialog header p,.model-style-hint{font-size:12px;color:var(--text-dim);line-height:1.7}
+.model-style-close{border:0;background:none;color:var(--text);font-size:27px;cursor:pointer;width:34px;height:34px}
+.model-style-workspace{display:grid;grid-template-columns:190px minmax(0,1fr);min-height:0;flex:1;gap:28px}
+.model-style-bases{min-width:0;min-height:0;display:flex;flex-direction:column;gap:13px}
+.model-style-bases h3{font-size:13px}
+.model-style-bases>[role=tablist]{overflow:auto;display:flex;flex-direction:column;gap:5px;flex:1;min-height:0}
+.model-style-bases [role=tab]{padding:11px 13px;border:0;border-left:3px solid transparent;background:color-mix(in srgb,var(--text) 5%,transparent);color:var(--text);text-align:left;cursor:pointer;font-size:13px}
+.model-style-bases [aria-selected=true]{border-left-color:var(--ef-yellow);background:color-mix(in srgb,var(--ef-yellow) 13%,var(--surface));font-weight:650}
+.model-style-bases>p{font-size:10px;line-height:1.7;color:var(--text-dim)}
+.model-style-main{display:flex;flex-direction:column;min-height:0;gap:10px}
+.model-style-main-heading{display:flex;justify-content:space-between;align-items:center;gap:20px}
+.model-style-main-heading h3{font-size:18px}
+.model-style-main-heading label{display:flex;gap:8px;align-items:center;font-size:12px}
+.model-style-main-heading select{width:110px;padding:6px 10px;background:var(--bg);color:var(--text);border:1px solid var(--border)}
+.model-style-main>.model-frame-grid{margin:0;max-height:none;flex:1;min-height:0;align-content:start;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));padding:8px;border:1px solid var(--border);background:color-mix(in srgb,var(--bg) 30%,transparent)}
+.model-style-main .model-frame-choice>span{font-size:10px;color:var(--text)}
+.model-style-main #modelStyleSelection{font-size:11px;color:var(--text-dim)}
+#modelStyleError{font-size:12px;color:var(--danger)}
+.model-style-actions{position:absolute;left:50%;bottom:0;transform:translate(-50%,50%);display:flex;gap:24px;max-width:calc(100% - 32px)}
+.model-style-actions>.btn{width:220px;min-height:46px;max-width:45vw}
+/* Reference-style compact hero followed by actual attributes, words, description and a details footer. */
+html[data-endfield=true] body #detailPanel .dt-body{display:flex;flex-direction:column;gap:0;flex:1;min-height:0}
+html[data-endfield=true] body #detailPanel .detail-left{padding-bottom:10px}
+html[data-endfield=true] .ef-inspector-hero{position:relative;min-height:180px;display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr);gap:4px;align-items:start}
+html[data-endfield=true] .ef-inspector-heading{position:relative;z-index:1;padding-top:2px;min-width:0}
+html[data-endfield=true] #detailPanel .ef-inspector-heading .detail-title{font-size:22px;margin:0 0 7px;line-height:1.3;overflow-wrap:anywhere}
+html[data-endfield=true] #detailPanel .ef-inspector-heading .dt-mr{display:block;padding:0;border:0;color:var(--text-dim);font-size:13px}
+html[data-endfield=true] .ef-inspector-heading .dt-mr>.k{display:none}
+html[data-endfield=true] #detailPanel .ef-inspector-hero>.detail-main-img{width:100%;height:180px;max-height:none;object-fit:contain;margin:0}
+html[data-endfield=true] #detailPanel .ef-inspector-version{display:flex;justify-content:center;align-items:center;gap:8px;border:2px solid color-mix(in srgb,var(--text) 35%,transparent);border-radius:24px;padding:5px 12px;font-size:13px;background:none}
+html[data-endfield=true] #detailPanel .detail-right{display:flex;flex-direction:column;flex:1;padding:0 12px 8px;gap:0}
+html[data-endfield=true] .ef-inspector-attributes>h3{text-align:center;font-size:14px;letter-spacing:.1em;margin:12px 0 10px}
+html[data-endfield=true] #detailPanel .ef-inspector-attributes .dt-mrs{padding:0;margin:0}
+html[data-endfield=true] #detailPanel .ef-inspector-attributes .dt-mr{display:flex;align-items:center;justify-content:space-between;padding:8px;font-size:13px;background:color-mix(in srgb,var(--text) 9%,transparent);margin-bottom:5px;border:0;gap:10px}
+html[data-endfield=true] #detailPanel .ef-inspector-attributes .dt-mr .k{color:var(--text-dim)}
+html[data-endfield=true] #detailPanel .dt-sec{padding:12px 0;margin:0;border:0;border-bottom:1px solid var(--border)}
+html[data-endfield=true] #detailPanel .dt-sec-h{font-size:13px;font-weight:650;margin-bottom:8px;display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+html[data-endfield=true] #detailPanel .dt-sec-h:before{content:'';width:5px;height:5px;border:1px solid var(--text-dim);border-radius:50%;flex:none}
+html[data-endfield=true] #detailPanel .dt-sec-hint{font-size:10px;font-weight:400}
+html[data-endfield=true] #detailPanel .detail-desc{font-size:12px;line-height:1.8;max-height:180px;overflow:auto}
+html[data-endfield=true] .ef-inspector-more{margin-top:auto;padding-top:14px;display:flex;flex-direction:column}
+html[data-endfield=true] .ef-inspector-more>summary{list-style:none;padding:10px 20px;cursor:pointer;border-radius:24px;background:var(--ef-secondary-bg);color:var(--ef-secondary-text);border:1px solid var(--border);font-size:13px;text-align:center;box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--text) 20%,transparent)}
+html[data-endfield=true] .ef-inspector-more>summary>span{float:right}
+html[data-endfield=true] .ef-inspector-more-content{padding-top:12px}
+html[data-endfield=true] .ef-inspector-more-content .dt-mr{display:block!important;font-size:11px;overflow-wrap:anywhere}
+@media(max-width:900px){html[data-endfield=true] .ef-model-filters{right:20px;left:calc(var(--sidebar-width) + 16px)}html[data-endfield=true] .ef-model-filter-panel{position:fixed;left:calc(var(--sidebar-width) + 16px);right:16px;bottom:76px;width:auto}.model-style-workspace{grid-template-columns:130px minmax(0,1fr);gap:15px}.model-style-main>.model-frame-grid{grid-template-columns:repeat(auto-fill,minmax(76px,1fr))}}
+@media(max-width:520px){html[data-endfield=true] .ef-model-sort #mmSortF{width:95px;font-size:11px}html[data-endfield=true] .ef-model-filters{gap:7px}html[data-endfield=true] .ef-model-filters #mmCheckLabel{display:none}.model-style-dialog{padding:18px 16px 42px;gap:12px;height:84dvh}.model-style-workspace{grid-template-columns:86px minmax(0,1fr);gap:10px}.model-style-bases>p{display:none}.model-style-bases [role=tab]{padding:9px 6px;font-size:11px}.model-style-dialog h2{font-size:20px}.model-style-dialog header p,.model-style-hint{font-size:10px}.model-style-main-heading{gap:8px;flex-wrap:wrap}.model-style-main-heading h3{font-size:14px}.model-style-main>.model-frame-grid{grid-template-columns:repeat(auto-fill,minmax(64px,1fr))}.model-style-actions{gap:12px}.model-style-actions>.btn{width:130px}}
+
+html[data-endfield=true] #dFavorite{background:none!important;border:0!important;box-shadow:none!important;border-radius:0!important}
+.model-style-main .model-frame-choice{background:repeating-conic-gradient(#5c655f 0 25%,#68716a 0 50%) 0 0/18px 18px;color:#fff}
+.model-style-main .model-frame-choice:has(input:checked){background:#5a6146;border-color:var(--ef-yellow)}
+.model-style-main .model-frame-choice>span{color:#f0f3e7}
+/* One selection affordance: the card/row glows, while the upper-right thumb is solely Favorite. */
+html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery) .ms-card.checked{outline:none!important;border-color:transparent!important;box-shadow:0 0 12px 3px #ffd94c99,0 0 28px #ffef0140!important}
+html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery) .ms-card:has(.model-shell){background:transparent!important;border-color:transparent}
+html[data-endfield=true] .model-fav-toggle{left:auto;right:7px;top:7px;opacity:1;width:27px;height:27px}
+html[data-endfield=true] .model-fav-toggle:not([aria-pressed=true]) .ef-model-favorite-icon{color:#d0d7ce;opacity:.68}
+html[data-endfield=true] .model-fav-toggle:hover .ef-model-favorite-icon{color:var(--ef-yellow);opacity:1}
+html[data-endfield=true] :is(#mmMasonry,.model-card-gallery)[data-model-view=grid] .ms-card:has(.model-shell) .ms-img-wrap{inset:var(--frame-top) var(--frame-right) var(--frame-bottom) var(--frame-left);width:auto;height:auto}
+html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery)[data-model-view=grid] .ms-card:has(.model-shell) .ms-info{left:var(--frame-left)!important;right:var(--frame-right)!important;bottom:var(--frame-bottom)!important}
+html[data-endfield=true] :is(#mmMasonry,.model-card-gallery)[data-model-view=grid] .ms-card:has(.model-shell)>.model-fav-toggle{top:calc(var(--frame-top) + 4px);right:calc(var(--frame-right) + 4px)}
+html[data-endfield=true] .model-underlight{height:55px;background:radial-gradient(ellipse 100% 85% at 50% 100%,var(--model-glow),transparent 90%);opacity:.7;mask-image:linear-gradient(0deg,#000,transparent)}
+html[data-endfield=true] .model-underlight:after{inset:-20% 0 0;background:linear-gradient(0deg,transparent 0 38%,#ffffffaa 50%,transparent 65%);background-size:100% 100%;animation:ef-model-rise 3600ms ease-in-out infinite;mask-image:none}
+@keyframes ef-model-rise{0%{transform:translateY(85%);opacity:0}35%{opacity:.7}80%,100%{transform:translateY(-80%);opacity:0}}
+html[data-endfield=true] :is(#mmMasonry,.model-card-gallery)[data-model-view=grid] .ms-card:has(.model-shell)>.model-underlight{left:var(--frame-left);right:var(--frame-right);bottom:var(--frame-bottom)}
+/* Honor the existing cover-only/hover preference in square mode as well. */
+html[data-masonry-info=slide] body :is(#mmMasonry,.model-card-gallery)[data-model-view=grid] .ms-info{transform:translateY(100%)!important;opacity:0!important;pointer-events:none;transition:transform 200ms ease,opacity 150ms ease}
+html[data-masonry-info=fade] body :is(#mmMasonry,.model-card-gallery)[data-model-view=grid] .ms-info{opacity:0!important;pointer-events:none;transition:opacity 180ms ease}
+html:is([data-masonry-info=slide],[data-masonry-info=fade]) body :is(#mmMasonry,.model-card-gallery)[data-model-view=grid] .ms-card:is(:hover,:focus-visible,:focus-within) .ms-info{transform:none!important;opacity:1!important;pointer-events:auto}
+html:is([data-masonry-info=slide],[data-masonry-info=fade]) body :is(#mmMasonry,.model-card-gallery)[data-model-view=grid] .ms-sub{display:block!important;font-size:9px!important;line-height:1.5;padding:0!important;margin:0;color:inherit}
+/* Compact transfer-like list: square rows, a cover wash, base-tinted paper and no outer panel. */
+html[data-endfield=true] body #mmTableWrap{background:transparent!important;border:0;box-shadow:none;min-width:0;overflow-x:hidden}
+html[data-endfield=true] body #mmTable{display:block;width:100%!important;min-width:0!important;max-width:100%;border:0;background:none}
+html[data-endfield=true] #mmTable colgroup{display:none}
+html[data-endfield=true] #mmTable :is(thead,tbody){display:block;width:100%}
+html[data-endfield=true] #mmTable tr{display:grid;grid-template-columns:27px minmax(0,2.3fr) minmax(0,.8fr) minmax(0,.6fr) minmax(0,.8fr);width:100%;align-items:center;gap:10px;min-width:0;padding:0 10px}
+html[data-endfield=true] #mmTable :is(th,td){display:block;min-width:0;width:auto!important;max-width:100%;border:0!important;background:transparent!important;padding:5px 0;text-align:center;z-index:1;white-space:normal;overflow-wrap:anywhere}
+html[data-endfield=true] #mmTable :is(th,td):not([data-col=sel]):not([data-col=name]):not([data-col=base]):not([data-col=ver]):not([data-col=size]){display:none!important}
+html[data-endfield=true] #mmTable th{font-size:11px;color:var(--text-dim);font-weight:600}
+html[data-endfield=true] #mmTable :is(th,td)[data-col=name]{text-align:left}
+html[data-endfield=true] #mmTable tbody{display:flex;flex-direction:column;gap:8px;padding:5px 3px 20px;overflow:visible}
+html[data-endfield=true] body #mmTable tbody tr{position:relative;isolation:isolate;min-height:78px;background:color-mix(in srgb,var(--surface) 94%,transparent)!important;border:0!important;border-radius:0!important;overflow:hidden;box-shadow:none;color:var(--text);transition:box-shadow 150ms}
+html[data-endfield=true] #mmTable tbody tr:before{content:'';position:absolute;inset:0;z-index:0;pointer-events:none;background:linear-gradient(90deg,transparent 40%,color-mix(in srgb,var(--model-glow) 24%,transparent));}
+html[data-endfield=true] #mmTable tbody tr:after{content:'';position:absolute;inset:auto 0 0;height:20px;z-index:0;background:linear-gradient(0deg,var(--model-glow),transparent);opacity:.25;pointer-events:none;animation:ef-model-list-light 3600ms ease-in-out infinite}
+@keyframes ef-model-list-light{0%,100%{opacity:.12}50%{opacity:.32}}
+html[data-endfield=true] #mmTable tbody tr[data-model-glow=none]:after{display:none}
+html[data-model-motion=paused] #mmTable tbody tr:after{animation-play-state:paused}
+html[data-endfield=true] body #mmTable tbody tr.sel-row{outline:none!important;border:0!important;box-shadow:0 0 12px 2px #ffdc59a1,0 0 26px #ffef0140!important}
+html[data-endfield=true] #mmTable .ml-thumb{position:absolute;inset:0 auto 0 0;width:30%;height:100%;max-width:none;object-fit:cover;border:0;border-radius:0!important;opacity:.55;z-index:-1;mask-image:linear-gradient(90deg,#000,transparent)}
+html[data-endfield=true] #mmTable .ml-wrap{min-width:0;background:none;gap:0}
+html[data-endfield=true] #mmTable .ml-txt{padding:6px 0;min-width:0;position:relative}
+html[data-endfield=true] #mmTable .ml-1{font-size:14px;font-weight:650;line-height:1.5;text-shadow:0 1px 2px #0006}
+html[data-endfield=true] #mmTable .ml-2,html[data-endfield=true] #mmTable .ml-3{font-size:10px;line-height:1.4;color:var(--text-dim)}
+html[data-theme=light_endfield] body #mmTable tbody tr{background:#e4e9dd!important;color:#283321}
+html[data-theme=light_endfield] #mmTable .ml-thumb{opacity:.3}
+html[data-theme=light_endfield] #mmTable .ml-1{text-shadow:none}
+html[data-model-list-size="1"] body #mmTable tbody tr{min-height:42px}
+html[data-model-list-size="2"] body #mmTable tbody tr{min-height:58px}
+/* Inspector: metadata on the left, image on the right, gallery before trigger words. */
+html[data-endfield=true] #detailPanel{position:relative}
+html[data-endfield=true] body #detailPanel .dt-head{position:absolute;right:6px;top:5px;padding:0;z-index:8;min-height:0;background:none}
+html[data-endfield=true] #detailPanel .dt-head-t{display:none}
+html[data-endfield=true] #detailPanel .detail-left{padding-top:10px}
+html[data-endfield=true] .ef-inspector-hero{min-height:254px;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:0}
+html[data-endfield=true] .ef-inspector-heading{padding-top:0}
+html[data-endfield=true] #detailPanel .ef-inspector-heading>.author-chip{display:block;padding:0;margin:14px 0 10px;color:var(--text);font-size:12px;background:none;border:0;cursor:pointer}
+html[data-endfield=true] #detailPanel .ef-inspector-heading .ef-inspector-version{display:block;border:0;border-radius:0;padding:0;font-size:11px;text-align:left;margin:0 0 12px}
+html[data-endfield=true] #detailPanel .ef-inspector-version>.k{margin-right:10px;color:var(--text-dim)}
+html[data-endfield=true] #detailPanel .ef-inspector-hero>.detail-main-img{height:226px;margin-top:32px}
+html[data-endfield=true] .ef-inspector-heading .ef-inspector-attributes>h3{display:none}
+html[data-endfield=true] #detailPanel .ef-inspector-heading .dt-mr{display:flex;justify-content:space-between;padding:5px 6px;margin-bottom:5px;background:color-mix(in srgb,var(--text) 9%,transparent);font-size:10px;gap:5px}
+html[data-endfield=true] #detailPanel .ef-inspector-heading>.dt-mr{padding:0;background:none;display:block;font-size:13px}
+html[data-endfield=true] #detailPanel .ef-inspector-heading .ef-inspector-attributes .k{display:block;font-size:10px;min-width:0;white-space:nowrap;color:var(--text-dim)}
+html[data-endfield=true] .ef-inspector-gallery{padding:6px 0 10px;border-bottom:1px solid var(--border)}
+html[data-endfield=true] .ef-inspector-gallery>h3{font-size:11px;font-weight:600;color:var(--text-dim);margin:0 0 7px}
+html[data-endfield=true] .ef-inspector-gallery .detail-thumbs{display:flex;flex-wrap:nowrap;gap:6px;overflow-x:auto;padding:0 0 4px;margin:0}
+html[data-endfield=true] .ef-inspector-gallery .detail-thumb{width:48px;height:58px;object-fit:cover;border:1px solid var(--border);border-radius:0!important;flex:none;cursor:pointer}
+html[data-endfield=true] .ef-inspector-gallery .detail-thumb.on{border-color:var(--ef-yellow);box-shadow:0 0 0 1px var(--ef-yellow)}
+html[data-endfield=true] #detailPanel .ef-inspector-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:auto;padding-top:20px}
+html[data-endfield=true] #detailPanel .ef-inspector-more{margin-top:8px;padding-top:0}
+@media(max-width:900px){html[data-endfield=true] #mmTable tr{grid-template-columns:24px minmax(0,1fr) minmax(55px,.35fr);gap:7px;padding-inline:7px}html[data-endfield=true] #mmTable :is(th,td)[data-col=base],html[data-endfield=true] #mmTable :is(th,td)[data-col=ver]{display:none!important}html[data-endfield=true] #mmTable :is(th,td)[data-col=size]{display:block!important;font-size:10px}html[data-endfield=true] #mmTable .ml-thumb{width:45%;height:100%}html[data-endfield=true] #mmTable .ml-summary{display:block;font-size:9px}}
+@media(prefers-reduced-motion:reduce){html[data-endfield=true] .model-underlight:after,html[data-endfield=true] #mmTable tbody tr:after{animation:none!important}}
+.model-style-main-heading{flex-wrap:wrap;gap:12px}
+.model-style-info-choice{margin-left:auto;white-space:nowrap}
+.model-style-main-heading .model-style-info-choice select{width:170px}
+@media(max-width:520px){.model-style-info-choice{margin-left:0}.model-style-main-heading .model-style-info-choice select{width:150px;font-size:11px}}
+html[data-endfield=true] #detailPanel .ef-inspector-heading .ef-inspector-version>.k{display:inline;margin-right:8px}
+html[data-endfield=true] #detailPanel .ef-inspector-heading .ef-inspector-attributes .dt-mr,html[data-endfield=true] #detailPanel .ef-inspector-heading .ef-inspector-attributes .k{font-size:11px}
+
+/* One common photo aperture; frames are mapped around it, not allowed to shrink individual photos. */
+html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery)[data-model-view=grid]{gap:4px}
+html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery)[data-model-view=grid]>.ms-card{background:transparent!important;border-color:transparent!important}
+html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery)[data-model-view=grid] .ms-img-wrap,html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery)[data-model-view=grid] .ms-card:has(.model-shell) .ms-img-wrap{inset:15%;width:auto;height:auto}
+html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery)[data-model-view=grid] .ms-info,html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery)[data-model-view=grid] .ms-card:has(.model-shell) .ms-info{left:15%!important;right:15%!important;bottom:15%!important}
+html[data-endfield=true] :is(#mmMasonry,.model-card-gallery)[data-model-view=grid] .model-shell{inset:auto;left:var(--shell-left);top:var(--shell-top);width:var(--shell-width);height:var(--shell-height)}
+html[data-endfield=true] :is(#mmMasonry,.model-card-gallery) .ms-img-wrap{position:relative;isolation:isolate}
+html[data-endfield=true] :is(#mmMasonry,.model-card-gallery)[data-model-view=grid] .ms-img-wrap{position:absolute}
+html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery) .ms-card.checked{outline:none!important;box-shadow:none!important}
+html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery) .ms-card.checked>.ms-img-wrap{box-shadow:0 0 11px 2px #ffdc5899,0 0 22px #ffef0140}
+html[data-endfield=true] :is(#mmMasonry,.model-card-gallery) .model-underlight{z-index:1;left:0;right:0;bottom:0;pointer-events:none}
+html[data-endfield=true][data-masonry-info=always] :is(#mmMasonry,.model-card-gallery) .ms-info{position:relative;z-index:4}
+html[data-endfield=true][data-masonry-info=always] :is(#mmMasonry,.model-card-gallery)[data-model-view=grid] .ms-info{position:absolute}
+/* Auto rows must retain their intrinsic square previews, never flex-shrink into clipped strips. */
+.model-style-main>.model-frame-grid{grid-auto-rows:max-content;align-content:start;overflow:auto}
+.model-style-main .model-frame-choice{align-self:start;min-height:max-content;overflow:visible}
+.model-style-main .model-frame-choice>img{flex:none;width:100%;height:auto;aspect-ratio:1;object-fit:contain}
+.model-style-main .model-frame-choice>span{flex:none;line-height:16px;min-height:16px}
+/* Pack actual photo edges, not the transparent margins baked into avatar-frame PNGs. */
+html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery)[data-model-view=grid]{grid-template-columns:repeat(auto-fill,minmax(min(100%,clamp(90px,calc(var(--model-card-width,220px)*.5),210px)),1fr));gap:10px;padding:16px 14px 70px;overflow:visible}
+html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery)[data-model-view=grid]>.ms-card{overflow:visible}
+html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery)[data-model-view=grid] .ms-img-wrap,html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery)[data-model-view=grid] .ms-card:has(.model-shell) .ms-img-wrap{inset:0;width:auto;height:auto;overflow:hidden}
+html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery)[data-model-view=grid] .ms-info,html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery)[data-model-view=grid] .ms-card:has(.model-shell) .ms-info{left:0!important;right:0!important;bottom:0!important}
+html[data-endfield=true] :is(#mmMasonry,.model-card-gallery)[data-model-view=grid] .ms-card>.model-fav-toggle,html[data-endfield=true] :is(#mmMasonry,.model-card-gallery)[data-model-view=grid] .ms-card:has(.model-shell)>.model-fav-toggle{top:4px;right:4px;left:auto}
+.model-style-main .model-frame-choice>span{display:none}
+@media(max-width:520px){html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery)[data-model-view=grid]{grid-template-columns:repeat(auto-fill,minmax(min(100%,90px),1fr));gap:8px;padding-inline:12px}}
+/* Moderate breathing room for shell ornaments, and light emitted only from the lower edge. */
+html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery)[data-model-view=grid]{column-gap:26px;row-gap:24px}
+html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery) .ms-card{overflow:visible;--active-model-glow:var(--model-glow)}
+html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery) .ms-card.checked{--active-model-glow:#ffdf48}
+html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery) .ms-card.checked>.ms-img-wrap{box-shadow:none!important}
+html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery) .ms-card:after{content:'';position:absolute;left:2px;right:2px;top:calc(100% - 2px);height:19px;pointer-events:none;z-index:0;background:radial-gradient(ellipse 70% 95% at 50% 0,var(--active-model-glow) 0,transparent 100%);filter:blur(3px);opacity:.85;animation:ef-model-lower-light 3200ms ease-in-out infinite}
+html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery) .ms-card[data-model-glow=none]:not(.checked):after{content:none}
+@keyframes ef-model-lower-light{0%,100%{opacity:.65;transform:scaleX(.95)}50%{opacity:1;transform:scaleX(1.04)}}
+html[data-model-motion=paused] :is(#mmMasonry,.model-card-gallery) .ms-card:after,html[data-endfield=true] :is(#mmMasonry,.model-card-gallery) .ms-card[data-model-visible=false]:after{animation-play-state:paused}
+@media(max-width:520px){html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery)[data-model-view=grid]{column-gap:20px;row-gap:22px}}
+@media(prefers-reduced-motion:reduce){html[data-endfield=true] :is(#mmMasonry,.model-card-gallery) .ms-card:after{animation:none!important}}
+/* Base identity stays INSIDE the cover; only selection emits a 360-degree gold halo. */
+html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery) .ms-card:after{content:none!important;animation:none!important}
+html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery) .ms-card>.ms-img-wrap{box-shadow:none}
+html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery) .ms-card.checked>.ms-img-wrap{box-shadow:0 0 12px 3px #ffdc589e,0 0 26px 5px #ffdf4847!important}
+html[data-endfield=true] :is(#mmMasonry,.model-card-gallery) .model-underlight{display:block;height:52px;bottom:0;left:0;right:0;z-index:1;opacity:1;background:linear-gradient(0deg,var(--model-glow),transparent 95%);mask-image:linear-gradient(0deg,#000 0 25%,transparent 100%);filter:none}
+html[data-endfield=true] :is(#mmMasonry,.model-card-gallery) .ms-card[data-model-glow=none] .model-underlight{display:none}
+html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery)[data-model-view=grid] .ms-info{z-index:4;background:linear-gradient(transparent,#11191899 80%)}
+html[data-theme=light_endfield] body :is(#mmMasonry,.model-card-gallery)[data-model-view=grid] .ms-info{background:linear-gradient(transparent,#f0f2e89e 80%)}
+
+/* Static base-color inner light; no directional streak or upward sweep. */
+html[data-endfield=true] .model-underlight:after{content:none!important;animation:none!important}
+html[data-endfield=true] :is(#mmMasonry,.model-card-gallery) .model-underlight{animation:none!important}
+.model-style-custom-color{display:flex;align-items:center;gap:10px;font-size:12px;margin:4px 0 10px}
+.model-style-custom-color[hidden]{display:none}
+.model-style-custom-color input[type=color]{width:36px;height:28px;padding:2px;background:var(--surface);border:1px solid var(--border);cursor:pointer}
+.model-style-custom-color input[type=text]{width:90px;height:28px;padding:3px 8px;background:var(--surface);color:var(--text);border:1px solid var(--border)}
+.model-style-custom-color input:invalid{border-color:#ed655e}
+/* Restore the original whole-cover dimming choice in both card views. */
+html[data-endfield=true]:is([data-masonry-info=slide],[data-masonry-info=fade])[data-masonry-overlay=full] body :is(#mmMasonry,.model-card-gallery) .ms-info{position:absolute!important;inset:0!important;background:rgba(12,18,18,.78)!important;color:#f3f4eb!important;z-index:4;max-height:100%;overflow-y:auto;padding:8px!important;display:flex!important;flex-direction:column}
+html[data-endfield=true]:is([data-masonry-info=slide],[data-masonry-info=fade])[data-masonry-overlay=full] body :is(#mmMasonry,.model-card-gallery) .ms-info :is(.ms-name,.ms-sub,.ms-meta,.ms-size,.ms-author){color:inherit!important;text-shadow:none}
+html[data-endfield=true]:is([data-masonry-info=slide],[data-masonry-info=fade])[data-masonry-overlay=full] body :is(#mmMasonry,.model-card-gallery)[data-model-view=grid] .ms-titles{flex:1 0 auto;display:flex!important;flex-direction:column;justify-content:center}
+
+/* Cover identity light has its own configurable opacity, independent of selection. */
+html[data-endfield=true] :is(#mmMasonry,.model-card-gallery) .model-underlight{opacity:var(--model-glow-opacity,1)}
+html[data-endfield=true] #mmTable tbody tr:before{opacity:var(--model-glow-opacity,1)}
+html[data-endfield=true] #mmTable tbody tr:after{opacity:calc(var(--model-glow-opacity,1)*.25);animation:none}
+/* No checkbox gutter: row clicks are already multi-select. */
+html[data-endfield=true] body #mmTable :is(th,td)[data-col=sel]{display:none!important}
+html[data-endfield=true] body #mmTable tr{grid-template-columns:minmax(0,2.3fr) minmax(0,.8fr) minmax(0,.6fr) minmax(0,.8fr)}
+html[data-endfield=true] body #mmTable tbody tr{height:auto!important;min-height:78px;isolation:isolate}
+html[data-endfield=true] body #mmTable tbody td{height:auto!important;min-height:0;align-self:stretch;align-items:center;justify-content:center;display:flex;position:relative;z-index:2;overflow:visible;padding:8px 0}
+html[data-endfield=true] body #mmTable tbody td[data-col=name]{position:static;z-index:auto;justify-content:flex-start}
+html[data-endfield=true] body #mmTable .ml-wrap{position:static;min-height:0;height:100%;width:100%;align-items:center}
+html[data-endfield=true] body #mmTable .ml-txt{position:relative;z-index:2;padding:0;justify-content:center}
+html[data-endfield=true] body #mmTable .ml-thumb{display:block!important;position:absolute;inset:0 auto 0 0!important;width:52%!important;max-width:none!important;height:100%!important;max-height:none!important;object-fit:cover;object-position:center 38%;opacity:.65;z-index:0;pointer-events:none;mask-image:linear-gradient(90deg,#000 0%,#000b 40%,transparent 100%)}
+html[data-endfield=true] body #mmTable tbody tr:before{z-index:1;pointer-events:none}
+html[data-theme=light_endfield] body #mmTable .ml-thumb{opacity:.45}
+html[data-endfield=true] #mmMoreMenu button.mm-item{display:flex;align-items:center;justify-content:flex-start;width:100%;border:0;background:none;border-radius:0;text-align:left;padding:8px 12px;font-size:12px;color:var(--text);gap:8px}
+html[data-endfield=true] #mmMoreMenu button.mm-item:hover{background:color-mix(in srgb,var(--text) 12%,transparent)}
+@media(max-width:900px){html[data-endfield=true] body #mmTable tr{grid-template-columns:minmax(0,1fr) minmax(55px,.35fr)}html[data-endfield=true] body #mmTable tbody td[data-col=base],html[data-endfield=true] body #mmTable tbody td[data-col=ver]{display:none!important}html[data-endfield=true] body #mmTable tbody td[data-col=size]{display:flex!important}}
+html[data-model-list-size="1"] body #mmTable tbody tr{min-height:42px}
+html[data-model-list-size="2"] body #mmTable tbody tr{min-height:58px}
+
+/* Diffuse selection into the surroundings: no bright hard-edged spread ring. */
+html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery) .ms-card.checked>.ms-img-wrap{box-shadow:0 0 22px 0 #ffd74666,0 0 42px 8px #ffdc4429!important}
+html[data-endfield=true] :is(#mmMasonry,.model-card-gallery) .model-underlight{height:45%;min-height:60px;max-height:150px;background:linear-gradient(0deg,color-mix(in srgb,var(--model-glow) 78%,transparent) 0%,color-mix(in srgb,var(--model-glow) 42%,transparent) 27%,color-mix(in srgb,var(--model-glow) 12%,transparent) 62%,transparent 100%);mask-image:none}
+html[data-endfield=true] .cover-hover-preview{width:min(240px,40vw);max-height:48vh;border-radius:0;border:1px solid color-mix(in srgb,var(--text) 24%,transparent);padding:4px;background:var(--surface);box-shadow:0 10px 30px #0005}
+html[data-endfield=true] .cover-hover-preview img{border-radius:0;max-height:calc(48vh - 10px)}
+
+/* Folder visibility uses the same square secondary-menu surface, not a rounded settings card. */
+html[data-endfield=true] body #mmFoldersPanel{border-radius:0;padding:4px 0;background:var(--surface);color:var(--text);border:1px solid var(--border);box-shadow:0 2px 10px #0003;scrollbar-width:thin}
+html[data-endfield=true] #mmFoldersPanel .fm-item{position:relative;border-radius:0;min-height:34px;gap:9px;margin:0;padding-block:8px;border:0;border-bottom:1px solid color-mix(in srgb,var(--border) 45%,transparent);font-size:12px;color:var(--text)}
+html[data-endfield=true] #mmFoldersPanel .fm-item:is(:hover,:focus-visible){background:var(--surface2);outline:none}
+html[data-endfield=true] #mmFoldersPanel .fm-item:is(:hover,:focus-visible):before{content:'';position:absolute;left:4px;top:9px;bottom:9px;width:2px;background:var(--ef-yellow)}
+html[data-endfield=true] #mmFoldersPanel .fm-state{background:transparent;border-radius:0;padding:0 10px 0 4px;font-size:10px;color:var(--text-dim)}
+html[data-endfield=true] #mmFoldersPanel .fm-state.on{color:var(--text);font-weight:600}
+html[data-endfield=true] #mmFoldersPanel .fm-item>.ic{width:16px;height:16px;flex:none}
+html[data-endfield=true] #mmFoldersPanel .fm-toolbar{padding:4px 12px 8px}
+html[data-endfield=true] #mmFoldersPanel .fm-title{padding:8px 12px;font-size:11px;font-weight:400;white-space:normal;line-height:1.5}
+/* Full-height bottom fade sits underneath the controls and reaches the actual bottom edge. */
+html[data-endfield=true] .ef-model-filters{bottom:0;padding:18px 0 22px;background:none;isolation:isolate}
+html[data-endfield=true] .ef-model-filters:before{content:'';position:absolute;z-index:-1;pointer-events:none;inset:-34px -12px 0;background:linear-gradient(transparent 0,color-mix(in srgb,var(--bg) 80%,transparent) 56%,var(--bg) 100%)}
+
+/* Skip painting and layout of offscreen cards; keep a stable waterfall placeholder. */
+#mmMasonry>.ms-card{content-visibility:auto;contain-intrinsic-size:auto 260px}

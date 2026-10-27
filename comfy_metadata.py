@@ -1,7 +1,7 @@
 """Read-only prompt extraction. Never execute custom nodes, templates or cached UI outputs."""
 import json
 
-PARSER_REVISION = 'comfy-prompts-2'
+PARSER_REVISION = 'comfy-prompts-3-novelai'
 SAMPLERS = ('KSampler', 'KSamplerAdvanced', 'SamplerCustom', 'SamplerCustomAdvanced')
 WEILIN = 'WeiLinPromptUIWithoutLora'
 
@@ -214,3 +214,129 @@ def extract_model_references(graph=None, workflow=None):
         if not isinstance(value, dict) or str(value.get("id")) in graph: continue
         node(value.get("type", ""), {}, value.get("widgets_values") or [], value.get("mode", 0) not in (2, 4))
     return {"models": sorted(enabled), "disabled_models": sorted(disabled-enabled)}
+
+
+NOVELAI_COMMENT_LIMIT = 4 * 1024 * 1024
+
+
+def extract_novelai_metadata(info):
+    """Read ordinary NovelAI PNG/EXIF JSON metadata, including v4/v5 characters.
+
+    Return an empty mapping for unrelated comments. Model identifiers are service
+    metadata, not local checkpoint filenames. No graph, model dependency or final
+    custom-node output is inferred from text.
+    """
+    if not isinstance(info, dict):
+        return {}
+    values = {str(k).casefold(): v for k, v in info.items()}
+    comment = values.get('comment', values.get('usercomment'))
+    if isinstance(comment, bytes):
+        if comment.startswith(b'ASCII\0\0\0'):
+            comment = comment[8:]
+        elif comment.startswith(b'UNICODE\0'):
+            try:
+                comment = comment[8:].decode('utf-16')
+            except UnicodeError:
+                return {}
+        if isinstance(comment, bytes):
+            try:
+                comment = comment.decode('utf-8-sig')
+            except UnicodeError:
+                return {}
+    fields = {}
+    malformed = False
+    if isinstance(comment, str):
+        if len(comment) > NOVELAI_COMMENT_LIMIT:
+            return {}
+        try:
+            decoded = json.loads(comment, parse_constant=lambda _: None)
+            if isinstance(decoded, dict):
+                fields = decoded
+            else:
+                malformed = True
+        except (ValueError, TypeError, RecursionError):
+            malformed = True
+    elif isinstance(comment, dict):
+        # The gallery can also provide decoded metadata. Keep it JSON-only,
+        # bounded, and independent from the caller's mutable nested objects.
+        try:
+            encoded = json.dumps(comment, ensure_ascii=False, allow_nan=False)
+            if len(encoded) > NOVELAI_COMMENT_LIMIT:
+                return {}
+            fields = json.loads(encoded)
+        except (ValueError, TypeError, RecursionError):
+            malformed = True
+    software = values.get('software')
+    source = values.get('source')
+    branded = any(isinstance(v, str) and 'novelai' in v.casefold()
+                  for v in (software, source))
+    structured = isinstance(fields.get('v4_prompt'), dict) or isinstance(fields.get('v4_negative_prompt'), dict)
+    legacy = isinstance(fields.get('uc'), str) and all(k in fields for k in ('prompt', 'steps', 'scale', 'sampler'))
+    if not branded and not structured and not legacy:
+        return {}
+
+    def text(value):
+        return value if isinstance(value, str) and len(value) <= NOVELAI_COMMENT_LIMIT else ''
+
+    def caption(key, fallback):
+        block = fields.get(key)
+        cap = block.get('caption') if isinstance(block, dict) else None
+        base = cap.get('base_caption') if isinstance(cap, dict) else None
+        base = text(base) if isinstance(base, str) else text(fallback)
+        raw_chars = cap.get('char_captions') if isinstance(cap, dict) else []
+        chars = []
+        for index, item in enumerate(raw_chars[:100] if isinstance(raw_chars, list) else []):
+            if not isinstance(item, dict):
+                continue
+            centers = []
+            for center in (item.get('centers') or [])[:64] if isinstance(item.get('centers'), list) else []:
+                if isinstance(center, dict) and all(isinstance(center.get(k), (int, float)) and not isinstance(center.get(k), bool) for k in ('x', 'y')):
+                    import math
+                    try:
+                        finite = all(math.isfinite(center[k]) for k in ('x', 'y'))
+                    except OverflowError:
+                        finite = False
+                    if finite:
+                        centers.append({'x': center['x'], 'y': center['y']})
+            chars.append({'index': index + 1, 'prompt': text(item.get('char_caption')), 'centers': centers})
+        segments = [base] if base else []
+        for char in chars:
+            if char['prompt']:
+                segments.append('[角色 %d]\n%s' % (char['index'], char['prompt']))
+        return '\n\n'.join(segments), base, chars
+
+    positive, base_positive, positives = caption('v4_prompt', fields.get('prompt', values.get('description', '')))
+    negative, base_negative, negatives = caption('v4_negative_prompt', fields.get('uc', fields.get('negative_prompt', '')))
+    result = {'prompt': positive, 'negativePrompt': negative, 'Software': text(software) or 'NovelAI'}
+    for key in ('Title', 'Source', 'Generation time'):
+        if key.casefold() in values:
+            value = values[key.casefold()]
+            if isinstance(value, (str, int, float)):
+                result[key] = value
+    aliases = {'model_name': 'Model', 'model_hash': 'Model hash', 'steps': 'Steps',
+               'sampler': 'Sampler', 'scale': 'CFG scale', 'seed': 'Seed',
+               'width': 'Width', 'height': 'Height', 'noise_schedule': 'Noise schedule',
+               'uncond_scale': 'Unconditional scale', 'cfg_rescale': 'CFG rescale'}
+    for key, label in aliases.items():
+        if key in fields and isinstance(fields[key], (str, int, float, bool)):
+            result[label] = fields[key]
+    if positives or negatives:
+        by_index = {c['index']: {'index': c['index'], 'prompt': c['prompt'], 'centers': c['centers']}
+                    for c in positives}
+        for char in negatives:
+            item = by_index.setdefault(char['index'], {'index': char['index'], 'prompt': '', 'centers': char['centers']})
+            item['negativePrompt'] = char['prompt']
+            item['negativeCenters'] = char['centers']
+        result['NovelAI characters'] = list(by_index.values())
+        result['NovelAI base prompt'] = base_positive
+        result['NovelAI base negative prompt'] = base_negative
+    # Preserve the saved settings/structured prompts for copying, without executing them.
+    if fields:
+        result['NovelAI saved parameters'] = fields
+    notes = ['NovelAI 图片生成信息，不包含 ComfyUI 节点与连接；服务模型名称不作为本地缺失模型。']
+    if positives or negatives:
+        notes.append('角色提示词按文件原始顺序分段展示；角色标签仅用于阅读，原始坐标与结构保留在参数中。')
+    if malformed:
+        notes.append('Comment JSON 无法解析，仅显示图片中可读取的其它字段。')
+    result['promptExtractionNote'] = '\n'.join(notes)
+    return result

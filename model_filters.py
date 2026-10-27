@@ -40,6 +40,21 @@ def folder_visible(rel, cfg):
     return directory_visible(directory, folder_choices(cfg), cfg.get("model_folder_include_subfolders", True) is not False)
 
 
+def visibility_predicate(cfg):
+    """Compile choices once per operation; memoize folders, not every model file."""
+    choices = folder_choices(cfg)
+    recursive = cfg.get('model_folder_include_subfolders', True) is not False
+    show_root = cfg.get('show_root_models', True) is not False
+    memo = {'': show_root}
+    def visible(rel):
+        directory = posixpath.dirname(str(rel).replace('\\', '/'))
+        key = directory.lower()
+        if key not in memo:
+            memo[key] = directory_visible(directory, choices, recursive)
+        return memo[key]
+    return visible
+
+
 _TYPES = {
     "checkpoint": "Checkpoint", "diffusionmodel": "Checkpoint", "unet": "Checkpoint",
     "lora": "LORA", "locon": "LORA", "lycoris": "LORA", "loha": "LORA", "lokr": "LORA",

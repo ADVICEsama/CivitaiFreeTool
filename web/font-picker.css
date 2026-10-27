@@ -1,0 +1,116 @@
+/* A transactional, two-column local font chooser. No OS settings are modified. */
+#fontMenu.font-picker-mask{position:fixed;inset:0;z-index:100100;display:flex;align-items:center;justify-content:center;padding:24px;background:#0008;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.font-picker-dialog{box-sizing:border-box;width:min(960px,96vw);height:min(750px,92dvh);display:flex;flex-direction:column;gap:14px;min-height:0;padding:24px;background:var(--surface);color:var(--text);border:1px solid var(--border);box-shadow:0 24px 80px #0006;border-radius:var(--radius,12px);font-family:var(--font);text-align:left}
+.font-picker-head{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);padding-bottom:14px;flex:none}
+.font-picker-head small{font-size:10px;letter-spacing:.16em;color:var(--text-dim)}
+.font-picker-head h2{font-size:22px;font-weight:500;margin:4px 0 0;line-height:1.4}
+.font-picker-head .font-close{font-size:24px;width:36px;height:36px;padding:0;border:0;background:transparent}
+.font-picker-intro{margin:0;font-size:12px;color:var(--text-dim);flex:none;line-height:1.6}
+.font-picker-columns{display:grid;grid-template-columns:1fr 1fr;gap:24px;flex:1;min-height:100px}
+.font-picker-columns>section{display:flex;flex-direction:column;gap:10px;min-height:0;min-width:0}
+.font-picker-columns h3{display:flex;align-items:center;justify-content:space-between;margin:0;font-size:15px;font-weight:500}
+.font-picker-columns h3 small{font-size:11px;font-weight:400;color:var(--text-dim)}
+.font-picker-columns .input,.font-priority-hint{box-sizing:border-box;height:36px;flex:none;margin:0;font-size:12px;display:flex;align-items:center;color:var(--text-dim)}
+.font-picker-columns #fontSearch{width:100%;background:var(--bg);border:1px solid var(--border)}
+.font-picker-dialog .font-list{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;position:relative;background:color-mix(in srgb,var(--bg) 65%,transparent);border:1px solid var(--border);scrollbar-width:thin;scrollbar-color:var(--text-dim) transparent;outline:none}
+.font-picker-dialog .font-list:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.font-picker-dialog .font-menu-space{position:relative;min-width:0}
+.font-picker-dialog .font-option{position:absolute;left:0;right:0;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 14px;box-sizing:border-box;line-height:1.3;border:0;border-bottom:1px solid color-mix(in srgb,var(--border) 45%,transparent);font-size:16px;font-weight:400;cursor:default}
+.font-picker-dialog .font-option>span,.font-picker-dialog .font-selected-row>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.font-picker-dialog .font-option small,.font-picker-dialog .font-selected-row small{font-family:var(--font);font-size:10px;color:var(--text-dim);white-space:nowrap}
+.font-picker-dialog .font-option.focused,.font-picker-dialog .font-selected-row.focused{background:color-mix(in srgb,var(--primary) 12%,var(--surface));box-shadow:inset 3px 0 var(--primary);outline:0;color:var(--text)}
+.font-picker-dialog .font-option:hover,.font-picker-dialog .font-selected-row:hover{background:color-mix(in srgb,var(--text) 7%,var(--surface))}
+.font-selected-row{display:flex;align-items:center;gap:12px;padding:0 14px;min-height:44px;border-bottom:1px solid var(--border);font-size:16px;cursor:grab}
+.font-selected-row b{font-size:11px;letter-spacing:.06em;font-weight:500;color:var(--text-dim)}
+.font-selected-row>span{flex:1}
+.font-empty{padding:32px 18px;margin:0;color:var(--text-dim);white-space:pre-line;font-size:13px;line-height:1.9;text-align:center}
+.font-order-actions{display:flex;gap:8px}.font-order-actions #fontRemove{margin-right:auto;flex:1}
+.font-picker-dialog .btn{font:500 12px var(--font);min-height:34px;white-space:nowrap}
+.font-live-preview{border-top:1px solid var(--border);padding-top:14px;flex:none;min-width:0}
+.font-live-preview label{display:flex;justify-content:space-between;font-size:13px;font-weight:500;margin-bottom:7px}
+.font-live-preview label small{font-size:11px;font-weight:400;color:var(--text-dim)}
+#fontSample{box-sizing:border-box;width:100%;height:76px;resize:none;padding:9px 14px;color:var(--text);background:color-mix(in srgb,var(--bg) 65%,transparent);border:1px solid var(--border);border-radius:4px;font-size:20px;line-height:1.4}
+#fontDraftChain{font-size:10px;color:var(--text-dim);margin:6px 0 0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:100%}
+.font-picker-footer{display:flex;align-items:center;gap:10px;flex:none}.font-picker-footer #fontDefaults{margin-right:auto;background:transparent}.font-picker-footer #fontDialogStatus{font-size:11px;color:var(--text-dim)}.font-picker-footer #fontConfirm{min-width:130px}
+html[data-endfield=true] .font-picker-dialog{border-radius:0;border-top:3px solid var(--ef-yellow);background:color-mix(in srgb,var(--surface) 95%,transparent);animation:ef-navigation-arrive 180ms ease-out}
+html[data-endfield=true] .font-picker-head small{color:var(--ef-yellow)}
+html[data-theme=light_endfield] .font-picker-head small{color:#626600}
+html[data-endfield=true] .font-picker-footer #fontConfirm{background:var(--ef-yellow);color:#20230e}
+@media(max-width:700px){#fontMenu.font-picker-mask{padding:8px}.font-picker-dialog{padding:14px;gap:10px;height:94dvh;width:98vw}.font-picker-columns{gap:10px}.font-order-actions{gap:3px}.font-order-actions .btn{padding:4px;font-size:10px}.font-picker-columns h3{font-size:12px}.font-priority-hint{font-size:10px}.font-picker-intro{font-size:10px}.font-picker-head h2{font-size:18px}.font-live-preview label small{display:none}}
+@media(max-height:650px){.font-picker-dialog{gap:8px;padding:12px;height:96dvh}.font-picker-head{padding-bottom:6px}.font-picker-intro{display:none}.font-live-preview{padding-top:8px}#fontSample{height:54px;font-size:16px}.font-picker-columns{gap:16px}}
+@media(prefers-reduced-motion:reduce){html[data-endfield=true] .font-picker-dialog{animation:none}}
+.font-picker-tools{display:flex;align-items:center;gap:20px}.font-picker-dialog .font-reset{display:flex;flex-direction:column;align-items:center;gap:5px;border:0;background:transparent;padding:4px 12px}.font-reset svg{width:30px;height:30px}.font-reset span{font-size:11px;font-weight:400}.font-close svg{width:22px;height:22px}.font-contour{display:none;pointer-events:none}.font-selected-row{user-select:none;touch-action:pan-y}.font-dragging{touch-action:none;cursor:grabbing}.font-selected-row.drag-source{opacity:.4}.font-selected-row.drop-before{box-shadow:inset 0 3px var(--primary)}.font-selected-row.drop-after{box-shadow:inset 0 -3px var(--primary)}.font-drag-ghost{position:fixed;pointer-events:none;z-index:2;padding:10px 20px;background:var(--surface);color:var(--text);border:1px solid var(--primary);box-shadow:0 8px 24px #0003;font:16px var(--font)}
+html[data-endfield=true] #fontMenu{padding:0;background:#060909b5;backdrop-filter:blur(15px)}
+html[data-endfield=true] .font-picker-dialog{--surface:#f5f4f3;--bg:#e9e8e6;--text:#303331;--text-dim:#737772;--border:#c9cbc6;--primary:var(--ef-yellow);position:relative;isolation:isolate;width:100%;height:min(690px,86dvh);padding:24px clamp(28px,12vw,230px) 36px;gap:12px;border:0;border-top:1px solid #c6c8c1;background:#f5f4f3;box-shadow:0 0 22px #fff4;animation:font-band-arrive 220ms cubic-bezier(.18,.75,.22,1)}
+html[data-endfield=true] .font-picker-dialog>*:not(.font-contour){position:relative;z-index:1}
+html[data-endfield=true] .font-contour{display:block;position:absolute;z-index:0;overflow:hidden;opacity:.14;inset:0 auto 0 0;width:32%;mask-image:linear-gradient(90deg,#000,transparent)}
+html[data-endfield=true] .font-contour:before{content:'';position:absolute;inset:-100px;background:url('terrain-contours.svg') center/900px 650px repeat;animation:font-contour-flow 32s linear infinite alternate}
+html[data-endfield=true] .font-contour-right{inset:0 0 auto auto;width:34%;height:38%;mask-image:linear-gradient(210deg,#000,transparent 75%)}
+html[data-endfield=true] .font-contour-right:before{animation-direction:alternate-reverse}
+html[data-endfield=true] .font-picker-head{padding-bottom:10px;border-bottom-color:#c4c7c0}
+html[data-endfield=true] .font-picker-head small{color:#747866}
+html[data-endfield=true] .font-picker-dialog .font-list{background:#ffffff54}
+html[data-endfield=true] .font-picker-footer{justify-content:center;gap:28px;margin-bottom:-59px;padding-top:3px}
+html[data-endfield=true] .font-picker-footer #fontDialogStatus{position:absolute;bottom:56px;right:0;font-size:11px}
+html[data-endfield=true] .font-picker-footer .btn{min-width:210px;height:48px;border-radius:28px;border:4px solid #eeefeb;outline:1px solid #aeb1a8;box-shadow:inset 0 0 0 1px #8a8c80,0 4px 8px #0004;font-size:17px;font-weight:500}
+html[data-endfield=true] #fontCancel{background:#484a47;color:#fafafa}
+html[data-endfield=true] #fontConfirm{background:var(--ef-yellow);color:#303322}
+@keyframes font-contour-flow{from{transform:translate(-24px,-18px)}to{transform:translate(35px,28px)}}
+@keyframes font-band-arrive{from{opacity:0;transform:translateX(90px)}to{opacity:1;transform:translateX(0)}}
+@media(max-width:700px){html[data-endfield=true] .font-picker-dialog{padding:16px 16px 30px;height:90dvh}.font-picker-tools{gap:8px}html[data-endfield=true] .font-picker-footer{gap:12px;margin-bottom:-51px}html[data-endfield=true] .font-picker-footer .btn{min-width:120px;height:42px;font-size:14px}}
+@media(max-height:650px){html[data-endfield=true] .font-picker-dialog{height:90dvh;padding-top:10px;gap:6px}.font-reset svg{width:24px;height:24px}html[data-endfield=true] .font-picker-head{padding-bottom:4px}}
+@media(prefers-reduced-motion:reduce){html[data-endfield=true] .font-picker-dialog,html[data-endfield=true] .font-contour:before{animation:none}}
+/* The global Endfield square-button rule must not flatten the reference pills. */
+html[data-endfield=true] #fontMenu .font-picker-footer .btn{border-radius:28px!important;min-width:210px!important;clip-path:none!important}
+html[data-endfield=true] #fontMenu .font-reset svg{width:32px!important;height:32px!important;flex:0 0 32px}
+html[data-endfield=true] #fontMenu .font-reset{height:auto!important;min-height:58px;gap:5px}
+html[data-endfield=true] #fontMenu .font-close{display:grid;place-items:center;min-height:36px;align-self:center}
+html[data-endfield=true] #fontMenu .font-close svg{width:22px!important;height:22px!important;flex:none}
+html[data-endfield=true] #fontMenu .font-reset:hover{background:#e3e5dc;color:#303331}
+/* Match the active Endfield theme, rather than forcing a white modal at night. */
+html[data-theme=dark_endfield] #fontMenu .font-picker-dialog{--surface:#292d2e;--bg:#1e2324;--text:#e9ece6;--text-dim:#acb3ad;--border:#535b56;background:#292d2e;border-top-color:#59615a;box-shadow:0 0 24px #0009}
+html[data-theme=dark_endfield] #fontMenu .font-picker-head{border-bottom-color:var(--border)}
+html[data-theme=dark_endfield] #fontMenu .font-picker-head small{color:#b5bba5}
+html[data-theme=dark_endfield] #fontMenu .font-list{background:#ffffff05}
+html[data-theme=dark_endfield] #fontMenu .font-contour{opacity:.18}
+html[data-theme=dark_endfield] #fontMenu .font-contour:before{filter:invert(1)}
+html[data-theme=dark_endfield] #fontMenu .font-reset:hover{background:#3d4541;color:var(--text)}
+html[data-theme=dark_endfield] #fontMenu .font-picker-footer .btn{border-color:#4a524d;outline-color:#737d73;box-shadow:inset 0 0 0 1px #a1a998,0 4px 8px #0006}
+.font-picker-closing .font-picker-dialog{pointer-events:none;transform-origin:center center;will-change:transform}
+/* This dialog has its own flat decorative layer, never the pointer-driven terrain. */
+html[data-endfield=true] #fontMenu .font-contour{perspective:none;transform:none}
+.font-picker-dialog .font-list.font-dragging,.font-picker-dialog .font-list.font-dragging .font-selected-row{cursor:grabbing}
+.font-drag-ghost{max-width:min(420px,70vw);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.font-scope-panel{flex:none;padding:0 0 10px;border-bottom:1px solid var(--border)}
+.font-scope-panel[hidden]{display:none}
+.font-scope-tabs{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.font-picker-dialog .font-scope-tab{position:relative;min-width:0;height:34px;padding:0 8px;border:1px solid var(--border);background:color-mix(in srgb,var(--surface) 85%,transparent);color:var(--text-dim);font:500 12px var(--font);white-space:nowrap;cursor:pointer}
+.font-picker-dialog .font-scope-tab.active{background:color-mix(in srgb,var(--primary) 18%,var(--surface));color:var(--text);border-color:color-mix(in srgb,var(--primary) 55%,var(--border));box-shadow:inset 0 -3px var(--primary)}
+.font-picker-dialog .font-scope-tab.configured:after{content:'';position:absolute;top:4px;right:4px;width:4px;height:4px;background:var(--text-dim);border-radius:50%}
+.font-picker-dialog .font-scope-tab:focus-visible{outline:2px solid var(--primary);outline-offset:1px}
+.font-scope-panel p{margin:6px 0 0;font-size:10px;line-height:1.4;color:var(--text-dim)}
+.font-priority-hint{line-height:1.5}
+.font-picker-dialog .font-scope-toggle[aria-expanded=true]{background:color-mix(in srgb,var(--primary) 15%,var(--surface))}
+@media(max-width:900px){.font-scope-tabs{grid-template-columns:repeat(4,minmax(0,1fr))}.font-picker-dialog .font-scope-tab{font-size:10px}.font-picker-head h2{font-size:20px}.font-picker-tools{gap:8px}}
+@media(max-width:700px){html[data-endfield=true] #fontMenu .font-picker-footer .btn{min-width:120px!important}}
+@media(max-height:540px){html[data-endfield=true] #fontMenu .font-picker-dialog{height:calc(100dvh - 64px);padding-top:8px;padding-bottom:26px;gap:4px}html[data-endfield=true] #fontMenu .font-picker-head{padding-bottom:4px}.font-picker-head small,.font-priority-hint{display:none}.font-picker-columns{min-height:60px;gap:12px}.font-picker-columns>section{gap:6px}html[data-endfield=true] #fontMenu .font-reset{min-height:44px;gap:2px}html[data-endfield=true] #fontMenu .font-reset svg{width:24px!important;height:24px!important;flex-basis:24px}html[data-endfield=true] #fontMenu .font-picker-head h2{font-size:18px}html[data-endfield=true] #fontMenu .font-picker-footer{margin-bottom:-49px}html[data-endfield=true] #fontMenu .font-picker-footer .btn{height:42px;font-size:14px}.font-live-preview{padding-top:6px}#fontSample{height:44px;font-size:16px}.font-live-preview label{margin-bottom:3px}}
+/* Active state is a solid accent block, never a translucent terrain overlay. */
+html[data-endfield=true] #fontMenu .font-option.focused,
+html[data-endfield=true] #fontMenu .font-option.focused:hover,
+html[data-endfield=true] #fontMenu .font-selected-row.focused,
+html[data-endfield=true] #fontMenu .font-selected-row.focused:hover,
+html[data-endfield=true] #fontMenu .font-scope-tab.active,
+html[data-endfield=true] #fontMenu .font-scope-toggle[aria-expanded=true],
+html[data-endfield=true] #fontMenu .font-scope-toggle[aria-expanded=true]:hover{background:var(--ef-yellow);color:#252619;border-color:var(--ef-yellow)}
+html[data-endfield=true] #fontMenu :is(.font-option.focused,.font-selected-row.focused)>:is(b,small){color:#454935}
+html[data-endfield=true] #fontMenu .font-scope-tab.active.configured:after{background:#454935}
+
+/* Same full-width header stripe and integrated capsule bases as the exit band. */
+html[data-endfield=true] #fontMenu .font-picker-dialog{--font-face-height:56px;--font-base-height:68px;--font-face-inset:4px;padding-bottom:72px;border-top:0}
+html[data-endfield=true] #fontMenu .font-picker-dialog:before{content:'';position:absolute;left:0;right:0;top:0;height:3px;z-index:2;pointer-events:none;background:var(--ef-band-stripe)}
+html[data-endfield=true] #fontMenu .font-picker-footer{position:absolute;bottom:-.5px;left:50%;transform:translate(-50%,calc((var(--font-base-height) - var(--font-face-height)/2 - var(--font-face-inset))/2));display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:center;gap:14px;width:min(554px,calc(100% - 32px));padding:0;margin:0}
+html[data-endfield=true] #fontMenu .font-action-base{box-sizing:border-box;position:relative;height:var(--font-base-height);padding:var(--font-face-inset) 5px 8px;background:var(--surface);border:0;border-radius:999px;box-shadow:none;overflow:hidden;isolation:isolate}
+html[data-endfield=true] body #fontMenu .font-action-base>:is(#fontCancel,#fontConfirm).ef-footer-action{width:100%;min-width:0!important;height:var(--font-face-height);min-height:var(--font-face-height);font-size:16px;grid-template-columns:minmax(32px,1fr) auto minmax(32px,1fr);gap:12px;padding:6px 11px!important;outline:0;box-shadow:0 3px 5px #0009,inset 0 0 0 1px #ffffff70}
+html[data-endfield=true] #fontMenu .font-action-base .ef-action-circle{width:32px;height:32px}
+html[data-endfield=true] #fontMenu .font-picker-footer #fontDialogStatus{bottom:calc(100% + 8px);left:0;right:0;text-align:center;line-height:1.4}
+@media(max-width:700px),(max-height:540px){html[data-endfield=true] #fontMenu .font-picker-dialog{--font-face-height:48px;--font-base-height:60px;padding-bottom:60px}html[data-endfield=true] #fontMenu .font-picker-footer{gap:4px;width:min(480px,calc(100% - 16px))}html[data-endfield=true] body #fontMenu .font-action-base>:is(#fontCancel,#fontConfirm).ef-footer-action{font-size:13px;gap:7px;grid-template-columns:minmax(26px,1fr) auto minmax(26px,1fr);padding:5px 8px!important}html[data-endfield=true] #fontMenu .font-action-base .ef-action-circle{width:26px;height:26px}}

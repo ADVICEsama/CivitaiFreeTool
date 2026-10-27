@@ -1,0 +1,18 @@
+/* Shared alignment, with material and layout identities retained. */
+.btn-row,.filter-row,.download-tabs{column-gap:8px;row-gap:8px;align-items:center}
+.btn .ic,.nav-tab .ic,.settings-tab .ic{flex-shrink:0;align-self:center}
+table.grid :is(th,td){vertical-align:middle}
+.setting-control input:not([type=checkbox]),.setting-control select{box-sizing:border-box;min-height:36px}
+.settings-category header h3{font-weight:700}.setting-copy label{font-weight:500}.setting-copy p{font-weight:400}
+.iv-toolbar{align-items:center;gap:8px}.iv-actions,.iv-zoom{align-items:center;gap:6px}
+.iv-generation h2{font-weight:700}.iv-generation h3{font-weight:500}.iv-prompt{font-weight:400}
+.ef-credits{clear:both}.ef-credits a{color:var(--text);text-underline-offset:3px}
+#startupStage{position:fixed;inset:0;z-index:11000;display:grid;place-content:center;background:#202322;color:#f1f3e9;text-align:center;padding:24px}
+#startupStage[hidden]{display:none}#startupStage h1{font:700 40px var(--font);letter-spacing:.08em;margin:0 0 12px}
+#startupStage p{font:400 14px 'HarmonyOS Sans SC',sans-serif;color:#c5c9c1}#startupStage .startup-track{width:min(540px,75vw);height:2px;margin:28px auto;background:#62675b;overflow:hidden}
+#startupStage .startup-track i{display:block;width:24%;height:100%;background:#eef82c;animation:startup-pass 1.8s ease-in-out infinite}
+#startupStage button{border:1px solid #b0b89c;color:#f1f3e9;background:none;padding:8px 20px;margin:auto;cursor:pointer}
+@keyframes startup-pass{from{transform:translateX(-110%)}to{transform:translateX(520%)}}
+
+.about-dlg{top:50%;max-height:calc(100vh - 40px);overflow:auto}
+@media(prefers-reduced-motion:reduce){#startupStage .startup-track i{animation:none;width:100%;opacity:.6}}

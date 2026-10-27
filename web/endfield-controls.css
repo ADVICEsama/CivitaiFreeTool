@@ -1,0 +1,85 @@
+/* User-provided Geource Sans Alt, SIL OFL 1.1. Only default Latin/digits; custom stacks win. */
+@font-face{font-family:'CFT Endfield Latin';src:url('fonts/GeourceAltCHS-Regular.ttf') format('truetype');font-weight:400;font-style:normal;font-display:swap;unicode-range:U+0000-024F,U+1E00-1EFF}
+@font-face{font-family:'CFT Endfield Latin';src:url('fonts/GeourceAltCHS-Medium.ttf') format('truetype');font-weight:500;font-style:normal;font-display:swap;unicode-range:U+0000-024F,U+1E00-1EFF}
+@font-face{font-family:'CFT Endfield Latin';src:url('fonts/GeourceAltCHS-Bold.ttf') format('truetype');font-weight:600 900;font-style:normal;font-display:swap;unicode-range:U+0000-024F,U+1E00-1EFF}
+html[data-endfield=true]{--font:'CFT Endfield Latin','HarmonyOS Sans SC','Microsoft YaHei UI',sans-serif;--ef-settings-font:var(--font)}
+/* Shared secondary capsules: pale against dark pages, charcoal against light pages. */
+html[data-endfield=true]{--ef-band-stripe:linear-gradient(90deg,#fffd1f 0 50%,#00d0fd 50% 75%,#f954fd 75% 100%);--ef-secondary-bg:#d1d3cf;--ef-secondary-text:#51564e;--ef-secondary-border:#50554d;--ef-secondary-icon:#434a40;--ef-secondary-edge:#d1d3cf;--ef-secondary-texture-filter:none}
+html[data-theme=light_endfield]{--ef-secondary-bg:#484b47;--ef-secondary-text:#f0f1eb;--ef-secondary-border:#9ca199;--ef-secondary-icon:#f0f1e9;--ef-secondary-edge:#f0f1e9;--ef-secondary-texture-filter:invert(1)}
+
+
+.ef-number-stepper{box-sizing:border-box;display:flex;align-items:center;gap:8px;padding:3px;width:100%;height:40px;border-radius:24px;background:color-mix(in srgb,var(--text) 18%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--text) 12%,transparent)}
+html[data-endfield=true] .ef-number-stepper>input[type=number]{appearance:textfield;-moz-appearance:textfield;flex:1;min-width:0;width:0;min-height:0!important;height:32px;padding:0 4px;border:0!important;outline:0;background:transparent!important;text-align:center;color:var(--text);font:500 22px/32px var(--font);font-variant-numeric:tabular-nums;box-shadow:none;transform:translateY(-1px);cursor:text;transition:opacity .12s ease}
+.ef-number-stepper>input::-webkit-inner-spin-button,.ef-number-stepper>input::-webkit-outer-spin-button{appearance:none;-webkit-appearance:none;margin:0}
+html[data-endfield=true] .ef-number-stepper>.ef-number-step{display:grid;place-items:center;flex:0 0 32px;width:32px;height:32px;min-height:0;padding:0;border:1px solid #fff;border-radius:50%!important;background:#ecece9;color:#3d403c;cursor:pointer;box-shadow:none;clip-path:none}
+.ef-number-step svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:butt}
+html[data-endfield=true] .ef-number-stepper>.ef-number-step{transition:background .12s ease,border-color .12s ease}
+html[data-endfield=true] .ef-number-stepper>.ef-number-step:hover:not(:disabled){background:var(--ef-yellow);border-color:var(--ef-yellow)}
+html[data-endfield=true] .ef-number-stepper>input[type=number]:hover:not(:focus):not(:disabled){opacity:.55}
+.ef-number-step:disabled{opacity:.35;cursor:default}.ef-number-stepper:focus-within{outline:2px solid var(--ef-yellow);outline-offset:2px}
+html[data-endfield=true] body :is(#settingsActions,.font-picker-footer,.font-action-base,.about-action-base,.rd-actions,.settings-exit-base,.ms-footer,.ob-actions,.ob-actions2,.upd-footer,.model-style-actions)>.ef-footer-action{position:relative;isolation:isolate;display:inline-grid!important;grid-template-columns:auto 22px;align-items:center;justify-content:center;gap:10px;height:36px;min-height:36px;padding:3px 12px!important;border:1px solid #bfc3bb!important;border-radius:28px!important;clip-path:none;line-height:1.25;background:var(--ef-secondary-bg)!important;color:var(--ef-secondary-text)!important;box-shadow:inset 0 0 0 1px #ffffff38;outline:0}
+.ef-action-caption{position:relative;z-index:1;min-width:0;display:block;text-align:center;line-height:1.25;transform:translateY(.5px)}
+/* Decoration is atomic: never transition from an old modal's dark fill into this light pill. */
+html[data-endfield=true] body .ef-footer-action{transition:transform .14s ease,filter .14s ease}
+.ef-action-circle{position:relative;z-index:1;display:grid;place-items:center;width:22px;height:22px;box-sizing:border-box;background:none;color:#53594e;border:0;border-radius:50%;box-shadow:none}
+.ef-action-circle>svg{display:block;width:100%;height:100%;overflow:visible}
+.ef-action-stem,.ef-action-texture{display:none}
+html[data-endfield=true] body :is(#settingsActions,.font-picker-footer,.font-action-base,.about-action-base,.rd-actions,.settings-exit-base,.ms-footer,.ob-actions,.ob-actions2,.upd-footer,.model-style-actions)>.ef-footer-action:is(.ef-action-primary,.ef-action-secondary){grid-template-columns:minmax(30px,1fr) auto minmax(30px,1fr);gap:10px;height:44px;min-height:44px;padding:4px 7px!important;border:2px solid #444b27!important;box-shadow:0 0 0 1px var(--ef-yellow),inset 0 0 0 1px #ffffff58;overflow:hidden}
+html[data-endfield=true] body :is(#settingsActions,.font-picker-footer,.font-action-base,.about-action-base,.rd-actions,.settings-exit-base,.ms-footer,.ob-actions,.ob-actions2,.upd-footer,.model-style-actions)>.ef-footer-action.ef-action-primary{background:var(--ef-yellow)!important;color:#2c341b!important}
+html[data-endfield=true] body :is(#settingsActions,.font-picker-footer,.font-action-base,.about-action-base,.rd-actions,.settings-exit-base,.ms-footer,.ob-actions,.ob-actions2,.upd-footer,.model-style-actions)>.ef-footer-action.ef-action-secondary{border-color:var(--ef-secondary-border)!important;box-shadow:0 0 0 1px var(--ef-secondary-edge),inset 0 0 0 1px #ffffff80}
+:is(.ef-action-primary,.ef-action-secondary)>.ef-action-circle{width:30px;height:30px;color:#303a20}
+.ef-action-secondary>.ef-action-circle{color:var(--ef-secondary-icon)}
+:is(.ef-action-primary,.ef-action-secondary)>.ef-action-stem{position:relative;z-index:1;display:block;width:100%;max-width:36px;justify-self:start;opacity:.45}
+.ef-action-stem svg{display:block;width:100%;height:8px;fill:currentColor;stroke:currentColor;stroke-width:.75}
+:is(.ef-action-primary,.ef-action-secondary)>.ef-action-texture{display:block;position:absolute;inset:0;z-index:0;border-radius:inherit;background:url('button-contours.svg') right center/180px 50px no-repeat;opacity:.28;pointer-events:none}
+.ef-action-secondary>.ef-action-texture{opacity:.17;filter:var(--ef-secondary-texture-filter)}
+html[data-endfield=true] body :is(#settingsActions,.font-picker-footer,.font-action-base,.about-action-base,.rd-actions,.settings-exit-base,.ms-footer,.ob-actions,.ob-actions2,.upd-footer,.model-style-actions)>.ef-footer-action:focus-visible{outline:2px solid var(--ef-yellow);outline-offset:3px}
+html[data-endfield=true] body :is(#settingsActions,.font-picker-footer,.font-action-base,.about-action-base,.rd-actions,.settings-exit-base,.ms-footer,.ob-actions,.ob-actions2,.upd-footer,.model-style-actions)>.ef-action-primary:focus-visible{outline-color:var(--text)}
+html[data-endfield=true] body :is(#settingsActions,.font-picker-footer,.font-action-base,.about-action-base,.rd-actions,.settings-exit-base,.ms-footer,.ob-actions,.ob-actions2,.upd-footer,.model-style-actions)>.ef-footer-action:disabled{opacity:.45;filter:grayscale(.6);cursor:not-allowed}
+html[data-endfield=true] #settingsActions>.ef-footer-action{font-size:13px}
+/* Every secondary footer action uses the same finished capsule, not just Cancel. */
+html[data-endfield=true] body #settingsActions>.ef-footer-action.ef-action-secondary{grid-template-columns:minmax(24px,1fr) auto minmax(24px,1fr);gap:10px;height:40px;min-height:40px;padding:4px 9px!important}
+html[data-endfield=true] #settingsActions>.ef-action-secondary>.ef-action-circle{width:24px;height:24px}
+html[data-endfield=true] #settingsActions>.ef-action-secondary>.ef-action-stem{max-width:26px}
+html[data-endfield=true] #settingsActions{align-items:center;flex-wrap:wrap}
+html[data-endfield=true] #fontMenu :is(.font-picker-footer,.font-action-base)>.ef-footer-action{height:42px;min-height:42px;padding:4px 12px!important}
+html[data-endfield=true] #fontMenu :is(.font-picker-footer,.font-action-base)>.ef-footer-action:is(.ef-action-primary,.ef-action-secondary){height:48px;min-height:48px;padding:5px 8px!important}
+html[data-endfield=true] #settingsForm .ef-number-stepper>input[type=number]{font-size:22px;font-weight:500;line-height:32px}
+/* Icon geometry stays angular. The enclosing circles/capsules intentionally stay round. */
+html[data-endfield=true] :is(svg.ic,svg.ef-icon,svg.ef-select-check,.ef-action-circle svg,.ef-number-step svg),
+html[data-endfield=true] :is(svg.ic,svg.ef-icon,svg.ef-select-check,.ef-action-circle svg,.ef-number-step svg) :is(path,line,polyline,polygon,rect){stroke-linecap:butt!important;stroke-linejoin:miter!important}
+/* Dark outlines keep yellow shapes readable against the light theme, without recoloring the accent. */
+html[data-theme=light_endfield] #fontMenu :is(.font-option.focused,.font-selected-row.focused,.font-scope-tab.active,.font-scope-toggle[aria-expanded=true]){box-shadow:inset 0 0 0 1.5px #20251d;border-color:#20251d}
+html[data-theme=light_endfield] #settingsForm .appearance-swatch{outline:1px solid #20251d}
+html[data-theme=light_endfield] #page-settings .page-title:before{-webkit-text-stroke:.65px #20251d;paint-order:stroke fill}
+html[data-theme=light_endfield] #settingsForm .settings-category header h3{position:relative;color:#444b09}
+html[data-theme=light_endfield] #settingsForm .settings-category header h3:before{content:'';position:absolute;left:-5px;top:0;bottom:0;width:5px;box-sizing:border-box;background:var(--ef-yellow);border:1px solid #20251d}
+/* The original status remains authoritative, but Endfield presents it once in the floating ribbon. */
+html[data-endfield=true] #settingsForm #settingsDirty{display:none}
+html[data-theme=light_endfield] #page-settings{--text-dim:#505a4d}
+html[data-theme=light_endfield] #settingsForm .font-preview>span{color:#444b09}
+html[data-theme=light_endfield] #shortcutCatalog .shortcut-key.recording{color:#20251d;background:var(--ef-yellow);border-color:#20251d}
+html[data-theme=light_endfield] .nav-tab.active{--ef-cut:9px}
+html[data-theme=light_endfield] body .nav-tab.active:after{content:'';display:block;position:absolute;inset:0;width:auto;height:auto;pointer-events:none;border-radius:0;background:linear-gradient(135deg,transparent calc(50% - .75px),#20251d calc(50% - .75px),#20251d calc(50% + .75px),transparent calc(50% + .75px)) right bottom/var(--ef-cut) var(--ef-cut) no-repeat;box-shadow:inset 0 0 0 1.5px #20251d;clip-path:inherit}
+html[data-theme=light_endfield] body :is(#settingsActions,.font-picker-footer,.font-action-base,.about-action-base,.rd-actions,.settings-exit-base,.ms-footer,.ob-actions,.ob-actions2,.upd-footer,.model-style-actions)>.ef-footer-action:is(.ef-action-primary,.ef-action-secondary){box-shadow:0 0 0 1px var(--ef-yellow),0 0 0 2px #20251d,inset 0 0 0 1px #ffffff80}
+html[data-theme=light_endfield] body :is(#settingsActions,.font-picker-footer,.font-action-base,.about-action-base,.rd-actions,.settings-exit-base,.ms-footer,.ob-actions,.ob-actions2,.upd-footer,.model-style-actions)>.ef-footer-action.ef-action-secondary{box-shadow:0 0 0 1px var(--ef-secondary-edge),inset 0 0 0 1px #ffffff80}
+/* All punched icon discs are complete shapes; no secondary or primary halo. */
+html[data-endfield=true] .ef-action-circle:after{content:none}
+html[data-theme=light_endfield] .ef-number-stepper:focus-within,
+html[data-theme=light_endfield] #settingsForm .ef-select-trigger:focus-visible,
+html[data-theme=light_endfield] #settingsForm .setting-switch:focus-within{outline-color:#20251d}
+html[data-theme=light_endfield] body :is(#settingsActions,.font-picker-footer,.font-action-base,.about-action-base,.rd-actions,.settings-exit-base,.ms-footer,.ob-actions,.ob-actions2,.upd-footer,.model-style-actions)>.ef-footer-action:focus-visible,
+html[data-theme=light_endfield] #fontMenu button:focus-visible{outline-color:#20251d}
+html[data-theme=light_endfield] .ef-number-stepper>.ef-number-step:hover:not(:disabled){border-color:#20251d}
+@media(max-width:700px){:is(.ef-action-primary,.ef-action-secondary)>.ef-action-stem{max-width:22px}html[data-endfield=true] #fontMenu :is(.font-picker-footer,.font-action-base)>.ef-footer-action:is(.ef-action-primary,.ef-action-secondary){grid-template-columns:minmax(26px,1fr) auto minmax(26px,1fr);gap:6px}:is(.ef-action-primary,.ef-action-secondary)>.ef-action-circle{width:26px;height:26px}}
+@media(max-width:1250px){html[data-endfield=true] #settingsActions>.ef-preview-note{flex-basis:100%;margin:0 0 2px;text-align:left}}
+@media(prefers-reduced-motion:reduce){html[data-endfield=true] :is(.ef-footer-action,.ef-number-stepper>input,.ef-number-step){transition:none!important}}
+/* Keep wheel/keyboard scrolling, without a native scrollbar in secondary select menus. */
+.ef-settings-select-menu{scrollbar-width:none;-ms-overflow-style:none}
+.ef-settings-select-menu::-webkit-scrollbar{display:none;width:0;height:0}
+
+/* Shared capsule contract: caption centered on the whole button, balanced sides.
+   Applied to every existing and dynamically created footer action. */
+html[data-endfield=true] .ef-footer-action>.ef-action-circle{justify-self:end}
+html[data-endfield=true] body .ef-footer-action:hover:not(:disabled){outline:2px solid var(--ef-yellow)!important;outline-offset:2px!important}
+html[data-endfield=true] body :is(#settingsActions,.font-picker-footer,.rd-actions,.ms-footer,.ob-actions,.ob-actions2,.upd-footer,.model-style-actions):has(.ef-footer-action:hover) .ef-footer-action:focus-visible:not(:hover){outline:none!important}

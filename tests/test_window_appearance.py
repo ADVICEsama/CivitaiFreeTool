@@ -5,7 +5,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 import types
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from window_appearance import appearance_plan, colorref, WindowAppearance
+from window_appearance import appearance_plan, colorref, WindowAppearance, effective_appearance_options
 import webui
 
 
@@ -64,6 +64,53 @@ class WindowAppearanceTests(unittest.TestCase):
 
     def test_unknown_mode_is_rejected(self):
         with self.assertRaises(ValueError): appearance_plan({'mode': 'arbitrary'})
+
+    def test_endfield_suppresses_every_backdrop_without_mutating_preferences(self):
+        for theme in ('light_endfield', 'dark_endfield'):
+            for mode in ('theme', 'mica', 'mica_alt', 'external', 'system'):
+                with self.subTest(theme=theme, mode=mode):
+                    saved = {'mode': mode, 'theme': theme, 'integrated': True}
+                    effective = effective_appearance_options(saved)
+                    self.assertEqual(saved, {'mode': mode, 'theme': theme, 'integrated': True})
+                    self.assertTrue(effective['material_suppressed'])
+                    self.assertEqual(effective['requested_mode'], mode)
+                    self.assertNotIn(effective['mode'], ('mica', 'mica_alt', 'external'))
+                    self.assertIn(dict(appearance_plan(saved, 'external'))[38], (0, 1))
+
+    def test_retired_themes_cannot_restore_deleted_glass_material(self):
+        for legacy in ('dark_glass', 'light_glass', 'modern', 'metro', 'dark_rose'):
+            for mode in ('mica', 'mica_alt', 'external'):
+                saved = {'mode': mode, 'theme': legacy}
+                effective = effective_appearance_options(saved)
+                self.assertTrue(effective['material_suppressed'])
+                self.assertIn(effective['theme'], ('dark_endfield', 'light_endfield'))
+                self.assertEqual(dict(appearance_plan(saved))[38], 1)
+                self.assertEqual(saved['theme'], legacy)
+
+    def test_endfield_does_not_bypass_invalid_input_validation(self):
+        with self.assertRaises(ValueError):
+            appearance_plan({'mode': 'arbitrary', 'theme': 'light_endfield'})
+        with self.assertRaises(ValueError):
+            appearance_plan({'mode': 'mica', 'theme': 'dark_endfield', 'background': 'red'})
+
+    def test_direct_api_uses_saved_theme_but_allows_theme_preview(self):
+        api = webui.Api.__new__(webui.Api)
+        api.cfg = {'theme': 'light_endfield', 'window_appearance': 'mica_alt'}
+        api._window_appearance_handler = Mock(return_value={'ok': True})
+        options = {'mode': 'mica_alt'}
+        api.set_window_appearance(options)
+        api._window_appearance_handler.assert_called_with({'mode': 'mica_alt', 'theme': 'light_endfield'})
+        self.assertEqual(options, {'mode': 'mica_alt'})
+        api.set_window_appearance({'mode': 'mica_alt', 'theme': 'dark_glass'})
+        api._window_appearance_handler.assert_called_with({'mode': 'mica_alt', 'theme': 'dark_glass'})
+        self.assertEqual(api.cfg, {'theme': 'light_endfield', 'window_appearance': 'mica_alt'})
+
+    def test_startup_frame_and_shown_share_effective_theme_policy(self):
+        source = (Path(__file__).resolve().parents[1] / 'main_web.py').read_text(encoding='utf-8')
+        self.assertIn('initial_appearance = effective_appearance_options(', source)
+        self.assertIn('frameless=bool(initial_appearance["integrated"])', source)
+        after_shown = source[source.index('    def after_shown():'):source.index('    initial_load = [True]')]
+        self.assertIn('"theme": api.cfg.get("theme")', after_shown)
 
     def test_browser_api_returns_limit_instead_of_success(self):
         api = webui.Api.__new__(webui.Api)

@@ -1,5 +1,6 @@
+/* Shared component tokens and layouts retained after removing the Metro theme. */
 :root {
-  /* 全局令牌：经典主题下 = 主题变量别名（随各主题/亮暗自洽）；Metro 主题块内有显式值覆盖 */
+  
   --metro-bg: var(--bg);
   --metro-surface: var(--surface);
   --metro-border-hair: var(--border);
@@ -12,271 +13,31 @@
   --metro-tint-2: var(--surface2);
   --metro-sel-bg: var(--surface2);
   --m-gray: var(--surface2);
-  --metro-accent: #0078d4;
+  --metro-accent: var(--primary);
   --metro-accent-hover: color-mix(in srgb, var(--metro-accent) 85%, #000);
   --metro-accent-press: color-mix(in srgb, var(--metro-accent) 72%, #000);
   --metro-green: #107c10;
   --metro-green-bg: var(--surface2);
   --metro-orange: #ca5010;
-  /* 排版令牌（与主题无关） */
+  
   --fs-hero: calc(18px * var(--type-scale, 1)); --fs-title: calc(15px * var(--type-scale, 1)); --fs-lg: calc(14px * var(--type-scale, 1)); --fs-md: calc(13px * var(--type-scale, 1)); --fs-sm: calc(12px * var(--type-scale, 1)); --fs-xs: calc(11.5px * var(--type-scale, 1));
   --fw-bold: 600; --fw-med: 500; --fw-body: 400;
   --lh-tight: 1.25; --lh-row: 1.45; --lh-body: 1.7;
   --c1: var(--text); --c2: var(--text-dim); --c3: var(--text-dim);
-  /* 状态色（亮色默认；Metro 暗色块覆盖） */
+  
   --status-upd: #107C10;      --status-upd-bg: #E7F4E8;
   --status-latest: #0078D4;   --status-latest-bg: #E5F0FA;
   --status-base: #555555;     --status-base-bg: #F0F0F0;
   --status-unknown: #B26A00;  --status-unknown-bg: #FBF0DC;
 }
 
-/* ============================================================================
-   Metro 主题 v2 —— 现代 Win10 Metro（扁平 / 几何 / 直角 / 强网格感）
-   ----------------------------------------------------------------------------
-   设计原则（按用户验收标准）：
-   · 纯色块 + 简洁文字 + 轻微 hover + 极少量边框   × 灰色立体按钮 / 深描边 / 凹陷
-   · 直角（0~2px）但现代几何                    × 旧式 Windows 控件感
-   · 只用一个强调色（Win10 蓝 #0078D4）+ 状态绿  × 粉色 / 渐变 / 彩虹
-   · 主要结构：浅灰白底 / 白控件 / 浅蓝 hover / 蓝选中
-   作用域：全部规则限定 [data-theme="metro"]，与 Classic 完全解耦
-   ========================================================================== */
-
-[data-theme="metro"] {
-  /* 通用变量（老组件先自动跟随） */
-  --bg: #f6f6f6;
-  --surface: #ffffff;
-  --surface2: #fafafa;
-  --border: #ececec;
-  --text: #202020;
-  --text-dim: #737373;
-  --primary: #0078d4;
-  --primary-hover: #106ebe;
-  --primary-fg: #ffffff;
-  --danger: #c42b1c;
-  --radius: 2px;
-  --radius-sm: 2px;
-  --shadow: none;
-  --shadow-hover: none;
-  --font: "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, sans-serif;
-
-  /* Metro Token */
-  --metro-bg: #f6f6f6;
-  --metro-surface: #ffffff;
-  --metro-border-hair: #ececec;      /* 极浅分隔线 */
-  --metro-border-input: #e0e0e0;     /* 输入类控件描边（浅） */
-  --metro-accent: #0078d4;
-  --m-gray: #f6f6f6;                 /* 浅灰底（缩略图/占位，暗色下变深灰） */
-  --metro-accent-hover: color-mix(in srgb, var(--metro-accent) 85%, #000);
-  --metro-accent-press: color-mix(in srgb, var(--metro-accent) 72%, #000);
-  --metro-tint: color-mix(in srgb, var(--metro-accent) 8%, transparent);   /* 跟随主题色的极浅 hover */
-  --metro-tint-2: color-mix(in srgb, var(--metro-accent) 16%, transparent);
-  --metro-sel-bg: color-mix(in srgb, var(--metro-accent) 14%, #fff);      /* 选中行底（跟随主题色） */
-  --metro-text: #202020;
-  --metro-text-2: #737373;
-  --metro-text-3: #9a9a9a;
-  --metro-green: #107c10;
-  /* 全局层级令牌（避免各处随手写 9999） */
-  --z-content: 1;
-  --z-toolbar: 40;
-  --z-dropdown: 340;
-  --z-popover: 360;
-  --z-modal: 600;
-  --z-toast: 900;
-  /* 全局排版令牌（三页共用；一级=名称/版本/状态，二级=作者/类型/底模，辅助=文件名/路径/时间/哈希） */
-  --fs-hero: calc(18px * var(--type-scale, 1));    /* 页面标题 */
-  --fs-title: calc(15px * var(--type-scale, 1));   /* 面板标题 / 详情标题 */
-  --fs-lg: calc(14px * var(--type-scale, 1));
-  --fs-md: calc(13px * var(--type-scale, 1));      /* 一级信息（模型名、核心版本） */
-  --fs-sm: calc(12px * var(--type-scale, 1));      /* 二级信息（作者、类型、底模） */
-  --fs-xs: calc(11.5px * var(--type-scale, 1));    /* 辅助信息（文件名、时间、哈希、路径） */
-  --fw-bold: 600;
-  --fw-med: 500;
-  --fw-body: 400;
-  --lh-tight: 1.25;
-  --lh-row: 1.45;
-  --lh-body: 1.7;     /* 正文/简介：更舒适 */
-  --c1: var(--text);      /* 一级文字色 */
-  --c2: var(--text-dim);    /* 二级 */
-  --c3: var(--text-dim);    /* 辅助 */
-  --metro-green-bg: #e8f5e9;
-  --metro-orange: #ca5010;
-}
-
-/* ---------------------------------------------------------------- 基础 */
-[data-theme="metro"] body { background: var(--bg) !important; }
-[data-theme="metro"] { font-family: var(--font); color: var(--text); }
-[data-theme="metro"] ::selection { background: var(--surface2); }
-[data-theme="metro"] ::-webkit-scrollbar { width: 10px; height: 10px; }
-[data-theme="metro"] ::-webkit-scrollbar-track { background: transparent; }
-[data-theme="metro"] ::-webkit-scrollbar-thumb { background: #cfcfcf; border-radius: 0; border: 2px solid transparent; background-clip: padding-box; }
-[data-theme="metro"] ::-webkit-scrollbar-thumb:hover { background: #b0b0b0; background-clip: padding-box; }
-[data-theme="metro"] :focus-visible { outline: 2px solid var(--metro-accent); outline-offset: 0; }
-[data-theme="metro"] canvas#bg,
-[data-theme="metro"] canvas.bg-shader,
-[data-theme="metro"] #bgCanvas { opacity: 0 !important; }
-
-/* ---------------------------------------------------------------- 顶部导航 */
-[data-theme="metro"] .nav {
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  border-radius: 0;
-  box-shadow: none;
-  padding: 0 14px;
-}
-[data-theme="metro"] .nav-logo { border-radius: 2px; background: none; box-shadow: none; }   /* 左上角 logo 不要蓝底 */
-[data-theme="metro"] .nav-tab {
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  border-radius: 0;
-  color: var(--text-dim);
-  font-weight: 400;
-  padding: 11px 14px;
-}
-[data-theme="metro"] .nav-tab:hover { background: var(--surface2); color: var(--text); }
-[data-theme="metro"] .nav-tab.active {
-  background: transparent;
-  color: var(--text);
-  font-weight: 600;
-  border-bottom-color: var(--metro-accent);
-}
-[data-theme="metro"] .nav-tab.active::after { display: none; }
-
-/* ---------------------------------------------------------------- 页面骨架 */
-[data-theme="metro"] .card {
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  box-shadow: none;
-  padding: 0;
-}
-[data-theme="metro"] .page-title { font-size: calc(20px * var(--type-scale, 1)); font-weight: 600; color: var(--text); }
-[data-theme="metro"] .title-row { padding: 16px 16px 4px 16px; margin: 0; align-items: baseline; }
-[data-theme="metro"] .status-pill {
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  color: var(--text-dim);
-  font-size: calc(13px * var(--type-scale, 1));
-  padding: 0 6px;
-}
-
-/* ---------------------------------------------------------------- 按钮（扁平：纯色块 + 文字 + 轻微 hover） */
-[data-theme="metro"] .btn {
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 2px;
-  box-shadow: none;
-  color: var(--text);
-  font-weight: 400;
-  padding: 8px 14px;
-  min-height: 34px;
-  transition: background .08s linear;
-}
-[data-theme="metro"] .btn:hover { background: var(--surface2); border-color: transparent; color: var(--text); }
-[data-theme="metro"] .btn:active { background: var(--surface2); }
-[data-theme="metro"] .btn:disabled { background: transparent; color: var(--text-dim); }
-
-[data-theme="metro"] .btn-primary {
-  background: var(--metro-accent);
-  border-color: var(--metro-accent);
-  color: #fff;
-  font-weight: 600;
-}
-[data-theme="metro"] .btn-primary:hover { background: var(--metro-accent-hover); border-color: var(--metro-accent-hover); color: #fff; }
-[data-theme="metro"] .btn-primary:active { background: var(--metro-accent-press); }
-
-[data-theme="metro"] .btn-danger { background: transparent; border-color: transparent; color: var(--metro-danger, #c42b1c); }
-[data-theme="metro"] .btn-danger:hover { background: rgba(196, 43, 28, .08); color: #c42b1c; }
-
-[data-theme="metro"] .icon-btn { background: transparent; border: none; border-radius: 2px; }
-[data-theme="metro"] .icon-btn:hover { background: var(--surface2); }
-
-/* ---------------------------------------------------------------- 输入 / 下拉（自定义，不用浏览器默认样） */
-[data-theme="metro"] .input,
-[data-theme="metro"] input[type="text"],
-[data-theme="metro"] input[type="number"],
-[data-theme="metro"] input[type="password"],
-[data-theme="metro"] textarea {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 2px;
-  box-shadow: none;
-  color: var(--text);
-  min-height: 34px;
-  padding: 6px 10px;
-}
-[data-theme="metro"] .input:hover, [data-theme="metro"] input:hover, [data-theme="metro"] textarea:hover { border-color: #c8c8c8; }
-[data-theme="metro"] .input:focus,
-[data-theme="metro"] input:focus,
-[data-theme="metro"] textarea:focus {
-  border-color: var(--metro-accent);
-  outline: none;
-  box-shadow: inset 0 -2px 0 var(--metro-accent);
-}
-
-[data-theme="metro"] select {
-  -webkit-appearance: none;
-  appearance: none;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 2px;
-  color: var(--text);
-  min-height: 34px;
-  padding: 6px 30px 6px 10px;
-  background-image: linear-gradient(45deg, transparent 50%, #5f5f5f 50%), linear-gradient(135deg, #5f5f5f 50%, transparent 50%);
-  background-position: calc(100% - 15px) 54%, calc(100% - 10px) 54%;
-  background-size: 5px 5px, 5px 5px;
-  background-repeat: no-repeat;
-}
-[data-theme="metro"] select:hover { border-color: #c8c8c8; }
-[data-theme="metro"] select:focus { border-color: var(--metro-accent); outline: none; box-shadow: inset 0 -2px 0 var(--metro-accent); }
-
-/* ---- Metro 方框 Checkbox（完全自绘：白底浅灰描边 → 选中蓝底白勾） ---- */
-[data-theme="metro"] input[type="checkbox"] {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 18px; height: 18px;
-  margin: 0;
-  position: relative;
-  background: var(--surface);
-  border: 1px solid #bdbdbd;
-  border-radius: 2px;
-  vertical-align: middle;
-  cursor: default;
-  transition: background .06s linear, border-color .06s linear;
-}
-[data-theme="metro"] input[type="checkbox"]:hover { border-color: var(--metro-accent); }
-[data-theme="metro"] input[type="checkbox"]:checked { background: var(--metro-accent); border-color: var(--metro-accent); }
-[data-theme="metro"] input[type="checkbox"]:checked::after {
-  content: ""; position: absolute; left: 5px; top: 1px; width: 4px; height: 9px;
-  border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg);
-}
-[data-theme="metro"] input[type="checkbox"]:indeterminate { background: var(--metro-accent); border-color: var(--metro-accent); }
-[data-theme="metro"] input[type="checkbox"]:indeterminate::after {
-  content: ""; position: absolute; left: 3px; top: 7px; width: 10px; height: 2px; background: #fff;
-}
-[data-theme="metro"] input[type="radio"] { accent-color: var(--metro-accent); }
-
-/* ---------------------------------------------------------------------- 
-   模型管理 · Metro 顶部工具区（.mm-metro 仅 metro 显示；.mm-legacy 仅 classic）
-   -------------------------------------------------------------------- */
 .mm-metro { display: block; padding: 10px 16px 4px 16px; }
 .mm-legacy { display: none !important; }
 .mm-metro .mm-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
 .mm-metro .mm-row2 { margin-top: 8px; gap: 8px; }
 .mm-metro .mm-sep { width: 1px; height: 20px; background: var(--border); margin: 0 8px; }
 .mm-metro .mm-spacer { flex: 1 1 auto; }
-
-/* 筛选区（共用行；Metro 下扁平化） */
-[data-theme="metro"] .tool-row.mm-filter { padding: 8px 16px 12px 16px; gap: 8px; align-items: center; border-bottom: 1px solid var(--border); }
-[data-theme="metro"] .tool-row.mm-filter .input { min-width: 260px; }
-[data-theme="metro"] #mmCheckLabel { color: var(--text-dim); font-size: calc(13px * var(--type-scale, 1)); margin-left: auto; margin-right: 6px; }
-
-/* ---------------------------------------------------------------- Dropdown（点击式；白底 / 浅边框 / 直角 / 浅蓝 hover / 蓝选中标记） */
-[data-theme="metro"] .btn-group { position: relative; }
-[data-theme="metro"] .btn-group .submenu,
-.mm-menu {
+.mm-menu{
   display: none;
   position: absolute;
   left: 0;
@@ -289,13 +50,8 @@
   border-radius: 0;
   box-shadow: 0 2px 10px rgba(0, 0, 0, .12);
 }
-[data-theme="metro"] .btn-group.open .submenu,
-.mm-menu.open { display: block; }
-[data-theme="metro"] .btn-group:hover .submenu { display: none; }
-[data-theme="metro"] .btn-group.open:hover .submenu { display: block; }
-
-[data-theme="metro"] .submenu-item,
-.mm-menu .mm-item {
+.mm-menu.open{ display: block; }
+.mm-menu .mm-item{
   display: flex;
   align-items: center;
   gap: 8px;
@@ -306,328 +62,26 @@
   color: var(--text);
   font-size: calc(13px * var(--type-scale, 1));
 }
-[data-theme="metro"] .submenu-item:hover,
-.mm-menu .mm-item:hover { background: var(--surface2); }
-[data-theme="metro"] .submenu-item:active,
-.mm-menu .mm-item:active { background: var(--surface2); }
-[data-theme="metro"] .submenu-item.sel::before,
-.mm-menu .mm-item.sel::before {
+.mm-menu .mm-item:hover{ background: var(--surface2); }
+.mm-menu .mm-item:active{ background: var(--surface2); }
+.mm-menu .mm-item.sel::before{
   content: ""; position: absolute; left: 12px; top: 50%; width: 4px; height: 4px;
   margin-top: -2px; background: var(--metro-accent);
 }
-[data-theme="metro"] .submenu-item.danger, [data-theme="metro"] .mm-menu .mm-item.danger { color: #c42b1c; }
-[data-theme="metro"] .submenu-item.danger:hover { background: rgba(196, 43, 28, .07); }
-[data-theme="metro"] .submenu-sep, [data-theme="metro"] .mm-menu .mm-sep-h { height: 1px; background: var(--border); margin: 4px 0; }
 
-/* 分裂按钮（改名：主按钮 + 小角 ▾） */
-[data-theme="metro"] .sp-btn { display: inline-flex; }
-[data-theme="metro"] .sp-btn .sp-caret { padding: 8px 8px; min-width: 0; color: var(--text-dim); }
-[data-theme="metro"] .sp-btn:hover .sp-caret { color: var(--text); }
-
-/* Classic 下这些是新元素，全部隐藏（互不干扰） */
 .mm-legacy-note { display: none; }
-.mm-legacy { display: none !important; }   /* 旧平铺工具区在所有主题下隐藏（功能由分组工具栏代理） */
-
-/* ---------------------------------------------------------------- 瀑布流：Metro Tile + Masonry（大图为主、文字克制） */
-[data-theme="metro"] .masonry { padding: 14px 16px; }
-[data-theme="metro"] .ms-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 0;
-  box-shadow: none;
-  overflow: hidden;
-  position: relative;
-  transition: border-color .08s linear, background .08s linear;
-}
-[data-theme="metro"] .ms-card:hover { border-color: var(--metro-accent); background: #fbfdff; transform: none; }
-[data-theme="metro"] .ms-card.checked { border-color: var(--metro-accent); box-shadow: inset 0 0 0 1px var(--metro-accent); }
-[data-theme="metro"] .ms-img-wrap { background: var(--m-gray); }
-[data-theme="metro"] .ms-img { display: block; width: 100%; border-radius: 0; }
-[data-theme="metro"] .ms-name {
-  padding: 8px 10px 0 10px;
-  font-size: calc(13px * var(--type-scale, 1)); font-weight: 600; color: var(--text);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-[data-theme="metro"] .ms-meta { padding: 2px 10px 0 10px; font-size: calc(12px * var(--type-scale, 1)); color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-[data-theme="metro"] .ms-size { padding: 1px 10px 9px 10px; font-size: calc(11px * var(--type-scale, 1)); color: var(--text-dim); }
-[data-theme="metro"] .ms-sub { display: none; }          /* C站名已在主名位置；文件名走悬停 title */
-[data-theme="metro"] .ms-check {
-  position: absolute; top: 8px; left: 8px; z-index: 2;
-  width: 20px; height: 20px; line-height: calc(18px * var(--type-scale, 1)); text-align: center;
-  background: rgba(255, 255, 255, .92);
-  border: 1px solid var(--border);
-  border-radius: 2px;
-  font-size: calc(12px * var(--type-scale, 1));
-}
-[data-theme="metro"] .ms-upd { border-radius: 2px; background: var(--metro-accent); color: #fff; }
-/* 状态徽章：只保留一个（有更新=蓝 / 已最新=绿），贴在图上 */
-[data-theme="metro"] .ms-tag {
-  position: absolute; top: 8px; right: 8px; z-index: 2;
-  font-size: calc(11px * var(--type-scale, 1)); line-height: calc(18px * var(--type-scale, 1)); padding: 0 7px;
-  border-radius: 2px; border: none;
-}
-[data-theme="metro"] .ms-tag.upd { background: var(--metro-accent); color: #fff; }
-[data-theme="metro"] .ms-tag.ok { background: var(--surface2); color: var(--metro-green); }
-
-/* ---------------------------------------------------------------- 列表视图（轻量：极少描边） */
-[data-theme="metro"] table.grid { border-collapse: collapse; }
-[data-theme="metro"] table.grid thead th {
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid var(--border);
-  border-radius: 0;
-  color: var(--text-dim);
-  font-weight: 600;
-  font-size: calc(12px * var(--type-scale, 1));
-  padding: 9px 10px;
-}
-[data-theme="metro"] table.grid thead th:hover { background: var(--surface2); color: var(--text); }
-[data-theme="metro"] table.grid tbody tr { border: none; }
-[data-theme="metro"] table.grid tbody td { border-bottom: 1px solid #f4f4f4; padding: 6px 10px; }
-[data-theme="metro"] table.grid tbody tr:nth-child(even) { background: transparent !important; }
-[data-theme="metro"] table.grid tbody tr:hover { background: var(--surface2) !important; }
-[data-theme="metro"] table.grid tbody tr.selected,
-[data-theme="metro"] table.grid tbody tr.sel-row { background: var(--surface2) !important; }
-[data-theme="metro"] table.grid tbody tr.selected td:first-child,
-[data-theme="metro"] table.grid tbody tr.sel-row td:first-child { box-shadow: inset 2px 0 0 var(--metro-accent); }
-[data-theme="metro"] .cell-sel { color: var(--metro-accent); }
-[data-theme="metro"] .thumb { border-radius: 2px; border: 1px solid var(--border); }
-[data-theme="metro"] .table-wrap { border: none; }
-
-/* ---------------------------------------------------------------- 徽章 / 药丸（扁平，无描边） */
-[data-theme="metro"] .chip,
-[data-theme="metro"] .chip-dl,
-[data-theme="metro"] .upd-chip,
-[data-theme="metro"] .about-ver,
-[data-theme="metro"] .bd-links,
-[data-theme="metro"] .bili-float,
-[data-theme="metro"] .ud-tag { border-radius: 2px !important; box-shadow: none; border: none; }
-[data-theme="metro"] .chip-dl { background: var(--surface2); color: var(--metro-accent); }
-[data-theme="metro"] .chip-dl:hover { background: var(--surface2); }
-[data-theme="metro"] .upd-chip.is-down { background: rgba(202, 80, 16, .10); color: var(--metro-orange); }
-
-/* ---------------------------------------------------------------- 右键菜单 / 文件夹面板 */
-[data-theme="metro"] .ctx-menu {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 0;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, .12);
-  padding: 4px 0;
-}
-[data-theme="metro"] .ctx-menu .ctx-item { border-radius: 0; padding: 9px 16px; font-size: calc(13px * var(--type-scale, 1)); }
-[data-theme="metro"] .ctx-menu .ctx-item:hover { background: var(--surface2); }
-[data-theme="metro"] .ctx-menu .ctx-item.danger { color: #c42b1c; }
-[data-theme="metro"] .ctx-menu .ctx-item.danger:hover { background: rgba(196, 43, 28, .07); }
-[data-theme="metro"] .ctx-menu .ctx-sep { border-top-color: var(--border); }
-
-[data-theme="metro"] .folders-panel {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 0;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, .12);
-}
-[data-theme="metro"] .folders-panel .fm-item { border-radius: 0; }
-[data-theme="metro"] .folders-panel .fm-item:hover { background: var(--surface2); }
-[data-theme="metro"] .folders-panel .fm-state { border-radius: 2px; border: none; }
-
-/* ---------------------------------------------------------------- 弹窗 / 提示 */
-[data-theme="metro"] .rd-mask { background: rgba(0, 0, 0, .22); }
-[data-theme="metro"] .rename-dialog {
-  background: var(--surface);
-  border: none;
-  border-radius: 0;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, .18);
-  padding: 0;
-  overflow: hidden;
-}
-[data-theme="metro"] .rd-title { background: var(--metro-accent); color: #fff; padding: 12px 16px; font-weight: 600; font-size: calc(14px * var(--type-scale, 1)); border: none; }
-[data-theme="metro"] .rd-actions { padding: 12px 16px; gap: 8px; border-top: 1px solid var(--border); background: var(--surface2); }
-[data-theme="metro"] .rd-actions .btn { min-width: 84px; justify-content: center; }
-[data-theme="metro"] .rd-group, [data-theme="metro"] .rd-home, [data-theme="metro"] .rd-img { border-radius: 0; }
-[data-theme="metro"] #toast { border-radius: 2px; background: #202020; color: #fff; border: none; }
-
-/* ---------------------------------------------------------------- Tooltip */
-[data-theme="metro"] [data-tip]:hover::after,
-[data-theme="metro"] .tipbox {
-  border-radius: 0 !important;
-  background: #2b2b2b !important;
-  color: #f5f5f5 !important;
-  border: none !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, .18) !important;
-  font-size: calc(12px * var(--type-scale, 1));
-}
-
-/* ---------------------------------------------------------------- 更新页同步扁平化 */
-[data-theme="metro"] .upd-table thead th { background: transparent; border-bottom: 1px solid var(--border); color: var(--text-dim); }
-[data-theme="metro"] .upd-table thead th.sortable:hover { background: var(--surface2); color: var(--text); }
-[data-theme="metro"] .upd-table tbody tr:hover { background: var(--surface2) !important; }
-[data-theme="metro"] .upd-table tbody tr.sel { background: var(--surface2) !important; }
-[data-theme="metro"] .upd-table .ver-sel { border-radius: 2px; }
-[data-theme="metro"] .pager .btn { min-width: 32px; }
-[data-theme="metro"] .masonry, [data-theme="metro"] .table-wrap { background: transparent; }
-
-/* ---------------------------------------------------------------- 边角清理（直角 + 去阴影） */
-[data-theme="metro"] .about-logo,
-[data-theme="metro"] .about-contrib-avatar,
-[data-theme="metro"] .bili-icon,
-[data-theme="metro"] .nav-logo,
-[data-theme="metro"] .ob-card,
-[data-theme="metro"] .ob-mask.mini .ob-card,
-[data-theme="metro"] .ob-theme,
-[data-theme="metro"] .ob-theme .sw,
-[data-theme="metro"] .ob-step,
-[data-theme="metro"] .ob-feat-btn,
-[data-theme="metro"] .ob-github,
-[data-theme="metro"] .ob-guide,
-[data-theme="metro"] .about-updates,
-[data-theme="metro"] .about-up-item,
-[data-theme="metro"] .about-thanks,
-[data-theme="metro"] .about-contrib,
-[data-theme="metro"] .detail-panel,
-[data-theme="metro"] .detail-main-img,
-[data-theme="metro"] .folders-panel,
-[data-theme="metro"] .folders-panel .fm-item,
-[data-theme="metro"] .wf-info,
-[data-theme="metro"] .wf-node,
-[data-theme="metro"] .hf-item,
-[data-theme="metro"] .bd-link,
-[data-theme="metro"] .rd-group,
-[data-theme="metro"] .rd-home,
-[data-theme="metro"] .ctx-menu .ctx-item { border-radius: 2px !important; }
-[data-theme="metro"] .dot, [data-theme="metro"] .status-dot { border-radius: 50% !important; }
-
-/* ---------------------------------------------------------------- 细节 */
-[data-theme="metro"] a { color: var(--metro-accent); text-decoration: none; }
-[data-theme="metro"] a:hover { text-decoration: underline; }
-[data-theme="metro"] hr, [data-theme="metro"] .sep { border-color: var(--border); }
-[data-theme="metro"] .stat-line, [data-theme="metro"] .dim { color: var(--text-dim); }
-[data-theme="metro"] .ob-mask, [data-theme="metro"] .wf-mask { background: rgba(0, 0, 0, .22); }
-
-/* ============================================================================
-   v2.1.46 精修层
-   ========================================================================== */
-
-/* ---- ★ 关键 Bug 修复：.open 加在 .btn-group 上，菜单类名是 .mm-menu ----
-   （旧规则只匹配 .mm-menu.open / .submenu，导致点击后菜单永不显示） */
-[data-theme="metro"] .btn-group.open .mm-menu,
-[data-theme="metro"] .btn-group.open .submenu { display: block; }
-
-/* ---- 菜单不被父容器裁切（.card 原本 overflow:hidden 会剪掉下拉） ---- */
-[data-theme="metro"] .card,
-[data-theme="metro"] section.page,
-[data-theme="metro"] #page-models { overflow: visible; }
-
-/* ---- 层级：工具栏 > 内容；避免菜单被卡片盖住 ---- */
-.mm-metro,
-[data-theme="metro"] .tool-row.mm-filter { position: relative; z-index: 40; overflow: visible; }
-[data-theme="metro"] .masonry,
-[data-theme="metro"] .table-wrap,
-[data-theme="metro"] .detail { position: relative; z-index: 1; }
+.mm-legacy { display: none !important; }
+.mm-metro{ position: relative; z-index: 40; overflow: visible; }
 .mm-menu { z-index: 120; }
 
-/* ---- 按钮三级权重（统一高度/字号/内边距） ---- */
-[data-theme="metro"] .mm-metro .btn {
-  height: 36px;
-  padding: 0 14px;
-  font-size: calc(13px * var(--type-scale, 1));
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  line-height: 1;
-}
-[data-theme="metro"] .btn.btn-l2 {                 /* 常用动作：白底 + 极细边框 */
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text);
-}
-[data-theme="metro"] .btn.btn-l2:hover { background: var(--surface2); border-color: var(--metro-accent); }
-[data-theme="metro"] .btn.btn-l2:active { background: var(--surface2); }
-[data-theme="metro"] .mm-metro .btn[data-menu] { padding-right: 10px; }
-
-/* ---- 菜单打开态反馈：按钮持续高亮 + 箭头翻转 ---- */
-[data-theme="metro"] .btn-group.open > .btn { background: var(--surface2); color: var(--text); }
-[data-theme="metro"] .btn-group.open > .btn.btn-l2 { border-color: var(--metro-accent); }
-[data-theme="metro"] .sp-btn.open > .btn:first-child { background: var(--surface2); }
-
-/* ---- 分段视图切换 ---- */
 .mm-seg { display: inline-flex; border: 1px solid var(--border); border-radius: 2px; overflow: hidden; }
-[data-theme="metro"] .mm-seg .btn.seg { height: 32px; border-radius: 0; border: none; background: var(--surface); color: var(--text-dim); padding: 0 12px; }
-[data-theme="metro"] .mm-seg .btn.seg + .btn.seg { border-left: 1px solid var(--metro-border-input); }
-[data-theme="metro"] .mm-seg .btn.seg:hover { background: var(--surface2); color: var(--text); }
-[data-theme="metro"] .mm-seg .btn.seg.on { background: var(--metro-accent); color: #fff; font-weight: 600; }
 .mm-classic-only { display: none !important; }
-
-/* ---- 留白压缩：让模型更早进入视野 ---- */
-[data-theme="metro"] .title-row { padding: 10px 16px 0 16px; }
-[data-theme="metro"] .page-title { font-size: calc(18px * var(--type-scale, 1)); line-height: calc(26px * var(--type-scale, 1)); }
 .mm-metro { padding: 8px 16px 0 16px; }
-[data-theme="metro"] .tool-row.mm-filter { padding: 6px 16px 8px 16px; }
-[data-theme="metro"] .masonry { padding: 10px 14px 52px 14px; }
 
-/* ---- 瀑布流：响应式列宽（1366≈4列 / 1920≈6列 / 2560≈8列） ---- */
-[data-theme="metro"] .masonry { column-width: 280px; column-gap: 12px; }
-
-/* ---- 卡片：底栏三行等高、信息克制 ---- */
-[data-theme="metro"] .ms-card { break-inside: avoid; }
-[data-theme="metro"] .ms-name { padding: 9px 10px 0 10px; line-height: calc(18px * var(--type-scale, 1)); }
-[data-theme="metro"] .ms-meta { padding: 2px 10px 0 10px; line-height: calc(16px * var(--type-scale, 1)); }
-[data-theme="metro"] .ms-size { padding: 1px 10px 10px 10px; line-height: calc(16px * var(--type-scale, 1)); }
-
-/* ---- ★ 空封面 / 载入中 / 加载失败 占位（高度稳定，不再出现白块） ---- */
-[data-theme="metro"] .ms-img-wrap {
-  position: relative;
-  min-height: 190px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f6f6f6;
-}
-[data-theme="metro"] .ms-img-wrap[data-ph="loading"]::after,
-[data-theme="metro"] .ms-img-wrap[data-ph="none"]::after,
-[data-theme="metro"] .ms-img-wrap[data-ph="fail"]::after {
-  content: "◇\A载入中…";
-  white-space: pre;
-  text-align: center;
-  font-size: calc(12px * var(--type-scale, 1));
-  line-height: 1.7;
-  color: #b3b3b3;
-}
-[data-theme="metro"] .ms-img-wrap[data-ph="none"]::after { content: "◇\A暂无封面"; }
-[data-theme="metro"] .ms-img-wrap[data-ph="fail"]::after { content: "◇\A封面加载失败"; color: #c99; }
-[data-theme="metro"] .ms-img { display: none; border-radius: 0; }
-[data-theme="metro"] .ms-img-wrap[data-ph="ok"] .ms-img { display: block; }
-
-/* ---- 右下角「关于」：Metro 化 + 固定角落留边距，不压住卡片 ---- */
-[data-theme="metro"] .bili-float {
-  right: 18px; bottom: 18px;
-  background: var(--surface);
-  border: 1px solid #e0e0e0;
-  border-radius: 2px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, .08);
-  color: var(--text-dim);
-  transform: none !important;
-}
-[data-theme="metro"] .bili-float:hover {
-  transform: none !important;
-  background: var(--surface2);
-  border-color: var(--metro-accent);
-  color: var(--metro-accent);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, .08);
-}
-[data-theme="metro"] .bili-icon { background: transparent; color: var(--metro-accent); }
-
-/* ---- 筛选控件统一高度（搜索框 / 底模 / 状态 / 排序） ---- */
-[data-theme="metro"] .mm-metro select.input,
-[data-theme="metro"] .tool-row.mm-filter .btn,
-[data-theme="metro"] .tool-row.mm-filter .input { height: 34px; min-height: 34px; }
-
-/* ============================================================================
-   v2.1.47：Dropdown portal（挂 body / fixed / 完全不透明 / 高层级）
-   ========================================================================== */
 .mm-menu.open {
   display: block;
   position: fixed;
-  background: var(--surface) !important;          /* 实体不透明：绝不透出下层文字 */
+  background: var(--surface) !important;          
   opacity: 1 !important;
   backdrop-filter: none !important;
   border: 1px solid var(--border);
@@ -637,297 +91,52 @@
   min-width: 210px;
 }
 .mm-menu { isolation: isolate; }
-/* 弹窗/遮罩使用层级令牌 */
-[data-theme="metro"] .rd-mask, [data-theme="metro"] #detailMask, [data-theme="metro"] .ob-mask
-  { z-index: var(--z-modal) !important; }
-[data-theme="metro"] .rename-dialog, [data-theme="metro"] .detail-panel, [data-theme="metro"] .ob-card
-  { z-index: calc(var(--z-modal) + 1) !important; }
-[data-theme="metro"] #toast { z-index: var(--z-toast) !important; }
-[data-theme="metro"] .folders-panel, [data-theme="metro"] .ctx-menu { z-index: var(--z-popover) !important; }
-
-/* ============================================================================
-   v2.1.47：模型详情 = 桌面工具 Inspector（左预览 / 右结构化信息 + 分组操作）
-   ========================================================================== */
-[data-theme="metro"] .detail-panel {
-  width: min(1280px, 94vw);
-  height: min(86vh, 900px);
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  background: var(--surface);
-  border: none;
-  border-radius: 0;
-  overflow: hidden;
-}
-[data-theme="metro"] .dt-head {
-  flex: 0 0 auto;
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 14px;
-  background: var(--surface2);
-  border-bottom: 1px solid var(--border);
-}
-[data-theme="metro"] .dt-head-t { font-size: calc(15px * var(--type-scale, 1)); font-weight: 600; }
-[data-theme="metro"] .dt-head-r { display: flex; align-items: center; gap: 10px; }
-[data-theme="metro"] .dt-author { color: var(--text-dim); font-size: calc(12px * var(--type-scale, 1)); }
-[data-theme="metro"] .dt-author:hover { color: var(--metro-accent); }
-[data-theme="metro"] .dt-close { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; }
-/* 图片列按"刚好容下竖版作品图"设置（约 24%）：图元素填满列宽、作品完整显示 → 两侧无空白带 */
-[data-theme="metro"] .dt-body { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(230px, 24%) minmax(0, 1fr); }
-[data-theme="metro"] .detail-left {
-  border-right: 1px solid var(--border);
-  padding: 14px; min-height: 0; overflow: auto;
-  display: flex; flex-direction: column; gap: 10px;
-  align-items: center;               /* 图片与缩略图条水平居中 */
-  width: auto;                       /* ★ 关键：清掉 classic 的 width:46% —— 它在网格轨道上又乘一次 46%，把图片列压到 186px */
-}
-/* ★ 关键：主图吃满左列剩余空间（flex:1 + min-height:0），作品完整显示（contain）、无灰底信箱带。
-   上一版 width:auto 会被 flex 列压缩得更小（错），必须让它作为弹性项吃剩余高度。 */
-[data-theme="metro"] .detail-main-img { width: 100%; flex: 1 1 auto; min-height: 0; max-height: 58vh; object-fit: contain; background: none; border-radius: 0; }
-[data-theme="metro"] .detail-main-img.dt-empty {
-  width: 100%; align-self: stretch;   /* 无封面占位仍占满列宽 */
-  height: 210px; display: flex; align-items: center; justify-content: center; gap: 8px;
-  color: var(--text-dim); font-size: calc(13px * var(--type-scale, 1));
-}
-[data-theme="metro"] .detail-thumbs { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; flex: 0 0 auto; }
-[data-theme="metro"] .detail-thumb { width: 44px; height: 44px; object-fit: cover; border: 1px solid var(--border); border-radius: 0; background: var(--m-gray); }
-[data-theme="metro"] .detail-thumb.on { border: 2px solid var(--metro-accent); }
-[data-theme="metro"] .detail-right {
-  padding: 14px 16px; min-height: 0; overflow: auto;
-  display: flex; flex-direction: column; gap: 12px;
-}
-[data-theme="metro"] .detail-title { font-size: calc(17px * var(--type-scale, 1)); font-weight: 600; line-height: calc(24px * var(--type-scale, 1)); }
-[data-theme="metro"] .detail-cname { color: var(--text-dim); font-size: calc(12px * var(--type-scale, 1)); margin-top: -8px; }
-[data-theme="metro"] .dt-mrs {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 3px 18px;
-  padding-bottom: 10px; border-bottom: 1px solid var(--border);
-}
-[data-theme="metro"] .dt-mr { display: flex; gap: 8px; font-size: calc(12.5px * var(--type-scale, 1)); line-height: calc(20px * var(--type-scale, 1)); min-width: 0; }
-[data-theme="metro"] .dt-mr .k { flex: 0 0 34px; color: var(--text-dim); }
-[data-theme="metro"] .dt-mr .v { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-[data-theme="metro"] .dt-mr .dt-mono { font-family: ui-monospace, Consolas, "Courier New", monospace; }
-[data-theme="metro"] .dt-warn { color: var(--metro-orange); }
-[data-theme="metro"] .dt-sec { display: flex; flex-direction: column; gap: 6px; }
-[data-theme="metro"] .dt-sec-h { display: flex; align-items: center; gap: 6px; font-size: calc(12.5px * var(--type-scale, 1)); font-weight: 600; }
-[data-theme="metro"] .dt-sec-h .ic { width: calc(14px * var(--type-scale, 1)); height: calc(14px * var(--type-scale, 1)); color: var(--text-dim); }
-[data-theme="metro"] .dt-sec-hint { font-weight: 400; color: var(--text-dim); font-size: calc(11.5px * var(--type-scale, 1)); margin-left: 4px; }
-[data-theme="metro"] .dt-dim { color: var(--text-dim); font-size: calc(12px * var(--type-scale, 1)); }
-[data-theme="metro"] .detail-tags { display: flex; flex-direction: column; gap: 4px; }
-[data-theme="metro"] .detail-tag {
-  display: flex; align-items: center; gap: 8px;
-  padding: 6px 9px; background: #f8f8f8; border: 1px solid transparent; border-radius: 0; font-size: calc(12.5px * var(--type-scale, 1));
-}
-[data-theme="metro"] .detail-tag:hover { background: var(--surface2); border-color: var(--metro-accent); }
-[data-theme="metro"] .detail-tag-idx { color: var(--text-dim); font-size: calc(11px * var(--type-scale, 1)); }
-[data-theme="metro"] .detail-tag-txt { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: ui-monospace, Consolas, monospace; }
-[data-theme="metro"] .dt-copy { color: var(--text-dim); }
-[data-theme="metro"] .detail-desc { font-size: calc(12.5px * var(--type-scale, 1)); line-height: 1.7; max-height: 190px; overflow: auto; }
-[data-theme="metro"] .detail-desc-orig { color: var(--text-dim); font-size: calc(11.5px * var(--type-scale, 1)); margin-top: 6px; }
-[data-theme="metro"] .dt-ag { margin-top: 8px; }
-[data-theme="metro"] .dt-ag-h { font-size: calc(11.5px * var(--type-scale, 1)); color: var(--text-dim); margin-bottom: 5px; }
-[data-theme="metro"] .dt-ag-b { display: flex; flex-wrap: wrap; gap: 6px; }
-[data-theme="metro"] .dt-ag-b .btn { height: 32px; padding: 0 12px; font-size: calc(12.5px * var(--type-scale, 1)); }
-
-/* ============================================================================
-   v2.1.47：更新页表格修复（日期不断行 / 操作不截断 / 行高统一 / 层级清晰）
-   ========================================================================== */
-[data-theme="metro"] .upd-table td, [data-theme="metro"] .upd-table th { height: 56px; vertical-align: middle; }
-[data-theme="metro"] .upd-table th.c-date, [data-theme="metro"] .upd-table td.c-date { white-space: nowrap; width: 108px; }
-[data-theme="metro"] .upd-table th.c-cur, [data-theme="metro"] .upd-table td.c-cur { white-space: nowrap; width: 132px; }
-[data-theme="metro"] .upd-table td.c-ver { min-width: 210px; }
-[data-theme="metro"] .upd-table th.c-st, [data-theme="metro"] .upd-table td.c-st { white-space: nowrap; width: 110px; }
-[data-theme="metro"] .upd-table th.c-act, [data-theme="metro"] .upd-table td.c-act { white-space: nowrap; width: 240px; }
-[data-theme="metro"] .upd-acts2 { display: flex; align-items: center; gap: 6px; }
-[data-theme="metro"] .upd-acts2 .upd-go { max-width: 154px; display: inline-block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-[data-theme="metro"] .upd-vsel { height: 30px; min-height: 30px; max-width: 100%; font-size: calc(12.5px * var(--type-scale, 1)); padding: 4px 26px 4px 8px; }
 .ver-badge { font-weight: 600; color: var(--text); }
-[data-theme="metro"] .upd-dim { color: var(--text-dim); font-size: calc(11px * var(--type-scale, 1)); }
-[data-theme="metro"] .upd-sub2 { color: var(--text-dim); }
-[data-theme="metro"] .upd-table th.c-ck, [data-theme="metro"] .upd-table td.c-ck { width: 44px; }
 
-/* 更新页顶部筛选行：权重平衡（搜索占主、按钮右对齐） */
-[data-theme="metro"] .upd-filters { gap: 8px; }
-[data-theme="metro"] .upd-filters .upd-search { min-width: 280px; }
-[data-theme="metro"] .upd-filters .btn { height: 34px; }
-[data-theme="metro"] .upd-filters .btn-primary { height: 34px; }
-
-/* 菜单箭头 span（图标化后仍可翻转） */
-[data-theme="metro"] .btn .car { font-size: calc(10px * var(--type-scale, 1)); opacity: .75; }
-[data-theme="metro"] .btn .car-only { font-size: calc(14px * var(--type-scale, 1)); letter-spacing: 1px; opacity: .85; }
-
-/* ============================================================================
-   v2.1.49：Split Button 合并为一个控件（一体边框 / 一体 hover / 内部细分隔）
-   ========================================================================== */
-[data-theme="metro"] .sp-btn {
-  display: inline-flex;
-  border: 1px solid var(--border);   /* 外层提供唯一边框 */
-  border-radius: 2px;
-}
-[data-theme="metro"] .sp-btn > .btn {
-  border: none !important;
-  border-radius: 0 !important;
-  background: transparent;
-}
-[data-theme="metro"] .sp-btn:hover { background: var(--surface2); }
-[data-theme="metro"] .sp-btn > .btn:hover { background: transparent; }
-[data-theme="metro"] .sp-btn.open { background: var(--surface2); }
-[data-theme="metro"] .sp-btn > .sp-caret {
-  border-left: 1px solid var(--border) !important;
-  padding: 0 8px;
-  color: var(--text-dim);
-}
-[data-theme="metro"] .sp-btn .ic { width: calc(14px * var(--type-scale, 1)); height: calc(14px * var(--type-scale, 1)); }
-
-/* 下拉箭头：打开时旋转 180°（不再改文字/HTML） */
-[data-theme="metro"] .btn .car .ic,
-[data-theme="metro"] .sp-caret .ic { transition: transform .12s ease; }
-[data-theme="metro"] .btn-group.open .car .ic,
-[data-theme="metro"] .btn-group.open .sp-caret .ic { transform: rotate(180deg); }
-[data-theme="metro"] .btn .car { display: inline-flex; margin-left: 4px; opacity: .8; }
-
-/* 状态徽章带图标 */
-[data-theme="metro"] .st-badge { display: inline-flex; align-items: center; gap: 5px; }
-[data-theme="metro"] .st-badge .ic { width: calc(13px * var(--type-scale, 1)); height: calc(13px * var(--type-scale, 1)); }
-
-/* ============================================================================
-   v2.1.49：更新页列宽改为比例（宽屏自然扩展）+ 表头 Sticky
-   ========================================================================== */
-[data-theme="metro"] .upd-table { table-layout: fixed; width: 100%; }
-[data-theme="metro"] .upd-table col.c-ck { width: 44px; }
-[data-theme="metro"] .upd-table col.c-info { width: 32%; }
-[data-theme="metro"] .upd-table col.c-cur { width: 10%; }
-[data-theme="metro"] .upd-table col.c-ver { width: 23%; }
-[data-theme="metro"] .upd-table col.c-date { width: 11%; }
-[data-theme="metro"] .upd-table col.c-st { width: 10%; }
-[data-theme="metro"] .upd-table col.c-act { width: 14%; }
-[data-theme="metro"] .upd-table thead th {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: var(--surface);
-  box-shadow: inset 0 -1px 0 var(--border);
-}
-[data-theme="metro"] .upd-table td.c-cur, [data-theme="metro"] .upd-table td.c-date,
-[data-theme="metro"] .upd-table td.c-st { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-[data-theme="metro"] .upd-table td.c-ver { white-space: nowrap; }
-[data-theme="metro"] .upd-table .upd-nm,
-[data-theme="metro"] .upd-table .upd-sub2 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-/* ============================================================================
-   v2.1.50：列表视图两行结构（固定行高 68px / 缩略图 52px / 省略号 + tooltip）
-   ========================================================================== */
 #mmTable tbody tr { height: 68px; }
 #mmTable tbody td { height: 68px; vertical-align: middle; padding: 6px 10px; }
 #mmTable .thumb { width: 52px; height: 52px; object-fit: cover; }
-[data-theme="metro"] .ml-wrap { display: flex; align-items: center; gap: 8px; min-width: 0; }
-[data-theme="metro"] .ml-wrap .mm-upd { color: var(--metro-accent); display: inline-flex; }
-[data-theme="metro"] .ml-txt { min-width: 0; flex: 1 1 auto; }
 .ml-1 { font-size: calc(13px * var(--type-scale, 1)); font-weight: 600; color: var(--text); line-height: calc(20px * var(--type-scale, 1)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ml-2 { font-size: calc(11.5px * var(--type-scale, 1)); color: var(--text-dim); line-height: calc(18px * var(--type-scale, 1)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* ===== 状态色令牌：全应用唯一定义（列表徽章 / 更新页徽章 / 状态选项卡 共用） ===== */
-[data-theme="metro"] {
-  --status-upd: #107C10;      --status-upd-bg: #E7F4E8;
-  --status-latest: #0078D4;   --status-latest-bg: #E5F0FA;
-  --status-base: #555555;     --status-base-bg: #F0F0F0;
-  --status-unknown: #B26A00;  --status-unknown-bg: #FBF0DC;
-}
 .st-mini { display: inline-flex; align-items: center; gap: 4px; font-size: calc(11.5px * var(--type-scale, 1)); padding: 1px 6px; border-radius: 2px; }
 .st-mini .ic { width: calc(12px * var(--type-scale, 1)); height: calc(12px * var(--type-scale, 1)); }
 .st-mini.upd { background: var(--status-upd-bg); color: var(--status-upd); }
 .st-mini.ok { background: var(--status-latest-bg); color: var(--status-latest); }
-#mmTable td.c-name { max-width: 0; }          /* 配合 ellipsis 生效 */
-#mmTable th.c-ver, [data-theme="metro"] #mmTable td.c-ver,
-#mmTable td.c-time { white-space: nowrap; }
-
-/* ============================================================================
-   v2.1.50：App Shell 边界（Header / Page Header / Toolbar / Filter / Content）
-   ========================================================================== */
-[data-theme="metro"] .nav { background: var(--surface); box-shadow: inset 0 -1px 0 var(--border); }
-[data-theme="metro"] #page-models { background: var(--bg); }
-[data-theme="metro"] .title-row { background: var(--surface); padding: 12px 16px 6px 16px; border-bottom: 1px solid var(--border); }
+#mmTable td.c-name { max-width: 0; }
+#mmTable th.c-ver,
+#mmTable td.c-time{ white-space: nowrap; }
 .mm-metro { background: var(--surface); }
-[data-theme="metro"] .tool-row.mm-filter { background: var(--surface); border-bottom: 1px solid #e6e6e6; }
-[data-theme="metro"] .masonry { background: var(--bg); }
-[data-theme="metro"] .table-wrap { background: var(--surface); border: 1px solid var(--border); margin: 10px 14px 52px 14px; }
 #mmTable thead th { background: var(--surface2); }
-[data-theme="metro"] .upd-title-row { background: var(--surface); }
-[data-theme="metro"] .upd-filters { background: var(--surface); }
-
-/* ============================================================================
-   v2.1.51：Typography 令牌落地（禁止全站同一字号/字重/颜色）
-   ========================================================================== */
-[data-theme="metro"] .page-title { font-size: var(--fs-hero); font-weight: var(--fw-bold); color: var(--c1); line-height: var(--lh-tight); }
-[data-theme="metro"] .detail-title, [data-theme="metro"] .dt-head-t { font-size: var(--fs-title); font-weight: var(--fw-bold); color: var(--c1); }
-/* 一级：模型名 / 核心版本 / 状态 */
-.ml-1, .upd-nm, .ms-name { font-size: var(--fs-md); font-weight: var(--fw-bold); color: var(--c1); }
+.ml-1,
+.upd-nm,
+.ms-name{ font-size: var(--fs-md); font-weight: var(--fw-bold); color: var(--c1); }
 .ver-badge { font-size: var(--fs-md); font-weight: var(--fw-bold); color: var(--c1); }
-/* 二级：作者 / 类型 / 底模 / 版本 */
-[data-theme="metro"] .upd-sub2, [data-theme="metro"] .ms-meta, [data-theme="metro"] .dt-mr .v { font-size: var(--fs-sm); color: var(--c2); }
-[data-theme="metro"] .dt-mr .k { font-size: var(--fs-sm); color: var(--c3); }
-/* 辅助：文件名 / 路径 / 时间 / 哈希 */
-.ml-2, .ml-3, .upd-dim, .ms-size,
-[data-theme="metro"] .c-time, [data-theme="metro"] .c-path, [data-theme="metro"] .dt-mono { font-size: var(--fs-xs); color: var(--c3); }
+.ml-2,
+.ml-3,
+.upd-dim,
+.ms-size{ font-size: var(--fs-xs); color: var(--c3); }
 .ml-3 { line-height: calc(16px * var(--type-scale, 1)); }
-/* 正文 */
-[data-theme="metro"] .detail-desc { font-size: var(--fs-sm); line-height: var(--lh-body); color: var(--c1); }
-[data-theme="metro"] .detail-desc-orig { font-size: var(--fs-xs); color: var(--c3); line-height: var(--lh-body); }
 
-/* ---- 列表：三行信息格 + 缩略图入格 ---- */
-/* 表头一律左对齐（除选择列），数据都是左对齐 —— 此前 th 默认居中导致"表头悬浮在数据中间" */
 #mmTable thead th { text-align: left; }
 #mmTable thead th.c-sel { text-align: center; }
-/* 行高统一 72px（信息三行 + 48px 缩略图；文件名再长也不撑高） */
+
 #mmTable tbody tr { height: 72px; }
 #mmTable tbody td { padding-top: 10px; padding-bottom: 10px; }
-/* 未检查：中性灰徽章（此前是"-"，看起来像坏掉的列） */
+
 .st-mini.none { background: var(--status-base-bg); color: var(--status-base); font-weight: var(--fw-body); }
 #mmTable .ml-thumb { width: 48px; height: 48px; object-fit: cover; border: 1px solid var(--border); flex: 0 0 48px; }
 #mmTable tbody tr { height: 72px; }
 #mmTable tbody td { height: 72px; }
 .ml-1 { line-height: calc(19px * var(--type-scale, 1)); }
 .ml-2 { line-height: calc(16px * var(--type-scale, 1)); }
-[data-theme="metro"] .ml-txt { display: flex; flex-direction: column; justify-content: center; gap: 1px; }
 
-/* ---- 状态胶囊（列表/更新页：轻量圆角；其余控件保持直角） ---- */
 .st-mini { border-radius: 10px; padding: 2px 9px; font-size: var(--fs-xs); font-weight: var(--fw-med); }
-[data-theme="metro"] .st-badge { border-radius: 10px; padding: 2px 10px; font-size: var(--fs-xs); font-weight: var(--fw-med); }
 .ver-badge { border-radius: 10px; background: var(--surface2); padding: 2px 10px; }
 
-/* ============================================================================
-   v2.1.51：更新页「版本选择」门户菜单（直角控件 + 全部版本 + ★推荐 + 当前版本）
-   ========================================================================== */
-[data-theme="metro"] .vsel-wrap { display: inline-flex; max-width: 100%; }
-[data-theme="metro"] .vsel-btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  max-width: 100%; height: 32px; padding: 0 8px 0 10px;
-  border: 1px solid var(--border); background: var(--surface);
-  font-size: var(--fs-sm); font-weight: var(--fw-med);
-}
-[data-theme="metro"] .vsel-btn:hover { border-color: var(--metro-accent); background: var(--surface2); }
-[data-theme="metro"] .vsel-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-[data-theme="metro"] .vsel-btn .ic { width: calc(13px * var(--type-scale, 1)); height: calc(13px * var(--type-scale, 1)); color: var(--c3); }
-[data-theme="metro"] .btn-group.open .vsel-btn { border-color: var(--metro-accent); background: var(--surface2); }
-
-[data-theme="metro"] .vmenu { min-width: 260px; max-height: 340px; overflow: auto; }
-[data-theme="metro"] .vmenu .vitem {
-  display: flex; align-items: center; justify-content: space-between; gap: 14px;
-  padding: 8px 14px; font-size: var(--fs-sm); color: var(--c1);
-}
-[data-theme="metro"] .vmenu .vitem:hover { background: var(--surface2); }
-[data-theme="metro"] .vmenu .vitem.on { background: var(--surface2); }
-[data-theme="metro"] .vmenu .v-name { display: inline-flex; align-items: center; gap: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-[data-theme="metro"] .vmenu .v-date { font-size: var(--fs-xs); color: var(--c3); flex: 0 0 auto; }
-[data-theme="metro"] .vmenu .v-star { color: var(--metro-accent); font-weight: var(--fw-bold); }
-[data-theme="metro"] .vmenu .v-cur { font-size: var(--fs-xs); color: var(--c3); border: 1px solid var(--border); border-radius: 9px; padding: 0 6px; }
-[data-theme="metro"] .vmenu .vopen { color: var(--metro-accent); font-weight: var(--fw-med); }
-
-/* ============================================================================
-   v2.1.52：表格列定义（colgroup，表头/数据行唯一来源）+ 内容不撑列
-   ========================================================================== */
 #mmTable { table-layout: fixed; width: 100%; }
-/* 列宽：只有「模型信息」是 auto 弹性列 —— fixed 布局下 auto 列会吃掉全部剩余宽度，
-   所以无论隐藏多少列、窗口多宽，表格永远铺满，右侧不可能留空。（2026-09 两次踩坑：全 % 会留空、只隐藏单元格会留空槽） */
+
 #mmTable col.c-sel { width: 46px; }
-#mmTable col.c-name { width: auto; }            /* ★ 唯一弹性列，吸收全部剩余宽度 */
+#mmTable col.c-name { width: auto; }            
 #mmTable col.c-cname { width: 10%; }
 #mmTable col.c-type { width: 4.5%; }
 #mmTable col.c-base { width: 5.5%; }
@@ -937,232 +146,47 @@
 #mmTable col.c-size { width: 6.5%; }
 #mmTable col.c-mtime { width: 10%; }
 #mmTable col.c-path { width: 12%; }
-#mmTable thead th, #mmTable tbody td {
+#mmTable thead th,
+#mmTable tbody td{
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
-/* 工具栏分层：第一行主操作 / 第二行工具菜单 / 第三行筛选，行间细分隔线 */
 .mm-metro .mm-row1 { gap: 6px; padding-bottom: 6px; }
 .mm-metro .mm-row2 { gap: 6px; padding: 6px 0; border-top: 1px solid var(--border); }
 .mm-metro .mm-row3 { gap: 8px; padding: 8px 0 6px 0; border-top: 1px solid var(--border); }
-[data-theme="metro"] .mm-metro .btn { white-space: nowrap; }         /* 不许断词（"扫描模/型"） */
-
-/* ============================================================================
-   v2.1.52：更新页最右侧 [C站] / [···] 重做（更大更好点）+ 提示框直角化
-   ========================================================================== */
-[data-theme="metro"] .upd-acts2 { gap: 8px; }
-[data-theme="metro"] .upd-site {
-  display: inline-flex; align-items: center; gap: 5px;
-  height: 30px; padding: 0 10px;
-  border: 1px solid var(--border); border-radius: 2px;
-  background: var(--surface); color: var(--metro-accent); font-size: var(--fs-sm);
-}
-[data-theme="metro"] .upd-site:hover { background: var(--surface2); border-color: var(--metro-accent); text-decoration: none; }
-[data-theme="metro"] .upd-site .ic { width: calc(13px * var(--type-scale, 1)); height: calc(13px * var(--type-scale, 1)); }
-[data-theme="metro"] .upd-more {
-  width: 30px; height: 30px; border: 1px solid var(--border); border-radius: 2px;
-  background: var(--surface); color: var(--c2); display: inline-flex; align-items: center; justify-content: center;
-}
-[data-theme="metro"] .upd-more:hover { background: var(--surface2); border-color: var(--metro-accent); color: var(--metro-accent); }
-[data-theme="metro"] .upd-go { height: 30px; padding: 0 12px; font-size: var(--fs-sm); }
-
-/* 提示框：Win10 直角扁平（去掉圆角与缩放） */
-[data-theme="metro"] .tip-float {
-  border-radius: 0 !important;
-  background: #2b2b2b !important;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, .25) !important;
-  transform: none !important;
-  font-size: var(--fs-xs);
-}
-[data-theme="metro"] .tip-float.show { transform: none !important; }
-[data-theme="metro"] [data-tip]:hover::after { border-radius: 0 !important; }
-
-
-/* ===== 更新页状态徽章：使用统一令牌（green=有更新 blue=已最新 mut=仅底模 gray=未知/未检查） ===== */
-[data-theme="metro"] .st-badge.green { background: var(--status-upd-bg); color: var(--status-upd); }
-[data-theme="metro"] .st-badge.blue { background: var(--status-latest-bg); color: var(--status-latest); }
-[data-theme="metro"] .st-badge.mut { background: var(--status-base-bg); color: var(--status-base); }
-[data-theme="metro"] .st-badge.gray { background: var(--status-unknown-bg); color: var(--status-unknown); }
-
-/* ===== 更新页：状态选项卡（Status Tabs） ===== */
-[data-theme="metro"] .upd-tabs { display: inline-flex; align-items: stretch; height: 34px; border: 1px solid var(--metro-line); background: var(--surface); }
-[data-theme="metro"] .upd-tabs .upd-tab {
-  display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; background: var(--surface); border: 0;
-  border-right: 1px solid var(--metro-line); font-size: var(--fs-sm); color: var(--c2);
-  cursor: pointer; white-space: nowrap; box-shadow: inset 0 -2px 0 0 transparent;
-}
-[data-theme="metro"] .upd-tabs .upd-tab:last-child { border-right: 0; }
-[data-theme="metro"] .upd-tabs .upd-tab:hover { background: var(--surface2); }
-[data-theme="metro"] .upd-tabs .upd-tab .n { font-size: var(--fs-xs); color: var(--c3); }
-[data-theme="metro"] .upd-tabs .upd-tab .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--c3); }
-[data-theme="metro"] .upd-tabs .upd-tab .dot.upd { background: var(--status-upd); }
-[data-theme="metro"] .upd-tabs .upd-tab .dot.latest { background: var(--status-latest); }
-[data-theme="metro"] .upd-tabs .upd-tab .dot.other { background: var(--status-base); }
-[data-theme="metro"] .upd-tabs .upd-tab .dot.unknown, [data-theme="metro"] .upd-tabs .upd-tab .dot.todo { background: var(--status-unknown); }
-[data-theme="metro"] .upd-tabs .upd-tab.on { color: var(--c1); font-weight: var(--fw-med); }
-[data-theme="metro"] .upd-tabs .upd-tab.on[data-st=""] { box-shadow: inset 0 -2px 0 0 var(--metro-accent); }
-[data-theme="metro"] .upd-tabs .upd-tab.on[data-st="upd"] { box-shadow: inset 0 -2px 0 0 var(--status-upd); }
-[data-theme="metro"] .upd-tabs .upd-tab.on[data-st="latest"] { box-shadow: inset 0 -2px 0 0 var(--status-latest); }
-[data-theme="metro"] .upd-tabs .upd-tab.on[data-st="other"] { box-shadow: inset 0 -2px 0 0 var(--status-base); }
-[data-theme="metro"] .upd-tabs .upd-tab.on[data-st="unknown"], [data-theme="metro"] .upd-tabs .upd-tab.on[data-st="todo"] { box-shadow: inset 0 -2px 0 0 var(--status-unknown); }
-
-/* ===== 详情「简介」：长 URL / 中英混排都能断行；可复制按钮 ===== */
-[data-theme="metro"] .detail-desc { white-space: pre-wrap; overflow-wrap: anywhere; word-break: normal; line-height: 1.7; }
-[data-theme="metro"] .detail-desc-orig { overflow-wrap: anywhere; word-break: normal; }
-[data-theme="metro"] .dt-sec-h .dt-copy { margin-left: auto; height: 26px; padding: 0 8px; font-size: var(--fs-xs); }
-
-/* 页面标题按全局排版规范：20px / 600 */
-[data-theme="metro"] .page-title { font-size: calc(20px * var(--type-scale, 1)); font-weight: 600; }
-
-
-/* ===== 简介富文本（经白名单 sanitize 后渲染）===== */
-[data-theme="metro"] .detail-desc.rich { white-space: normal; }
-[data-theme="metro"] .detail-desc.rich p { margin: 0 0 8px; }
-[data-theme="metro"] .detail-desc.rich p:last-child { margin-bottom: 0; }
-[data-theme="metro"] .detail-desc.rich strong, [data-theme="metro"] .detail-desc.rich b { font-weight: 600; color: var(--c1); }
-[data-theme="metro"] .detail-desc.rich em, [data-theme="metro"] .detail-desc.rich i { font-style: italic; }
-[data-theme="metro"] .detail-desc.rich u { text-decoration: underline; }
-[data-theme="metro"] .detail-desc.rich s, [data-theme="metro"] .detail-desc.rich del { text-decoration: line-through; color: var(--c3); }
-[data-theme="metro"] .detail-desc.rich ul, [data-theme="metro"] .detail-desc.rich ol { margin: 6px 0 8px; padding-left: 20px; }
-[data-theme="metro"] .detail-desc.rich li { margin: 2px 0; }
-[data-theme="metro"] .detail-desc.rich h1, [data-theme="metro"] .detail-desc.rich h2,
-[data-theme="metro"] .detail-desc.rich h3, [data-theme="metro"] .detail-desc.rich h4 { font-size: calc(13.5px * var(--type-scale, 1)); font-weight: 600; color: var(--c1); margin: 10px 0 6px; }
-[data-theme="metro"] .detail-desc.rich blockquote { margin: 8px 0; padding: 6px 10px; border-left: 3px solid var(--metro-accent); background: var(--surface2); color: var(--c2); }
-[data-theme="metro"] .detail-desc.rich code { background: #f2f2f2; border: 1px solid var(--border); padding: 0 4px; font-family: ui-monospace, Consolas, "Courier New", monospace; font-size: calc(12px * var(--type-scale, 1)); }
-[data-theme="metro"] .detail-desc.rich pre { background: #f6f6f6; border: 1px solid var(--border); padding: 8px 10px; overflow-x: auto; font-family: ui-monospace, Consolas, "Courier New", monospace; font-size: calc(12px * var(--type-scale, 1)); line-height: 1.5; }
-[data-theme="metro"] .detail-desc.rich pre code { background: none; border: none; padding: 0; }
-[data-theme="metro"] .detail-desc.rich a { color: var(--metro-accent); text-decoration: none; overflow-wrap: anywhere; }
-[data-theme="metro"] .detail-desc.rich a:hover { text-decoration: underline; }
-[data-theme="metro"] .detail-desc.rich img { max-width: 100%; height: auto; display: block; margin: 6px 0; }
-[data-theme="metro"] .detail-desc.rich hr { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
-[data-theme="metro"] .detail-desc-zh { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--border); font-size: var(--fs-sm); color: var(--c2); line-height: var(--lh-body); white-space: pre-wrap; overflow-wrap: anywhere; }
-[data-theme="metro"] .detail-desc-zh .dz-label { display: flex; align-items: center; gap: 4px; font-size: var(--fs-xs); color: var(--c3); margin-bottom: 4px; }
-[data-theme="metro"] .detail-desc-zh .dz-label .ic { width: calc(12px * var(--type-scale, 1)); height: calc(12px * var(--type-scale, 1)); }
-
-/* ===== 弹窗标题：去掉整块蓝底，改白色标题行 + 细线（全弹窗统一）===== */
-[data-theme="metro"] .rd-title { background: none; color: var(--c1); padding: 0 0 10px 0; margin-bottom: 10px; border-bottom: 1px solid var(--border); font-size: var(--fs-title); font-weight: var(--fw-bold); display: flex; align-items: center; }
-[data-theme="metro"] .rd-title .dlg-x { margin-left: auto; }
-
-/* ===== 从 C 站同步：Metro 对话框内容 ===== */
-[data-theme="metro"] .m-dlg .sb-status { display: flex; align-items: center; gap: 8px; font-size: calc(13.5px * var(--type-scale, 1)); font-weight: 600; margin: 2px 0 10px; }
-[data-theme="metro"] .m-dlg .sb-status .ic { width: calc(16px * var(--type-scale, 1)); height: calc(16px * var(--type-scale, 1)); }
-[data-theme="metro"] .m-dlg .sb-status.ok { color: var(--status-upd); }
-[data-theme="metro"] .m-dlg .sb-status.fail { color: #C42B1C; }
-[data-theme="metro"] .m-dlg .sb-status.warn { color: var(--status-unknown); }
-[data-theme="metro"] .m-dlg .sb-status.run { color: var(--metro-accent); }
-[data-theme="metro"] .m-dlg .sb-status.run .ic { animation: sb-spin 0.9s linear infinite; }
 @keyframes sb-spin { to { transform: rotate(360deg); } }
-[data-theme="metro"] .m-dlg .sb-kv { display: grid; grid-template-columns: 56px 1fr; gap: 3px 10px; font-size: var(--fs-sm); margin-bottom: 8px; }
-[data-theme="metro"] .m-dlg .sb-kv .k { color: var(--c3); }
-[data-theme="metro"] .m-dlg .sb-kv .v { color: var(--c1); word-break: break-all; line-height: 1.5; }
-[data-theme="metro"] .m-dlg .sb-fields { border-top: 1px solid var(--border); padding-top: 8px; margin-top: 4px; }
-[data-theme="metro"] .m-dlg .sb-fields-h { font-size: var(--fs-sm); color: var(--c2); margin-bottom: 4px; }
-[data-theme="metro"] .m-dlg .sb-fields ul { margin: 0; padding-left: 18px; }
-[data-theme="metro"] .m-dlg .sb-fields li { font-size: var(--fs-sm); line-height: 1.8; color: var(--c1); }
-[data-theme="metro"] .m-dlg .sb-dim { font-size: var(--fs-sm); color: var(--c3); line-height: 1.6; }
-[data-theme="metro"] .m-dlg .sb-err { font-size: var(--fs-sm); color: #C42B1C; line-height: 1.6; word-break: break-all; }
+.metro-opt{ display: none !important; }
 
-/* ===== 详情：键值对标签略放宽、简介可视高度 ===== */
-[data-theme="metro"] .dt-mr .k { flex: 0 0 40px; }
-[data-theme="metro"] .detail-desc { max-height: 260px; overflow: auto; }
-
-
-/* ===== 设置页底部操作条：去亚克力圆角，改 Metro 直角面板 ===== */
-[data-theme="metro"] .sticky-actions {
-  border-radius: 0;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  box-shadow: none;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  padding: 8px 12px;
-}
-
-/* ===== Metro 暗色（data-scheme=dark）===== */
-[data-theme="metro"][data-scheme="dark"] {
-  --bg: #1b1b1b;
-  --surface: #232323;
-  --surface2: #2a2a2a;
-  --border: #3a3a3a;
-  --text: #e8e8e8;
-  --text-dim: #a0a0a0;
-  --primary-fg: #ffffff;
-  --m-gray: #2a2a2a;
-  --metro-bg: #1b1b1b;
-  --metro-surface: #232323;
-  --metro-border-hair: #333333;
-  --metro-border-input: #454545;
-  --metro-text: #e8e8e8;
-  --metro-text-2: #a8a8a8;
-  --metro-text-3: #808080;
-  --metro-hover: color-mix(in srgb, var(--metro-accent) 22%, transparent);
-  --metro-sel-bg: color-mix(in srgb, var(--metro-accent) 30%, #232323);
-  --c1: #e8e8e8;
-  --c2: #a8a8a8;
-  --c3: #7d7d7d;
-  --status-upd-bg: #16351c;
-  --status-latest-bg: #12283c;
-  --status-base-bg: #333333;
-  --status-unknown-bg: #3a2e14;
-}
-
-
-/* Metro 专属设置项：只在 Metro 主题下显示（亮暗 / 主题色） */
-html:not([data-theme="metro"]) .metro-opt { display: none !important; }
-
-
-/* 全局 SVG 图标尺寸兜底（工具栏图标在经典主题下也要可见；Metro 规则可覆盖） */
 svg.ic { width: calc(16px * var(--type-scale, 1)); height: calc(16px * var(--type-scale, 1)); flex: 0 0 auto; vertical-align: -3px; }
-.mm-metro .mm-row1 .btn .ic, .mm-metro .mm-row2 .btn .ic { width: calc(15px * var(--type-scale, 1)); height: calc(15px * var(--type-scale, 1)); }
+.mm-metro .mm-row1 .btn .ic,
+.mm-metro .mm-row2 .btn .ic{ width: calc(15px * var(--type-scale, 1)); height: calc(15px * var(--type-scale, 1)); }
 
-
-/* 更新页「C 站」链接：紧凑小按钮（原先是大号裸链接） */
 .upd-acts2 { display: flex; align-items: center; gap: 6px; justify-content: flex-end; }
 .upd-acts2 .upd-site { display: inline-flex; padding: 0; border: 0; text-decoration: none; line-height: 0; }
 .upd-acts2 .upd-site img.upd-cov {
   width: 34px; height: 34px; object-fit: cover; display: block;
   border-radius: 3px; border: 1px solid var(--border); background: var(--surface2);
 }
-.upd-acts2 .upd-site:hover img.upd-cov { border-color: var(--metro-accent); }
+.upd-acts2 .upd-site:hover img.upd-cov { border-color: var(--primary); }
+.emj ~ .ic{ display: none !important; }
 
-
-/* 经典主题显示 emoji、Metro 主题隐藏：按钮里的 emoji 一律包在 .emj 中 */
-[data-theme="metro"] .emj { display: none !important; }
-
-/* 经典主题：按钮带 emoji 时隐藏 SVG 图标（emoji 替代图标；Metro 相反） */
-html:not([data-theme="metro"]) .emj ~ .ic { display: none !important; }
-
-
-/* Metro 亮暗的滚动条色 */
-[data-scheme="dark"] { color-scheme: dark; }
-[data-scheme="light"] { color-scheme: light; }
-/* 显示列面板：关闭"缩略图"时隐藏单元格缩略图（伪列，无真实 <col>） */
 #mmTable.no-thumb .ml-thumb { display: none; }
-
-
-/* ============ 经典主题补全（非 Metro 专用；Metro 有自己的规则） ============ */
-
-/* 分裂按钮（改名/整理/检查/信息处理 ▾）：经典主题下合并为一体控件（此前是分开的两个按钮） */
-html:not([data-theme="metro"]) .sp-btn { display: inline-flex; align-items: stretch; }
-html:not([data-theme="metro"]) .sp-btn > .btn:first-child { border-top-right-radius: 0; border-bottom-right-radius: 0; }
-html:not([data-theme="metro"]) .sp-btn > .sp-caret {
+.sp-btn{ display: inline-flex; align-items: stretch; }
+.sp-btn > .btn:first-child{ border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.sp-btn > .sp-caret{
   border-top-left-radius: 0; border-bottom-left-radius: 0;
   margin-left: -1px; padding: 0 8px; min-width: 0;
   display: inline-flex; align-items: center; justify-content: center;
   color: var(--text-dim);
 }
-html:not([data-theme="metro"]) .sp-btn:hover > .sp-caret { color: var(--text); }
-html:not([data-theme="metro"]) .sp-btn.open > .btn:first-child { background: var(--surface2); }
-
-/* 分段视图控件（列表|瀑布流）：经典主题下只保留外框一条，内部按钮去边框去圆角（此前是"框里套胶囊"的双重框） */
-html:not([data-theme="metro"]) .mm-seg { border-radius: var(--radius, 8px); }
-html:not([data-theme="metro"]) .mm-seg .btn.seg { border: 0; border-radius: 0; background: transparent; box-shadow: none; }
-html:not([data-theme="metro"]) .mm-seg .btn.seg + .btn.seg { border-left: 1px solid var(--border); }
-html:not([data-theme="metro"]) .mm-seg .btn.seg:hover { background: var(--surface2); }
-html:not([data-theme="metro"]) .mm-seg .btn.seg.on { background: var(--primary); color: var(--primary-fg); font-weight: 600; }
-
-/* 模型详情：经典主题下的整体布局（此前 .dt-body 只有 Metro 的 grid 规则，经典主题下整页错乱） */
-html:not([data-theme="metro"]) .detail-panel { flex-direction: column; }
+.sp-btn:hover > .sp-caret{ color: var(--text); }
+.sp-btn.open > .btn:first-child{ background: var(--surface2); }
+.mm-seg{ border-radius: var(--radius, 8px); }
+.mm-seg .btn.seg{ border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.mm-seg .btn.seg + .btn.seg{ border-left: 1px solid var(--border); }
+.mm-seg .btn.seg:hover{ background: var(--surface2); }
+.mm-seg .btn.seg.on{ background: var(--primary); color: var(--primary-fg); font-weight: 600; }
+.detail-panel{ flex-direction: column; }
 .dt-head {
   display: flex; align-items: center; justify-content: space-between;
   padding: 12px 18px; border-bottom: 1px solid var(--border); flex: 0 0 auto;
@@ -1170,22 +194,14 @@ html:not([data-theme="metro"]) .detail-panel { flex-direction: column; }
 .dt-head-t { font-size: calc(17px * var(--type-scale, 1)); font-weight: 700; color: var(--text); }
 .dt-head-r { display: flex; align-items: center; gap: 10px; }
 .dt-body { flex: 1 1 auto; min-height: 0; display: flex; }
-html:not([data-theme="metro"]) .dt-body .detail-left { overflow: auto; }
-
-/* 设置页：Metro 下隐藏经典专属项（斑马纹等） */
-[data-theme="metro"] .classic-opt { display: none !important; }
-
-
-/* 经典详情页排版细节（信息行/标签/分区；Metro 有自己的规则不受影响） */
-html:not([data-theme="metro"]) .dt-mr { display: flex; gap: 10px; padding: 2px 0; }
-html:not([data-theme="metro"]) .dt-mr .k { color: var(--text-dim); min-width: 38px; }
-html:not([data-theme="metro"]) .dt-mrs { margin: 8px 0; }
-html:not([data-theme="metro"]) .detail-tags { display: flex; flex-wrap: wrap; gap: 6px; }
-html:not([data-theme="metro"]) .detail-tag { display: inline-block; padding: 2px 10px; border-radius: var(--radius, 8px);
+.dt-body .detail-left{ overflow: auto; }
+.dt-mr{ display: flex; gap: 10px; padding: 2px 0; }
+.dt-mr .k{ color: var(--text-dim); min-width: 38px; }
+.dt-mrs{ margin: 8px 0; }
+.detail-tags{ display: flex; flex-wrap: wrap; gap: 6px; }
+.detail-tag{ display: inline-block; padding: 2px 10px; border-radius: var(--radius, 8px);
   background: var(--surface2); font-size: calc(12px * var(--type-scale, 1)); color: var(--text-dim); }
-html:not([data-theme="metro"]) .dt-sec { margin-top: 12px; }
-html:not([data-theme="metro"]) .dt-sec-h { font-size: calc(13px * var(--type-scale, 1)); font-weight: 600; color: var(--text-dim); margin-bottom: 6px; }
-
-
-/* 列表与更新页：等宽数字（大小/时间纵向对齐） */
-#mmTable, .upd-table { font-variant-numeric: tabular-nums; }
+.dt-sec{ margin-top: 12px; }
+.dt-sec-h{ font-size: calc(13px * var(--type-scale, 1)); font-weight: 600; color: var(--text-dim); margin-bottom: 6px; }
+#mmTable,
+.upd-table{ font-variant-numeric: tabular-nums; }

@@ -13,7 +13,13 @@ const SETTINGS_CATEGORIES = [
 ];
 const ADVANCED_SETTING_KEYS = new Set(["ui_mode", "window_wait_seconds", "browser_fallback_enabled", "close_action", "webview_disable_gpu", "tray_icon", "exit_when_page_closed", "default_page", "confirm_buttons_flip", "rename_menu_default"]);
 const WORKBENCH_SETTING_HELP = {
-  theme: "绯夜为浓郁玫红，夜樱为柔和低饱和粉。强调色、圆角和字体可独立调整。",
+  download_hud_enabled: "独立桌面小窗，不抢焦点。关闭小窗不会停止下载；重新显示请关闭再开启此项。当前需要 Windows 软件窗口模式。",
+  download_hud_dock: "拖到屏幕左右边缘后，移出鼠标收成小进度环，移入恢复；展开任务时不收起。",
+  download_hud_scale: "75–150%，独立于软件界面缩放。",
+  download_hud_motion: "线条展开、进度弧平滑推进、悬停图标淡入；隐藏时停止动画，系统减少动画设置优先。",
+  download_hud_theme: "可跟随软件亮暗模式，或固定使用终末地亮色、暗色；使用细长平面胶囊布局。",
+  endfield_parallax: "终末地侧栏与背景的等高线缓慢流动，背景随鼠标呈现分层透视。文字和控件不动；关闭或系统减少动画时静止，隐藏窗口暂停绘制。",
+  theme: "只提供终末地亮色和暗色，强调色统一使用黄色。等高线替代顶部氛围背景，自动关闭 Mica；字体、字号、信息密度和圆角可独立调整。旧主题配置会按原亮暗迁移。",
   api_key: "用于查询和下载 C 站模型。在 Civitai 账号页面生成后粘贴到这里。",
   download_name_mode: "下载入队时自动命名，不需要下载后再改。中文需要百度翻译配置，失败保留 C站名字；多个文件保留格式/精度后缀避免重名。原文件名中本来已有的版本文字不会删除。",
   filename_include_version: "默认关闭。开启后使用“模型名字-原始版本号.后缀”，版本号不翻译；C站名/中文名改名和手动编辑也遵循此设置。缺少版本信息时不编造版本号。",
@@ -24,7 +30,7 @@ const WORKBENCH_SETTING_HELP = {
   ui_zoom: "统一调整整个界面大小；Ctrl + 滚轮始终用于全局缩放。只放大文字请使用“全局字号”。",
   ui_text_size: "五档文字尺寸，同步调整图标，不改变界面缩放比例和图片宽度；标题、正文保留原有大小层次。立即生效并保存。",
   integrated_titlebar: "默认隐藏整条标题栏，仅在软件右上角保留最小化、最大化/还原、关闭按钮。可拖动侧栏品牌区或页面标题区，支持边缘缩放。关闭恢复系统框，需重启。",
-  window_appearance: "Mica / Mica Alt 扩展到整个窗口背景，面板不再盖住材质；Mica 取桌面壁纸色调，不是实时透视毛玻璃，窗口失焦/系统关闭透明时回退纯色；需要 Windows 11 22H2 或更新版本，不支持时回退不透明背景。选择外部控制可配合 Mica For Everyone，按进程名 CivitaiFreeToolWeb.exe 添加规则；需要另行安装并配置工具，不等于内置 Mica。外部模式使用系统窗口框，改动需重启。",
+  window_appearance: "终末地亮/暗主题使用自身背景，自动关闭 Mica，不交由外部材质控制。旧材质值仅为配置兼容保留，不再提供无效入口。",
   proxy_enabled: "只有需要通过代理连接外网时才开启。代理软件需要保持运行。",
   ssl_verify: "建议开启。仅排查代理证书问题时暂时关闭，不要长期关闭。",
   target_env: "选择模型最终使用的环境，让自动整理采用对应目录结构。",
@@ -32,7 +38,7 @@ const WORKBENCH_SETTING_HELP = {
   window_wait_seconds: "30–600 秒，默认 30 秒。正在初始化时会继续宽限，避免 5–8 秒就打断正常启动。改动重启后生效。",
   ui_mode: "默认先打开软件窗口，只有失败才按兜底开关用浏览器。选择浏览器启动后，以后直接打开浏览器，不创建软件窗口。选择即保存，重启生效。",
   browser_fallback_enabled: "默认开启；仍先启动软件窗口，确认初始化失败后才用浏览器兜底。想一直使用浏览器，请选择“界面模式”；也可点下方按钮主动打开。",
-  ui_font: "从本机已安装字体中选择；立即预览并保存。不下载网络字体。不包含中文的字体会回退到系统中文字体。",
+  ui_font: "左侧为 Windows 已安装字体，双击加入右侧。按从上到下的顺序使用字形，缺字才回退；右侧双击移除，长按拖动排序，也可用上移、下移按钮。确定后应用，取消不修改，不更改系统字体。",
   model_folder_include_subfolders: "默认开启：A 包含子目录，但子目录显式选择优先。隐藏 A 仍可勾选 B；显示 A、隐藏 B 会排除 B（更深子目录可另选）。关闭后仅显示所勾选目录直属的模型；全部显示仍可勾选所有目录。保存后刷新模型列表，不移动文件。",
   model_list_size: "三档独立调节列表行高与信息：当前完整样式是最大，紧凑去掉封面与作者，极简再去本地文件名；极简仅留 C站模型名称和勾选格。未识别模型暂用文件名，不改变全局字号或瀑布流。",
   masonry_info_mode: "常驻保留当前样式；滑出/淡入模式只显示封面，鼠标悬停或键盘聚焦时展示介绍。保持卡片位置和勾选操作，不改变列表视图。立即保存。",
@@ -40,10 +46,11 @@ const WORKBENCH_SETTING_HELP = {
   name_scroll_speed: "10–240 像素/秒；越大越快。默认 70，修改立即生效并保存。只滚动被截断的单行名称。",
   name_scroll_start_pause: "0–5000 毫秒；每轮开头及重新悬停时的停顿，默认 350。可设 0，立即滚动。",
   name_scroll_end_pause: "0–5000 毫秒；滚到末尾后的停顿，默认 250，随后回到开头循环。",
-  masonry_card_width: "140–420 px；模型页滑杆或 Alt + 滚轮都可调整，普通滚轮仍用于浏览模型。",
+  masonry_card_width: "140–420 px；瀑布流采用原宽度，方格按比例缩小。模型页滑杆或 Alt + 滚轮都可调整，普通滚轮仍用于浏览模型。",
   folder_picker_show_paths: "仅控制分类选择窗口。默认只显示文件夹名字，也可在该窗口顶部临时切换并记住。",
   cache_detail_images: "把详情中已加载的在线缩略图缓存在本机，重复打开优先读取缓存。不下载原图；关闭后不写新缓存。",
-  effects_fps_limit: "仅控制拖尾/点击和氛围动画，不改变视频或 WebView 刷新率。0 跟随屏幕；可输入 15–360，上限不保证实际帧率。",
+  show_fps: "在左下角显示 UI 动画帧率与地图实际绘制帧率。测量的是当前页面回调/绘制频率，不是 GPU 使用率；关闭后停止采样。",
+  effects_fps_limit: "控制地图与页面脚本动画的绘制上限，不改变视频或 WebView 刷新率。0 跟随屏幕；可输入 15–360，实际帧率取决于屏幕与性能。",
   cache_original_images: "只缓存你打开过的原图和来源已提供的生成数据，下次优先本地读取；不会批量下载未查看的图片。关闭后不读写缓存。",
   gallery_cache_mb: "64–8192 MB，超过上限按最旧访问自动淘汰。缓存随软件数据目录迁移；清理不删除模型或你保存的图片。",
   pointer_effects: "仅在本软件内绘制波纹与几何拖尾，不安装全局鼠标钩子。静止、切后台或关闭时停止绘制。",
@@ -61,11 +68,16 @@ function settingCategory(key, oldGroup) {
   if (ADVANCED_SETTING_KEYS.has(key)) return "advanced";
   return ({ "基本": "general", "下载": "download", "界面": "appearance", "网络": "network", "翻译": "translation" })[oldGroup] || "advanced";
 }
+// Fallback for older/sparse configs as well as the isolated preview. Keep in sync with config.DEFAULTS.
+const SETTING_NUMBER_DEFAULTS=Object.freeze({max_concurrent_downloads:3,download_timeout:300,download_retry:5,hash_threads:4,name_scroll_speed:70,name_scroll_start_pause:350,name_scroll_end_pause:250,window_wait_seconds:30,effects_fps_limit:60,gallery_cache_mb:1024});
 function settingRow(key, label, type, opts, tip) {
-  const value = state.cfg[key] ?? ({ui_text_size:"standard",window_appearance:"theme"})[key];
+  const value = state.cfg[key] ?? ({...SETTING_NUMBER_DEFAULTS,ui_text_size:"standard",window_appearance:"theme"})[key];
+  const numberDefault=SETTING_NUMBER_DEFAULTS[key];
+  const numericHint=type==='number'&&numberDefault!==undefined?' data-default="'+numberDefault+'" placeholder="默认 '+numberDefault+'"':'';
   const id = "setting-" + key;
   const attrs = ' id="' + id + '" data-key="' + key + '" aria-label="' + esc(label) + '" aria-describedby="' + id + '-help"';
   let input = "";
+  if(type === "modelcards") return window.CFTModelCards.settingsMarkup();
   if (type === "bool") {
     input = '<label class="setting-switch"><input type="checkbox"' + attrs + ((["zebra_rows","integrated_titlebar"].includes(key) ? value !== false : value) ? " checked" : "") + '/><span>开启</span></label>';
   } else if (type === "select") {
@@ -75,21 +87,22 @@ function settingRow(key, label, type, opts, tip) {
       return '<option value="' + esc(val) + '"' + (String(value) === String(val) ? " selected" : "") + '>' + esc(text) + '</option>';
     }).join("") + '</select>';
   } else if (type === "font") {
-    input = '<input class="input font-search" id="fontSearch" type="search" placeholder="搜索本地字体名称…" aria-label="搜索本地字体" aria-controls="fontMenu"/><select hidden'+attrs+'><option value="">软件默认字体</option>' + (value ? '<option selected value="'+esc(value)+'">'+esc(value)+'</option>' : '') + '</select><button type="button" class="input font-choice" id="fontChoice" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="fontMenu" aria-label="默认字体（字体名称即预览）"><span>'+esc(value || '软件默认字体')+'</span><span aria-hidden="true">⌄</span></button><div class="font-preview"><span id="fontPreviewName">'+esc(value || '软件默认字体')+'</span><p>角色模型 · 下载管理 · 绯夜主题</p><p>Model Library  ABC abc  0123456789</p><small id="fontListStatus">正在读取本地字体…</small></div>';
+    input = '<select hidden'+attrs+'><option value="">软件默认字体</option>' + (value ? '<option selected value="'+esc(value)+'">'+esc(value)+'</option>' : '') + '</select><button type="button" class="input font-choice" id="fontChoice" aria-haspopup="dialog" aria-expanded="false" aria-controls="fontMenu" aria-label="选择字体与回退顺序"><span>'+esc(value || '主题默认字体组合')+'</span><span aria-hidden="true">＋</span></button><div class="font-preview"><span id="fontPreviewName"></span><p>模型管理 · Model Library · 0123456789</p><small id="fontListStatus">正在读取 Windows 已安装字体…</small></div>';
   } else if (type === "range") {
-    input = '<div class="setting-range"><input type="range"'+attrs+' min="'+opts[0]+'" max="'+opts[1]+'" step="'+opts[2]+'" value="'+(Number(value)||220)+'"/><output id="masonrySizeSettings">'+(Number(value)||220)+' px</output></div>';
+    const fallback={masonry_card_width:220,model_grid_size:220,model_page_size:60,model_glow_opacity:100}[key]??opts[0],numeric=value!=null&&value!==''&&Number.isFinite(Number(value))?Number(value):fallback,unit=key==='model_glow_opacity'?'%':key==='model_page_size'?' 个':' px',output=key==='masonry_card_width'?'masonrySizeSettings':'setting-'+key+'-output';
+    input = '<div class="setting-range"><input type="range"'+attrs+' min="'+opts[0]+'" max="'+opts[1]+'" step="'+opts[2]+'" value="'+numeric+'"/><output id="'+output+'">'+numeric+unit+'</output></div>';
   } else if (type === "dirs") {
     const dirs = (Array.isArray(value) && value.length) ? value : (state.cfg.models_dir ? [state.cfg.models_dir] : []);
     input = '<textarea class="input" rows="3"' + attrs + ' placeholder="D:\\ComfyUI\\models&#10;D:\\WebUI\\models">' + esc(dirs.join("\n")) + '</textarea>';
   } else if (type === "dir") {
     input = '<div class="dir-pick"><input class="input"' + attrs + ' value="' + esc(value || "") + '" readonly placeholder="使用默认下载目录"/>' +
-      '<button type="button" class="btn" data-dirpick="' + key + '">' + _icon("folder") + '选择</button><button type="button" class="btn" data-dirclear="' + key + '">清除</button></div>';
+      '<button type="button" class="dir-icon-button" data-dirpick="' + key + '" aria-label="选择下载目标文件夹" title="选择文件夹">' + _icon("folder") + '</button><button type="button" class="dir-icon-button" data-dirclear="' + key + '" aria-label="清除预设下载目标" title="清除预设">'+_icon('x')+'</button></div>';
   } else if (type === "password") {
     input = '<div class="pwd-wrap"><input class="input" type="password"' + attrs + ' value="' + esc(value || "") + '"/><button type="button" class="pwd-eye btn" data-eye="' + key + '" aria-label="显示或隐藏' + esc(label) + '">显示</button></div>';
   } else if (type === "color") {
     input = '<input class="appearance-color" type="color"' + attrs + ' value="' + esc(/^#[0-9a-f]{6}$/i.test(value || "") ? value : "#60a5fa") + '"/>';
   } else {
-    input = '<input class="input" type="' + (type === "number" ? "number" : "text") + '"' + attrs + (key === "window_wait_seconds" ? ' min="30" max="600" step="1"' : key === "effects_fps_limit" ? ' min="0" max="360" step="1"' : key === "name_scroll_speed" ? ' min="10" max="240" step="5"' : ["name_scroll_start_pause","name_scroll_end_pause"].includes(key) ? ' min="0" max="5000" step="50"' : key === "gallery_cache_mb" ? ' min="64" max="8192" step="1"' : "") + ' value="' + esc(value == null ? "" : value) + '"/>';
+    input = '<input class="input" type="' + (type === "number" ? "number" : "text") + '"' + attrs + numericHint + (key === "window_wait_seconds" ? ' min="30" max="600" step="1"' : key === "effects_fps_limit" ? ' min="0" max="360" step="1"' : key === "name_scroll_speed" ? ' min="10" max="240" step="5"' : ["name_scroll_start_pause","name_scroll_end_pause"].includes(key) ? ' min="0" max="5000" step="50"' : key === "gallery_cache_mb" ? ' min="64" max="8192" step="1"' : "") + ' value="' + esc(value == null ? "" : value) + '"/>';
   }
   if(key === "window_appearance") input += '<p id="windowAppearanceStatus" role="status"></p>';
   const help = tip || "保持默认即可，按需要调整。";
@@ -141,16 +154,17 @@ function buildWorkbenchSettings() {
   refreshStorageInfo();
   if(typeof renderShortcutSettings === "function")renderShortcutSettings();
   if(typeof captureSettingsBaseline === "function")captureSettingsBaseline();
+  window.CFTEndfieldSettings?.refresh();
 }
 let masonrySaveTimer=0,masonryMenuCloseTimer=0;
 function openMasonrySizeMenu(){
   closeListSizeMenu();
-  if(typeof state==='undefined' || state.mmView!=='masonry')return;
+  if(typeof state==='undefined' || !['masonry','grid'].includes(state.mmView))return;
   clearTimeout(masonryMenuCloseTimer);$('#mmViewSeg').classList.add('size-menu-open');
-  $('#mmViewMasonry').setAttribute('aria-expanded','true');positionMasonrySizeMenu();
+  $(state.mmView==='grid'?'#mmViewGrid':'#mmViewMasonry').setAttribute('aria-expanded','true');syncModelImageSizeControl();positionMasonrySizeMenu();
 }
 function positionMasonrySizeMenu(){
-  const menu=$('#mmImageSizeControl'),anchor=$('#mmViewMasonry');if(!menu || !$('#mmViewSeg').classList.contains('size-menu-open'))return;
+  const menu=$('#mmImageSizeControl'),anchor=$(state.mmView==='grid'?'#mmViewGrid':'#mmViewMasonry');if(!menu || !$('#mmViewSeg').classList.contains('size-menu-open'))return;
   const rect=anchor.getBoundingClientRect(),box=menu.getBoundingClientRect(),z=Number(document.documentElement.style.zoom)||1;
   const x=Math.max(8,Math.min(rect.right-box.width,innerWidth-box.width-8));
   const y=rect.bottom+6+box.height<innerHeight-8?rect.bottom+6:Math.max(8,rect.top-box.height-6);
@@ -158,18 +172,23 @@ function positionMasonrySizeMenu(){
 }
 function closeMasonrySizeMenu(){
   clearTimeout(masonryMenuCloseTimer);$('#mmViewSeg')?.classList.remove('size-menu-open');
-  $('#mmViewMasonry')?.setAttribute('aria-expanded','false');
+  $('#mmViewMasonry')?.setAttribute('aria-expanded','false');$('#mmViewGrid')?.setAttribute('aria-expanded','false');
 }
 
 function setMasonrySize(value,save=false) {
   const width=Math.max(140,Math.min(420,Math.round((Number(value)||220)/10)*10));
+  const previousWidth=state.cfg.masonry_card_width;
   document.documentElement.style.setProperty('--model-card-width',width+'px');
+  if(Number(previousWidth)!==width)window.dispatchEvent(new Event('cft:model-card-size'));
   if(typeof state!=='undefined' && state.cfg)state.cfg.masonry_card_width=width;
-  const control=$('#mmImageSizeControl');if(control){control.hidden=typeof state==='undefined' || state.mmView!=='masonry';if(control.hidden)closeMasonrySizeMenu();}
-  for(const id of ['mmImageSize','setting-masonry_card_width']){const input=document.getElementById(id);if(input)input.value=width;}
-  for(const id of ['mmImageSizeValue','masonrySizeSettings']){const label=document.getElementById(id);if(label)label.textContent=width+' px';}
+  const control=$('#mmImageSizeControl');if(control){control.hidden=typeof state==='undefined' || !['masonry','grid'].includes(state.mmView);if(control.hidden)closeMasonrySizeMenu();}
+  for(const id of ['mmImageSize','setting-masonry_card_width']){const input=document.getElementById(id);if(input&&(id!=='mmImageSize'||state.mmView!=='grid'))input.value=width;}
+  for(const id of ['mmImageSizeValue','masonrySizeSettings']){const label=document.getElementById(id);if(label&&(id!=='mmImageSizeValue'||state.mmView!=='grid'))label.textContent=width+' px';}
+  syncModelImageSizeControl();
   if(save){clearTimeout(masonrySaveTimer);masonrySaveTimer=setTimeout(()=>api.call('save_config',{masonry_card_width:width}).catch(()=>setStatus('图片大小保存失败')),350);}
 }
+function syncModelImageSizeControl(){const grid=state.mmView==='grid',input=$('#mmImageSize'),menu=$('#mmImageSizeControl');if(!input||!menu)return;input.min=grid?'100':'140';input.max=grid?'500':'420';input.value=Number(grid?state.cfg.model_grid_size||220:state.cfg.masonry_card_width||220);const label=(grid?'方格':'瀑布流')+'图片大小';input.setAttribute('aria-label',label);menu.setAttribute('aria-label',label);$('#mmImageSizeValue').textContent=input.value+' px';}
+function setActiveModelImageSize(value){if(state.mmView==='grid')window.CFTModelManagement?.setGridSize(value,true);else setMasonrySize(value,true);syncModelImageSizeControl();}
 const MODEL_LIST_SIZES = {3:['完整 · 最大','封面、名称、文件名、作者'],2:['紧凑 · 无封面/作者','名称、本地文件名'],1:['极简 · 名称精简','隐藏封面/作者/本地名；基础、版本等信息列保留']};
 let listSaveTimer=0,listMenuCloseTimer=0,listPersistedSize=null,listSaveGeneration=0;
 function closeListSizeMenu(){
@@ -240,7 +259,7 @@ async function refreshLocalFontOptions() {
     select.innerHTML='<option value="">软件默认字体</option>'+fonts.map(font=>'<option value="'+esc(font)+'">'+esc(font)+'</option>').join('');
     if(current && !fonts.includes(current))select.insertAdjacentHTML('beforeend','<option value="'+esc(current)+'">'+esc(current)+'（当前未找到）</option>');
     select.value=current;
-    syncFontChoice();if(fontPicker)filterFontMenu();
+    syncFontChoice();if(fontPicker){filterFontMenu();renderFontSelection();}
     $('#fontListStatus').textContent=fonts.length?'已读取 '+fonts.length+' 个本地字体族；中文显示取决于字体字形覆盖。':result?.msg || '无法读取本地字体，使用默认字体。';
   }catch(e){if($('#fontListStatus'))$('#fontListStatus').textContent='字体读取失败，仍可使用默认字体。';}
 }
@@ -278,6 +297,16 @@ function showSettingsCategory(id) {
   const search = $("#settingsSearch");
   if (search) search.value = "";
   filterWorkbenchSettings();
+  window.CFTEndfieldSettings?.categoryChanged();
+}
+// Keep dormant preferences intact, but do not offer controls whose effect is overridden.
+function isWorkbenchSettingRelevant(key) {
+  const theme=document.documentElement.dataset.theme,endfield=['dark_endfield','light_endfield'].includes(theme);
+  if(key==='endfield_parallax')return endfield;
+  if(['window_appearance','ambient_bg'].includes(key))return !endfield;
+  if(['custom_accent_enabled','custom_accent'].includes(key)&&endfield)return false;
+  if(key==='custom_accent')return !!state.cfg.custom_accent_enabled;
+  return true;
 }
 function filterWorkbenchSettings() {
   closeFontMenu();
@@ -286,7 +315,7 @@ function filterWorkbenchSettings() {
   $$("[data-settings-panel]").forEach(panel => {
     let matches = 0;
     panel.querySelectorAll(".setting-row").forEach(row => {
-      const themeVisible = row.dataset.themeOnly !== "metro" || document.documentElement.dataset.theme === "metro";
+      const themeVisible = isWorkbenchSettingRelevant(row.dataset.settingKey);
       const match = themeVisible && (!q || (row.dataset.settingSearch || "").includes(q));
       row.hidden = !match;
       if (match) matches++;
@@ -307,10 +336,6 @@ function filterWorkbenchSettings() {
   if (empty) empty.hidden = !q || total > 0;
 }
 function applyWorkbenchThemeOptions() {
-  ["ui_scheme", "metro_accent"].forEach(key => {
-    const row = document.querySelector('[data-setting-key="' + key + '"]');
-    if (row) row.dataset.themeOnly = "metro";
-  });
   const zebra = document.querySelector('[data-key="zebra_rows"]');
   if (zebra) { zebra.disabled = false; zebra.checked = state.cfg.zebra_rows !== false; }
   if ($("#settingsSearch")) filterWorkbenchSettings();
@@ -346,14 +371,27 @@ async function refreshDownloadHistory() {
 function renderDownloadHistory() {
   const q = ($("#dlHistorySearch").value || "").trim().toLowerCase();
   const status = {done:"已完成", error:"失败", canceled:"已取消"};
-  const rows = historyItems.filter(row => [row.filename, row.modelName, row.dest_dir, status[row.status], row.error].join(" ").toLowerCase().includes(q));
+  const visibleHistory=historyItems.filter(row=>window.CFTDownloadPresentation?.includeHistory(row)!==false);
+  const rows = visibleHistory.filter(row => [row.filename, row.modelName, row.dest_dir, status[row.status], row.error].join(" ").toLowerCase().includes(q));
   const pages = Math.max(1, Math.ceil(rows.length / 100));
   historyPage = Math.max(1, Math.min(historyPage, pages));
-  const signature=JSON.stringify([historyPage,q,rows]);
+  const signature=JSON.stringify([historyPage,q,rows,!!window.CFTDownloadPresentation,window.CFTDownloadPresentation?.groupSignature()]);
   if(signature===historyRenderSignature&&$("#dlHistoryTable tbody").children.length)return;
   historyRenderSignature=signature;
-  $("#dlHistoryTable tbody").innerHTML = rows.slice((historyPage - 1) * 100, historyPage * 100).map(row =>
-    '<tr data-history-id="' + esc(row.id) + '"><td class="c-file" title="' + esc(row.filename) + '"><div class="history-thumb" data-history-thumb="' + esc(row.id) + '">' + _icon('image') + '</div><div class="history-file-name">' + esc(row.filename) + '</div><div class="file-subpath" title="' + esc(row.dest_dir) + '">' + esc(row.dest_dir || "") + '</div>' + (row.modelName ? '<div class="history-model">' + esc(row.modelName) + '</div>' : "") + '</td><td><span class="history-result ' + esc(row.status) + '">' + esc(row.verification_status==='mismatch' || /SHA256 校验失败/.test(row.error||'') ? (row.manual_binding ? '已关联 · 校验不一致' : '已下载 · 校验不一致') : status[row.status] || row.status) + '</span>' + (row.error || row.partial_cleanup_error ? '<div class="history-error" title="' + esc([row.error,row.partial_cleanup_error].filter(Boolean).join("；")) + '">' + esc([row.error,row.partial_cleanup_error].filter(Boolean).join("；")) + '</div>' : "") + '</td><td>' + fmtSize(row.total || row.downloaded) + '</td><td>' + (row.finished_at ? fmtTime(row.finished_at) : '时间未记录') + '</td><td><button class="btn btn-tiny" data-history-open="' + esc(row.id) + '"' + (row.dest_dir ? "" : " disabled") + '>' + _icon("folder") + '打开目录</button><button class="btn btn-tiny" data-history-save="' + esc(row.id) + '"' + (row.file_exists === false || row.status !== 'done' ? ' disabled' : '') + '>' + _icon('folder') + '保存到…</button><button class="btn btn-tiny" data-history-site="' + esc(row.id) + '"' + (row.model_url ? '' : ' disabled') + '>' + _icon('external') + '打开 C 站</button><button class="btn btn-tiny" data-history-info="' + esc(row.id) + '">' + _icon('info') + '模型信息</button></td></tr>').join("") ||
+  const renderHistoryRow = row =>
+    '<tr data-history-id="' + esc(row.id) + '" data-ef-complete="'+String(row.status==='done'&&row.verification_status!=='mismatch'&&!/SHA256 校验失败/.test(row.error||''))+'" data-history-group="'+esc(window.CFTDownloadPresentation?.groupKey(row).key||'legacy')+'"'+(window.CFTDownloadPresentation?.isGroupCollapsed(window.CFTDownloadPresentation.groupKey(row).key)?' hidden':'')+'><td class="c-file" title="' + esc(row.filename) + '"><div class="history-thumb" data-history-thumb="' + esc(row.id) + '">' + _icon('image') + '</div><div class="history-file-copy"><div class="history-file-name">' + esc(row.filename) + '</div><div class="history-file-meta"><div class="file-subpath" title="' + esc(row.dest_dir) + '">' + esc(row.dest_dir || "") + '</div>' + (row.modelName ? '<div class="history-model">' + esc(row.modelName) + '</div>' : "") + '</div></div></td><td><span class="history-result ' + esc(row.status) + '">' + esc(row.verification_status==='mismatch' || /SHA256 校验失败/.test(row.error||'') ? (row.manual_binding ? '已关联 · 校验不一致' : '已下载 · 校验不一致') : status[row.status] || row.status) + '</span>' + (row.error || row.partial_cleanup_error ? '<div class="history-error" title="' + esc([row.error,row.partial_cleanup_error].filter(Boolean).join("；")) + '">' + esc([row.error,row.partial_cleanup_error].filter(Boolean).join("；")) + '</div>' : "") + '</td><td>' + fmtSize(row.total || row.downloaded) + '</td><td>' + (row.finished_at ? fmtTime(row.finished_at) : '时间未记录') + '</td><td><button class="btn btn-tiny" data-history-open="' + esc(row.id) + '"' + (row.dest_dir ? "" : " disabled") + '>' + _icon("folder") + '打开目录</button><button class="btn btn-tiny" data-history-save="' + esc(row.id) + '"' + (row.file_exists === false || row.status !== 'done' ? ' disabled' : '') + '>' + _icon('folder') + '保存到…</button><button class="btn btn-tiny" data-history-site="' + esc(row.id) + '"' + (row.model_url ? '' : ' disabled') + '>' + _icon('external') + '打开 C 站</button><button class="btn btn-tiny" data-history-info="' + esc(row.id) + '">' + _icon('info') + '模型信息</button></td></tr>';
+  const pageRows=rows.slice((historyPage-1)*100,historyPage*100);let historyHtml='';
+  if(document.documentElement.dataset.endfield==='true'&&window.CFTDownloadPresentation){
+    const batches=new Map();for(const row of pageRows){const meta=CFTDownloadPresentation.groupKey(row);if(!batches.has(meta.key))batches.set(meta.key,{meta,items:[]});batches.get(meta.key).items.push(row);}
+    const batchOrder=new Map(),days=new Map();
+    for(const row of visibleHistory){const meta=CFTDownloadPresentation.groupKey(row);if(!meta.known)continue;if(!days.has(meta.day))days.set(meta.day,new Map());days.get(meta.day).set(meta.key,Number(row.batch_started_at||row.created_at||row.finished_at)||0);}
+    for(const entries of days.values())[...entries].sort((a,b)=>a[1]-b[1]||a[0].localeCompare(b[0])).forEach(([key],i)=>batchOrder.set(key,i+1));
+    for(const {meta,items} of [...batches.values()].sort((a,b)=>b.meta.timestamp-a.meta.timestamp||b.meta.key.localeCompare(a.meta.key))){
+      const expanded=!CFTDownloadPresentation.isGroupCollapsed(meta.key),batch=items[0].batch_id;
+      historyHtml+='<tr class="history-batch"><td colspan="5"><button type="button" class="history-batch-toggle" data-tip="" data-history-batch="'+esc(meta.key)+'" aria-expanded="'+expanded+'"><b>'+esc(meta.day)+'</b><small>'+esc(meta.known?'第 '+String(batchOrder.get(meta.key)||1).padStart(2,'0')+' 批 · '+(String(batch).length>28?String(batch).slice(0,12)+'…':String(batch))+(meta.time?' · '+meta.timeLabel+' '+meta.time:''):'旧记录 · 批次未记录')+'</small><span>本页 '+items.length+' 项　'+(expanded?'−':'+')+'</span></button></td></tr>'+items.map(renderHistoryRow).join('');
+    }
+  }else historyHtml=pageRows.map(renderHistoryRow).join('');
+  $("#dlHistoryTable tbody").innerHTML = historyHtml ||
     '<tr><td colspan="5" class="history-empty">' + (q ? '没有匹配的历史记录' : '暂无下载历史。完成、失败、取消的任务会自动保留；收起队列不会删除它们。') + '</td></tr>';
   $("#dlHistoryTable").querySelectorAll("[data-history-thumb]").forEach(async cell => {
     const item = historyItems.find(row => row.id === cell.dataset.historyThumb);
@@ -369,19 +407,19 @@ function renderDownloadHistory() {
     } catch (e) {}
   });
   $("#dlHistoryCount").textContent = rows.length + " / " + historyItems.length + " 条记录";
-  $("#dlHistoryTab").dataset.count = historyItems.length;
+  $("#dlHistoryTab").dataset.count = visibleHistory.length;
   $("#historyPage").textContent = historyPage + " / " + pages;
   $("#historyPrev").disabled = historyPage === 1;
   $("#historyNext").disabled = historyPage >= pages;
 }
 function updateDownloadQueueCount() {
-  $("#dlQueueTab").dataset.count = state.dlTasks.length;
+  $("#dlQueueTab").dataset.count = document.querySelectorAll("#dlTable tbody tr[data-task-id]").length;
   if (!$("#dlHistoryPanel").hidden) refreshDownloadHistory();
 }
 
 const WORKBENCH_ICON_IDS = {
-  btnParse:"play", btnClearUrls:"x", btnAddUrl:"plus", btnDlTarget:"folder", btnDlTargetReset:"refresh", dlHistoryTab:"clock", dlQueueTab:"list", dlHistoryRefresh:"refresh",
-  dlStartSel:"play", dlStartAll:"play", dlPauseAll:"pause", dlRemoveAll:"x", dlPauseSel:"pause", dlRetrySel:"refresh", dlRemoveSel:"x", dlSave:"file", mmViewToggle:"layers", mmUpdOnly:"refresh", mmScan:"scan", mmRefresh:"refresh", mmVerify:"shield", mmCheckUpd:"refresh", mmUpdate:"refresh", mmUpdDl:"download", mmRename:"pencil", mmLocalize:"file", mmJson:"file", mmSite:"external", mmCovers:"image", mmTranslate:"file", mmSendRp:"search", mmOrganize:"folder", mmCleanup:"trash", mmDedupe:"layers", mmFolders:"folder", mmRecover:"refresh", mmRestore:"refresh", mmFilterClear:"x", mmSelAll:"check", mmSelNone:"x", mmSelInv:"refresh", rpAddFiles:"file", rpAddDir:"folder", rpRemoveSel:"x", rpStart:"play", rpPause:"pause", rpStop:"x", btnSaveSettings:"check", btnTestApi:"globe", btnTestBaidu:"file", btnOnboarding:"info", openLogs:"folder", wfAddFiles:"file", wfAddFile:"file", wfChoose:"folder"
+  btnParse:"play", btnClearUrls:"x", btnDlTarget:"folder", btnDlTargetReset:"refresh", dlHistoryTab:"clock", dlQueueTab:"list", dlHistoryRefresh:"refresh",
+  dlStartSel:"play", dlPauseSel:"pause", dlRetrySel:"refresh", dlRemoveSel:"x", mmViewToggle:"layers", mmUpdOnly:"refresh", mmScan:"scan", mmRefresh:"refresh", mmVerify:"shield", mmCheckUpd:"refresh", mmUpdate:"refresh", mmUpdDl:"download", mmRename:"pencil", mmLocalize:"file", mmJson:"file", mmSite:"external", mmCovers:"image", mmTranslate:"file", mmSendRp:"search", mmOrganize:"folder", mmCleanup:"trash", mmDedupe:"layers", mmFolders:"folder", mmRecover:"refresh", mmRestore:"refresh", mmFilterClear:"x", mmSelAll:"check", mmSelNone:"x", mmSelInv:"refresh", rpAddFiles:"file", rpAddDir:"folder", rpRemoveSel:"x", rpStart:"play", rpPause:"pause", rpStop:"x", btnSaveSettings:"check", btnTestApi:"globe", btnTestBaidu:"file", btnOnboarding:"info", openLogs:"folder", wfAddFiles:"file", wfAddFile:"file", wfChoose:"file", wfActionSelect:"pointer"
 };
 function syncModelInspector(active) {
   applyModelToolbarLock();
@@ -406,7 +444,7 @@ async function toggleModelFavorite(path){
 function applyModelToolbarLock(){
   const locked=state.cfg?.model_toolbar_locked===true;
   document.body.classList.toggle('model-toolbar-locked',locked);
-  const viewport=$('#mmMasonryViewport');if(viewport)viewport.hidden=state.mmView!=='masonry';
+  const viewport=$('#mmMasonryViewport');if(viewport)viewport.hidden=state.mmView==='list';
   const button=$('#mmToolbarLock');if(button){button.setAttribute('aria-pressed',String(locked));button.innerHTML=_icon('pin')+(locked?'取消固定':'固定菜单');}
 }
 document.addEventListener('click',async e=>{
@@ -421,6 +459,11 @@ document.addEventListener('click',async e=>{
   }
 });
 function decorateWorkbenchIcons(root = document) {
+  document.querySelectorAll('#settingsActions > button').forEach(button=>{
+    const nodes=[...button.childNodes].filter(n=>n.nodeType===Node.TEXT_NODE&&n.textContent.trim());
+    if(nodes.length){const caption=document.createElement('span');caption.className='settings-action-label';nodes[0].before(caption);nodes.forEach(n=>caption.append(n));}
+  });
+  const emojiIcons={'🔍':'search','🔄':'refresh','✅':'check','🧬':'layers','⏫':'refresh','⬇':'download','✏':'pencil','📄':'file','🖼':'image','🌏':'globe','📤':'external','📂':'folder','📁':'folder','🗑':'trash','🔧':'settings','❗':'alert','🏷':'tag','🀄':'file','📖':'info','📋':'copy','⏸':'pause','▶':'play','⏹':'x','💾':'file','⚠':'alert','ℹ':'info','⭐':'star','➕':'plus','⏰':'clock'};
   root.querySelectorAll(".nav-tab[data-nav-icon]").forEach(button => {
     if (button.querySelector(".ic")) return;
     const label = button.textContent.trim();
@@ -429,7 +472,8 @@ function decorateWorkbenchIcons(root = document) {
     button.innerHTML = _icon(button.dataset.navIcon) + '<span class="nav-label">' + esc(label) + '</span>';
   });
   root.querySelectorAll("button").forEach(button => {
-    if (button.matches(".font-choice,.window-control")) return;
+    if (button.matches(".font-choice,.window-control,.shortcut-key,.ef-footer-action") || button.closest('#fontMenu')) return;
+    const emoji=button.textContent.match(/[\p{Extended_Pictographic}▶]/u)?.[0];
     Array.from(button.childNodes).filter(node => node.nodeType === Node.TEXT_NODE).forEach(node => {
       const clean = node.data.replace(/^[\s\p{Extended_Pictographic}\uFE0F\u200D▶►]+/u, " ");
       if (node.data !== clean) node.data = clean;
@@ -437,8 +481,14 @@ function decorateWorkbenchIcons(root = document) {
     if (button.querySelector(".ic") || button.classList.contains("nav-tab") || button.classList.contains("mm-seg-btn") || button.matches("[data-eye], .pwd-eye, .ms-check, .fp-favorite-chip")) return;
     const text = button.textContent.replace(/^[\s\p{Extended_Pictographic}\uFE0F▶►＋×]+/u, "").trim();
     const name = WORKBENCH_ICON_IDS[button.id] || WORKBENCH_ICON_IDS[button.dataset.proxy] ||
-      ({"取消":"x", "确定":"check", "保存":"check", "刷新":"refresh", "清除":"x", "选择":"folder", "重置尺寸":"ruler", "不移动":"x", "选择文件夹":"folder", "暂停":"pause", "停止":"x", "重试":"refresh", "应用":"check"})[text];
+      ({"取消":"x", "确定":"check", "保存":"check", "刷新":"refresh", "清除":"x", "选择":"folder", "重置尺寸":"ruler", "不移动":"x", "选择文件夹":"folder", "暂停":"pause", "停止":"x", "重试":"refresh", "应用":"check"})[text] || (emoji && (emojiIcons[emoji] || 'info'));
     if (name) button.insertAdjacentHTML("afterbegin", _icon(name));
+  });
+  // App-owned action labels only. Never alter model names, paths, descriptions,
+  // font family names or other user-authored strings just because they contain emoji.
+  root.querySelectorAll('.shortcut-row>span,.page-title,.rd-title,.df-title,.settings-category h3').forEach(label=>{
+    const nodes=[...label.childNodes].filter(n=>n.nodeType===Node.TEXT_NODE);
+    for(const node of nodes){const re=/[\p{Extended_Pictographic}▶][\uFE0F\u200D]*/gu;if(!re.test(node.data))continue;re.lastIndex=0;const fragment=document.createDocumentFragment();let last=0;for(const match of node.data.matchAll(re)){fragment.append(document.createTextNode(node.data.slice(last,match.index)));const holder=document.createElement('span');holder.innerHTML=_icon(emojiIcons[Array.from(match[0])[0]]||'info');fragment.append(holder.firstElementChild);last=match.index+match[0].length;}fragment.append(document.createTextNode(node.data.slice(last)));node.replaceWith(fragment);}
   });
   root.querySelectorAll(".ctx-item[data-act], .mm-menu button, #page-models .mm-item[data-icon]:not([data-proxy])").forEach(item => {
     if (item.querySelector(".ic")) return;
@@ -446,6 +496,11 @@ function decorateWorkbenchIcons(root = document) {
     const name = item.dataset.icon || (/folder|move|organize/.test(action) ? "folder" : /copy/.test(action) ? "copy" : /site/.test(action) ? "external" : /rename|edit|localize/.test(action) ? "pencil" : /del/.test(action) ? "trash" : /rp|scan/.test(action) ? "search" : "file");
     Array.from(item.childNodes).filter(n => n.nodeType === Node.TEXT_NODE).forEach(n => {n.data = n.data.replace(/^[\s\p{Extended_Pictographic}\uFE0F\u200D]+/u, " ");});
     item.insertAdjacentHTML("afterbegin", _icon(name));
+  });
+  root.querySelectorAll('.emj').forEach(item=>{
+    const control=item.closest('button,.mm-item,.ctx-item');
+    if(control?.querySelector('.ic'))item.remove();
+    else {const glyph=Array.from(item.textContent.trim())[0];const holder=document.createElement('span');holder.innerHTML=_icon(emojiIcons[glyph]||'info');item.replaceWith(holder.firstElementChild);}
   });
 }
 function decorateModelActionHelp(){
@@ -461,21 +516,21 @@ function initializeWorkbench() {
   document.querySelectorAll(".sidebar-brand,.sidebar-name,.sidebar-name small,.page-title,.card > h2,.iv-toolbar").forEach(el=>el.classList.add("pywebview-drag-region"));
   const sizeAnchor=$('#mmViewMasonry'),sizeMenu=$('#mmImageSizeControl');
   sizeAnchor.setAttribute('aria-controls','mmImageSizeControl');sizeAnchor.setAttribute('aria-expanded','false');
-  for(const el of [sizeAnchor,sizeMenu]){
+  for(const el of [sizeAnchor,$('#mmViewGrid'),sizeMenu]){
     el.addEventListener('pointerenter',openMasonrySizeMenu);
     el.addEventListener('pointerleave',()=>{masonryMenuCloseTimer=setTimeout(closeMasonrySizeMenu,160);});
     el.addEventListener('focusin',openMasonrySizeMenu);
   }
-  sizeAnchor.addEventListener('click',()=>setTimeout(openMasonrySizeMenu,0));
+  for(const anchor of [sizeAnchor,$('#mmViewGrid')]){anchor.setAttribute('aria-controls','mmImageSizeControl');anchor.setAttribute('aria-expanded','false');anchor.addEventListener('click',()=>setTimeout(openMasonrySizeMenu,0));anchor.addEventListener('wheel',e=>{if(e.ctrlKey||e.altKey||e.metaKey||anchor.id!==(state.mmView==='grid'?'mmViewGrid':'mmViewMasonry'))return;e.preventDefault();setActiveModelImageSize(Number(state.mmView==='grid'?state.cfg.model_grid_size||220:state.cfg.masonry_card_width||220)+(e.deltaY<0?20:-20));},{passive:false});}
   document.addEventListener('pointerdown',e=>{if(!e.target.closest('#mmViewSeg'))closeMasonrySizeMenu();});
   document.addEventListener('keydown',e=>{if(e.key==='Escape' && $('#mmViewSeg').classList.contains('size-menu-open')){sizeAnchor.focus();closeMasonrySizeMenu();e.preventDefault();e.stopImmediatePropagation();}},true);
   document.addEventListener('focusin',e=>{if(!e.target.closest('#mmViewSeg'))closeMasonrySizeMenu();});
   document.addEventListener('scroll',positionMasonrySizeMenu,true);window.addEventListener('resize',positionMasonrySizeMenu);window.addEventListener('cft:zoom',positionMasonrySizeMenu);
-  sizeAnchor.addEventListener('keydown',e=>{if(e.key==='ArrowDown'){openMasonrySizeMenu();$('#mmImageSize').focus();e.preventDefault();}});
-  $('#mmImageSize').addEventListener('input' ,e=>setMasonrySize(e.target.value,true));
+  for(const anchor of [sizeAnchor,$('#mmViewGrid')])anchor.addEventListener('keydown',e=>{if(e.key==='ArrowDown'){openMasonrySizeMenu();$('#mmImageSize').focus();e.preventDefault();}});
+  $('#mmImageSize').addEventListener('input' ,e=>setActiveModelImageSize(e.target.value));
   $('#mmImageSizeControl').addEventListener('wheel',e=>{
     if(e.ctrlKey || e.altKey)return;
-    e.preventDefault();setMasonrySize(Number(state.cfg.masonry_card_width || 220)+(e.deltaY<0?20:-20),true);
+    e.preventDefault();setActiveModelImageSize(Number(state.mmView==='grid'?state.cfg.model_grid_size||220:state.cfg.masonry_card_width||220)+(e.deltaY<0?20:-20));
   },{passive:false});
   const about = $("#aboutFloat");
   if (about) {
@@ -580,7 +635,7 @@ function initializeWorkbench() {
         const result = await api.call("open_in_folder", item.file_exists ? item.file_path : item.dest_dir);
         if (result?.ok === false) setStatus(result.msg || "目录可能已移动或删除");
       } else if (button.hasAttribute("data-history-save")) {
-        const folder = await pickFolderModal();
+        const folder = await pickFolderModal({target:item.dest_dir,model:item,cover:historyThumbCache.get(item.id+":"+(item.thumb_revision||0)),loadCover:()=>api.call("get_history_thumbnail",item.id)});
         if (!folder) return;
         const result = await api.call("history_move_to", id, folder);
         setStatus(result?.msg || "移动完成");

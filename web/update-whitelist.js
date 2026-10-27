@@ -1,0 +1,52 @@
+/* A transactional full-band chooser, using the model manager's actual card renderer. */
+(()=>{'use strict';let active=null;
+ const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const validId=value=>/^[1-9][0-9]{0,19}$/.test(String(value||''));
+ async function open(){
+  if(active)return;
+  const origin=document.activeElement,mask=document.createElement('div');active=mask;
+  mask.id='updateWhitelistMenu';mask.className='update-whitelist-mask';
+  mask.innerHTML='<section class="update-whitelist-dialog" role="dialog" aria-modal="true" aria-labelledby="updateWhitelistTitle"><header class="wl-heading"><div><small>MODEL UPDATE / WHITELIST</small><h2 id="updateWhitelistTitle">更新白名单</h2></div><button type="button" class="wl-close" aria-label="关闭更新白名单">'+_icon('x')+'</button></header><p class="wl-intro">选择不再提示更新的模型。同一个 C站模型的所有本地版本一起生效；取消不会保存。</p><div class="wl-workspace"><aside class="wl-sidebar" aria-label="白名单分类"><button type="button" data-wl-filter="all">全部模型 <span></span></button><button type="button" data-wl-filter="selected">已加入白名单 <span></span></button><button type="button" data-wl-filter="available">尚未加入 <span></span></button><p>没有 C站 modelId 的模型不能加入。未在本地库中的原有白名单也会保留，可在这里移出。</p></aside><main class="wl-main"><div class="wl-search-row"><input class="input" id="updateWhitelistSearch" placeholder="搜索名称、底模、作者或 modelId…" aria-label="搜索白名单模型"/><span id="updateWhitelistCount"></span></div><div id="updateWhitelistScroll"><div id="updateWhitelistGrid" class="masonry model-card-gallery" aria-label="选择不再提醒更新的模型" role="group"></div></div><p class="wl-empty" role="status">正在读取模型库与白名单…</p></main></div><p id="updateWhitelistError" role="alert"></p><footer class="wl-footer"><span id="updateWhitelistSelection" role="status"></span><div class="font-action-base"><button type="button" class="btn" id="updateWhitelistCancel">取消</button></div><div class="font-action-base"><button type="button" class="btn btn-primary" id="updateWhitelistSave" disabled>确定</button></div></footer></section>';
+  document.body.append(mask);
+  const dialog=mask.querySelector('[role=dialog]'),grid=mask.querySelector('#updateWhitelistGrid'),search=mask.querySelector('input'),save=mask.querySelector('#updateWhitelistSave'),empty=mask.querySelector('.wl-empty');
+  grid.dataset.whitelistView=grid.dataset.modelView=state.mmView==='grid'?'grid':'masonry';
+  const scroller=mask.querySelector('#updateWhitelistScroll');
+  let whitelistTerrain=null;
+  if(document.documentElement.dataset.endfield==='true'&&window.CFTTerrain){const host=document.createElement('div');host.className='wl-terrain';host.setAttribute('aria-hidden','true');dialog.prepend(host);whitelistTerrain=CFTTerrain.mount(host,{strength:.2,interactive:false,flow:state.cfg?.endfield_parallax!==false,cover:true});}
+  let rows=[],draft=new Map(),original=[],ready=false,busy=false,filter='all',limit=160,matched=[];
+  const localCovers=new Map(),pending=new Set();
+  const close=()=>{if(busy)return;whitelistTerrain?.destroy();if(window.CFTModalMotion)CFTModalMotion.remove(mask);else mask.remove();active=null;origin?.isConnected&&origin.focus({preventScroll:true});};
+  const allowed=row=>validId(row._mid)||draft.has(row._mid);
+  function fillCovers(){
+   const images=[...grid.querySelectorAll('.ms-img')];for(const image of images){const path=image.dataset.path,src=localCovers.get(path)||state.coverCache.get(path);if(src){image.src=src;image.closest('.ms-img-wrap').dataset.ph='ok';}}
+   const paths=[...new Set(images.map(i=>i.dataset.path).filter(p=>p&&!localCovers.has(p)&&!state.coverCache.has(p)&&!pending.has(p)))];
+   for(let i=0;i<paths.length;i+=40){const batch=paths.slice(i,i+40);batch.forEach(p=>pending.add(p));Promise.resolve(api.call('get_covers',batch,480)).then(value=>{const covers=typeof value==='string'?JSON.parse(value):value||{};for(const path of batch){const b64=covers[path];if(b64)localCovers.set(path,'data:image/jpeg;base64,'+b64);}if(mask.isConnected)for(const image of grid.querySelectorAll('.ms-img'))if(batch.includes(image.dataset.path)){const src=localCovers.get(image.dataset.path);if(src)image.src=src;image.closest('.ms-img-wrap').dataset.ph=src?'ok':'none';}}).catch(()=>{if(mask.isConnected)for(const image of grid.querySelectorAll('.ms-img'))if(batch.includes(image.dataset.path))image.closest('.ms-img-wrap').dataset.ph='none';}).finally(()=>batch.forEach(p=>pending.delete(p)));}
+  }
+  function render(){
+   const query=search.value.trim().toLocaleLowerCase();matched=rows.filter(row=>(filter==='all'||(filter==='selected'?draft.has(row._mid):!draft.has(row._mid)))&&[row.civitai_name,row.name,row.base,row.author,row._mid,row.path].join(' ').toLocaleLowerCase().includes(query));
+   const top=scroller.scrollTop;grid.innerHTML=matched.slice(0,limit).map((row,i)=>{const p=CFTModelCards.presentation(row),shell=grid.dataset.whitelistView==='grid'&&p.frame?'<img class="model-shell" src="model-frames/'+p.frame+'.png" alt="" aria-hidden="true"/>':'',favorite=row.path&&isModelFavorite(row.path)?'<span class="wl-favorite" aria-label="已收藏">'+CFTModelCards.favoriteIcon()+'</span>':'';return modelCardHtml(row,i,{checked:draft.has(row._mid),role:'checkbox',selectionOnly:true,decoration:shell+favorite});}).join('');
+   [...grid.children].forEach((card,i)=>{const row=matched[i];card.dataset.whitelistId=row._mid;card.classList.add('wl-card');card.setAttribute('aria-label',(row.civitai_name||row.name)+' · '+(draft.has(row._mid)?'已加入白名单':'点击加入白名单'));if(!allowed(row)){card.classList.add('wl-card-disabled');card.setAttribute('aria-disabled','true');card.tabIndex=-1;}const wrap=card.querySelector('.ms-img-wrap');if(!row.path){card.classList.add('wl-card-no-cover');wrap.dataset.ph='none';card.querySelector('.ms-img').remove();}card.querySelector('.ms-img')?.addEventListener('load',e=>{if(grid.dataset.whitelistView==='masonry')wrap.style.aspectRatio=e.target.naturalWidth+'/'+e.target.naturalHeight;});if(!validId(row._mid)){const note=document.createElement('small');note.className='wl-unavailable';note.textContent='缺少 C站 ID';card.append(note);}});
+   scroller.scrollTop=top;empty.hidden=matched.length>0;empty.textContent=query?'没有匹配的模型。':filter==='selected'?'尚未选择任何模型。':'这个分类下没有模型。';
+   mask.querySelector('#updateWhitelistCount').textContent=matched.length+' 个模型';mask.querySelector('#updateWhitelistSelection').textContent='已选择 '+draft.size+' 个 C站模型';
+   for(const b of mask.querySelectorAll('[data-wl-filter]')){b.setAttribute('aria-pressed',String(b.dataset.wlFilter===filter));b.querySelector('span').textContent=b.dataset.wlFilter==='all'?rows.length:b.dataset.wlFilter==='selected'?draft.size:rows.filter(r=>!draft.has(r._mid)).length;}
+   fillCovers();
+  }
+  function toggle(card){if(!ready||busy||card.getAttribute('aria-disabled')==='true')return;const row=rows.find(r=>r._mid===card.dataset.whitelistId);if(!row)return;draft.has(row._mid)?draft.delete(row._mid):draft.set(row._mid,row.civitai_name||row.name||row._mid);const index=[...grid.children].indexOf(card);render();grid.children[Math.min(index,grid.children.length-1)]?.focus({preventScroll:true});}
+  mask.addEventListener('click',e=>{if(e.target===mask||e.target.closest('.wl-close,#updateWhitelistCancel'))close();const b=e.target.closest('[data-wl-filter]');if(b&&!busy){filter=b.dataset.wlFilter;limit=160;scroller.scrollTop=0;render();}const card=e.target.closest('.wl-card');if(card)toggle(card);});
+  mask.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();close();}if(e.target.matches('.wl-card')&&[' ','Enter'].includes(e.key)){e.preventDefault();toggle(e.target);}if(e.key==='Tab'){const controls=[...mask.querySelectorAll('button,input,[role=checkbox]')].filter(el=>!el.disabled&&el.tabIndex!==-1&&el.getClientRects().length),first=controls[0],last=controls.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}}});
+  search.addEventListener('input',()=>{limit=160;scroller.scrollTop=0;render();});
+  scroller.addEventListener('scroll',()=>{if(scroller.scrollHeight-scroller.scrollTop-scroller.clientHeight<260&&limit<matched.length){limit+=160;render();}});
+  save.onclick=async()=>{if(!ready||busy)return;busy=true;dialog.setAttribute('aria-busy','true');mask.querySelectorAll('button,input').forEach(e=>e.disabled=true);try{const result=await api.call('save_update_whitelist',[...draft].map(([model_id,name])=>({model_id,name})),original);if(!result?.ok)throw Error(result?.msg||'保存失败，原白名单未改变');for(const [path,it] of Object.entries(state.mmUpdItems||{}))if(draft.has(String(it.model_id)))delete state.mmUpdItems[path];for(const row of state.models)if(draft.has(String(row.modelId||row.model_id||'')))row.upd=null;state.updSel.clear();busy=false;close();await renderUpdatesPage();setStatus(result.msg||'更新白名单已保存');}catch(error){busy=false;dialog.removeAttribute('aria-busy');mask.querySelectorAll('button,input').forEach(e=>e.disabled=false);mask.querySelector('#updateWhitelistError').textContent=error.message||'保存失败，请重试';}};
+  search.focus();
+  try{
+   const [response,scan]=await Promise.all([api.call('get_update_whitelist'),Promise.resolve(api.call('get_scan_rows')).catch(()=>null)]);if(!mask.isConnected)return;
+   if(!response||!Array.isArray(response.items))throw Error('白名单读取失败，未改变原设置');
+   draft=new Map(response.items.map(item=>[String(item.model_id),String(item.name||item.model_id)]));original=[...draft.keys()];
+   const scanned=typeof scan==='string'?JSON.parse(scan):scan;const source=Array.isArray(scanned)&&scanned.length?scanned:state.models,byId=new Map();
+   for(const row of source){const cached=state.mmUpdItems?.[row.path]||{},mid=String(row.modelId||row.model_id||cached.model_id||'');const key=mid||'missing:'+row.path;if(!byId.has(key))byId.set(key,{...row,_mid:mid||key,ver:row.ver||row.versionName||cached.local_name});}
+   for(const [mid,name] of draft)if(!byId.has(mid))byId.set(mid,{_mid:mid,path:'',name,civitai_name:name,type:'未在本地模型库中',base:'',author:'',size:0});
+   rows=[...byId.values()];ready=true;save.disabled=false;render();
+  }catch(error){empty.hidden=false;empty.textContent=error.message||'读取失败，请关闭后重试';mask.querySelector('#updateWhitelistError').textContent='未读取到完整白名单，无法保存；原设置保持不变。';}
+ }
+ window.CFTUpdateWhitelist={open};
+})();

@@ -2,7 +2,7 @@
 :root { --sidebar-width: 186px; --inspector-width: 390px; --app-height: 100vh; }
 html[data-sidebar="collapsed"] { --sidebar-width: 66px; }
 .emj { display: none !important; }
-html:not([data-theme="metro"]) .emj ~ .ic { display: inline-block !important; }
+html .emj ~ .ic { display: inline-block !important; }
 .btn, .nav-tab, .settings-tab { display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
 svg.ic { display: inline-block; width: calc(17px * var(--type-scale, 1)); height: calc(17px * var(--type-scale, 1)); flex: 0 0 auto; vertical-align: middle; }
 html body .nav-wrap { position: fixed; inset: 0 auto auto 0; width: var(--sidebar-width); height: var(--app-height); padding: 0; z-index: 45; }
@@ -109,7 +109,7 @@ html body .download-tabs .btn:not(.active) { color: var(--text-dim); background:
 .history-model { color: var(--text-dim); font-size: calc(11px * var(--type-scale, 1)); margin-top: 4px; }
 .history-error { color: var(--danger); font-size: calc(11px * var(--type-scale, 1)); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .history-result.done { color: var(--status-upd, #34d399); }
-[data-theme^="dark"] .history-result.done, [data-theme="metro"][data-scheme="dark"] .history-result.done { color: #52d9a0; }
+[data-theme="dark_endfield"] .history-result.done { color: #52d9a0; }
 .history-result.error { color: var(--danger); }
 .history-result.canceled { color: var(--text-dim); }
 .history-empty { text-align: center; padding: 30px !important; white-space: normal !important; color: var(--text-dim); }
@@ -508,8 +508,8 @@ html[data-masonry-info]:not([data-masonry-info=always])[data-masonry-overlay=ful
 html[data-masonry-info]:not([data-masonry-info=always]) .ms-info :is(.ms-name,.ms-sub,.ms-meta,.ms-size){color:inherit;flex:none;}
 html[data-masonry-info]:not([data-masonry-info=always]) .ms-info :is(.ms-sub,.ms-meta,.ms-size){color:rgba(247,250,252,.82);}
 html[data-masonry-info]:not([data-masonry-info=always]) .ms-sub{display:block!important;}
-html:is([data-theme^=light],[data-theme=modern],[data-theme=metro][data-scheme=light])[data-masonry-info]:not([data-masonry-info=always]) .ms-info{background:rgba(255,255,255,.88);color:#16202d;}
-html:is([data-theme^=light],[data-theme=modern],[data-theme=metro][data-scheme=light])[data-masonry-info]:not([data-masonry-info=always]) .ms-info :is(.ms-sub,.ms-meta,.ms-size){color:#384555;}
+html[data-theme=light_endfield][data-masonry-info]:not([data-masonry-info=always]) .ms-info{background:rgba(255,255,255,.88);color:#16202d;}
+html[data-theme=light_endfield][data-masonry-info]:not([data-masonry-info=always]) .ms-info :is(.ms-sub,.ms-meta,.ms-size){color:#384555;}
 .ms-card:focus-visible{outline:2px solid var(--primary);outline-offset:2px;}
 @media(prefers-reduced-motion:reduce){html .ms-info{transition:none!important;}}
 
@@ -540,7 +540,7 @@ html[data-masonry-info]:not([data-masonry-info=always])[data-masonry-overlay=ful
 html[data-masonry-info]:not([data-masonry-info=always])[data-masonry-overlay=full] .ms-name[data-civitai-name=true]{display:-webkit-box!important;-webkit-box-orient:vertical;-webkit-line-clamp:var(--ms-title-lines,1);flex:1 1 0;min-height:calc(22px * var(--type-scale,1));margin:0;padding:4px 12px 0;white-space:normal!important;overflow-wrap:anywhere;text-indent:24px;overflow:hidden;text-overflow:ellipsis;}
 html[data-masonry-info]:not([data-masonry-info=always])[data-masonry-overlay=full] .ms-footer{flex:none;margin-top:auto;min-width:0;}
 html[data-masonry-info]:not([data-masonry-info=always])[data-masonry-overlay=full] .ms-author{display:block;font-size:calc(13px * var(--type-scale,1));line-height:1.5;padding:0 12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(247,250,252,.82);}
-html:is([data-theme^=light],[data-theme=modern],[data-theme=metro][data-scheme=light])[data-masonry-info]:not([data-masonry-info=always]) .ms-author{color:#384555;}
+html[data-theme=light_endfield][data-masonry-info]:not([data-masonry-info=always]) .ms-author{color:#384555;}
 html[data-masonry-info]:not([data-masonry-info=always])[data-masonry-overlay=full] .ms-sub{white-space:nowrap;}
 html[data-masonry-info]:not([data-masonry-info=always])[data-masonry-overlay=full] .ms-size{padding-bottom:3px;}
 

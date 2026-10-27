@@ -1,0 +1,5 @@
+html[data-endfield=true] body .nav-right:has(#fpsMonitor:not([hidden])){flex-wrap:wrap;gap:4px 10px}
+#fpsMonitor{font:600 10px/1.5 var(--font);font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--ef-yellow);flex:none}
+html[data-theme=light_endfield] #fpsMonitor{color:#6b6500}
+#fpsMonitor[hidden]{display:none!important}
+@media(max-width:760px){html[data-endfield=true] body .nav-right:has(#fpsMonitor:not([hidden])){margin-left:0;justify-content:center}#fpsMonitor{font-size:9px}}

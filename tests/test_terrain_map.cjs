@@ -1,0 +1,29 @@
+/* Same canvas, seven map destinations. Synthetic app APIs only. */
+const assert=require('node:assert/strict'),path=require('node:path');
+const {chromium}=require(process.env.PLAYWRIGHT_PATH||'playwright'),server=require('../scripts/preview_endfield_settings.cjs');
+const out=path.resolve('.test_tmp/endfield-settings-preview');
+(async()=>{await new Promise(r=>server.listen(0,'127.0.0.1',r));const browser=await chromium.launch();try{
+ for(const theme of ['dark_endfield','light_endfield']){
+  const page=await browser.newPage({viewport:{width:1600,height:1000}}),errors=[];page.on('pageerror',e=>errors.push(e.stack||e.message));
+  await page.goto('http://127.0.0.1:'+server.address().port+'/?reverse=preview');await page.waitForSelector('#rpInspector h2');await page.evaluate(t=>{state.cfg.theme=t;applyUiAppearance();window.initialMapCanvas=document.querySelector('#efTerrain canvas');},theme);
+  await page.waitForFunction(()=>document.querySelector('#efTerrain canvas')?.dataset.mapPage==='reverse'&&document.querySelector('#efTerrain canvas')?.dataset.mapSettled==='true');
+  const nodes=await page.evaluate(()=>CFTTerrainMap.stations);assert.equal(nodes.length,7);assert.equal(new Set(nodes.map(n=>n.x+','+n.y)).size,7);assert.equal(await page.locator('#efTerrain canvas').count(),1);assert.equal(await page.locator('#efTerrain').evaluate(e=>getComputedStyle(e).pointerEvents),'none');
+  const destinations=[];
+  for(const node of nodes){
+   const before=await page.locator('#efTerrain canvas').evaluate(e=>({x:+e.dataset.cameraX,y:+e.dataset.cameraY}));await page.locator('.nav-tab[data-page="'+node.id+'"]').click();
+   await page.waitForFunction(id=>document.querySelector('#efTerrain canvas').dataset.mapPage===id,node.id);await page.waitForTimeout(80);
+   const intermediate=await page.locator('#efTerrain canvas').evaluate(e=>({x:+e.dataset.cameraX,y:+e.dataset.cameraY,done:e.dataset.mapSettled}));if(Math.hypot(before.x-node.x,before.y-node.y)>100){assert.equal(intermediate.done,'false');assert(Math.hypot(intermediate.x-node.x,intermediate.y-node.y)>1,'camera is not teleporting');}
+   await page.waitForFunction(()=>document.querySelector('#efTerrain canvas').dataset.mapSettled==='true');
+   const end=await page.locator('#efTerrain canvas').evaluate(e=>({x:+e.dataset.cameraX,y:+e.dataset.cameraY,pillar:e.dataset.activePillar,drawMs:+e.dataset.drawMs}));assert.equal(end.x,node.x);assert.equal(end.y,node.y);assert.equal(end.pillar,node.code.slice(0,2));destinations.push(end);
+   assert(await page.evaluate(()=>initialMapCanvas===document.querySelector('#efTerrain canvas')),'navigation must not rebuild the map');
+   if(['models','reverse','settings'].includes(node.id))await page.screenshot({path:path.join(out,'terrain-map-'+node.id+'-'+theme+'-v1.png')});
+  }
+  await page.locator('.nav-tab[data-page=reverse]').click();await page.waitForFunction(()=>document.querySelector('#efTerrain canvas').dataset.mapSettled==='true');
+  const heading=page.locator('#rpInspector h2'),originalBox=await heading.boundingBox();await page.mouse.move(20,30);await page.waitForTimeout(300);const a=await page.locator('#efTerrain canvas').evaluate(e=>[e.dataset.tilt,e.dataset.yaw,e.dataset.pillarTipX,e.dataset.pillarTipY]);await page.mouse.move(1570,970);await page.waitForTimeout(300);const b=await page.locator('#efTerrain canvas').evaluate(e=>[e.dataset.tilt,e.dataset.yaw,e.dataset.pillarTipX,e.dataset.pillarTipY]);assert.notDeepEqual(a,b,'mouse still changes terrain/pillar perspective');const afterBox=await heading.boundingBox();assert(Math.abs(originalBox.x-afterBox.x)<.5&&Math.abs(originalBox.y-afterBox.y)<.5,'UI must never tilt with the map');
+  for(const id of ['download','models','workflow'])await page.locator('.nav-tab[data-page='+id+']').click();await page.waitForFunction(()=>document.querySelector('#efTerrain canvas').dataset.mapPage==='workflow'&&document.querySelector('#efTerrain canvas').dataset.mapSettled==='true');assert.equal(await page.locator('#efTerrain canvas').getAttribute('data-camera-x'),nodes.find(n=>n.id==='workflow').x.toFixed(2));
+  await page.evaluate(()=>{state.cfg.endfield_parallax=false;CFTEndfield.reset();});await page.waitForTimeout(100);const draws=await page.locator('#efTerrain canvas').getAttribute('data-draws');await page.mouse.move(300,400);await page.waitForTimeout(250);assert.equal(await page.locator('#efTerrain canvas').getAttribute('data-draws'),draws);await page.locator('.nav-tab[data-page=settings]').click();await page.waitForTimeout(100);assert.equal(await page.locator('#efTerrain canvas').getAttribute('data-map-settled'),'true');assert.equal(await page.locator('#efTerrain canvas').getAttribute('data-camera-y'),nodes.find(n=>n.id==='settings').y.toFixed(2));
+  await page.evaluate(()=>{state.cfg.endfield_parallax=true;CFTEndfield.reset();});await page.emulateMedia({reducedMotion:'reduce'});await page.locator('.nav-tab[data-page=updates]').click();await page.waitForTimeout(100);assert.equal(await page.locator('#efTerrain canvas').getAttribute('data-map-settled'),'true');assert.equal(await page.locator('#efTerrain canvas').getAttribute('data-camera-x'),nodes.find(n=>n.id==='updates').x.toFixed(2));
+  for(const width of [1100,760,420,320]){await page.setViewportSize({width,height:850});await page.waitForTimeout(80);const rect=await page.locator('#efTerrain').boundingBox();assert.equal(rect.x,0);assert.equal(rect.width,width);if(width===420)await page.screenshot({path:path.join(out,'terrain-map-narrow-'+theme+'-v1.png')});}
+  assert.deepEqual(errors,[]);console.log('PASS '+theme+' 连续大地图/七站镜头移动/中间帧/快速改向/鼠标透视与UI隔离/关闭动效与减少动画/四档视口');console.log('DRAW MS',destinations.map(d=>d.drawMs).join(','));await page.close();
+ }
+}finally{await browser.close();await new Promise(r=>server.close(r));}})().catch(e=>{console.error(e);process.exitCode=1;server.close();});

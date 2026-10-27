@@ -33,6 +33,16 @@ function bindPersistedTableColumns(tableId, defaults, skipColumns=[], key=null) 
     columns.forEach((col,i)=>col.style.width=Math.round(widths[i])+'px');
     group.replaceChildren(...columns.filter((_,i)=>!(tableId==='dlTable'&&i===8&&table.dataset.hasErrors==='false')));
     table.style.width=Math.floor(total)+'px';table.style.minWidth=Math.floor(total)+'px';
+    // Explicitly resized widths drive both CSS-grid headers and task cells.
+    // Defaults stay responsive; double-clicking the last saved handle restores them.
+    if(['dlTable','dlHistoryTable'].includes(tableId)){
+      const customized=Object.keys(saved).length>0,visible=tableId==='dlTable'?[widths[0],widths[1],widths[2],widths[7],widths[3],widths[4]]:widths.slice(0,5);
+      if(customized){
+        table.style.setProperty('--ef-transfer-columns',visible.map(w=>Math.round(w)+'px').join(' ')+(tableId==='dlTable'?' 84px 92px':''));
+        table.style.setProperty('--ef-transfer-width',(visible.reduce((a,b)=>a+Math.round(b),0)+(tableId==='dlTable'?265:72))+'px');
+      }else{table.style.removeProperty('--ef-transfer-columns');table.style.removeProperty('--ef-transfer-width');}
+    }
+
   }
   const save=()=>{try{localStorage.setItem(key,JSON.stringify(saved));}catch(_){};};
   headers.forEach((th,i)=>{

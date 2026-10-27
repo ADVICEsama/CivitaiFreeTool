@@ -13,7 +13,7 @@ let passed=0;function ok(s){console.log('OK '+s);passed++;}
 (async()=>{
  await new Promise(r=>server.listen(0,'127.0.0.1',r));const browser=await chromium.launch({headless:true});
  try{
-  const page=await browser.newPage({viewport:{width:1920,height:1080}}),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.addInitScript(init);
+  const page=await browser.newPage({viewport:{width:1920,height:1080}}),errors=[];page.on('pageerror',e=>errors.push(e.stack||e.message));await page.addInitScript(init);
   await page.goto('http://127.0.0.1:'+server.address().port);await page.waitForFunction(()=>window.__ready);
 
   await page.evaluate(()=>{
@@ -29,7 +29,7 @@ let passed=0;function ok(s){console.log('OK '+s);passed++;}
    };dlRefresh();
   });
   await page.waitForFunction(()=>document.querySelectorAll('#dlTable img.thumb').length===2);ok('未完成任务也能读取预取封面');
-  await page.locator('#dlTable tr[data-task-id=one] .dl-task-check').check();await page.locator('#dlStartSel').click();
+  await page.locator('#dlTable tr[data-task-id=one] .c-file').click();await page.locator('#dlStartSel').click();
   const selected=await page.evaluate(()=>window.fixtureCalls.filter(x=>x.method==='dl_action').at(-1));assert.equal(selected.args[0],'start');assert.deepEqual(selected.args[2],['one']);ok('开始/继续选中只提交勾选任务 ID');
 
   await page.evaluate(()=>{window.fixtureTasks[0].status='retrying';window.fixtureTasks[0].speed=0;dlRefresh();});await page.waitForFunction(()=>document.querySelector('#dlTable tr[data-task-id=one]').textContent.includes('等待重试'));ok('重试等待与真实下载状态分开显示');
@@ -39,6 +39,7 @@ let passed=0;function ok(s){console.log('OK '+s);passed++;}
   const downDrag=await page.evaluateHandle(()=>new DataTransfer());const targetBounds=await page.locator('#dlTable tr[data-task-id=one]').boundingBox();await page.locator('#dlTable tr[data-task-id=two] .dl-drag-handle').dispatchEvent('dragstart',{dataTransfer:downDrag});await page.locator('#dlTable tr[data-task-id=one]').dispatchEvent('drop',{dataTransfer:downDrag,clientY:targetBounds.y+targetBounds.height-1});await page.waitForFunction(()=>window.fixtureOrder?.[0]==='one');assert.deepEqual(await page.evaluate(()=>window.fixtureOrder),['one','two']);ok('向下拖动可放到目标行之后');
   for(const [pageName,id,index] of [['dlmanager','dlTable',3],['dlmanager','dlHistoryTable',2],['updates','updTable',2],['reverse','rpTable',2]]){
    await page.evaluate(([name,id])=>{switchPage(name);if(id==='dlHistoryTable')document.querySelector('#dlHistoryTab').click();},[pageName,id]);
+   if(['dlTable','dlHistoryTable'].includes(id)&&await page.evaluate(()=>document.documentElement.dataset.endfield==='true')){const layout=await page.locator('#'+id).evaluate(e=>({width:e.getBoundingClientRect().width,parent:e.parentElement.clientWidth,overflow:e.parentElement.scrollWidth-e.parentElement.clientWidth}));assert(layout.width<=layout.parent+1&&layout.overflow<=1,JSON.stringify({id,layout}));ok(id+' 终末地使用响应式列布局，不产生横向滚动');continue;}
    const handle=page.locator('#'+id+' th').nth(index).locator('.dl-col-resize');await handle.scrollIntoViewIfNeeded();const before=await page.locator('#'+id+' th').nth(index).boundingBox();const box=await handle.boundingBox();
    await page.mouse.move(box.x+4,box.y+box.height/2);await page.mouse.down();await page.mouse.move(box.x+84,box.y+box.height/2,{steps:6});await page.mouse.up();
    const after=await page.locator('#'+id+' th').nth(index).boundingBox();assert(after.width>=before.width+74,JSON.stringify({id,before,after}));ok(id+' 可拖动并持久保存列宽');
@@ -52,12 +53,12 @@ let passed=0;function ok(s){console.log('OK '+s);passed++;}
   await page.evaluate(()=>{switchPage('updates');state.mmUpdItems={'D:/Demo/deleted.safetensors':{model_name:'Deleted'}};});await page.locator('#updSync').click();await page.waitForFunction(()=>window.fixtureSyncRequested);await page.waitForFunction(()=>!document.querySelector('#updSync').disabled);assert.deepEqual(await page.evaluate(()=>Object.keys(state.mmUpdItems)),['D:/Demo/live.safetensors']);ok('同步更新页替换陈旧列表并刷新模型列表');
   await page.evaluate(()=>{switchPage('settings');buildSettingsForm();showSettingsCategory('download');});assert.equal(await page.locator('[data-key=download_name_mode] option').count(),3);assert.equal(await page.locator('[data-key=filename_include_version]').isChecked(),false);ok('三种命名方式，附加版本默认关闭');
   await page.evaluate(()=>{switchPage('models');showRenameDialog('D:/Demo/raw.safetensors','raw.safetensors');});await page.locator('#rdInput').waitFor();assert.equal(await page.locator('#rdInput').inputValue(),'Mountain-v1.2');await page.locator('#rdCancel').click();ok('手动改名编辑框沿用默认命名设置');
-  await page.evaluate(async()=>{switchPage('workflow');api.call=async(method,...args)=>method==='workflow_model_matches'?'[]':method==='get_covers'?JSON.stringify({'D:/Demo/live.safetensors':window.extraCover}):{};await wfRenderResult({ok:true,file:'flow.json',nodes:[{id:1,type:'Loader',position:[0,0]},{id:2,type:'Sampler',position:[300,0]}],edges:[{source:1,target:2,input:'model'}],models:[]});});await page.locator('#wfFull').click();assert.equal(await page.locator('#wfGraphSection').isVisible(),true);assert((await page.locator('#wfFull').getAttribute('class')).includes('btn-primary'));assert.equal(await page.locator('#wfGraphCanvas .wf-wire').count(),1);assert.equal(await page.locator('#wfGraphCanvas .wf-graph-node').count(),2);ok('完整画布渲染真实节点与连接线');
+  await page.evaluate(async()=>{switchPage('workflow');const workflowFallback=api.call.bind(api);api.call=async(method,...args)=>method==='workflow_model_matches'?'[]':method==='get_covers'?JSON.stringify({'D:/Demo/live.safetensors':window.extraCover}):workflowFallback(method,...args);await wfRenderResult({ok:true,file:'flow.json',nodes:[{id:1,type:'Loader',position:[0,0]},{id:2,type:'Sampler',position:[300,0]}],edges:[{source:1,target:2,input:'model'}],models:[]});});await page.locator('#wfFull').click();assert.equal(await page.locator('#wfGraphSection').isVisible(),true);assert((await page.locator('#wfFull').getAttribute('class')).includes('btn-primary'));assert.equal(await page.locator('#wfGraphCanvas .wf-wire').count(),1);assert.equal(await page.locator('#wfGraphCanvas .wf-graph-node').count(),2);ok('完整画布渲染真实节点与连接线');
   await page.locator('.wf-graph-node[data-node-index="1"]').click();assert((await page.locator('#wfNodeDetail').innerText()).includes('Sampler'));ok('点击画布节点同步只读参数');
 
   await page.evaluate(async()=>{
    document.querySelectorAll('.hover-fixture').forEach(e=>e.remove());
-   api.call=async(method,...args)=>method==='workflow_model_matches'?JSON.stringify(args[0].map((ref,i)=>({ref,local:true,path:'D:/Demo/'+ref,sha256:'fixture'}))):method==='get_covers'?JSON.stringify(Object.fromEntries(args[0].map(p=>[p,window.extraCover]))):{};
+   const workflowFallback=api.call.bind(api);api.call=async(method,...args)=>method==='workflow_model_matches'?JSON.stringify(args[0].map((ref,i)=>({ref,local:true,path:'D:/Demo/'+ref,sha256:'fixture'}))):method==='get_covers'?JSON.stringify(Object.fromEntries(args[0].map(p=>[p,window.extraCover]))):workflowFallback(method,...args);
    const nodes=[
     {id:1,type:'CheckpointLoaderSimple',title:'加载基础模型',position:[0,150],widgets:['landscape.safetensors']},
     {id:2,type:'CLIPTextEncode',title:'正向提示词',position:[300,0],parameters:[{name:'text',value:'watercolor landscape'}]},

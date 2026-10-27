@@ -110,7 +110,7 @@ document.addEventListener("wheel", (e) => {
     e.preventDefault(); setModelListSize(Number(state.cfg.model_list_size || 3) + (e.deltaY < 0 ? 1 : -1), true); return;
   }
   if (e.altKey && !e.ctrlKey && e.target.closest && e.target.closest("#mmMasonry, #mmImageSizeControl")) {
-    e.preventDefault(); setMasonrySize(Number(state.cfg.masonry_card_width || 220) + (e.deltaY < 0 ? 20 : -20), true); return;
+    e.preventDefault(); if(state.mmView==='grid')window.CFTModelManagement?.setGridSize(Number(state.cfg.model_grid_size||220)+(e.deltaY<0?20:-20),true);else setMasonrySize(Number(state.cfg.masonry_card_width || 220) + (e.deltaY < 0 ? 20 : -20), true); return;
   }
   if (!e.ctrlKey) return;
   e.preventDefault();
@@ -179,7 +179,7 @@ function confirmBox(msg) {
       "</div>";
     document.body.appendChild(mask);
     document.body.appendChild(dlg);
-    const close = () => { mask.remove(); dlg.remove(); };
+    const close = () => { CFTModalMotion.remove(mask); CFTModalMotion.remove(dlg); };
     $("#cfCancel", dlg).addEventListener("click", () => { close(); resolve(false); });
     mask.addEventListener("click", () => { close(); resolve(false); });
     $("#cfOk", dlg).addEventListener("click", () => { close(); resolve(true); });
@@ -204,10 +204,10 @@ function confirmBoxRaw(html, title) {
       "</div>";
     document.body.appendChild(mask);
     document.body.appendChild(dlg);
-    const close = () => { mask.remove(); dlg.remove(); };
+    const close = () => { CFTModalMotion.remove(mask); CFTModalMotion.remove(dlg); };
     $("#cfCancel", dlg).addEventListener("click", () => { close(); resolve(false); });
     mask.addEventListener("click", () => { close(); resolve(false); });
-    $("#cfOk", dlg).addEventListener("click", () => { mask.remove(); resolve({ ok: true, root: dlg }); });
+    $("#cfOk", dlg).addEventListener("click", () => { CFTModalMotion.remove(mask); resolve({ ok: true, root: dlg }); });
   });
 }
 
@@ -261,6 +261,7 @@ const state = {
   mmUpdOnly: false,          // 只看有更新的模型（更新检测筛选）
   mmUpdItems: null,          // 更新检测结果（path → 记录），「更新」页面用
   mmUpdCheckedAt: 0,
+  updBatches: [], updBatchId: "current", updProgress: null,
   updSel: new Set(),         //「更新」页面勾选的文件
   updPick: {},               //「更新」页面每行下拉选中的目标版本 {path: versionId}
   updQ: "", updBase: "", updState: "", updSortKey: "date",
@@ -290,10 +291,12 @@ function switchPage(name) {
   if (name === "download") refreshDlTarget();
   if (name === "updates") renderUpdatesPage();
   if (name === "dlmanager" && typeof refreshDownloadHistory === "function") refreshDownloadHistory();
+  window.dispatchEvent(new CustomEvent("cft:page-changed",{detail:{page:name}}));
 }
 let navWheelDelta=0,navWheelLast=0,navWheelDirection=0,navWheelEventAt=0;
 $('#navTabs').title='滚轮上下切换页面；Ctrl + 滚轮仍调整界面缩放';
-$('#navTabs').addEventListener('wheel',e=>{
+// Wheel navigation covers the entire reserved sidebar, including its utilities.
+$('.nav-wrap').addEventListener('wheel',e=>{
   if(e.ctrlKey || e.metaKey || e.altKey || !e.deltaY || Math.abs(e.deltaX)>Math.abs(e.deltaY) || !window.__ready)return;
   e.preventDefault();
   const now=performance.now(),direction=Math.sign(e.deltaY),tabs=[...document.querySelectorAll('#navTabs .nav-tab')];
@@ -315,8 +318,8 @@ function addUrlRow(url) {
   row.className = "url-row";
   row.innerHTML =
     '<input class="input" placeholder="https://civitai.red/models/12345"/>' +
-    '<button class="icon-btn" title="新建">＋</button>' +
-    '<button class="icon-btn" title="删除">×</button>';
+    '<button class="icon-btn" title="新建"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v16M4 12h16"/></svg></button>' +
+    '<button class="icon-btn" title="删除"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>';
   const inp = row.querySelector("input");
   if (url) inp.value = url;
   inp.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); addUrlRow(); } });
@@ -340,7 +343,6 @@ function addUrlRow(url) {
   inp.focus();
 }
 
-$("#btnAddUrl").addEventListener("click", () => addUrlRow());
 $("#btnPaste").addEventListener("click", async () => {
   const txt = await api.call("get_clipboard");
   const lines = String(txt || "").split(/[\r\n]+/).map((x) => x.trim()).filter((x) => x.startsWith("http"));
@@ -351,102 +353,6 @@ $("#btnPaste").addEventListener("click", async () => {
   for (let i = 1; i < lines.length; i++) addUrlRow(lines[i]);
   setStatus("已从剪贴板粘贴 " + lines.length + " 条链接");
 });
-$("#btnTodo").addEventListener("click", () => openTodoDialog());
-function openTodoDialog() {
-  const mask = document.createElement("div");
-  mask.className = "rd-mask";
-  const dlg = document.createElement("div");
-  dlg.className = "rename-dialog";
-  dlg.style.width = "520px";
-  dlg.innerHTML =
-    '<div class="rd-title">到期提醒清单（到期打开软件时提醒）</div>' +
-    '<div class="form-grid" style="grid-template-columns:90px 1fr">' +
-    '<label>链接</label><input class="input" id="tdUrl" placeholder="https://civitai.red/models/..." />' +
-    "</div>" +
-    '<div style="font-size:calc(12px * var(--type-scale, 1));color:var(--text-dim);margin:4px 0 6px 90px">时间自动选择：Early Access 模型按其免费到期时间提醒；其他模型默认 7 天后提醒</div>' +
-    '<div class="rd-actions"><button class="btn btn-primary" id="tdAdd">添加</button></div>' +
-    '<div style="font-size:calc(13px * var(--type-scale, 1));font-weight:600;margin:10px 0 6px">清单：</div>' +
-    '<div id="tdList" style="max-height:200px;overflow:auto;font-size:calc(12px * var(--type-scale, 1));line-height:1.9"></div>' +
-    '<div class="rd-actions"><button class="btn" id="tdClose">关闭</button></div>';
-  document.body.appendChild(mask);
-  document.body.appendChild(dlg);
-  const close = () => { mask.remove(); dlg.remove(); };
-  mask.addEventListener("click", close);
-  $("#tdClose").addEventListener("click", close);
-  $("#tdAdd").addEventListener("click", async () => {
-    const url = $("#tdUrl").value.trim();
-    if (!url) { setStatus("请输入链接"); return; }
-    setStatus("检测到期时间 …");
-    const res = await api.call("todo_add", url);
-    setStatus(res && res.msg ? res.msg : "已添加");
-    $("#tdUrl").value = "";
-    renderTodoList();
-  });
-  async function renderTodoList() {
-    const r = await api.call("todo_list");
-    const box = $("#tdList");
-    if (!r || !r.todos || !r.todos.length) { box.innerHTML = "（空）"; return; }
-    box.innerHTML = r.todos.map((t) =>
-      '<div style="display:flex;gap:6px;align-items:center">' +
-      '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(t.url) + '">' + esc(t.label || t.url) + "</span>" +
-      (t.due ? '<span style="color:var(--danger)">已到期</span>' : "<span>" + t.remain_days + " 天后</span>") +
-      '<button class="btn btn-tiny" data-dl="' + esc(t.url) + '" title="立即解析并下载这个模型">下载</button>' +
-      '<button class="btn btn-tiny" data-del="' + esc(t.url) + '" title="从清单移除"></button></div>').join("");
-    box.querySelectorAll("button[data-dl]").forEach((b) => b.addEventListener("click", async () => {
-      setStatus("正在解析并加入下载队列 …");
-      const res = await api.call("todo_download", b.dataset.dl);
-      setStatus(res && res.msg ? res.msg : "已开始下载");
-      renderTodoList();
-    }));
-    box.querySelectorAll("button[data-del]").forEach((b) => b.addEventListener("click", async () => {
-      await api.call("todo_remove", b.dataset.del);
-      renderTodoList();
-    }));
-  }
-  renderTodoList();
-}
-// 启动时检查到期待办：直接给「一键下载 / 全部下载」，不用再自己去翻链接
-(async function checkTodoDue() {
-  try {
-    const r = await api.call("todo_due");
-    if (!r || !r.due || !r.due.length) return;
-    const mask = document.createElement("div");
-    mask.className = "rd-mask";
-    const dlg = document.createElement("div");
-    dlg.className = "rename-dialog";
-    dlg.style.width = "470px";
-    const rows = r.due.map((t) =>
-      '<div style="display:flex;gap:8px;align-items:center;margin:5px 0">' +
-      '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:calc(13px * var(--type-scale, 1))" title="' + esc(t.url) + '">' + esc(t.label || t.url) + "</span>" +
-      '<button class="btn btn-tiny td-dl" data-url="' + esc(t.url) + '">一键下载</button></div>').join("");
-    dlg.innerHTML =
-      '<div style="font-size:calc(15px * var(--type-scale, 1));font-weight:600;margin-bottom:6px">到期待办：可以下载了</div>' +
-      '<div style="font-size:calc(12px * var(--type-scale, 1));color:var(--text-dim);margin-bottom:8px">这些模型已到免费/可下载时间（下载成功后会自动从清单里移除）：</div>' +
-      '<div style="max-height:240px;overflow:auto">' + rows + "</div>" +
-      '<div class="rd-actions"><button class="btn btn-primary" id="tdAll">全部下载</button><button class="btn" id="tdGoDl">去下载页</button><button class="btn" id="tdLater">稍后再说</button></div>';
-    document.body.appendChild(mask);
-    document.body.appendChild(dlg);
-    const close = () => { mask.remove(); dlg.remove(); };
-    mask.addEventListener("click", close);
-    $("#tdLater").addEventListener("click", close);
-    $("#tdGoDl").addEventListener("click", () => { switchPage("download"); close(); });
-    $("#tdAll").addEventListener("click", async () => {
-      setStatus("正在把到期待办加入下载队列 …");
-      const res = await api.call("todo_download_all");
-      setStatus(res && res.msg ? res.msg : "已开始下载");
-      close();
-    });
-    dlg.querySelectorAll(".td-dl").forEach((b) => b.addEventListener("click", async () => {
-      setStatus("正在解析并加入下载队列 …");
-      const res = await api.call("todo_download", b.dataset.url);
-      setStatus(res && res.msg ? res.msg : "已开始下载");
-      b.disabled = true;
-      b.textContent = "已加入";
-      const row = b.parentElement;
-      if (row) row.style.opacity = ".5";
-    }));
-  } catch (e) { /* 忽略 */ }
-})();
 $("#btnClearUrls").addEventListener("click", () => {
   $("#urlRows").innerHTML = "";
   addUrlRow();
@@ -465,7 +371,7 @@ function showDlNotice() {
   document.body.appendChild(mask);
   document.body.appendChild(dlg);
   const timer = setTimeout(close, 4000);
-  function close() { clearTimeout(timer); mask.remove(); dlg.remove(); }
+  function close() { clearTimeout(timer); CFTModalMotion.remove(mask); CFTModalMotion.remove(dlg); }
   $("#dnOk", dlg).addEventListener("click", close);
   mask.addEventListener("click", close);
 }
@@ -544,7 +450,7 @@ function showImgDlResult(r) {
     '<div class="rd-actions"><button class="btn btn-primary" id="imgDlOk">知道了</button></div>';
   document.body.appendChild(mask);
   document.body.appendChild(dlg);
-  const close = () => { mask.remove(); dlg.remove(); };
+  const close = () => { CFTModalMotion.remove(mask); CFTModalMotion.remove(dlg); };
   $("#imgDlOk", dlg).addEventListener("click", close);
   mask.addEventListener("click", close);
 }
@@ -580,14 +486,14 @@ function showHfDialog(info) {
   $("#hfOk").addEventListener("click", async () => {
     const sel = [];
     document.querySelectorAll(".hf-cb:checked").forEach((c) => sel.push(files[Number(c.dataset.i)].path));
-    const close = () => { mask.remove(); dlg.remove(); hfCtx = null; };
+    const close = () => { CFTModalMotion.remove(mask); CFTModalMotion.remove(dlg); hfCtx = null; };
     close();
     if (!sel.length) { setStatus("未选择任何文件"); return; }
     const r = await api.call("hf_enqueue", info.repo, info.rev, sel);
     setStatus("已加入下载队列 " + (r && r.added ? r.added : 0) + " 个文件");
     dlRefresh();
   });
-  mask.addEventListener("click", () => { mask.remove(); dlg.remove(); hfCtx = null; });
+  mask.addEventListener("click", () => { CFTModalMotion.remove(mask); CFTModalMotion.remove(dlg); hfCtx = null; });
 }
 
 function pollParse() {
@@ -622,7 +528,7 @@ function showPaidDialog(items) {
     return '<div class="paid-row" data-url="' + esc(it.url) + '" data-deadline="' + (it.deadline || 0) + '">' +
       '<div style="font-weight:600">需付费（Early Access）</div>' +
       '<div style="font-size:calc(12px * var(--type-scale, 1));color:var(--text-dim);word-break:break-all">' + esc(it.url) + "</div>" +
-      '<div style="font-size:calc(12px * var(--type-scale, 1));margin:4px 0 8px">约 ' + remain + ' 天后免费 —— <button class="btn btn-tiny paid-todo">加入待办（自动到期提醒）</button> <button class="btn btn-tiny paid-dl">仍要下载</button></div></div>';
+      '<div style="font-size:calc(12px * var(--type-scale, 1));margin:4px 0 8px">约 ' + remain + ' 天后免费 —— <button class="btn btn-tiny paid-dl">仍要下载</button></div></div>';
   }).join("");
   dlg.innerHTML =
     '<div class="rd-title">以下模型需要付费或尚未公开</div>' +
@@ -630,16 +536,9 @@ function showPaidDialog(items) {
     '<div class="rd-actions"><button class="btn" id="paidClose">知道了</button></div>';
   document.body.appendChild(mask);
   document.body.appendChild(dlg);
-  const close = () => { mask.remove(); dlg.remove(); };
+  const close = () => { CFTModalMotion.remove(mask); CFTModalMotion.remove(dlg); };
   mask.addEventListener("click", close);
   $("#paidClose").addEventListener("click", close);
-  dlg.querySelectorAll(".paid-todo").forEach((b) => b.addEventListener("click", async () => {
-    const row = b.closest(".paid-row");
-    const res = await api.call("todo_add", row.dataset.url, null, Number(row.dataset.deadline) || null);
-    setStatus(res && res.msg ? res.msg : "已加入待办");
-    b.textContent = "已加入待办";
-    b.disabled = true;
-  }));
   dlg.querySelectorAll(".paid-dl").forEach((b) => b.addEventListener("click", async () => {
     const row = b.closest(".paid-row");
     setStatus("正在加入下载队列 …");
@@ -689,9 +588,9 @@ async function pickFolderModal(options = {}) {
   };
 
   const mask = document.createElement("div");
-  mask.className = "rd-mask";
+  mask.className = "rd-mask ef-folder-mask";
   const dlg = document.createElement("div");
-  dlg.className = "rename-dialog folder-picker";
+  dlg.className = "rename-dialog folder-picker ef-folder-band";
   dlg.setAttribute("role", "dialog");
   dlg.setAttribute("aria-modal", "true");
   dlg.setAttribute("aria-labelledby", "fpTitle");
@@ -704,8 +603,31 @@ async function pickFolderModal(options = {}) {
     '<div id="fpList" role="listbox" aria-label="分类文件夹" tabindex="0"></div>' +
     '<div class="fp-footer"><div class="fp-selected"><span>' + (options.anyFolder?'移动到':'保存到') + '</span><div id="fpSelected"></div></div>' +
     '<div class="rd-actions">' + (options.anyFolder?'<button class="btn" id="fpBrowse">其他文件夹…</button>':'') + '<button class="btn" id="fpCancel">取消</button><button class="btn btn-primary" id="fpOk">确定</button></div></div>';
+  if(document.documentElement.dataset.endfield==='true'){
+    const layout=document.createElement('div');layout.className='fp-layout';
+    const browser=document.createElement('section');browser.className='fp-browser';browser.setAttribute('aria-label','分类目录');
+    const choice=document.createElement('aside');choice.className='fp-choice';
+    const listHeading=document.createElement('h3');listHeading.className='fp-list-heading';listHeading.textContent='模型目录与分类';browser.append(listHeading);
+    browser.append(dlg.querySelector('.fp-toolbar'),dlg.querySelector('.fp-view-options'),dlg.querySelector('#fpList'));
+    const selected=dlg.querySelector('.fp-selected');selected.classList.add('fp-path-summary');dlg.querySelector('.fp-footer').before(selected);const favoritesTitle=document.createElement('h3');favoritesTitle.textContent='常用文件夹';choice.append(favoritesTitle,dlg.querySelector('#fpFavorites'));
+    const right=document.createElement('div');right.className='fp-right';right.append(choice);
+    const modelCard=document.createElement('section');modelCard.className='fp-model-card';modelCard.setAttribute('aria-label','当前模型信息');
+    const copy=document.createElement('div');copy.className='fp-model-copy';const model=options.model||null;
+    const kicker=document.createElement('small');kicker.textContent='MODEL / 保存对象';const name=document.createElement('h3');name.textContent=model?(model.modelName||model.filename||'当前模型'):'下载目标';copy.append(kicker,name);
+    const details=document.createElement('dl');for(const [label,value] of model?[['文件',model.filename],['版本',model.versionName],['大小',model.total?fmtSize(model.total):null],['状态',({downloading:'下载中',pending:'等待中',paused:'已暂停',retrying:'等待重试',done:'已完成',error:'失败',canceled:'已取消'})[model.status]],['当前目录',model.dest_dir]]:[['范围','后续添加的下载任务'],['提示','从任务或历史记录打开，可查看对应模型与缓存封面']]){if(!value)continue;const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=label;dd.textContent=value;details.append(dt,dd);}copy.append(details);
+    const cover=document.createElement('div');cover.className='fp-model-cover';const empty=document.createElement('span');empty.textContent=model?'暂无缓存封面':'未指定单个模型';cover.append(empty);
+    const setCover=value=>{if(!value||!dlg.isConnected)return;const img=document.createElement('img');img.alt='当前模型缩略图';img.src='data:image/jpeg;base64,'+value;cover.replaceChildren(img);};
+    modelCard.append(copy,cover);right.append(modelCard);layout.append(browser,right);selected.before(layout);
+    dlg._loadModelCover=()=>{if(options.cover)setCover(options.cover);else if(options.loadCover)Promise.resolve().then(options.loadCover).then(setCover).catch(()=>{});};
+    const actions=dlg.querySelector('.rd-actions');for(const button of [...actions.children]){const base=document.createElement('div');base.className='font-action-base fp-action-base';button.before(base);base.append(button);}
+    dlg.querySelector('.fp-hint').textContent='左侧选择分类，右侧快速访问常用文件夹。底部确认保存路径；取消不会更改目录。';
+    dlg.querySelector('#fpReset').remove();
+  }
   document.body.appendChild(mask);
   document.body.appendChild(dlg);
+  dlg._loadModelCover?.();
+  let pickerTerrain=null;
+  if(document.documentElement.dataset.endfield==='true'&&window.CFTTerrain){const host=document.createElement('div');host.className='fp-terrain';host.setAttribute('aria-hidden','true');dlg.prepend(host);pickerTerrain=CFTTerrain.mount(host,{strength:.14,interactive:false,flow:state.cfg?.endfield_parallax!==false,cover:true});}
   const previousFocus = document.activeElement;
   const currentTarget = options.target || (state.cfg && state.cfg.download_target_dir);
   let sel = (rows.find((r) => r.path === currentTarget) || rows[0] || {}).path || "";
@@ -737,7 +659,7 @@ async function pickFolderModal(options = {}) {
       d.classList.toggle("selected", on);
       d.setAttribute("aria-selected", String(on));
     });
-    $("#fpSelected", dlg).textContent = (showPaths ? sel : folderName(sel)) || "请先在设置中配置模型目录";
+    $("#fpSelected", dlg).textContent = ((showPaths || document.documentElement.dataset.endfield==='true') ? sel : folderName(sel)) || "请先在设置中配置模型目录";
     $("#fpSelected", dlg).title = sel;
     renderFavorites();
     const status=statuses.get(key(sel));$("#fpOk", dlg).disabled = !sel || !!(status && (!status.exists || (!options.anyFolder && !status.valid)));
@@ -843,7 +765,7 @@ async function pickFolderModal(options = {}) {
     preferred = { width: rect.width / window.innerWidth, height: rect.height / window.innerHeight };
   };
   dlg.addEventListener("pointerup", remember);
-  $("#fpReset", dlg).addEventListener("click", () => { preferred = { width: 0.72, height: 0.78 }; fit(); });
+  $("#fpReset", dlg)?.addEventListener("click", () => { preferred = { width: 0.72, height: 0.78 }; fit(); });
   window.addEventListener("resize", fit);
   window.addEventListener("cft:zoom", fit);
   fit();
@@ -861,7 +783,7 @@ async function pickFolderModal(options = {}) {
       window.removeEventListener("cft:zoom", fit);
       document.removeEventListener("keydown", keydown, true);
       document.removeEventListener("pointerdown",outsideMenu);window.removeEventListener("resize",hideMenu);window.removeEventListener("cft:zoom",hideMenu);menu.remove();
-      mask.remove(); dlg.remove();
+      pickerTerrain?.destroy();CFTModalMotion.remove(mask); CFTModalMotion.remove(dlg);
       if (previousFocus && previousFocus.isConnected) previousFocus.focus();
       resolve(value);
     };
@@ -1001,7 +923,7 @@ async function showDedupeDialog(groups, modelGroups) {
     '<button class="btn btn-danger" id="ddDel">移入回收站</button></div>';
   document.body.appendChild(mask);
   document.body.appendChild(dlg);
-  const close = () => { mask.remove(); dlg.remove(); };
+  const close = () => { CFTModalMotion.remove(mask); CFTModalMotion.remove(dlg); };
   mask.addEventListener("click", close);
   $("#ddClose", dlg).addEventListener("click", close);
   dlg.querySelectorAll(".dd-link").forEach((a) => a.addEventListener("click", (e) => {
@@ -1080,19 +1002,38 @@ async function showDedupeDialog(groups, modelGroups) {
 if ($("#mmDedupe")) $("#mmDedupe").addEventListener("click", mmDedupeFlow);
 
 // ================= 下载管理 =================
-let dlDragging=false;
+// Keep row identity stable while polling: progress updates must not restart light/exit
+// animations, lose keyboard focus or rebuild every capsule and cover on each tick.
+function syncDownloadRows(tbody,markup){
+  const buffer=document.createElement('tbody');buffer.innerHTML=markup;
+  const existing=new Map([...tbody.querySelectorAll(':scope>tr[data-task-id]')].map(row=>[row.dataset.taskId,row]));
+  const wanted=[];
+  for(const fresh of [...buffer.children]){
+    const id=fresh.dataset.taskId,old=existing.get(id);let row=fresh;
+    if(old){
+      row=old;row.dataset.efProgress=fresh.dataset.efProgress;row.dataset.efComplete=fresh.dataset.efComplete;row.dataset.efStatus=fresh.dataset.efStatus;row.dataset.fn=fresh.dataset.fn;row.style.setProperty('--ef-progress',fresh.style.getPropertyValue('--ef-progress'));row.classList.toggle('sel-row',fresh.classList.contains('sel-row'));
+      [...fresh.children].forEach((cell,i)=>{const current=row.children[i],source=cell.outerHTML;if(i===0&&current){const input=current.querySelector('input'),newInput=cell.querySelector('input');if(input&&newInput)input.setAttribute('aria-label',newInput.getAttribute('aria-label'));current._downloadSource=source;return;}if(!current||current._downloadSource!==source){cell._downloadSource=source;if(current)current.replaceWith(cell);else row.append(cell);}});
+    }else for(const cell of fresh.children)cell._downloadSource=cell.outerHTML;
+    wanted.push(row);existing.delete(id);
+  }
+  for(const stale of existing.values())stale.remove();
+  wanted.forEach((row,i)=>{if(tbody.children[i]!==row)tbody.insertBefore(row,tbody.children[i]||null);});
+}
+let dlDragging=false,dlRefreshRequest=0;
 async function dlRefresh() {
   if(dlDragging)return;
   try {
+    const request=++dlRefreshRequest;
     const tasks = await api.call("get_tasks");
+    if(request!==dlRefreshRequest||dlDragging)return;
     state.dlTasks = tasks || [];
     $("#dlTable").dataset.hasErrors=state.dlTasks.some(t=>t.error)?"true":"false";
-    $("#dlRemoveCompleted").disabled=!state.dlTasks.some(t=>t.status==="done");
     const tbody = $("#dlTable tbody");
     const selPaths = new Set(Array.from(tbody.querySelectorAll("tr.sel-row")).map((tr) => tr.dataset.taskId));
-    tbody.innerHTML = state.dlTasks.map((t) => {
+    const presentedTasks=window.CFTDownloadPresentation?.prepareTasks(state.dlTasks)||state.dlTasks;
+    const rowsHtml = presentedTasks.map((t) => {
       const st = t.hash_mismatch ? (t.manual_binding ? "已关联 · 校验不一致" : "已下载 · 校验不一致") : { pending: "等待中", downloading: "下载中", retrying: "等待重试", done: "已完成", paused: "已暂停", error: "失败", canceled: "已取消" }[t.status] || t.status;
-      const prog = t.status === "downloading" ? (Number(t.progress)||0).toFixed(1) + "%" : st;
+      const prog = Math.max(0,Math.min(100,t.status === "done" ? 100 : Number(t.progress)||0)).toFixed(1) + "%";
       const speed = t.speed ? (t.speed / 1048576).toFixed(1) + " MB/s" : "";
       const size = t.total ? fmtSize(t.downloaded) + " / " + fmtSize(t.total) : fmtSize(t.downloaded);
       const thumb = (state.dlThumbs[t.id] || state.dlThumbs[t.filename]) ? '<img class="thumb" src="data:image/jpeg;base64,' + (state.dlThumbs[t.id] || state.dlThumbs[t.filename]) + '" alt=""/>' : '<span class="thumb thumb-empty"></span>';
@@ -1110,13 +1051,14 @@ async function dlRefresh() {
       const destTip = (destFull ? destFull : (effFull + "\n（全局目标）")) + "\n点击选择该文件的保存文件夹";
       const destLeaf = String(destShow || effFull || "未设置").replace(/[\\/]$/, "").split(/[\\/]/).pop();
       const destCell = "<td class='c-dest cell-dest' data-task='" + esc(t.id) + "' title='" + esc(destTip) + "'><button type='button' class='dest-picker' aria-label='保存到 " + esc(destLeaf) + "'>" + _icon("folder") + "<span>" + esc(destLeaf) + "</span>" + _icon("chevron-down") + "</button>" + (destFull ? "" : " <span class='dest-def'>默认</span>") + "</td>";
-      return '<tr data-task-id="'+esc(t.id)+'" data-fn="' + esc(t.filename) + '" class="' + (selPaths.has(t.id) ? "sel-row" : "") + '">' +
-        '<td class="dl-check-col"><span class="dl-check-controls"><button type="button" class="dl-drag-handle" draggable="true" aria-label="拖动调整下载顺序" data-tip="拖动排序：前面的等待任务优先，不中断当前下载">'+ '<svg class="ic dl-grip" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="8" cy="6" r="1.7"/><circle cx="16" cy="6" r="1.7"/><circle cx="8" cy="12" r="1.7"/><circle cx="16" cy="12" r="1.7"/><circle cx="8" cy="18" r="1.7"/><circle cx="16" cy="18" r="1.7"/></svg>' +'</button><input type="checkbox" class="dl-task-check" aria-label="选择下载任务 ' + esc(t.filename) + '"'+(selPaths.has(t.id)?' checked':'')+'/></span></td>' + "<td class='c-thumb'>" + thumb + "</td><td class='c-file'><div>" + esc(t.filename) + "</div>" +
+      return '<tr data-ef-progress="'+Math.max(0,Math.min(100,t.status==='done'?100:Number(t.progress)||0))+'" data-ef-complete="'+String(t.status==='done'&&!t.hash_mismatch)+'" data-ef-status="'+esc(t.status)+'" style="--ef-progress:'+Math.max(0,Math.min(100,t.status==='done'?100:Number(t.progress)||0))+'%" data-task-id="'+esc(t.id)+'" tabindex="0" aria-selected="'+String(selPaths.has(t.id))+'" data-fn="' + esc(t.filename) + '" class="' + (selPaths.has(t.id) ? "sel-row" : "") + '">' +
+        '<td class="dl-check-col"><span class="dl-check-controls"><button type="button" class="dl-drag-handle" draggable="true" aria-label="拖动调整下载顺序" data-tip="拖动排序：前面的等待任务优先，不中断当前下载">'+ '<svg class="ic dl-grip" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="8" cy="6" r="1.7"/><circle cx="16" cy="6" r="1.7"/><circle cx="8" cy="12" r="1.7"/><circle cx="16" cy="12" r="1.7"/><circle cx="8" cy="18" r="1.7"/><circle cx="16" cy="18" r="1.7"/></svg>' +'</button></span></td>' + "<td class='c-thumb'>" + thumb + "</td><td class='c-file'><div>" + esc(t.filename) + "</div>" +
         (effFull ? '<div class="file-subpath" title="' + esc(effFull + (/[/\\]$/.test(effFull) ? "" : (effFull.includes("\\") || /^[a-z]:/i.test(effFull) ? "\\" : "/")) + t.filename) + '">' +
           esc(effFull + (/[/\\]$/.test(effFull) ? "" : (effFull.includes("\\") || /^[a-z]:/i.test(effFull) ? "\\" : "/")) + t.filename) + "</div>" : "") +
-        "</td>" + destCell + "<td class='dl-task-status'>" + esc(st) + (t.hash_mismatch && !t.manual_binding ? '<button type="button" class="btn btn-tiny" data-bind-download="' + esc(t.id) + '" data-tip="仅关联已保存的 C站信息，不修改文件、不代表通过校验">' + _icon('file') + '关联模型信息</button>' : '') + (["done", "error", "canceled"].includes(t.status) ? '<button class="btn btn-tiny task-archive" data-archive-task="' + esc(t.id) + '">' + _icon("clock") + '移入历史</button>' : "") + "</td><td>" + esc(prog) + "</td>" +
+        "</td>" + destCell + "<td class='dl-task-status' data-ef-state='" + esc(t.hash_mismatch ? "error" : t.status) + "'>" + esc(st) + (t.hash_mismatch && !t.manual_binding ? '<button type="button" class="btn btn-tiny" data-bind-download="' + esc(t.id) + '" data-tip="仅关联已保存的 C站信息，不修改文件、不代表通过校验">' + _icon('file') + '关联模型信息</button>' : '') + (["done", "error", "canceled"].includes(t.status) ? '<button class="btn btn-tiny task-archive" data-archive-task="' + esc(t.id) + '">' + _icon("clock") + '移入历史</button>' : "") + "</td><td>" + esc(prog) + "</td>" +
         "<td>" + esc(speed) + "</td><td>" + esc(size) + "</td>" + errCell + "</tr>";
     }).join("");
+    syncDownloadRows(tbody,rowsHtml);
     syncDlSelection();
     loadDlThumbs(state.dlTasks || []);
     if (typeof updateDownloadQueueCount === "function") updateDownloadQueueCount();
@@ -1166,14 +1108,13 @@ function maybeAskRestricted(tasks) {
   dlg.innerHTML =
     '<div class="rd-title">模型下载受限（Early Access / 付费）</div>' +
     '<div style="font-size:calc(12px * var(--type-scale, 1));color:var(--text-dim);word-break:break-all">' + esc(t.filename || "") + "</div>" +
-    '<div style="font-size:calc(12px * var(--type-scale, 1));color:var(--text-dim);margin:4px 0 10px">该模型在 C 站暂不可直接下载。若有积分可先在浏览器购买解锁，或加入待办等免费开放。</div>' +
+    '<div style="font-size:calc(12px * var(--type-scale, 1));color:var(--text-dim);margin:4px 0 10px">该模型在 C 站暂不可直接下载。若有积分可先在浏览器购买解锁，或等待模型公开后再重试。</div>' +
     '<div class="rd-actions">' +
     '<button class="btn btn-primary" id="rkRetry">花费积分/重试下载</button>' +
-    '<button class="btn" id="rkTodo">加入待办并移除</button>' +
     '<button class="btn" id="rkSite">浏览器打开</button></div>';
   document.body.appendChild(mask);
   document.body.appendChild(dlg);
-  const close = () => { mask.remove(); dlg.remove(); _restrictAsking = false; };
+  const close = () => { CFTModalMotion.remove(mask); CFTModalMotion.remove(dlg); _restrictAsking = false; };
   mask.addEventListener("click", close);
   $("#rkRetry").addEventListener("click", async () => {
     close();
@@ -1184,13 +1125,7 @@ function maybeAskRestricted(tasks) {
     const url = t.url || ("https://" + (state.cfg.site_domain || "civitai.red") + "/models/" + (t.filename || ""));
     api.call("open_url", url);
   });
-  $("#rkTodo").addEventListener("click", async () => {
-    close();
-    if (t.url) await api.call("todo_add", t.url);
-    await api.call("dl_action", "remove", [t.filename]);
-    setStatus("已加入待办并从下载管理移除");
-    dlRefresh();
-  });
+
 }
 let _restrictAsking = false;
 
@@ -1221,7 +1156,7 @@ function maybeAskMove(tasks) {
     "</div></div>";
   document.body.appendChild(mask);
   document.body.appendChild(dlg);
-  const close = () => { clearTimeout(mvTimer); mask.remove(); dlg.remove(); _moveAsking = false; };
+  const close = () => { clearTimeout(mvTimer); CFTModalMotion.remove(mask); CFTModalMotion.remove(dlg); _moveAsking = false; };
   // 左侧显示模型缩略图（同目录 preview.png 封面；封面下载是后台任务，可能稍后才落盘，最多重试 4 次）
   let mvTries = 0;
   let mvTimer = null;
@@ -1284,8 +1219,8 @@ $("#dlTable tbody").addEventListener("click", async (e) => {
   // 「保存到」列：给这一个任务单独选文件夹（应用内文件夹树，不用系统弹窗）
   const destCell = e.target.closest(".cell-dest");
   if (destCell) {
-    const tid = destCell.dataset.task;
-    const p = await pickFolderModal();
+    const tid = destCell.dataset.task,task=(state.dlTasks||[]).find(t=>t.id===tid);
+    const p = await pickFolderModal({target:task?.dest_dir,model:task,cover:state.dlThumbs[tid],loadCover:async()=>{const result=await api.call('get_task_thumbnails',[tid]);const covers=typeof result==='string'?JSON.parse(result):result;return covers?.[tid];}});
     if (!p) return;
     const r = await api.call("set_task_target", tid, p);
     setStatus((r && r.msg) || "已更新保存位置");
@@ -1294,13 +1229,8 @@ $("#dlTable tbody").addEventListener("click", async (e) => {
   }
   const tr = e.target.closest("tr");
   if (!tr) return;
-  const ctrl = e.ctrlKey || e.metaKey;
-  if(e.target.matches(".dl-task-check"))tr.classList.toggle("sel-row",e.target.checked);
-  else if (ctrl) tr.classList.toggle("sel-row");
-  else {
-    $$("#dlTable tbody tr").forEach((r) => r.classList.remove("sel-row"));
-    tr.classList.add("sel-row");
-  }
+  if(e.target.closest('button,.dl-drag-handle,.err-copy'))return;
+  tr.classList.toggle("sel-row");
   syncDlSelection();
 });
 
@@ -1309,41 +1239,19 @@ function dlSel() {
 }
 
 function dlSelectedIds(){return Array.from(document.querySelectorAll('#dlTable tbody tr.sel-row')).map(r=>r.dataset.taskId);}
-function syncDlSelection(){const rows=Array.from(document.querySelectorAll('#dlTable tbody tr'));rows.forEach(r=>{const input=r.querySelector('.dl-task-check');if(input)input.checked=r.classList.contains('sel-row');});const count=rows.filter(r=>r.classList.contains('sel-row')).length;$('#dlSelectAll').checked=rows.length>0&&count===rows.length;$('#dlSelectAll').indeterminate=count>0&&count<rows.length;}
-$('#dlSelectAll').addEventListener('change',e=>{document.querySelectorAll('#dlTable tbody tr').forEach(r=>r.classList.toggle('sel-row',e.target.checked));syncDlSelection();});
-$('#dlPauseAll').addEventListener('click',()=>dlAct('pause_all'));
-$('#dlRemoveAll').addEventListener('click',async()=>{if(await confirmBox('移除全部下载任务？取消未完成下载并清理其 .part 临时文件；不删除模型文件或历史。'))dlAct('remove_all');});
+function syncDlSelection(){const rows=[...document.querySelectorAll('#dlTable tbody tr[data-task-id]')],count=rows.filter(r=>r.classList.contains('sel-row')).length;rows.forEach(r=>r.setAttribute('aria-selected',String(r.classList.contains('sel-row'))));for(const id of ['dlStartSel','dlPauseSel','dlRetrySel','dlRemoveSel']){const b=document.getElementById(id);if(b)b.disabled=!count;}const hint=document.querySelector('.ef-transfer-selection-hint');if(hint)hint.textContent=count?'已选 '+count+' / '+rows.length+' 项':'点击任务选择，可多选 · 右键快捷操作';}
+$('#dlTable tbody').addEventListener('keydown',e=>{const row=e.target.closest('tr[data-task-id]');if(!row||e.target!==row||![' ','Enter'].includes(e.key))return;e.preventDefault();row.classList.toggle('sel-row');syncDlSelection();});
 async function dlAct(action) {
-  if (["start","pause","retry","remove"].includes(action) && !dlSelectedIds().length) {setStatus("请先勾选下载任务");return;}
+  if (["start","pause","retry","remove"].includes(action) && !dlSelectedIds().length) {setStatus("请先点击选择下载任务");return;}
   if(action==="remove" && !(await confirmBox("移除选中任务并清理未完成的 .part？已完成模型和历史保留。")))return;
   const result = await api.call("dl_action", action, null, ["start_all","pause_all","remove_all","clear_done","remove_completed","save"].includes(action) ? null : dlSelectedIds());
   if (action === "save") setStatus(result ? "任务及历史已保存" : "记录保存失败，请检查目录写入权限");
   dlRefresh();
 }
 $("#dlStartSel").addEventListener("click", () => dlAct("start"));
-$("#dlStartAll").addEventListener("click", () => dlAct("start_all"));
 $("#dlPauseSel").addEventListener("click", () => dlAct("pause"));
 $("#dlRetrySel").addEventListener("click", () => dlAct("retry"));
 $("#dlRemoveSel").addEventListener("click", () => dlAct("remove"));
-// 批量/单选：给任务指定保存文件夹（应用内文件夹树；未勾选=全部任务）
-$("#dlSetTarget").addEventListener("click", async () => {
-  const sel = dlSel();
-  const ids=dlSelectedIds();const tasks = (state.dlTasks || []).filter((t) => !ids.length || ids.includes(t.id));
-  if (!tasks.length) { setStatus(sel.length ? "选中的任务里没有可设置的" : "任务列表为空"); return; }
-  const p = await pickFolderModal();
-  if (!p) return;
-  let ok = 0, fail = 0, msg = "";
-  for (const t of tasks) {
-    const r = await api.call("set_task_target", t.id, p);
-    if (r && r.ok) ok++; else { fail++; msg = (r && r.msg) || msg; }
-  }
-  setStatus("已设置 " + ok + " 个任务的保存位置" + (fail ? ("，失败 " + fail + (msg ? "：" + msg : "")) : ""));
-  dlRefresh();
-});
-$('#dlRemoveCompleted').addEventListener('click',()=>dlAct('remove_completed'));
-$("#dlClearDone").addEventListener("click", () => dlAct("clear_done"));
-$("#dlSave").addEventListener("click", () => dlAct("save"));
-
 // Download context actions target the right-clicked task ID, never the previous selection.
 let dlContextTaskId = null;
 $("#dlTable tbody").addEventListener("contextmenu", (e) => {
@@ -1354,10 +1262,14 @@ $("#dlTable tbody").addEventListener("contextmenu", (e) => {
   e.preventDefault();
   dlContextTaskId = t.id;
   const menu = $("#ctxMenu");
+  menu.classList.add("ef-download-context");
   menu.innerHTML =
-    '<div class="ctx-item" data-act="dl_folder" data-tip="打开资源管理器并选中该文件">打开所在文件夹</div>' +
-    '<div class="ctx-item" data-act="dl_copy" data-tip="复制当前文件名">复制文件名</div>' +
-    '<div class="ctx-item" data-act="dl_site" data-tip="在浏览器打开该模型在 C 站的主页">打开C站</div>' +
+    '<button class="ctx-item" data-act="dl_start">'+_icon('play')+'开始 / 继续</button>'+
+    '<button class="ctx-item" data-act="dl_pause">'+_icon('pause')+'暂停此任务</button>'+
+    '<button class="ctx-item" data-act="dl_retry">'+_icon('refresh')+'重试此任务</button><hr class="ctx-sep"/>'+
+    '<button class="ctx-item" data-act="dl_folder" data-tip="打开资源管理器并选中该文件">打开所在文件夹</button>' +
+    '<button class="ctx-item" data-act="dl_copy" data-tip="复制当前文件名">复制文件名</button>' +
+    '<button class="ctx-item" data-act="dl_site" data-tip="在浏览器打开该模型在 C 站的主页">打开C站</button>' +
     '<hr class="ctx-sep"/><button class="ctx-item danger" data-act="dl_remove" data-tip="取消此任务，停止写入后清理未完成 .part；已完成模型与历史保留">' + _icon("trash") + '移除此任务</button>';
   menu.style.display = "block";
   const zf = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
@@ -1374,7 +1286,8 @@ $("#ctxMenu").addEventListener("click", async (e) => {
   $("#ctxMenu").style.display = "none";
   const act = item.dataset.act;
   if (!t) return;
-  if (act === "dl_remove") {
+  if(['dl_start','dl_pause','dl_retry'].includes(act)){await api.call('dl_action',act.slice(3),null,[t.id]);await dlRefresh();
+  } else if (act === "dl_remove") {
     if(!(await confirmBox("移除此任务："+t.filename+"？未完成的 .part 会在写入停止后清理；已完成模型与历史保留。")))return;
     const result=await api.call("remove_download_task",t.id);
     setStatus(result?.msg||"任务已移除");await dlRefresh();await refreshDownloadHistory();
@@ -1396,40 +1309,34 @@ function mmScanIfNeeded() {
   if (!state.models.length && !$("#mmScan").disabled) mmScan();
 }
 
+let mmScanRequest = false, mmScanPolling = false;
 async function mmScan() {
-  if (!window.__ready) { setStatus("初始化中，请稍候 ..."); await new Promise((r) => setTimeout(r, 600)); return mmScan(); }
-  setStatus("正在扫描 ...");
-  // fire-and-forget + 独立轮询：不依赖 js_api Promise 完成来启动轮询
-  api.call("scan_models").catch(() => {});
-  pollMmScan();
+  if (mmScanRequest || mmScanPolling) return;
+  if (!window.__ready) { setStatus('初始化中，请稍候 ...'); return; }
+  mmScanRequest = true; mmMissingCovers.clear(); setStatus('正在扫描 ...');
+  try { await api.call('scan_models'); pollMmScan(); }
+  catch (e) { setStatus('扫描未开始，请重试'); }
+  finally { mmScanRequest = false; }
 }
-
 function pollMmScan() {
-  const t = setInterval(async () => {
-    const s = await api.call("get_scan_state");
-    if (s && !s.running) {
-      clearInterval(t);
-      try {
-        state.models = JSON.parse((await api.call("get_scan_rows")) || "[]");
-        const cfg=await api.call("get_config");if(cfg?.model_favorites)state.cfg.model_favorites=cfg.model_favorites;
-      } catch (e) {
-        state.models = [];
-        setStatus("行数据解析失败: " + e);
-      }
-      // 保留用户的排序与筛选（删除/刷新后不再重置）；勾选只清掉已不存在的模型
-      try {
-        const alive = new Set(state.models.map((r) => r.path));
-        Array.from(state.mmChecked).forEach((p) => { if (!alive.has(p)) state.mmChecked.delete(p); });
-      } catch (e) { state.mmChecked.clear(); }
-      try {
-        const u = await api.call("get_model_updates");   // 缓存的更新检测结果 → 卡片
-        if (u && u.items) applyUpdatesToRows(u.items);
-      } catch (e) { /* 忽略 */ }
-      applyMmFilter();
-      setStatus(s.msg || "扫描完成：" + state.models.length + " 个模型");
-      $("#mmCount").textContent = state.models.length + " 个";
-    } else if (s && s.msg) setStatus(s.msg);
-  }, 700);
+  if (mmScanPolling) return;
+  mmScanPolling = true;
+  (async()=>{try{
+    for (;;) {
+      await new Promise(r=>setTimeout(r,350));
+      const status = await api.call('get_scan_state');
+      if (!status) throw Error('scan state');
+      if (status.running) { if(status.msg)setStatus(status.msg); continue; }
+      const rows = JSON.parse((await api.call('get_scan_rows')) || '[]');
+      if (!Array.isArray(rows)) throw Error('scan rows');
+      state.models = rows;
+      const cfg = await api.call('get_config'); if(cfg?.model_favorites)state.cfg.model_favorites=cfg.model_favorites;
+      const alive=new Set(rows.map(r=>r.path));for(const set of [state.mmChecked,state.mmSel])for(const p of set)if(!alive.has(p))set.delete(p);
+      try { const u=await api.call('get_model_updates');if(u?.items)applyUpdatePayload(u); } catch(_){}
+      applyMmFilter(); setStatus(status.msg || '扫描完成：'+rows.length+' 个模型'); $('#mmCount').textContent=rows.length+' 个';
+      break;
+    }
+  }catch(e){setStatus('读取扫描结果失败，请重试');}finally{mmScanPolling=false;}})();
 }
 
 function renderMm() {
@@ -1438,7 +1345,7 @@ function renderMm() {
   const _scMV=$("#mmMasonryViewport")?.scrollTop||0;
   const _scM = ($("#mmMasonry") || {}).scrollTop || 0;
   const _scT = ($("#mmTableWrap") || {}).scrollTop || 0;
-  const rows = state.display.slice();
+  let rows = state.display.slice();
   if (state.mmSort.col) {
     const c = state.mmSort.col;
     rows.sort((a, b) => {
@@ -1454,13 +1361,17 @@ function renderMm() {
   rows.sort((a,b)=>Number(isModelFavorite(b.path))-Number(isModelFavorite(a.path)));
   applyModelToolbarLock();
   state.display = rows.slice();  // 同步排序后的显示顺序（shift 区间 / data-idx 依赖）
-  if (state.mmView === "masonry") {
-    renderMasonry(rows);
+  rows = window.CFTModelManagement?.pageRows(rows) || rows;
+  window.CFTModelCards?.configureView(state.mmView);
+  if (state.mmView === "masonry" || state.mmView === "grid") {
+    renderMasonry(rows,{mv:_scMV,m:_scM});
     if($("#mmMasonryViewport"))$("#mmMasonryViewport").scrollTop=_scMV;
     if ($("#mmMasonry")) $("#mmMasonry").scrollTop = _scM;
     if ($("#mmTableWrap")) $("#mmTableWrap").scrollTop = _scT;
     return;
   }
+  ++mmMasonryRenderVersion;
+  $('#mmMasonry').dataset.rendering='false';
   // 切回列表时恢复容器显示
   $("#mmTableWrap").style.display = "block";
   $("#mmMasonry").style.display = "none";
@@ -1468,16 +1379,15 @@ function renderMm() {
   const tbody = $("#mmTable tbody");
   tbody.innerHTML = rows.map((r, i) => {
     const rel = root ? r.path.replace(root.replace(/\\/g, "/"), "").replace(/^\//, "") : r.path;
-    return '<tr data-idx="' + i + '" data-path="' + esc(r.path) + '" class="' + (state.mmSel.has(r.path) ? "sel-row" : "") + (normalizedModelPath(state.historyFocusPath)===normalizedModelPath(r.path)?" history-focus":"") + '">' +
-      '<td class="cell-sel" data-col="sel">' + (state.mmChecked.has(r.path) ? '<span class="cbox on"></span>' : '<span class="cbox"></span>') + "</td>" +
+    return '<tr '+(window.CFTModelCards?.cardAttributes(r)||'')+' data-idx="' + (i+(window.CFTModelManagement?.offset()||0)) + '" data-path="' + esc(r.path) + '" class="' + (state.mmChecked.has(r.path) ? "sel-row" : "") + (normalizedModelPath(state.historyFocusPath)===normalizedModelPath(r.path)?" history-focus":"") + '">' +
       "<td class='c-name' data-col='name'><div class='ml-wrap'>" +
-        '<img data-idx="' + i + '" data-path="' + esc(r.path) + '" class="thumb ml-thumb" alt=""/>' +
+        '<img data-idx="' + (i+(window.CFTModelManagement?.offset()||0)) + '" data-path="' + esc(r.path) + '" class="thumb ml-thumb" alt=""/>' +
         (r.upd && r.upd.has_update ? '<a href="#" class="mm-upd" data-url="' + esc(r.upd.url || "") + '" title="' + esc(updTip(r.upd)) + '">' + _icon("alert") + '</a>' : "") +
         '<div class="ml-txt">' +
-          '<div class="ml-1" data-tip="' + esc((r.civitai_name || r.name) + "\n" + String(r.name || "")) + '">' + (isModelFavorite(r.path)?_icon("star","ic model-star"):"")+esc(r.civitai_name || r.name) + "</div>" +
+          '<div class="ml-1" data-tip="' + esc((r.civitai_name || r.name) + "\n" + String(r.name || "")) + '">' + (isModelFavorite(r.path)?window.CFTModelCards.favoriteIcon():"")+esc(r.civitai_name || r.name) + "</div>" +
           ((r.civitai_name && r.name && String(r.civitai_name) !== String(r.name)) ? '<div class="ml-2" data-tip="本地文件名">' + esc(r.name) + "</div>" : "") +
           ((r.author || (r.info && r.info.creator)) ? '<div class="ml-3">作者 ' + esc(r.author || (r.info && r.info.creator)) + "</div>" : "") +
-        "</div></div></td>" +
+        '<div class="ml-summary">'+esc([r.type_filter||r.type,r.base,r.ver,fmtSize(r.size)].filter(Boolean).join(" · "))+'</div></div></div></td>' +
       "<td class='c-name' data-col='cname' data-tip='' >" + esc(r.civitai_name || "-") + "</td>" +
       "<td data-col='type'>" + esc(r.type || "-") + "</td><td data-col='base'>" + esc(r.base || "-") + "</td>" +
       "<td class='c-ver' data-col='ver'>" + esc(r.ver || "-") + "</td>" +
@@ -1488,7 +1398,6 @@ function renderMm() {
   }).join("");
   tbody.querySelectorAll("td[data-col]:not([data-col=sel]):not([data-col=name]):not([data-col=path])").forEach(td=>td.title=td.textContent.trim());
   $("#mmCheckLabel").textContent = "已勾选 " + state.mmChecked.size + " 个";
-  _applyCoverCache($("#mmTable"));
   loadThumbs(0);
   mmApplyCols();
   if ($("#mmMasonry")) $("#mmMasonry").scrollTop = _scM;
@@ -1521,27 +1430,13 @@ function _applyCoverCache(root) {
     }
   });
 }
-async function loadThumbs(start) {
-  if (state.mmView === "list" && Number(state.cfg.model_list_size || 3) < 3) return;
-  const batch = state.display.slice(start, start + 40);
-  if (!batch.length) return;
-  const miss = batch.filter((r) => !state.coverCache.has(r.path));
-  if (miss.length) {
-    try {
-      const json = await api.call("get_covers", miss.map((r) => r.path));
-      const covers = JSON.parse(json || "{}");
-      if (state.coverCache.size > 4000) state.coverCache.clear();
-      for (const [p, b64] of Object.entries(covers)) {
-        const du = "data:image/jpeg;base64," + b64;
-        state.coverCache.set(p, du);
-        document.querySelectorAll(".thumb").forEach((img) => {
-          if (img.dataset.path === p) img.src = du;
-        });
-      }
-    } catch (e) { /* 缩略图失败不影响列表 */ }
-  }
-  loadThumbs(start + 40);
-}
+const mmMissingCovers=new Set();let mmThumbObserver=null,mmThumbQueue=new Map(),mmThumbNodes=new Map(),mmThumbBusy=false;
+function mmApplyThumb(path,source,phase){for(const img of mmThumbNodes.get(path)||[]){if(!img.isConnected)continue;const wrap=img.closest('.ms-img-wrap');if(source&&img.getAttribute('src')!==source){img.onload=()=>{if(wrap)wrap.dataset.ph='ok';};img.onerror=()=>{if(wrap)wrap.dataset.ph='fail';};img.src=source;}if(wrap)wrap.dataset.ph=phase;}}
+function mmTrimCoverCache(){let bytes=0;for(const v of state.coverCache.values())bytes+=v.length*2;while(state.coverCache.size>256||bytes>48*1024*1024){const key=state.coverCache.keys().next().value;if(key===undefined)break;bytes-=state.coverCache.get(key).length*2;state.coverCache.delete(key);}}
+async function mmPumpThumbs(){if(mmThumbBusy)return;mmThumbBusy=true;try{while(mmThumbQueue.size){const batch=[...mmThumbQueue.keys()].slice(0,16);batch.forEach(p=>mmThumbQueue.delete(p));const missing=batch.filter(p=>!state.coverCache.has(p)&&!mmMissingCovers.has(p));for(const p of batch)if(state.coverCache.has(p))mmApplyThumb(p,state.coverCache.get(p),'ok');if(missing.length){try{const edge=Math.min(960,Math.round(320*Math.max(1,devicePixelRatio||1))),raw=await api.call('get_covers',missing,edge),covers=typeof raw==='string'?JSON.parse(raw||'{}'):raw||{};for(const p of missing){if(covers[p]){const source='data:image/jpeg;base64,'+covers[p];state.coverCache.delete(p);state.coverCache.set(p,source);mmApplyThumb(p,source,'ok');}else{mmMissingCovers.add(p);mmApplyThumb(p,null,'none');}}mmTrimCoverCache();}catch(_){for(const p of missing)mmApplyThumb(p,null,'fail');}}await new Promise(r=>setTimeout(r,0));}}finally{mmThumbBusy=false;if(mmThumbQueue.size)mmPumpThumbs();}}
+function mmObserveThumbs(scope){for(const img of scope.querySelectorAll('img.ms-img[data-path],img.thumb[data-path]')){img.loading='lazy';img.decoding='async';const path=img.dataset.path;if(!mmThumbNodes.has(path))mmThumbNodes.set(path,new Set());mmThumbNodes.get(path).add(img);mmThumbObserver.observe(img);}}
+function mmStartThumbs(scope){mmThumbObserver?.disconnect();mmThumbQueue.clear();mmThumbNodes=new Map();mmThumbObserver=new IntersectionObserver(entries=>{for(const e of entries){if(!e.isIntersecting)continue;const img=e.target,path=img.dataset.path;mmThumbObserver.unobserve(img);if(state.coverCache.has(path)){const source=state.coverCache.get(path);state.coverCache.delete(path);state.coverCache.set(path,source);mmApplyThumb(path,source,'ok');}else if(mmMissingCovers.has(path))mmApplyThumb(path,null,'none');else mmThumbQueue.set(path,true);}mmPumpThumbs();},{rootMargin:'350px'});mmObserveThumbs(scope);}
+async function loadThumbs(start){if(!start)mmStartThumbs($('#mmTable'));}
 
 // ===== 表头列宽拖拽（v2.1.74 重做）=====
 // 规则：拖动某列右缘的分隔线 → 调整【该列】；若该列是"模型信息"（弹性 auto 列），则调整它右边那一列。
@@ -1747,76 +1642,41 @@ document.addEventListener("keydown", (e) => {
 // 渲染后应用列显隐（在 renderMm 列表分支后调用）
 
 // ===== 瀑布流视图 =====
-function renderMasonry(rows) {
-  $("#mmTableWrap").style.display = "none";
-  $("#mmMasonry").style.display = "block";
-  $("#mmMasonry").innerHTML = rows.map((r, i) => {
-    const checked = state.mmChecked.has(r.path) ? "checked" : "";
+function modelCardHtml(r,i,options={}){
+    const checked = options.checked ? "checked" : "";
     const _cn = String(r.civitai_name || "").trim();
     const _disp = _cn || String(r.name || "");
     const _sub = (_cn && _cn !== r.name) ? String(r.name || "") : "";
     const _meta = [r.base, r.type].filter(Boolean).map((x) => short(String(x), 16)).join(" · ");
-    const _meta2 = [r.ver ? short(String(r.ver), 16) : "", fmtSize(r.size)].filter(Boolean).join(" · ");
-    return '<div class="ms-card' + (checked ? " checked" : "") + (normalizedModelPath(state.historyFocusPath)===normalizedModelPath(r.path)?' history-focus':'') + '" tabindex="0" data-idx="' + i + '" data-path="' + esc(r.path) + '" title="' + esc(String(r.name || "") + " · " + String(r.path || "")) + '">' +
-      '<span class="ms-check">' + (checked ? '<span class="cbox on"></span>' : '<span class="cbox"></span>') + "</span>" +
+    const _meta2 = options.selectionOnly&&!r.path?'未在本地模型库中':[r.ver ? short(String(r.ver), 16) : "", fmtSize(r.size)].filter(Boolean).join(" · ");
+    return '<div class="ms-card' + (checked ? " checked" : "") + (!options.selectionOnly&&normalizedModelPath(state.historyFocusPath)===normalizedModelPath(r.path)?' history-focus':'') + '" '+(window.CFTModelCards?.cardAttributes(r)||'')+' role="'+(options.role||'option')+'" aria-'+(options.role==='checkbox'?'checked':'selected')+'="'+!!checked+'" tabindex="0" data-idx="' + i + '" data-path="' + esc(r.path) + '" title="' + esc(String(r.name || "") + " · " + String(r.path || "")) + '">' +
+      (options.decoration??(window.CFTModelCards?.cardDecoration(r)||'')) +
       _msTag(r) +
-      (r.upd && r.upd.has_update ? '<a href="#" class="ms-upd" data-url="' + esc(r.upd.url || "") + '" title="' + esc(updTip(r.upd)) + '">' + _icon("alert") + '</a>' : "") +
-      '<div class="ms-img-wrap" data-ph="loading"><img class="ms-img" data-idx="' + i + '" data-path="' + esc(r.path) + '" alt=""/></div>' +
-      '<div class="ms-info"><div class="ms-titles"><div class="ms-name" data-civitai-name="' + (_cn ? 'true' : 'false') + '">' + (isModelFavorite(r.path)?_icon('star','ic model-star'):'') + esc(_disp) + "</div>" +
+      (!options.selectionOnly && r.upd && r.upd.has_update ? '<a href="#" class="ms-upd" data-url="' + esc(r.upd.url || "") + '" title="' + esc(updTip(r.upd)) + '">' + _icon("alert") + '</a>' : "") +
+      '<div class="ms-img-wrap" data-ph="loading"><img class="ms-img" data-idx="' + i + '" data-path="' + esc(r.path) + '" alt=""/><span class="model-underlight" aria-hidden="true"></span></div>' +
+      '<div class="ms-info"><div class="ms-titles"><div class="ms-name" data-civitai-name="' + (_cn ? 'true' : 'false') + '">' + (isModelFavorite(r.path)?window.CFTModelCards.favoriteIcon():'') + esc(_disp) + "</div>" +
       (_sub ? '<div class="ms-sub">' + esc(_sub) + "</div>" : "") +
       '</div><div class="ms-footer">' +
       (r.author ? '<div class="ms-author" title="' + esc(r.author) + '">作者：' + esc(r.author) + '</div>' : '') +
       '<div class="ms-meta">' + esc(_meta || (r.type || "-")) + "</div>" +
       '<div class="ms-size">' + esc(_meta2 || fmtSize(r.size)) + "</div></div></div></div>";
-  }).join("");
-  _applyCoverCache($("#mmMasonry"));
-  $("#mmCheckLabel").textContent = "已勾选 " + state.mmChecked.size + " 个";
-  loadMasonryThumbs(0);
 }
-async function loadMasonryThumbs(start) {
-  const batch = state.display.slice(start, start + 40);
-  if (!batch.length) {
-    // 所有批次跑完：仍处 loading 的标记为"暂无封面"（保证高度稳定、不再是白块）
-    document.querySelectorAll('.ms-img-wrap[data-ph="loading"]').forEach((w) => { w.dataset.ph = "none"; });
-    return;
-  }
-  const _markBatch = (paths, ph) => {
-    paths.forEach((pp) => {
-      document.querySelectorAll(".ms-img[data-path]").forEach((img) => {
-        if (img.dataset.path === pp) {
-          const w = img.closest(".ms-img-wrap");
-          if (w && w.dataset.ph === "loading") w.dataset.ph = ph;
-        }
-      });
-    });
+
+let mmMasonryRenderVersion=0;
+function renderMasonry(rows,restore={}) {
+  $('#mmTableWrap').style.display='none';const root=$('#mmMasonry');root.style.display=state.mmView==='masonry'?'flex':'grid';const version=++mmMasonryRenderVersion;
+  root.replaceChildren();mmStartThumbs(root);let offset=0;root.dataset.rendering='true';
+  const masonry=state.mmView==='masonry',gap=12,width=Math.max(140,Number(state.cfg.masonry_card_width)||220),count=masonry?Math.max(1,Math.floor((root.clientWidth+gap)/(width+gap))):0,lanes=[];
+  root.dataset.stableColumns=String(count);if(masonry)for(let i=0;i<count;i++){const lane=document.createElement('div');lane.className='ms-stable-column';root.append(lane);lanes.push(lane);}
+  const append=()=>{if(version!==mmMasonryRenderVersion||!['masonry','grid'].includes(state.mmView))return;const end=Math.min(rows.length,offset+(rows.length>300?120:rows.length));const template=document.createElement('template');template.innerHTML=rows.slice(offset,end).map((r,i)=>modelCardHtml(r,offset+i+(window.CFTModelManagement?.offset()||0),{checked:state.mmChecked.has(r.path)})).join('');
+   if(masonry){for(const card of [...template.content.children]){const index=Number(card.dataset.idx)-(window.CFTModelManagement?.offset()||0);lanes[index%count].append(card);}}else root.append(template.content);
+   offset=end;root.dataset.renderedCount=String(offset);if(offset<rows.length)requestAnimationFrame(append);else{root.dataset.rendering='false';mmStartThumbs(root);window.CFTModelCards?.observeCards();if(restore.mv!==undefined&&$('#mmMasonryViewport'))$('#mmMasonryViewport').scrollTop=restore.mv;if(restore.m!==undefined)root.scrollTop=restore.m;}
   };
-  const miss = batch.filter((r) => !state.coverCache.has(r.path));
-  if (miss.length) {
-    const _dpr = Math.max(1, window.devicePixelRatio || 1);
-    const _edge = Math.min(960, Math.round(320 * _dpr));   // 高缩放屏按物理像素取图，避免放大发糊
-    try {
-      const json = await api.call("get_covers", miss.map((r) => r.path), _edge);
-      const covers = JSON.parse(json || "{}");
-      if (state.coverCache.size > 4000) state.coverCache.clear();
-      for (const [p, b64] of Object.entries(covers)) {
-        const du = "data:image/jpeg;base64," + b64;
-        state.coverCache.set(p, du);
-        document.querySelectorAll(".ms-img").forEach((img) => {
-          if (img.dataset.path === p) {
-            const w = img.closest(".ms-img-wrap");
-            img.onload = () => { if (w) w.dataset.ph = "ok"; };
-            img.onerror = () => { if (w) w.dataset.ph = "fail"; };
-            img.src = du;
-          }
-        });
-      }
-      _markBatch(miss.filter((r) => !covers[r.path]).map((r) => r.path), "none");
-    } catch (e) {
-      _markBatch(miss.map((r) => r.path), "fail");     // 拉取失败：统一显示"封面加载失败"
-    }
-  }
-  loadMasonryThumbs(start + 40);
+  append();$('#mmCheckLabel').textContent='已勾选 '+state.mmChecked.size+' 个';
 }
+
+async function loadMasonryThumbs(start){if(!start)mmStartThumbs($('#mmMasonry'));}
+
 $("#mmViewToggle").addEventListener("click", () => {
   state.mmView = state.mmView === "masonry" ? "list" : "masonry";
   $("#mmViewToggle").textContent = state.mmView === "masonry" ? "列表视图" : "瀑布流";
@@ -1825,6 +1685,8 @@ $("#mmViewToggle").addEventListener("click", () => {
 });
 // 瀑布流：单击卡片打开详情；勾选走卡片角标按钮
 $("#mmMasonry").addEventListener("click", (e) => {
+  const favorite=e.target.closest("[data-model-favorite]");
+  if(favorite){toggleModelFavorite(favorite.dataset.modelFavorite);return;}
   const chk = e.target.closest(".ms-check");
   if (chk) {
     const card = chk.closest(".ms-card");
@@ -1845,6 +1707,7 @@ $("#mmMasonry").addEventListener("click", (e) => {
   if (state.mmChecked.has(p)) state.mmChecked.delete(p);
   else state.mmChecked.add(p);
   card.classList.toggle("checked", state.mmChecked.has(p));
+  card.setAttribute("aria-selected",String(state.mmChecked.has(p)));state.mmSel=new Set(state.mmChecked);
   if (cardChk) cardChk.innerHTML = state.mmChecked.has(p) ? '<span class="cbox on"></span>' : '<span class="cbox"></span>';
   $("#mmCheckLabel").textContent = "已勾选 " + state.mmChecked.size + " 个";
   showModelDetail(p);
@@ -1901,6 +1764,7 @@ let mmFilterTimer = null;
 // 统一过滤：关键词 + 「只看有更新」
 function applyMmFilter() {
   const kw = $("#mmFilter").value.trim().toLowerCase();
+  window.CFTModelManagement?.filterChanged();
   let rows = state.models;
   if (state.mmUpdOnly) rows = rows.filter((r) => r.upd && r.upd.has_update);
   if (kw) {
@@ -1959,6 +1823,20 @@ function updTip(u) {
   parts.push("· 点击去 C 站看新版（不会自动下载）");
   return parts.join(" ");
 }
+function applyUpdatePayload(u){
+  if(!u||!u.items)return;
+  applyUpdatesToRows(u.items);state.mmUpdCheckedAt=u.checked_at||0;
+  state.updBatches=Array.isArray(u.batches)?u.batches.filter(b=>b&&b.id&&b.items&&typeof b.items==="object"&&!Array.isArray(b.items)):[];
+  if(_updHistorical()&&!state.updBatches.some(b=>b.id===state.updBatchId)){state.updBatchId="current";state.updSel.clear();}
+  window.CFTUpdates?.sync();
+}
+function _updHistorical(){return state.updBatchId&&state.updBatchId!=="current";}
+function _updActiveItems(){
+  if(_updHistorical())return state.updBatches.find(b=>b.id===state.updBatchId)?.items||{};
+  if(state.updProgress?.running){const result={};for(const path of new Set([...(state.updProgress.paths||[]),...Object.keys(state.updProgress.items||{})])){const old=state.mmUpdItems?.[path]||{},row=state.models.find(r=>r.path===path)||{};result[path]=state.updProgress.items?.[path]||{model_name:old.model_name||row.civitai_name||row.name,local_name:old.local_name||row.ver,local_base:old.local_base||row.base,author:old.author||row.author,checked_at:0};}return result;}
+  if(state.updBatches[0])return Object.fromEntries(Object.keys(state.updBatches[0].items).filter(path=>Object.hasOwn(state.mmUpdItems||{},path)).map(path=>[path,state.mmUpdItems[path]]));
+  return state.mmUpdItems||{};
+}
 function applyUpdatesToRows(items) {
   if (!items) return;
   state.mmUpdItems = items;          // 供「更新」页面使用
@@ -1978,19 +1856,22 @@ async function mmCheckUpdatesFlow(force, paths) {
     }
     return;
   }
+  state.updCheckPolling=true;state.updBatchId="current";state.updSel.clear();state.updProgress={running:true,done:0,newer:0,total:r.total||0,checked_at:r.checked_at||Date.now()/1000,paths:r.paths||paths||[],items:{}};window.CFTUpdates?.sync();if($("#page-updates.active"))renderUpdatesPage();
   setStatus("检查更新中 0/" + (r.total || "?") + " …");
   const timer = setInterval(async () => {
     const p = await api.call("get_mm_update_state");
     if (!p) return;
+    state.updProgress=p;window.CFTUpdates?.sync();
+    if(p.running&&$("#page-updates.active"))renderUpdatesPage();
     if (p.running) {
       setStatus("检查更新中 " + (p.done || 0) + "/" + (p.total || 0) + " · 已发现 " + (p.newer || 0) + " 个有更新（再点一次按钮可停止）");
       ["#updCheck", "#mmCheckUpd"].forEach((sel) => {
         const b = $(sel);
-        if (b) { b.textContent = "停止检查（" + (p.done || 0) + "/" + (p.total || 0) + "）"; b.classList.add("is-busy"); }
+        if (b) { b.textContent = sel==="#updCheck"?"停止检查":"停止检查（" + (p.done || 0) + "/" + (p.total || 0) + "）"; b.classList.add("is-busy"); }
       });
       return;
     }
-    clearInterval(timer);
+    clearInterval(timer);state.updCheckPolling=false;
     ["#updCheck", "#mmCheckUpd"].forEach((sel) => {
       const b = $(sel);
       if (b) { b.textContent = "检查更新"; b.classList.remove("is-busy"); }
@@ -2000,8 +1881,7 @@ async function mmCheckUpdatesFlow(force, paths) {
     try {
       const u = await api.call("get_model_updates");
       if (u && u.items) {
-        applyUpdatesToRows(u.items);
-        state.mmUpdCheckedAt = u.checked_at || 0;
+        applyUpdatePayload(u);
         if (state.models.length) applyMmFilter();
         if ($("#page-updates") && $("#page-updates").classList.contains("active")) {
           renderUpdatesPage();                    // 正在「更新」页面 → 直接刷新列表
@@ -2093,13 +1973,14 @@ function vselHtml(x, list, rec, sel, selEntry) {
     ? '<div class="mm-sep-h"></div><div class="vitem vopen" data-vsite="' + esc(x.it.url) + '">打开 C 站查看全部版本 →</div>'
     : "";
   return '<span class="btn-group vsel-wrap">' +
-    '<button class="btn vsel-btn" data-vsel="' + esc(cur) + '" data-tip="选择要更新到的版本（推荐版本默认选中）">' +
+    '<button class="vsel-btn" data-vsel="' + esc(cur) + '" data-tip="选择要更新到的版本（推荐版本默认选中）">' +
     '<span class="vsel-label">' + label + '</span>' + _icon("chevron-down") + "</button>" +
     '<div class="mm-menu vmenu">' + items + site + "</div></span>";
 }
 
 function _updRowHtml(x) {
   const it = x.it || {};
+  const historical=_updHistorical();
   const st = _updState(it);
   const isUpd = !!it.has_update;
   const { list, rec } = _updVers(x);
@@ -2119,13 +2000,12 @@ function _updRowHtml(x) {
     if (sd && cd) isDown = sd < cd;
     else if (selEntry.name && curName) isDown = _verCmp(selEntry.name, curName) < 0;
   }
-  const actLabel = isDown ? "降级到 " + esc((selEntry && selEntry.name) || sel) : "更新到 " + esc((selEntry && selEntry.name) || "最新");
+  const actLabel = isDown ? "降级" : "更新";
   const actTip = isDown
     ? "回退到这一版（比你当前用的旧）：新版会下到旧版所在文件夹；当前这份文件保留或删除由设置决定"
     : "下载这一版到旧版所在文件夹；旧版保留或删除由设置决定";
   return '<tr class="' + (state.updSel.has(x.path) ? "is-sel" : "") + (isUpd ? "" : " is-flat") + '" data-path="' + esc(x.path) + '" data-mid="' + esc(it.model_id || "") +
-    '" data-mname="' + esc(it.model_name || "") + '">' +
-    '<td class="c-ck"><input type="checkbox" class="upd-cb" data-path="' + esc(x.path) + '"' + (state.updSel.has(x.path) ? " checked" : "") + "/></td>" +
+    '" data-mname="' + esc(it.model_name || "") + '" data-update-state="'+st.k+'">' +
     '<td class="c-info"><div class="upd-info">' +
       '<img class="dd-thumb upd-thumb" data-path="' + esc(x.path) + '" alt=""/>' +
       '<div class="upd-meta">' +
@@ -2135,18 +2015,20 @@ function _updRowHtml(x) {
       "</div></div></td>" +
     '<td class="c-cur"><span class="ver-badge" data-tip="' + esc(it.local_name || "") + '">' + esc(curName || "未知") + "</span>" +
       (!curName && it.local_version ? '<div class="upd-dim upd-id">ID ' + esc(it.local_version) + "</div>" : "") + "</td>" +
-    '<td class="c-ver">' + (list.length ? vselHtml(x, list, rec, sel, selEntry) : '<span class="upd-dim">—</span>') + "</td>" +
+    '<td class="c-ver">' + (list.length ? (historical?'<span class="upd-past-version">'+esc(selEntry?.name||sel)+'</span>':vselHtml(x, list, rec, sel, selEntry)) : '<span class="upd-dim">—</span>') + "</td>" +
     '<td class="c-date">' + esc(date || "—") + "</td>" +
     '<td class="c-st"><span class="st-badge ' + st.cls + '">' + st.t + "</span></td>" +
     '<td class="c-act"><div class="upd-acts2">' +
-      ((!selIsCurrent && sel) ? '<button class="btn btn-tiny upd-go' + (isDown ? " is-down" : " btn-primary") + '" data-path="' + esc(x.path) + '" data-vid="' + esc(sel) + '" data-tip="' + actTip + '">' + actLabel + "</button>" : "") +
+      ((!historical && !selIsCurrent && sel) ? '<button class="btn btn-tiny upd-go' + (isDown ? " is-down" : " btn-primary") + '" data-path="' + esc(x.path) + '" data-vid="' + esc(sel) + '" data-tip="' + actTip + '">' + actLabel + "</button>" : "") +
       (it.url ? '<a href="#" class="upd-site" data-url="' + esc(it.url) + '" data-tip="在浏览器打开 C 站页面"><img class="thumb upd-cov" data-path="' + esc(x.path) + '" alt=""/></a>' : "") +
       '<button class="icon-btn upd-more" data-path="' + esc(x.path) + '" data-tip="更多：打开文件夹 / 复制路径 / 不再提醒">···</button>' +
     "</div></td></tr>";
 }
 
 function _updLibraryRows() {
-  const items = state.mmUpdItems || {};
+  const items = _updActiveItems();
+  if(state.updResultsCleared&&!Object.keys(items).length)return [];
+  if(_updHistorical()||state.updBatches.length||state.updProgress?.running)return Object.entries(items).map(([path,it])=>({path,it}));
   const union = Object.assign({}, items);
   for (const r of (state.models || [])) {         // 扫到、有 C 站信息、但还没检查过的 → 补一条「未检查」行
     if (r && r.path && r.modelId && !union[r.path]) {
@@ -2212,23 +2094,24 @@ async function renderUpdatesPage() {
   if (!state.mmUpdItems) {
     try {
       const u = await api.call("get_model_updates");
-      if (u && u.items) { applyUpdatesToRows(u.items); state.mmUpdCheckedAt = u.checked_at || 0; }
+      if (u && u.items) applyUpdatePayload(u);
     } catch (e) { /* 忽略 */ }
   }
   const items = state.mmUpdItems || {};
   const all = _updFilterRows();
+  const visible=new Set(all.map(x=>x.path));for(const p of state.updSel)if(!visible.has(p)||_updHistorical())state.updSel.delete(p);
   const per = Number(state.updPer || 50);
   const pages = Math.max(1, Math.ceil(all.length / per));
   state.updPage = Math.min(Math.max(1, state.updPage || 1), pages);
   const pageRows = all.slice((state.updPage - 1) * per, state.updPage * per);
 
   // 底模下拉
-  const bases = Array.from(new Set(Object.values(items).map((it) => String((it || {}).local_base || "")).filter(Boolean))).sort();
+  const bases = Array.from(new Set(_updLibraryRows().map(x=>x.it).map((it) => String((it || {}).local_base || "")).filter(Boolean))).sort();
   const bsel = $("#updBase");
   if (bsel) bsel.innerHTML = '<option value="">全部底模</option>' + bases.map((b) => '<option value="' + esc(b) + '"' + (b === state.updBase ? " selected" : "") + ">" + esc(b) + "</option>").join("");
 
   // 顶部统计
-  const nUpd = Object.values(items).filter((it) => it && it.has_update).length;
+  const nUpd = Object.values(_updActiveItems()).filter((it) => it && it.has_update).length;
   const ca = state.mmUpdCheckedAt ? new Date(state.mmUpdCheckedAt * 1000).toLocaleString() : "还没检查过";
   const libraryTotal=_updLibraryRows().length;
   const cnt = $("#updCount");
@@ -2240,13 +2123,30 @@ async function renderUpdatesPage() {
     tbody.innerHTML = "";
     if (empty) {
       empty.style.display = "block";
-      empty.innerHTML = Object.keys(items).length
-        ? "当前筛选/搜索下没有条目（清空搜索框或把筛选改回「全部」）。"
-        : "还没有检查结果：点右上角「检查更新」开始（首次约 1~2 分钟，结果缓存 24 小时）。";
+      empty.textContent = _updLibraryRows().length
+        ? "当前筛选下没有匹配条目，可清空搜索或切回「全部」。"
+        : state.updProgress?.running ? "本批检查正在进行，结果会逐项显示。"
+        : _updHistorical() ? "该批次没有仍在当前模型目录中的记录。历史快照不会触发下载。"
+        : state.updBatches.length ? "本批没有可展示的版本记录。可能已停止、请求失败或来源未返回版本；可重新检查。"
+        : "还没有检查结果，点击顶部「检查更新」开始；不会自动下载模型。";
     }
   } else {
     if (empty) empty.style.display = "none";
-    tbody.innerHTML = pageRows.map(_updRowHtml).join("");
+    // Polling must not destroy a pressed button, cover hover, or an open version menu.
+    const existing=new Map([...tbody.children].map(row=>[row.dataset.path,row]));
+    const desired=new Set(pageRows.map(x=>x.path));
+    for(const row of [...tbody.children])if(!desired.has(row.dataset.path)){row.querySelectorAll('.vsel-wrap').forEach(box=>box._menu?.remove());row.remove();}
+    let cursor=tbody.firstElementChild;
+    for(const item of pageRows){
+      const html=_updRowHtml(item),signature=html.replace(/class="(?:is-sel)?( is-flat)?"/,'class="$1"');let row=existing.get(item.path);
+      if(!row||row._updateHtml!==signature){
+        const interacting=row&&(row.matches(':hover')||row.contains(document.activeElement)||row.querySelector('.vsel-wrap.open,.upd-go:disabled'));
+        if(!interacting){const t=document.createElement('template');t.innerHTML=html;const next=t.content.firstElementChild;next._updateHtml=signature;if(row){row.querySelectorAll('.vsel-wrap').forEach(box=>box._menu?.remove());row.replaceWith(next);}else tbody.append(next);if(cursor===row)cursor=next;row=next;_updBind(row);}
+      }
+      row.classList.toggle('is-sel',state.updSel.has(item.path));row.setAttribute('aria-selected',String(state.updSel.has(item.path)));
+      if(!state.updProgress?.running&&row!==cursor)tbody.insertBefore(row,cursor);
+      cursor=row.nextElementSibling;
+    }
   loadUpdThumbs();
     loadDdThumbs(tbody, pageRows.map((x) => x.path), 64);
   }
@@ -2273,7 +2173,7 @@ async function renderUpdatesPage() {
   _updSyncSel();
   const pg = $("#updPager");
   if (pg) pg.innerHTML = _updPagerHtml(pages, state.updPage);
-  _updBind(tbody);
+  window.CFTUpdates?.sync();
 }
 
 function _updSyncSel() {
@@ -2281,9 +2181,10 @@ function _updSyncSel() {
   const el = $("#updSelInfo");
   if (el) el.innerHTML = "已选 <b>" + n + "</b> 个";
   const b = $("#updDlSel");
-  if (b) { b.textContent = n ? "批量更新（" + n + "）" : "批量更新"; b.disabled = !n; }
+  if (b) { b.textContent = n ? "批量更新（" + n + "）" : "批量更新"; b.disabled = !n||!!_updHistorical(); }
   const allCk = $("#updAll");
   if (allCk) {
+    allCk.disabled=!!_updHistorical();
     const boxes = Array.from(document.querySelectorAll("#updTbody .upd-cb"));
     const on = boxes.filter((c) => c.checked).length;
     allCk.checked = boxes.length > 0 && on === boxes.length;
@@ -2325,12 +2226,21 @@ function _updSyncRowButton(tr, path, vid) {
     });
   }
   btn.dataset.vid = vid;
-  btn.textContent = isDown ? "降级到 " + ((e.name) || vid) : "更新到 " + ((e.name) || vid);
+  btn.textContent = isDown ? "降级" : "更新";
+  btn.title=(isDown?"降级到 ":"更新到 ")+(e.name||vid);
   btn.classList.toggle("is-down", isDown);
   btn.classList.toggle("btn-primary", !isDown);
 }
 
 function _updBind(tbody) {
+  (tbody.matches('tr[data-path]')?[tbody]:tbody.querySelectorAll('tr[data-path]')).forEach(tr=>{
+    const info=tr.querySelector('.upd-info');if(!info)return;
+    info.tabIndex=0;info.setAttribute('role','button');info.setAttribute('aria-label','查看模型信息');
+    const open=()=>showModelDetail(tr.dataset.path);
+    tr.addEventListener('click',e=>{if(e.target.closest('button,a,input,select,.vbox'))return;if(!_updHistorical()){const path=tr.dataset.path;state.updSel.has(path)?state.updSel.delete(path):state.updSel.add(path);tr.classList.toggle('is-sel',state.updSel.has(path));tr.setAttribute('aria-selected',String(state.updSel.has(path)));_updSyncSel();}open();});
+    info.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open();}});
+  });
+
   tbody.querySelectorAll(".upd-cb").forEach((cb) => cb.addEventListener("change", () => {
     const p = cb.dataset.path;
     if (cb.checked) state.updSel.add(p); else state.updSel.delete(p);
@@ -2369,22 +2279,23 @@ function _updBind(tbody) {
     e.stopPropagation();
     _updCtxMenu(b.dataset.path, b);
   }));
-  tbody.querySelectorAll("tr").forEach((tr) => tr.addEventListener("contextmenu", (e) => {
+  (tbody.matches("tr")?[tbody]:tbody.querySelectorAll("tr")).forEach((tr) => tr.addEventListener("contextmenu", (e) => {
     e.preventDefault();
     _updCtxMenu(tr.dataset.path, null, e.clientX, e.clientY);
   }));
 }
 
 function _updCtxMenu(path, anchor, cx, cy) {
-  const it = (state.mmUpdItems || {})[path] || {};
+  const it = _updActiveItems()[path] || {};
   state.updCtxPath = path;
   const menu = $("#ctxMenu");
   menu.innerHTML =
-    (it.has_update ? '<div class="ctx-item" data-act="upd_dl" data-tip="把下拉里选中的版本加入下载队列">更新到选中版本</div>' : "") +
+    (!_updHistorical() && it.has_update ? '<div class="ctx-item" data-act="upd_dl" data-tip="把下拉里选中的版本加入下载队列">更新到选中版本</div>' : "") +
     '<div class="ctx-item" data-act="upd_wl" data-tip="以后不再提示这个模型的更新（按模型记入白名单；对已最新的模型也有效）">不再提醒更新（加入白名单）</div>' +
     (it.url ? '<div class="ctx-item" data-act="upd_site2" data-tip="在浏览器打开 C 站页面">打开 C 站页面</div>' : "") +
     '<div class="ctx-item" data-act="upd_folder" data-tip="打开资源管理器并选中该文件">打开所在文件夹</div>' +
     '<div class="ctx-item" data-act="upd_copy" data-tip="复制文件完整路径">复制文件路径</div>';
+  if(_updHistorical())menu.querySelector('[data-act="upd_wl"]')?.remove();
   menu.style.display = "block";
   const zf = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
   if (anchor) {
@@ -2405,14 +2316,16 @@ $("#ctxMenu").addEventListener("click", async (e) => {
   if (!item) return;
   $("#ctxMenu").style.display = "none";
   const p = state.updCtxPath || "";
-  const it = (state.mmUpdItems || {})[p] || {};
+  const it = _updActiveItems()[p] || {};
   const act = item.dataset.act;
   if (act === "upd_dl") {
+    if(_updHistorical())return;
     const { rec } = _updVers({ path: p, it });
     const vid = state.updPick[p] || rec;
     const r = await api.call("mm_download_version", p, vid);
     setStatus((r && r.msg) || "");
   } else if (act === "upd_wl") {
+    if(_updHistorical())return;
     const r = await api.call("add_update_whitelist", it.model_id || "", it.model_name || "");
     setStatus((r && r.msg) || "已加入白名单");
     if (state.mmUpdItems) delete state.mmUpdItems[p];
@@ -2432,6 +2345,7 @@ $("#ctxMenu").addEventListener("click", async (e) => {
 
 // 批量更新：逐条按各自下拉选中的版本入队（每条几百毫秒，带进度）
 async function updBatchDownload(paths) {
+  if(_updHistorical()){setStatus("历史批次只读，请切回当前批次下载更新");return;}
   const items = state.mmUpdItems || {};
   const picks = [];
   (paths || []).forEach((p) => {
@@ -2494,65 +2408,14 @@ async function updBatchIgnore(paths) {
   renderMm();
 }
 
-async function updWhitelistDialog() {
-  let items = [];
-  try {
-    const r = await api.call("get_update_whitelist");
-    items = ((r && r.items) || []).slice();
-  } catch (e) {
-    infoBox("<div class='dt-dim'>白名单读取失败：" + esc(String(e)) + "</div>", "更新白名单");
-    return;
-  }
-  const dlg = document.createElement("div");
-  dlg.className = "rd-mask";
-  const box = document.createElement("div");
-  box.className = "rename-dialog";
-  box.style.width = "620px";
-  const onKey = (e) => { if (e.key === "Escape") closeAll(); };
-  const closeAll = () => { document.removeEventListener("keydown", onKey); dlg.remove(); box.remove(); };
-  document.addEventListener("keydown", onKey);
-  const render = () => {
-    box.innerHTML =
-      '<div class="rd-title">更新白名单 <span class="dt-dim">（' + items.length + ' 个模型）</span><span class="dlg-x" id="wlX" title="关闭" data-tip="关闭（Esc）">' + _icon("x") + "</span></div>" +
-      '<input class="input" id="wlQ" placeholder="搜索模型名称 / modelId…" style="width:100%;margin:6px 0 8px" />' +
-      '<div class="dd-hint">名单里的模型<b>不再提示更新</b>（检查时直接跳过）。加入方式：行内「···」→「不再提醒更新」。</div>' +
-      '<div style="max-height:320px;overflow:auto">' +
-      (items.length ? items.map((x) =>
-        '<div class="cf-row" data-name="' + esc(((x.name || "") + " " + x.model_id).toLowerCase()) + '"><div class="dd-text"><b>' + esc(x.name || x.model_id) + "</b>" +
-        '<div class="dedup-dir">modelId ' + esc(x.model_id) + '</div></div>' +
-        '<button class="btn btn-tiny wl-del" data-mid="' + esc(x.model_id) + '">移出</button></div>').join("")
-        : '<div class="upd-empty">白名单是空的。</div>') +
-      "</div>" +
-      '<div class="rd-actions"><button class="btn" id="wlClose">关闭</button></div>';
-    $("#wlClose", box).addEventListener("click", closeAll);
-    $("#wlX", box).addEventListener("click", closeAll);
-    const qEl = $("#wlQ", box);
-    if (qEl) qEl.addEventListener("input", () => {
-      const q = qEl.value.trim().toLowerCase();
-      box.querySelectorAll('.cf-row[data-name]').forEach((row) => {
-        row.style.display = (!q || row.dataset.name.includes(q)) ? "" : "none";
-      });
-    });
-    box.querySelectorAll(".wl-del").forEach((b) => b.addEventListener("click", async () => {
-      const rr = await api.call("remove_update_whitelist", b.dataset.mid);
-      setStatus((rr && rr.msg) || "已移出");
-      const i = items.findIndex((x) => String(x.model_id) === String(b.dataset.mid));
-      if (i >= 0) items.splice(i, 1);
-      render();
-    }));
-  };
-  render();
-  document.body.appendChild(dlg);
-  document.body.appendChild(box);
-  dlg.addEventListener("click", closeAll);
-}
+async function updWhitelistDialog(){return window.CFTUpdateWhitelist?.open();}
 
 // 工具栏 / 底栏交互（一次性绑定）
 $('#updSync').addEventListener('click',async()=>{
  const button=$('#updSync');button.disabled=true;setStatus('正在同步本地模型与更新记录…');
  try{
   const r=await api.call('sync_local_model_updates');
-  if(r?.ok){state.models=JSON.parse(await api.call('get_scan_rows')||'[]');const u=await api.call('get_model_updates');state.mmUpdItems=u?.items||{};applyUpdatesToRows(state.mmUpdItems);applyMmFilter();state.updPage=1;await renderUpdatesPage();}
+  if(r?.ok){state.models=JSON.parse(await api.call('get_scan_rows')||'[]');const u=await api.call('get_model_updates');applyUpdatePayload(u||{items:{}});applyMmFilter();state.updPage=1;await renderUpdatesPage();}
   setStatus(r?.msg||'同步未返回结果');
  }catch(_){setStatus('同步失败，原更新记录保留');}finally{button.disabled=false;}
 });
@@ -2565,7 +2428,7 @@ if ($("#updCheck")) $("#updCheck").addEventListener("click", async () => {
   }
   const sel = [...state.updSel];                // 有勾选 → 只检查勾选的这几个
   if (sel.length) { setStatus("只检查勾选的 " + sel.length + " 个模型…"); mmCheckUpdatesFlow(true, sel); return; }
-  mmCheckUpdatesFlow(false);
+  state.updResultsCleared=false;mmCheckUpdatesFlow(false);
 });
 if ($("#updWl")) $("#updWl").addEventListener("click", updWhitelistDialog);
 if ($("#updDlSel")) $("#updDlSel").addEventListener("click", () => updBatchDownload([...state.updSel]));
@@ -2631,7 +2494,7 @@ function infoBox(html, title) {
     '<div class="ib-body" style="font-size:calc(13px * var(--type-scale, 1));color:var(--text);line-height:1.7">' + html + "</div>" +
     '<div class="rd-actions"><button class="btn btn-primary" id="ibOk">知道了</button></div>';
   const onKey = (e) => { if (e.key === "Escape") close(); };
-  const close = () => { document.removeEventListener("keydown", onKey); mask.remove(); dlg.remove(); };
+  const close = () => { document.removeEventListener("keydown", onKey); CFTModalMotion.remove(mask); CFTModalMotion.remove(dlg); };
   document.body.appendChild(mask);
   document.body.appendChild(dlg);
   document.addEventListener("keydown", onKey);
@@ -2691,7 +2554,7 @@ async function showUpdateResults(items) {
     '<button class="btn" id="updFilter">只看这些模型</button></div>';
   document.body.appendChild(dlg);
   document.body.appendChild(box);
-  const close = () => { dlg.remove(); box.remove(); };
+  const close = () => { CFTModalMotion.remove(dlg); CFTModalMotion.remove(box); };
   dlg.addEventListener("click", close);
   $("#updClose", box).addEventListener("click", close);
   $("#updFilter", box).addEventListener("click", () => {
@@ -2905,7 +2768,8 @@ function fmRender() {
     '<span class="fm-name">根目录下的模型</span><span class="fm-state '+(showRoot?'on':'off')+'">'+(showRoot?'显示':'排除')+'</span></div><hr class="fp-sep"/>'+fmTreeHtml(foldersState.tree||[],0);
 }
 // 独立弹层：锁定工具栏的 overflow 不再裁切文件夹菜单。
-let fmAnchor = null, fmRequest = 0, fmSaving = false;
+let fmAnchor = null, fmProxyAnchor = null, fmRequest = 0, fmSaving = false;
+document.addEventListener('click',e=>{if(e.target.closest('[data-proxy="mmFolders"]'))fmProxyAnchor=$('[data-menu="mmMoreMenu"]');},true);
 function fmClose(restoreFocus = false) {
   ++fmRequest;
   $("#mmFoldersPanel").classList.remove("open");
@@ -2927,27 +2791,17 @@ function fmPosition() {
   panel.style.left = Math.max(gap, Math.min(rect.left, innerWidth - box.width - gap)) / z + "px";
   panel.style.top = Math.max(gap, Math.min(upwards ? rect.top - box.height - gap : rect.bottom + gap, innerHeight - box.height - gap)) / z + "px";
 }
-async function fmSave(visibility, showRoot) {
-  if (!foldersState || fmSaving) return;
-  fmSaving = true;
-  const panel = $("#mmFoldersPanel");
-  const focusedPath=panel.contains(document.activeElement)?document.activeElement.closest(".fm-item")?.dataset.path:null;
-  panel.setAttribute("aria-busy", "true");
-  try {
-    const nextHidden=Object.keys(visibility).filter(p=>visibility[p]===false);
-    const saved = await api.call("save_folders", nextHidden, showRoot, visibility);
-    if (saved !== true) throw new Error("save_folders failed");
-    foldersState.hidden = nextHidden; foldersState.visibility=visibility; foldersState.show_root = showRoot;
-    Object.assign(state.cfg,{hidden_model_folders:nextHidden,model_folder_visibility:{...visibility},show_root_models:showRoot});
-    // A changed folder scope must not leave hidden models selected while the scan refreshes.
-    state.mmChecked.clear();state.mmSel.clear();state.mmLastSel=-1;renderMm();
-    fmRender(); fmPosition();
-    if(focusedPath)panel.querySelector('.fm-item[data-path="'+CSS.escape(focusedPath)+'"]')?.focus();
-    setStatus("文件夹显示已保存（仅筛选显示，不移动或删除模型）");
-    mmScan();
-  } catch (err) { setStatus("文件夹显示保存失败，请重试"); }
-  finally { fmSaving = false; panel.removeAttribute("aria-busy"); }
+let fmPending=null;
+async function fmSave(visibility,showRoot){
+ if(!foldersState)return;const panel=$('#mmFoldersPanel'),focused=panel.contains(document.activeElement)?document.activeElement.closest('.fm-item')?.dataset.path:null;
+ fmPending={visibility:{...visibility},showRoot};foldersState.visibility={...visibility};foldersState.hidden=Object.keys(visibility).filter(p=>!visibility[p]);foldersState.show_root=showRoot;
+ const scroll=panel.scrollTop;fmRender();panel.scrollTop=scroll;if(focused)panel.querySelector('.fm-item[data-path="'+CSS.escape(focused)+'"]')?.focus({preventScroll:true});state.mmChecked.clear();state.mmSel.clear();state.mmLastSel=-1;
+ if(fmSaving)return;fmSaving=true;panel.setAttribute('aria-busy','true');
+ try{while(fmPending){const job=fmPending;fmPending=null;const hidden=Object.keys(job.visibility).filter(p=>!job.visibility[p]);if(await api.call('save_folders',hidden,job.showRoot,job.visibility)!==true)throw Error('save');Object.assign(state.cfg,{hidden_model_folders:hidden,model_folder_visibility:{...job.visibility},show_root_models:job.showRoot});if(fmPending)continue;const raw=await api.call('get_scan_rows');if(fmPending)continue;const rows=typeof raw==='string'?JSON.parse(raw||'[]'):raw;if(!Array.isArray(rows))throw Error('rows');state.models=rows;applyMmFilter();$('#mmCount').textContent=rows.length+' 个';setStatus('文件夹显示已更新：'+rows.length+' 个模型（使用扫描缓存，不重新扫描）');}}
+ catch(e){fmPending=null;foldersState.visibility={...(state.cfg.model_folder_visibility||{})};foldersState.hidden=[...(state.cfg.hidden_model_folders||[])];foldersState.show_root=state.cfg.show_root_models!==false;const scroll=panel.scrollTop;fmRender();panel.scrollTop=scroll;setStatus('文件夹显示保存失败，请重试');}
+ finally{fmSaving=false;panel.removeAttribute('aria-busy');}
 }
+
 $("#mmFoldersPanel").addEventListener("click", (e) => {
   e.stopPropagation();
   const btn = e.target.closest("#fmAll, #fmNone");
@@ -2969,7 +2823,8 @@ $("#mmFolders").addEventListener("click", async (e) => {
   e.stopPropagation();
   const panel = $("#mmFoldersPanel");
   if (panel.classList.contains("open")) { fmClose(); return; }
-  fmAnchor = e.currentTarget.getClientRects().length ? e.currentTarget : $("[data-menu='mmMoreMenu']");
+  fmAnchor = fmProxyAnchor || (e.currentTarget.checkVisibility?.() ? e.currentTarget : $("[data-menu='mmMoreMenu']"));
+  fmProxyAnchor = null;
   if (panel.parentElement !== document.body) document.body.appendChild(panel);
   panel.classList.add("open");
   $("#mmFolders").setAttribute("aria-expanded", "true");
@@ -3102,8 +2957,8 @@ function descToPlain(html) {
 // ===== 从 C 站同步：Metro 对话框（四态状态机 + 实际更新字段 diff） =====
 function syncDialogClose(d) {
   try { document.removeEventListener("keydown", d.onKey); } catch (e) { }
-  try { d.mask.remove(); } catch (e) { }
-  try { d.dlg.remove(); } catch (e) { }
+  try { CFTModalMotion.remove(d.mask); } catch (e) { }
+  try { CFTModalMotion.remove(d.dlg); } catch (e) { }
 }
 function syncDialogOpen() {
   const mask = document.createElement("div");
@@ -3148,15 +3003,16 @@ function syncDialogRender(d, st) {
 }
 
 async function showModelDetail(path, historyId = "") {
-  const generation = ++detailGeneration;
+  const generation = ++detailGeneration, originPage=document.querySelector(".page.active")?.id;
   let json;try{json = await api.call(historyId ? "get_history_detail" : "get_model_detail", historyId || path);}catch(_){if(generation===detailGeneration)setStatus('详情读取异常，请检查元数据或刷新后重试');return;}
   let d;
   try { d = typeof json==='object' && json!==null?json:JSON.parse(json || "{}"); } catch (e) { d = {}; }
-  if (generation !== detailGeneration || !$("#page-models").classList.contains("active")) return;
+  if (generation !== detailGeneration || document.querySelector(".page.active")?.id!==originPage) return;
   if (!d.ok) { setStatus(d.msg||"详情获取失败：元数据格式异常或文件不可读取"); return; }
   detailRow = d;
   detailRow.history_id = historyId;
-  document.body.classList.add("models-workspace");
+  document.body.classList.add("model-detail-open");
+  if(originPage==="page-models")document.body.classList.add("models-workspace");else{document.body.classList.add("external-model-detail-open");document.body.append($("#detailMask"));}
   const info = d.info || {};
   const v = info.version || {};
   const creator = (info.creator && info.creator.username) || info.creator || "";
@@ -3181,7 +3037,7 @@ async function showModelDetail(path, historyId = "") {
       '<div class="dt-head-t">模型详情</div>' +
       '<div class="dt-head-r">' +
         (creator ? '<span class="dt-author author-chip" data-author="' + esc(creator) + '" data-tip="点击复制作者链接">' + esc(creator) + '</span>' : "") +
-        '<button class="icon-btn dt-close" id="dFavorite" aria-pressed="'+isModelFavorite(d.path)+'" title="收藏并置顶 / 取消收藏">' + _icon('star') + '</button>' +
+        '<button type="button" class="icon-btn ef-model-detail-close" aria-label="关闭模型详情">'+_icon('x')+'</button><button class="icon-btn dt-close" id="dFavorite" aria-pressed="'+isModelFavorite(d.path)+'" title="收藏并置顶 / 取消收藏">' + _icon('star') + '</button>' +
       '</div>' +
     '</div>' +
     '<div class="dt-body">' +
@@ -3213,7 +3069,7 @@ async function showModelDetail(path, historyId = "") {
           '<span class="dt-copy">' + _icon("copy") + "</span></div>";
       }).join("") : '<span class="dt-dim">无触发词信息（可先「识别模型信息」）</span>') + "</div></div>" +
     '<div class="dt-sec"><div class="dt-sec-h">' + _icon("file") + '简介' +
-      (descPlain || descZh ? '<button class="btn dt-copy" id="dCopyDesc" data-tip="复制纯文本简介（保留段落与列表）">' + _icon("copy") + '复制</button>' : "") + '</div>' +
+      '</div>' +
       '<div class="detail-desc' + (descIsRich ? " rich" : "") + '">' + (descIsRich
         ? descRich
         : (descPlain || descZh ? esc(descPlain || descZh) : '<span class="dt-dim">暂无简介</span>')) + '</div>' +
@@ -3241,6 +3097,7 @@ async function showModelDetail(path, historyId = "") {
       "</div></div>" +
     "</div>" +
     "</div></div>";
+  window.CFTModelCards?.decorateInspector(panel,d);
   $("#detailMask").style.display = "flex";
   if (d.cached_history) {
     panel.querySelector('.detail-title').insertAdjacentHTML('afterend', '<p class="history-model">历史信息缓存 · 本地文件已移走或不存在，仅供查看</p>');
@@ -3291,7 +3148,7 @@ async function showModelDetail(path, historyId = "") {
     }
   };
   panel.querySelectorAll(".detail-thumb").forEach((t) => {
-    t.addEventListener("click", () => loadB64(Number(t.dataset.i)));
+    t.addEventListener("click", () => {detailImgIdx=Number(t.dataset.i);panel.querySelectorAll(".detail-thumb").forEach(th=>th.classList.toggle("on",th===t));openImageViewer(detailRow,detailImgIdx);});
   });
   // 操作
   $("#dSite", panel).addEventListener("click", () => {
@@ -3355,7 +3212,7 @@ async function showModelDetail(path, historyId = "") {
       '<div class="rd-actions"><button class="btn btn-primary" id="eiOk">保存</button><button class="btn" id="eiNo">取消</button></div>';
     document.body.appendChild(mask);
     document.body.appendChild(dlg);
-    const close = () => { mask.remove(); dlg.remove(); };
+    const close = () => { CFTModalMotion.remove(mask); CFTModalMotion.remove(dlg); };
     mask.addEventListener("click", close);
     $("#eiNo").addEventListener("click", close);
     $("#eiOk").addEventListener("click", async () => {
@@ -3470,21 +3327,8 @@ async function showModelDetail(path, historyId = "") {
     setStatus("SD json 已生成");
     closeDetail();
   });
-  const dCopyBtn = $("#dCopyDesc", panel);
-  if (dCopyBtn) dCopyBtn.addEventListener("click", async () => {   // 复制：纯文本（段落/列表保留，无 HTML 标签）
-    const full = [descPlain, descZh ? "—— 中文翻译 ——\n" + descZh : ""].filter(Boolean).join("\n\n");
-    let ok = false;
-    try { ok = await window.__copyText(full); } catch (e) { ok = false; }
-    if (!ok) {
-      try {
-        const ta = document.createElement("textarea");
-        ta.value = full; ta.style.position = "fixed"; ta.style.opacity = "0";
-        document.body.appendChild(ta); ta.select(); ok = document.execCommand("copy"); ta.remove();
-      } catch (e2) { ok = false; }
-    }
-    setStatus(ok ? "简介已复制" : "复制失败（可手动选中复制）");
-  });
   $("#dFavorite", panel).addEventListener("click", () => toggleModelFavorite(d.path));
+  window.CFTModelCards?.finalizeInspector(panel);
   // 只准备本地已有缓存的在线图；未知在线图不会后台下载。串行、空闲调度，避免同时解码整组图片。
   if(typeof warmViewedGallery==='function'){
     const prepare=async i=>{
@@ -3579,7 +3423,7 @@ $("#ctxMenu").addEventListener("click", async (e) => {
           setStatus("已设为模型缩略图：" + (detailRow.name || detailRow.path || ""));
           try { state.coverCache.delete(detailRow.path); } catch (e) { }
           try { await loadThumbs(0); } catch (e) { }
-          try { if (state.mmView === "masonry") await loadMasonryThumbs(0); } catch (e) { }
+          try { if (state.mmView !== "list") await loadMasonryThumbs(0); } catch (e) { }
         } else {
           showToast((rCov && rCov.msg) || "设为缩略图失败");
         }
@@ -3634,6 +3478,7 @@ document.addEventListener("keydown", (e) => {
   }
 });
 function closeDetail() {
+  document.body.classList.remove("model-detail-open","external-model-detail-open");
   detailGeneration++;
   $("#detailMask").style.display = "none";
   $("#detailPanel").innerHTML = "";
@@ -3653,12 +3498,17 @@ function wfSetStatus(t, k) {
   el.className = "wf-status" + (k ? " " + k : "");
 }
 let wfLastPath = "";
+let wfAnalysisRevision = 0;
 async function wfAnalyze(path) {
   if (!path) return;
+  const token = ++wfAnalysisRevision;
   wfLastPath = path;
   setStatus("工作流解析中...");
   wfSetStatus("分析中…", "on");
-  const json = await api.call("analyze_workflow", path);
+  let json;
+  try { json = await api.call("analyze_workflow", path); }
+  catch (_) { if (token === wfAnalysisRevision) { setStatus("读取失败，请重新选择文件"); wfSetStatus("分析失败", "err"); } return; }
+  if (token !== wfAnalysisRevision) return;
   let r = {};
   try { r = JSON.parse(json || "{}"); } catch (e) {}
   if (!r.ok) { setStatus("解析失败: " + (r.msg || "")); wfSetStatus("分析失败", "err"); return; }
@@ -3679,6 +3529,7 @@ wfDrop.addEventListener("drop", (e) => {
   const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
   if (!f) { setStatus("无法读取拖入文件，请点击选择"); return; }
   if (f.path) { wfAnalyze(f.path); return; }
+  const token = ++wfAnalysisRevision;
   setStatus("读取文件中...");
   wfSetStatus("读取文件中…", "on");
   const rd = new FileReader();
@@ -3691,14 +3542,15 @@ wfDrop.addEventListener("drop", (e) => {
       }
       const b64 = btoa(bin);
       const json = await api.call("wf_analyze_data", f.name, b64);
+      if (token !== wfAnalysisRevision) return;
       let r = {};
       try { r = JSON.parse(json || "{}"); } catch (err) {}
       if (!r.ok) { setStatus("解析失败: " + (r.msg || "")); wfSetStatus("分析失败", "err"); return; }
       wfSetStatus("分析完成", "done");
       wfRenderResult(r);
-    } catch (err) { setStatus("读取失败: " + err); wfSetStatus("读取失败", "err"); }
+    } catch (err) { if (token === wfAnalysisRevision) { setStatus("读取失败: " + err); wfSetStatus("读取失败", "err"); } }
   };
-  rd.onerror = () => setStatus("文件读取失败");
+  rd.onerror = () => { if (token === wfAnalysisRevision) setStatus("文件读取失败"); };
   rd.readAsArrayBuffer(f);
 });
 let wfLastPromptText = "";
@@ -3714,7 +3566,7 @@ $("#wfPick").addEventListener("click", async () => {
   }); }
 { const rl = $("#wfResultTitle");
   if (rl) rl.addEventListener("click", async (e) => {
-    if (e.target.closest("#wfRechoose")) {
+    if (e.target.closest("#wfQuickPick,#wfRechoose")) {
       const p2 = await api.call("pick_file");
       if (p2) wfAnalyze(p2);
     } else if (e.target.closest("#wfReanalyze")) {
@@ -3722,62 +3574,97 @@ $("#wfPick").addEventListener("click", async () => {
       else setStatus("没有可重新分析的文件");
     }
   }); }
-// ===== 关于弹窗（右下角「关于」/左上角 logo） =====
+// ===== 关于弹窗（左下角「关于」/左上角 logo） =====
+let aboutOpening=false;
 async function showAbout() {
+  if(aboutOpening)return;
+  const existing=document.querySelector(".about-dlg");if(existing){existing.querySelector("#aboutOk")?.focus();return;}
+  aboutOpening=true;
   const mask = document.createElement("div");
-  mask.className = "rd-mask";
+  mask.className = "rd-mask about-mask";
   const dlg = document.createElement("div");
-  dlg.className = "rename-dialog";
-  dlg.style.width = "480px";
-  let ver = "v?";
+  dlg.className = "rename-dialog about-dlg";
+  dlg.setAttribute("role","dialog");dlg.setAttribute("aria-modal","true");dlg.setAttribute("aria-labelledby","aboutTitle");
+  const previousFocus=document.activeElement;
+  let ver = "版本未知";
   try {
     const r = JSON.parse(await api.call("get_version") || "{}");
     if (r && r.ok) ver = "v" + r.version;
   } catch (e) { /* 版本获取失败时显示占位 */ }
-  dlg.innerHTML =
-    '<div class="about-head">' +
-    '<img class="about-logo" src="bili_face.png" alt=""/>' +
-    '<div><div class="about-name">CivitaiFreeTool <span class="about-ver">' + esc(ver) + '</span></div>' +
-    '<div style="font-size:calc(12px * var(--type-scale, 1));color:var(--text-dim)">Civitai / HuggingFace 模型下载、管理、反向解析工具（免费全功能）</div></div></div>' +
-    '<div class="about-updates">' +
-    '<div class="about-up-title">最近更新（' + esc(ver) + '）</div>' +
-    '<div class="about-up-body">' +
-    '<div class="about-up-item"><b>左右工作台</b>：左侧导航可收起，模型详情改为右侧抽屉，统一线性图标。</div>' +
-    '<div class="about-up-item"><b>设置重构</b>：八个分类、跨分类搜索、常用与高级分开，功能说明直接展示。</div>' +
-    '<div class="about-up-item"><b>分类规则</b>：使用流程与示例放在旁边，格式错误明确提示，插入示例不覆盖已有内容。</div>' +
-    '<div class="about-up-item"><b>下载历史</b>：自动保存并恢复任务，收起队列不删除历史。旧版未保存的记录无法补回。</div>' +
-    '</div></div>' +
-    '<div class="about-thanks">' +
-    '<div class="about-up-title">感谢 Contributors</div>' +
-    '<div class="about-contribs" id="aboutContribs">加载中…</div></div>' +
-    '<div class="about-author">' +
-    '<div class="rd-home" id="rdHome">作者：爱德怀斯official —— 点击打开 B 站主页</div>' +
-    '<div class="rd-group" id="rdGroup">粉丝群：909810278 —— 点击加入</div></div>' +
-    '<div class="rd-actions">' +
-    '<button class="btn" id="aboutGithub">GitHub 仓库</button>' +
-    '<button class="btn btn-primary" id="aboutOk">知道了</button></div>';
+  aboutOpening=false;
+  dlg.innerHTML = `
+    <div class="about-art" aria-hidden="true"></div>
+    <div class="about-scroll">
+      <div class="about-poster">
+        <svg width="0" height="0" aria-hidden="true" class="about-outline-defs"><defs><filter id="cftAboutOutlineUnion" x="-2%" y="-2%" width="104%" height="104%"><feMorphology in="SourceAlpha" operator="erode" radius=".8" result="interior"/><feComposite in="SourceGraphic" in2="interior" operator="out"/></filter></defs></svg><span class="about-watermark" aria-hidden="true">MODEL<br>ARCHIVE</span>
+        <header class="about-poster-head">
+          <img class="about-wordmark" src="about-wordmark.svg" alt="CivitaiFreeTool 下载器" width="2048" height="617"/>
+          <div class="about-release"><span>LOCAL VERSION</span><strong class="about-ver">${esc(ver)}</strong></div>
+          <button class="about-close" id="aboutClose" type="button" aria-label="关闭关于"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="#i-x"/></svg></button>
+        </header>
+        <section class="about-poster-copy">
+          <span class="about-eyebrow">YOUR MODELS / YOUR WORKBENCH</span>
+          <h2 class="about-name" id="aboutTitle">关于 CivitaiFreeTool</h2>
+          <p class="about-slogan">下载、归档、反向解析与工作流分析。<br>一个工作台，整理你的模型收藏。</p>
+          <div class="about-signal"><span aria-hidden="true">&gt;&gt;&gt;</span><b>免费全功能</b><span aria-hidden="true">CFT / LOCAL</span></div>
+          <div class="about-author">
+            <a class="about-contact" id="rdHome" href="https://space.bilibili.com/273101122">作者：爱德怀斯official <span aria-hidden="true">↗</span></a>
+            <a class="about-contact" id="rdGroup" href="https://qm.qq.com/q/EbnuVZB4wE">QQ 群：909810278 <span aria-hidden="true">↗</span></a>
+          </div>
+        </section>
+        <figure class="about-stage" aria-label="角色插画">
+          <div class="about-city" aria-hidden="true"><i></i><i></i><i></i><span></span></div>
+          <img class="about-character" src="about-character-v1.png" alt="粉色头发、蓝色帽子的Q版角色" width="1254" height="1254"/>
+          <figcaption class="about-character-code" aria-hidden="true">CFT / COLLECTION</figcaption>
+        </figure>
+        <div class="about-poster-caption"><h3>模型收藏，从这里开始<span aria-hidden="true">↗</span></h3><p>CIVITAI FREE TOOL / MODEL WORKBENCH</p></div>
+      </div>
+      <details class="about-details">
+        <summary id="aboutDetailsToggle">字体许可与社区鸣谢 <span aria-hidden="true">＋</span></summary>
+        <div class="about-details-body">
+          <section class="ef-credits" aria-label="字体与设计出处">
+            
+            <div class="about-credit"><b>鸿蒙黑体 / HarmonyOS Sans</b><a id="aboutDisplayFontSource" href="https://developer.huawei.com/consumer/cn/design/resource/">原始发布与授权记录 ↗</a></div>
+            <div class="about-credit"><b>圆构黑体 Alt / howlingFounts</b><a id="aboutBodyFontSource" href="https://github.com/howlingFounts/GeourceSans/">字体与许可 ↗</a></div>
+            <p class="about-legal">终末地为非官方视觉参考。圆构黑体 Alt 按 SIL OFL 1.1 使用；字体与许可记录见源码 docs/FONT-NOTICES.md。</p>
+          </section>
+          <section class="about-thanks" aria-label="社区贡献者"><h4>感谢社区贡献者</h4><div class="about-contribs" id="aboutContribs" role="status" aria-live="polite">正在读取贡献者…</div></section>
+        </div>
+      </details>
+    </div>
+    <div class="rd-actions about-actions">
+      <div class="about-action-base"><button class="btn" id="aboutGithub">GitHub 仓库</button></div>
+      <div class="about-action-base"><button class="btn btn-primary" id="aboutOk">知道了</button></div>
+    </div>`;
   document.body.appendChild(mask);
   document.body.appendChild(dlg);
-  const close = () => { mask.remove(); dlg.remove(); };
-  $("#aboutOk").addEventListener("click", close);
+  const contributorsRequest=new AbortController(),entryAnimations=[];let closed=false;
+  const close = () => {if(closed)return;closed=true;contributorsRequest.abort();entryAnimations.forEach(a=>a.cancel());document.removeEventListener('keydown',onKey,true);CFTModalMotion.remove(mask);CFTModalMotion.remove(dlg);if(previousFocus?.isConnected)previousFocus.focus();};
+  if(document.documentElement.dataset.endfield==='true'&&!matchMedia('(prefers-reduced-motion: reduce)').matches){
+    dlg.querySelectorAll('.about-poster-head,.about-poster-copy,.about-stage,.about-poster-caption').forEach((el,i)=>{const a=el.animate([{opacity:0,transform:'translateY(-14px)'},{opacity:1,transform:'translateY(0)'}],{duration:230,delay:i*18,easing:'cubic-bezier(.2,.75,.25,1)',fill:'backwards'});a.id='ef-about-enter';entryAnimations.push(a);});
+  }
+  function onKey(e){if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();close();return;}if(e.key!=='Tab')return;const controls=[...dlg.querySelectorAll('button,a[href],summary,[tabindex]')].filter(el=>!el.disabled&&el.getClientRects().length);if(!controls.length)return;const first=controls[0],last=controls.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}
+  document.addEventListener('keydown',onKey,true);$('#aboutOk',dlg).focus();
+  $("#aboutOk",dlg).addEventListener("click", close);
+  $("#aboutClose",dlg).addEventListener("click", close);
   mask.addEventListener("click", close);
+  dlg.querySelectorAll("#aboutBodyFontSource,#aboutDisplayFontSource,#rdHome,#rdGroup").forEach(link=>link.addEventListener("click", e => { e.preventDefault(); api.call("open_url", e.currentTarget.href); }));
   $("#aboutGithub").addEventListener("click", () => api.call("open_url", "https://github.com/ADVICEsama/CivitaiFreeTool"));
-  $("#rdHome").addEventListener("click", () => api.call("open_url", "https://space.bilibili.com/273101122"));
-  $("#rdGroup").addEventListener("click", () => api.call("open_url", "https://qm.qq.com/q/EbnuVZB4wE"));
   // 贡献者：动态拉取 GitHub contributors（排除作者本人），失败回退静态致谢
   const box = $("#aboutContribs", dlg);
-  const fallback = '<div class="about-contrib">感谢 <a href="#" data-gh="guanhaisen">@guanhaisen</a>、<a href="#" data-gh="LckHot">@LckHot</a> 的社区贡献 </div>';
-  fetch("https://api.github.com/repos/ADVICEsama/CivitaiFreeTool/contributors?per_page=10")
+  const fallback = '<a class="about-contrib" href="https://github.com/guanhaisen" data-gh="guanhaisen">@guanhaisen</a><a class="about-contrib" href="https://github.com/LckHot" data-gh="LckHot">@LckHot</a>';
+  fetch("https://api.github.com/repos/ADVICEsama/CivitaiFreeTool/contributors?per_page=10",{signal:contributorsRequest.signal})
     .then((r) => (r.ok ? r.json() : Promise.reject()))
     .then((list) => {
-      const others = (list || []).filter((c) => c.login !== "ADVICEsama");
+      if(closed)return;
+      const others = (Array.isArray(list)?list:[]).filter((c) => typeof c.login==="string"&&c.login !== "ADVICEsama");
       if (!others.length) { box.innerHTML = fallback; return; }
       box.innerHTML = others.map((c) =>
         '<a class="about-contrib" href="#" data-gh="' + esc(c.login) + '" title="' + c.contributions + ' 次提交">' +
         (c.avatar_url ? '<img class="about-contrib-avatar" src="' + esc(c.avatar_url) + '&s=48" alt=""/>' : "") +
         '<span>@' + esc(c.login) + '<em>' + c.contributions + " 次提交</em></span></a>").join("");
     })
-    .catch(() => { box.innerHTML = fallback; });
+    .catch(() => { if(!closed)box.innerHTML = fallback; });
   box.addEventListener("click", (e) => {
     const a = e.target.closest("[data-gh]");
     if (a) { e.preventDefault(); api.call("open_url", "https://github.com/" + a.dataset.gh); }
@@ -3797,6 +3684,7 @@ if (_logoEl) _logoEl.addEventListener("click", showAbout);
   document.addEventListener("mousemove", (e) => {
     const t = e.target && e.target.closest ? e.target.closest("[data-tip], td") : null;
     if (!t) { tip.style.display = "none"; return; }
+    if(t.closest("#mmTable tbody")&&!["text","both"].includes(state.cfg.model_list_hover||"thumbnail")){tip.style.display="none";return;}
     let text = (t.dataset && t.dataset.tip) || "";
     if (!text && t.tagName === "TD") {
       const full = t.getAttribute("data-full");
@@ -3944,7 +3832,7 @@ async function showRenameDialog(path, oldName) {
   const inp = $("#rdInput");
   inp.focus();
   inp.select();
-  const close = () => { mask.remove(); dlg.remove(); };
+  const close = () => { CFTModalMotion.remove(mask); CFTModalMotion.remove(dlg); };
   $("#rdCancel").addEventListener("click", close);
   mask.addEventListener("click", close);
   $("#rdOk").addEventListener("click", async () => {
@@ -4095,7 +3983,7 @@ async function mmRenamePreview(act, paths) {
     '<div class="rd-actions"><span class="rp-count">共 ' + items.length + " 项，将改动 " + willChange.length + " 项</span><span style=\"flex:1\"></span>" +
     '<button class="btn" id="rpCancel">取消</button>' +
     '<button class="btn btn-primary" id="rpApply"' + (willChange.length ? "" : " disabled") + ">应用 " + willChange.length + " 项</button></div>";
-  const close = () => { try { mask.remove(); dlg.remove(); } catch (e) { /* 忽略 */ } };
+  const close = () => { try { CFTModalMotion.remove(mask); CFTModalMotion.remove(dlg); } catch (e) { /* 忽略 */ } };
   document.body.appendChild(mask);
   document.body.appendChild(dlg);
   mask.addEventListener("click", close);
@@ -4212,7 +4100,7 @@ const rpChecked = new Set();
 let rpShown = [], rpRenderSignature = "";
 function rpVisibleRows(rows) {
   const kw = $("#rpFilter").value.trim().toLowerCase(), failed = $("#rpOnlyFailed").checked;
-  return rows.filter(r => (!failed || rpStatusCls(r.status) === "err") && (!kw || [r.path,r.model,r.status].some(v => String(v || "").toLowerCase().includes(kw))));
+  return rows.filter(r => (!failed || rpStatusCls(r.status) === "err") && (!kw || [r.path,r.model,r.status].some(v => String(v || "").toLowerCase().includes(kw))) && (!window.CFTReverse || CFTReverse.matches(r)));
 }
 function rpSelectionSync() {
   const visible = new Set(rpShown.map(r => r.path));
@@ -4226,16 +4114,17 @@ async function rpRefresh() {
   const rows = await api.call("rp_get_rows") || [];state.rpRows = rows;
   rpShown = rpVisibleRows(rows);rpSelectionSync();
   const signature = JSON.stringify([rpShown,Array.from(rpChecked)]);
-  if(signature === rpRenderSignature)return;rpRenderSignature = signature;
+  if(signature === rpRenderSignature){window.CFTReverse?.sync(rows,rpShown);return;}rpRenderSignature = signature;
   $("#rpTable tbody").innerHTML = rpShown.map(r => {
     const p=String(r.path||""),base=p.replace(/[\\/]+$/,"").split(/[\\/]/).pop()||p;
     const dir=base.length<p.length?p.slice(0,p.length-base.length):"",st=rpStatusCls(r.status),sha=String(r.sha||"");
-    return '<tr data-path="'+esc(p)+'"'+(rpChecked.has(p)?' class="sel-row"':'')+'><td class="rp-check-col"><input type="checkbox" class="rp-row-check" aria-label="勾选 '+esc(base)+'"'+(rpChecked.has(p)?' checked':'')+'/></td>'+
+    return '<tr data-path="'+esc(p)+'"'+(rpChecked.has(p)?' class="sel-row"':'')+'><td class="rp-check-col" aria-hidden="true"></td>'+
       '<td class="c-file" title="'+esc(p)+'"><div class="rp-fname">'+esc(base)+'</div><div class="rp-fdir file-subpath">'+esc(dir)+'</div></td>'+
       '<td class="c-sha"><span class="rp-sha" title="'+esc(sha)+'">'+esc(sha.length>18?sha.slice(0,18)+"…":sha)+'</span></td>'+
       '<td><span class="rp-st '+st+'">'+rpStatusGlyph(st)+esc(r.status||"")+'</span></td>'+
       '<td class="c-name"><div class="rp-model" title="'+esc(r.model||"")+'">'+esc(r.model||"")+'</div></td><td>'+esc(r.version||"")+'</td></tr>';
   }).join("") || '<tr class="rp-empty"><td colspan="6">'+(rows.length?"没有符合筛选的项目":"暂无待反查任务；点击上方逐步教程")+'</td></tr>';
+  window.CFTReverse?.sync(rows,rpShown);
 }
 $("#rpFilter").addEventListener("input",rpRefresh);
 $("#rpOnlyFailed").addEventListener("change",rpRefresh);
@@ -4301,6 +4190,21 @@ function pollRp() {
 }
 
 // ================= 设置 =================
+// 只保留终末地亮/暗；旧主题配置按原亮暗迁移，不会复活已移除的主题。
+function normalizeEndfieldTheme(value, cfg = {}) {
+  const theme = String(value || "");
+  if (theme === "light_endfield" || theme === "dark_endfield") return theme;
+  if (theme === "metro") return cfg.ui_scheme === "dark" ? "dark_endfield" : "light_endfield";
+  if (theme.startsWith("light") || theme === "modern") return "light_endfield";
+  if (!theme && cfg.dark_mode === false) return "light_endfield";
+  return "dark_endfield";
+}
+function normalizeThemeConfig(cfg) {
+  if (!cfg) return;
+  cfg.theme = normalizeEndfieldTheme(cfg.theme, cfg);
+  if (!cfg.download_hud_theme || cfg.download_hud_theme === "follow") cfg.download_hud_theme = "follow";
+  else cfg.download_hud_theme = normalizeEndfieldTheme(cfg.download_hud_theme, cfg);
+}
 // [分组, key, 标签, 类型, 选项]
 const SETTING_FIELDS = [
   ["基本", "api_key", "Civitai API Key", "password"],
@@ -4327,39 +4231,37 @@ const SETTING_FIELDS = [
   ["下载", "download_name_mode", "下载文件命名方式", "select", [["original","原文件名"],["civitai","C站模型名"],["chinese","中文模型名（需要翻译服务）"]]],
   ["下载", "filename_include_version", "命名附加模型版本号", "bool"],
   ["界面", "theme", "界面主题", "select", [
-    ["dark", "深色"],
-    ["dark_purple", "暮紫（暗）"],
-    ["dark_blue", "深海（暗）"],
-    ["dark_green", "森林（暗）"],
-    ["dark_red", "熔岩（暗）"],
-    ["dark_graphite", "石墨（暗 · 中性灰蓝）"],
-    ["dark_pink", "夜樱（暗 · 柔和粉色）"],
-    ["dark_rose", "绯夜（暗 · 浓郁玫红）"],
-    ["light", "浅色"],
-    ["light_blue", "晴空（亮）"],
-    ["light_pink", "樱粉（亮）"],
-    ["light_green", "薄荷（亮）"],
-    ["metro", "Metro 磁贴（Win10 风 · 直角扁平）"],
-    ["modern", "现代浅色"],
+    ["dark_endfield", "终末地主题-暗"],
+    ["light_endfield", "终末地主题-亮"],
   ]],
+  ["界面", "download_hud_enabled", "桌面下载悬浮窗（Windows 窗口模式）", "bool"],
+  ["界面", "download_hud_dock", "悬浮窗贴边收起", "bool"],
+  ["界面", "download_hud_scale", "悬浮窗大小", "select", ["75","90","100","110","125","150"]],
+  ["界面", "endfield_parallax", "终末地：等高线流动与透视", "bool"],
+  ["界面", "download_hud_motion", "悬浮窗平面动效", "bool"],
+  ["界面", "download_hud_theme", "悬浮窗主题", "select", [["follow","跟随主题"],["dark_endfield","终末地主题-暗"],["light_endfield","终末地主题-亮"]]],
   ["界面", "ui_zoom", "界面缩放", "select", ["80", "90", "100", "110", "125", "150"]],
-  ["界面", "ui_scheme", "Metro 亮暗", "select", [["light", "亮色"], ["dark", "暗色"], ["auto", "跟随系统"]]],
-  ["界面", "metro_accent", "Metro 主题色", "select", [["#0078D4", "Windows 蓝（默认）"], ["#107C10", "翡翠绿"], ["#7A3FF2", "紫罗兰"], ["#B26A00", "琥珀橙"], ["#C42B1C", "绛红"], ["#006E8C", "青碧"], ["system", "跟随系统主题色"]]],
   ["界面", "show_file_paths", "名称下显示完整路径", "bool"],
   ["界面", "folder_picker_show_paths", "分类选择器显示详细路径", "bool"],
-  ["界面", "ui_font", "默认字体（本机已安装）", "font"],
+  ["界面", "ui_font", "界面字体与回退顺序", "font"],
   ["界面", "ui_text_size", "全局字号（不缩放界面）", "select", [["small", "小 · 90%"], ["standard", "标准 · 100%"], ["large", "大 · 110%"], ["xlarge", "较大 · 120%"], ["huge", "最大 · 130%"]]],
   ["界面", "integrated_titlebar", "隐藏标题栏，仅保留窗口按钮", "bool"],
   ["界面", "window_appearance", "原生标题栏与材质", "select", [["theme", "跟随软件主题（推荐）"], ["mica", "Mica 标题栏 · Windows 11"], ["mica_alt", "Mica Alt 标题栏 · Windows 11"], ["system", "Windows 系统外观"], ["external", "外部工具控制（需另装 MFE）"]]],
   ["界面", "shortcuts_enabled", "启用快捷键（默认关闭）", "bool"],
   ["界面", "model_folder_include_subfolders", "勾选文件夹包含子目录", "bool"],
   ["界面", "model_list_size", "模型列表大小", "select", [["3","完整 · 最大（当前样式）"],["2","紧凑 · 无封面/作者"],["1","极简 · 名称精简（信息列保留）"]]],
-  ["界面", "masonry_info_mode", "瀑布流卡片介绍", "select", [["always","常驻介绍（当前样式）"],["slide","只看封面 · 悬停滑出介绍"],["fade","只看封面 · 悬停淡入介绍"]]],
+  ["界面", "model_card_styles", "模型卡片光效与外壳", "modelcards"],
+  ["界面", "model_glow_opacity", "模型底光浓度（不透明度 %）", "range", [0,100,1]],
+  ["界面", "masonry_info_mode", "卡片介绍显示（瀑布流 / 方格）", "select", [["always","常驻介绍（当前样式）"],["slide","只看封面 · 悬停滑出介绍"],["fade","只看封面 · 悬停淡入介绍"]]],
   ["界面", "masonry_overlay_size", "悬浮介绍覆盖范围", "select", [["partial","卡片下方部分"],["full","整个卡片"]]],
   ["界面", "name_scroll_speed", "名称滚动速度（像素/秒）", "number"],
   ["界面", "name_scroll_start_pause", "名称滚动：开头停顿（毫秒）", "number"],
   ["界面", "name_scroll_end_pause", "名称滚动：末尾停顿（毫秒）", "number"],
   ["界面", "masonry_card_width", "瀑布流图片大小", "range", [140,420,10]],
+  ["界面", "model_list_hover", "列表悬停预览", "select", [["thumbnail","仅缩略图（默认）"],["text","仅文字"],["both","文字和缩略图"],["none","关闭"]]],
+  ["界面", "model_grid_size", "方格图片大小", "range", [100,500,10]],
+  ["界面", "model_pagination", "模型管理翻页模式", "bool"],
+  ["界面", "model_page_size", "翻页模式每页模型数", "range", [12,240,12]],
   ["界面", "custom_accent_enabled", "自定义强调色（所有主题）", "bool"],
   ["界面", "custom_accent", "自定义强调色", "color"],
   ["界面", "ui_density", "列表信息密度", "select", [["compact", "紧凑"], ["standard", "标准"], ["comfortable", "宽松"]]],
@@ -4367,15 +4269,14 @@ const SETTING_FIELDS = [
   ["界面", "rename_menu_default", "改名默认动作", "select", [["custom", "自定义改名"], ["rename_c", "文件名改成C站名"], ["localize", "文件名翻中文"]]],
   ["界面", "confirm_buttons_flip", "确认弹窗按钮翻转", "bool"],
   ["界面", "default_page", "启动默认页", "select", [["models", "模型管理"], ["download", "批量下载"], ["dlmanager", "下载管理"], ["reverse", "反向解析"], ["workflow", "工作流分析"], ["settings", "设置"]]],
-  ["界面", "default_view", "模型默认视图", "select", [["waterfall", "瀑布流"], ["list", "列表"]]],
+  ["界面", "default_view", "模型默认视图", "select", [["waterfall", "瀑布流"], ["grid", "方格 · 仓库"], ["list", "列表"]]],
   ["界面", "zebra_rows", "模型列表斑马纹", "bool"],
   ["界面", "ambient_bg", "顶部氛围动态背景", "bool"],
   ["界面", "ui_mode", "启动界面", "select", [["window", "软件窗口（默认；失败可浏览器兜底）"], ["browser", "浏览器启动（以后不尝试软件窗口）"]]],
   ["界面", "window_wait_seconds", "窗口模式等待秒数", "number"],
   ["界面", "browser_fallback_enabled", "软件窗口失败时自动浏览器兜底", "bool"],
   ["界面", "cache_detail_images", "缓存详情在线缩略图", "bool"],
-  ["界面", "pointer_effects", "鼠标交互特效", "select", [["off", "关闭"], ["click", "仅点击波纹"], ["trail", "拖尾 + 点击"]]],
-  ["界面", "pointer_effect_quality", "交互特效性能档", "select", [["low", "轻量 · 少量粒子"], ["high", "精细 · 更多粒子"]]],
+  ["界面", "show_fps", "左下角显示帧数", "bool"],
   ["界面", "effects_fps_limit", "动画帧率上限（0 = 跟随屏幕）", "number"],
   ["界面", "cache_original_images", "缓存已查看原图和生成数据", "bool"],
   ["界面", "gallery_cache_mb", "原图缓存容量（MB）", "number"],
@@ -4386,8 +4287,7 @@ const SETTING_FIELDS = [
   ["界面", "exit_when_page_closed", "浏览器模式：关页面后自动退出", "bool"],
 ];
 
-// ===== Metro 外观：亮暗（可跟随系统）+ 主题色（可跟随系统主题色）=====
-let _schemeMQ = null;
+// ===== 终末地通用外观：字体、字号、布局及统一黄色 =====
 // 以 WCAG 相对亮度选择黑/白前景，亮色强调色不再出现白字看不清的问题。
 function accentForeground(hex) {
   const channels = hex.slice(1).match(/../g).map((s) => parseInt(s, 16) / 255);
@@ -4398,17 +4298,21 @@ function accentForeground(hex) {
 function applyCustomUi() {
   const cfg = state.cfg || {};
   const root = document.documentElement;
-  const custom = cfg.custom_accent_enabled && /^#[0-9a-f]{6}$/i.test(cfg.custom_accent || "");
+  const endfield = ["dark_endfield","light_endfield"].includes(root.dataset.theme);
+  const custom = !endfield && cfg.custom_accent_enabled && /^#[0-9a-f]{6}$/i.test(cfg.custom_accent || "");
   root.dataset.customAccent = custom ? "true" : "false";
-  if (custom) {
+  if (endfield) {
+    root.style.setProperty("--primary", "#ffef01");
+    root.style.setProperty("--primary-hover", "#fff22a");
+    root.style.setProperty("--primary-fg", "#252619");
+  } else if (custom) {
     root.style.setProperty("--primary", cfg.custom_accent);
     root.style.setProperty("--primary-hover", cfg.custom_accent);
     root.style.setProperty("--primary-fg", accentForeground(cfg.custom_accent));
-    root.style.setProperty("--metro-accent", cfg.custom_accent);
   } else {
     root.style.removeProperty("--primary-hover");
     root.style.removeProperty("--primary-fg");
-    if (root.dataset.theme !== "metro") root.style.removeProperty("--primary");
+    root.style.removeProperty("--primary");
   }
   const primary = getComputedStyle(root).getPropertyValue("--primary").trim();
   if (/^#[0-9a-f]{6}$/i.test(primary)) {
@@ -4416,13 +4320,19 @@ function applyCustomUi() {
     const lum = .2126*values[0]+.7152*values[1]+.0722*values[2];
     root.style.setProperty("--primary-fg", lum > .179 ? "#000000" : "#ffffff");
   }
-  const font = String(cfg.ui_font || "").trim();
-  if (font) root.style.setProperty("--font", JSON.stringify(font) + ', "Microsoft YaHei UI", system-ui, sans-serif');
+  const fonts = typeof customFontStack === "function" ? customFontStack() : (cfg.ui_font ? [cfg.ui_font] : []);
+  const font = fonts[0] || "";
+  if(fonts.length)root.style.setProperty("--ef-custom-fonts",fonts.map(f=>JSON.stringify(f)).join(", "));else root.style.removeProperty("--ef-custom-fonts");
+  if (font) root.style.setProperty("--font", fonts.map(f=>JSON.stringify(f)).join(", ") + ', "HarmonyOS Sans SC", "Microsoft YaHei UI", system-ui, sans-serif');
   else root.style.removeProperty("--font");
+  applyFontScriptRouting(cfg);
   const fontCaption = $("#fontPreviewName"); if(fontCaption)fontCaption.textContent = font || "软件默认字体";
   applyTextAndWindowAppearance();
   setMasonrySize(cfg.masonry_card_width,false);
+  window.CFTModelManagement?.setGridSize(cfg.model_grid_size,false);
   root.dataset.masonryInfo=["slide","fade"].includes(cfg.masonry_info_mode)?cfg.masonry_info_mode:"always";
+  window.CFTPerformance?.sync(cfg);
+  root.style.setProperty("--model-glow-opacity",Math.max(0,Math.min(100,Number(cfg.model_glow_opacity ?? 100)))/100);
   root.dataset.masonryOverlay=cfg.masonry_overlay_size==="full"?"full":"partial";
   window.dispatchEvent(new Event("cft:name-scroll-options"));
   root.dataset.showPaths = cfg.show_file_paths === false ? "false" : "true";
@@ -4434,44 +4344,21 @@ function applyCustomUi() {
   const sidebarButton = $("#toggleSidebar");
   if (sidebarButton) sidebarButton.setAttribute("aria-expanded", String(!cfg.sidebar_collapsed));
   const preview = $("#appearancePreview");
-  if (preview) preview.textContent = "实时预览 · " + (custom ? cfg.custom_accent.toUpperCase() : "主题默认强调色");
+  if (preview) preview.textContent = "实时预览 · " + (endfield ? "终末地统一黄色" : custom ? cfg.custom_accent.toUpperCase() : "主题默认强调色");
   const bg = $("#bg");
   if (bg) bg.style.display = cfg.ambient_bg === false ? "none" : "";
 }
 function applyUiAppearance() {
-  const scheme = String((state.cfg && state.cfg.ui_scheme) || "light");
-  const acc = String((state.cfg && state.cfg.metro_accent) || "#0078D4");
+  if(!state.cfg)return;
+  normalizeThemeConfig(state.cfg);
   const root = document.documentElement;
-  if (scheme === "auto") {
-    if (!_schemeMQ) {
-      try {
-        _schemeMQ = window.matchMedia("(prefers-color-scheme: dark)");
-        _schemeMQ.addEventListener("change", () => applyUiAppearance());
-      } catch (e) { _schemeMQ = null; }
-    }
-    root.dataset.scheme = (_schemeMQ && _schemeMQ.matches) ? "dark" : "light";
-  } else {
-    root.dataset.scheme = scheme === "dark" ? "dark" : "light";
-  }
-  const _setAcc = (c) => {
-    root.style.setProperty("--metro-accent", c);
-    // --primary 只在 Metro 主题下跟随主题色；经典主题必须保持自己的主题主色（否则主按钮变黑底黑字）
-    if (root.dataset.theme === "metro") root.style.setProperty("--primary", c);
-    else root.style.removeProperty("--primary");
-    applyCustomUi();
-  };
-  if (/^#([0-9a-f]{6})$/i.test(acc)) {
-    _setAcc(acc);
-  } else if (acc === "system") {
-    _setAcc("#0078D4");  // 读取系统色期间也清除前一个主题的内联覆盖。
-    api.call("get_system_accent").then((c) => {
-      if (state.cfg && state.cfg.metro_accent === "system" && c && /^#([0-9a-fA-F]{6})$/.test(c)) _setAcc(c);
-    }).catch(() => { });
-  } else _setAcc("#0078D4");
+  root.dataset.theme = state.cfg.theme;
+  delete root.dataset.scheme;
+  root.style.removeProperty("--metro-accent");
   applyCustomUi();
-  // 主题切换后：代理按钮标签需要按主题重刷（经典带 emoji / Metro 不带）
+  // 复用模型工具栏的现有 SVG 代理及分类设置联动。
   try { (window._mmLabelSync || []).forEach((f) => f()); } catch (e) { }
-  try { _applyMetroOpts(); } catch (e) { }
+  try { applyWorkbenchThemeOptions(); } catch (e) { }
 }
 
 // 设置项 hover 说明（鼠标移到标签上显示功能作用）
@@ -4504,14 +4391,13 @@ const SETTING_TIPS = {
   "baidu_key": "百度翻译开放平台密钥，与 APP ID 配套",
   "auto_translate": "反向解析时自动把模型名/简介翻译成中文",
   "translate_filename": "下载时把模型名翻译成中文作为文件名（需要配置百度翻译）",
-  "theme": "界面主题：深色 / 浅色 / 现代浅色；选 Metro 磁贴 = Win10 直角扁平风（顶部按钮分组 + 默认瀑布流）",
+  "theme": "界面主题只提供终末地亮色和暗色；两种模式统一使用黄色强调色，字体和布局可独立调整",
   "ui_zoom": "界面整体缩放比例（百分比）",
-  "ui_scheme": "Metro 主题的亮暗模式：亮色 / 暗色 / 跟随系统（Windows 的浅色/深色设置）",
-  "metro_accent": "Metro 主题的强调色：影响按钮、选中、链接等；「跟随系统主题色」读取 Windows 个性化里的主题色",
   "rename_menu_default": "点「改名」默认执行的动作：自定义 / 改成 C 站模型名 / 文件名翻中文",
   "confirm_buttons_flip": "交换确认弹窗中「确定/取消」按钮位置（防误点）",
   "default_page": "启动软件后默认打开的页面",
-  "default_view": "模型管理默认展示方式：瀑布流（大图卡片）或列表（表格）",
+  "default_view": "模型管理默认展示方式：瀑布流（自适应高低）、方格（紧凑仓库）或列表",
+  "model_glow_opacity": "模型底部内光的不透明度：0% 完全透明，100% 最浓；不影响选中卡片的金色外光",
   "zebra_rows": "模型列表行间斑马纹，便于横向对齐查看",
   "ambient_bg": "顶部氛围动态背景（渐变光晕）",
   "ui_mode": "界面显示方式：窗口 = 原生窗口（默认）；浏览器 = 软件在后台跑、界面用系统浏览器打开 —— 界面卡死/崩溃不会拖死下载任务，刷新页面即可恢复（推荐受「启动卡死」困扰时使用）。改完重启软件生效",
@@ -4551,14 +4437,11 @@ const BAIDU_LINKS = [
 ];
 
 function buildSettingsForm() {
+  normalizeThemeConfig(state.cfg);
   buildWorkbenchSettings();
 }
 
 
-// Metro 主题的选项联动：亮暗/主题色仅 Metro 显示；斑马纹仅 Metro 下强制关闭
-function _applyMetroOpts() {
-  applyWorkbenchThemeOptions();
-}
 
 // 密码框小眼睛（切换明文显示）
 $("#settingsForm").addEventListener("click", (e) => {
@@ -4585,11 +4468,13 @@ $("#settingsForm").addEventListener("click", (e) => {
 });
 
 async function saveSettings() {
+  const settingsScroll={content:document.querySelector('.content')?.scrollTop||0,panels:document.querySelector('#settingsForm .settings-panels')?.scrollTop||0,search:document.getElementById('settingsSearch')?.value||'',category:typeof settingsCategory==='string'?settingsCategory:null};
   const cfg = {};
   Object.assign(cfg, state.cfg);
   $$("#settingsForm [data-key]").forEach((el) => {
     const k = el.dataset.key;
-    if (el.type === "checkbox") cfg[k] = el.checked;
+    if(el.dataset.valueType==='json'){try{cfg[k]=JSON.parse(el.value);}catch{cfg[k]={};}}
+    else if (el.type === "checkbox") cfg[k] = el.checked;
     else if (el.type === "number") cfg[k] = Number(el.value);
     else if (el.tagName === "TEXTAREA") cfg[k] = el.value.split("\n").map((s) => s.trim()).filter(Boolean);
     else cfg[k] = el.value;
@@ -4612,9 +4497,13 @@ async function saveSettings() {
   updateOrganizeBtns();
   // 不刷新页面：直接应用主题/缩放/表单（避免白屏闪烁）
   applyZoom(Number(state.cfg.ui_zoom) || 100);
-  document.documentElement.dataset.theme = state.cfg.theme || "modern";
+  document.documentElement.dataset.theme = normalizeEndfieldTheme(state.cfg.theme, state.cfg);
   applyUiAppearance();
   buildSettingsForm();
+  if(settingsScroll.category)showSettingsCategory(settingsScroll.category);
+  if(settingsScroll.search){document.getElementById('settingsSearch').value=settingsScroll.search;filterWorkbenchSettings();}
+  const restoreSettingsScroll=()=>{const panels=document.querySelector('#settingsForm .settings-panels'),content=document.querySelector('.content');if(panels)panels.scrollTop=settingsScroll.panels;if(content)content.scrollTop=settingsScroll.content;};
+  restoreSettingsScroll();requestAnimationFrame(restoreSettingsScroll);
   if(folderModeChanged){foldersState=null;mmScan();}
   return true;
 }
@@ -4623,7 +4512,7 @@ $("#btnSaveSettings").addEventListener("click",()=>saveSettings().catch(()=>setS
 // 设置里「下载目标文件夹」的选择/清除（点击即时保存，不依赖底部「保存设置」）
 $("#settingsForm").addEventListener("click", async (e) => {
   if (e.target.closest("#resetAppearance")) {
-    const defaults = { custom_accent_enabled: false, custom_accent: "#60A5FA", ui_density: "standard", ui_corners: "theme", ui_font: "", ui_text_size: "standard", window_appearance: "theme", masonry_card_width:220, model_list_size:3 };
+    const defaults = { custom_accent_enabled: false, custom_accent: "#60A5FA", ui_density: "standard", ui_corners: "theme", ui_font: "", ui_font_stack: [], ui_font_scripts: {}, ui_text_size: "standard", window_appearance: "theme", masonry_card_width:220, model_list_size:3 };
     Object.assign(state.cfg, defaults);
     setModelListSize(3,false);
     for (const [key, value] of Object.entries(defaults)) {
@@ -4658,14 +4547,25 @@ $("#settingsForm").addEventListener("change", (e) => {
   const el = e.target.closest("[data-key]");
   if (!el) return;
   const key = el.dataset.key;
+  if(el.type==='number'&&!el.value.trim()&&el.dataset.default!==undefined)el.value=el.dataset.default;
   let val = el.type === "checkbox" ? el.checked : (el.type === "number" ? Number(el.value) : el.value);
   if(key.startsWith("shortcuts_")){applyShortcutPreference(key,val);return;}
   if(key==="model_list_size"){setModelListSize(val,true);return;}
+  if(key==="model_grid_size"){window.CFTModelManagement?.setGridSize(val,true);return;}
+  if(key==="model_pagination"||key==="model_page_size"){state.cfg[key]=key==='model_pagination'?!!val:Number(val);state.mmPage=1;window.CFTModelManagement?.refresh();}
   if(key==="name_scroll_speed"){val=Math.max(10,Math.min(240,Math.round(Number.isFinite(Number(val))?Number(val):70)));el.value=val;}
   if(["name_scroll_start_pause","name_scroll_end_pause"].includes(key)){val=Math.max(0,Math.min(5000,Math.round(Number(val)||0)));el.value=val;}
   if(key==="effects_fps_limit"){val=val===0?0:Math.max(15,Math.min(360,Math.round(Number(val)||60)));el.value=val;}
   if(key==="gallery_cache_mb"){val=Math.max(64,Math.min(8192,Math.round(Number(val)||1024)));el.value=val;}
-  if(key==='ui_mode' || key==='browser_fallback_enabled'){
+  if(key==="endfield_parallax"){state.cfg[key]=val;window.CFTEndfield?.reset();api.call("save_config",{[key]:val}).catch(()=>setStatus("视差设置保存失败"));
+  } else if(key.startsWith('download_hud_')){
+    const previous=state.cfg[key];state.cfg[key]=val;
+    api.call('save_config',{[key]:val}).then(async ok=>{
+      if(!ok)throw new Error('保存失败');
+      const r=await api.call('download_hud_control','sync');
+      setStatus(r?.ok?'悬浮窗设置已保存':r?.msg||'当前无法显示悬浮窗');
+    }).catch(()=>{state.cfg[key]=previous;setStatus('悬浮窗设置保存失败');});
+  } else if(key==='ui_mode' || key==='browser_fallback_enabled'){
     const previous=state.cfg[key];state.cfg[key]=val;
     api.call('save_config',{[key]:val}).then(ok=>{
       if(!ok){state.cfg[key]=previous;if(el.type==='checkbox')el.checked=previous;else el.value=previous;setStatus('启动方式保存失败，请重试');return;}
@@ -4673,29 +4573,33 @@ $("#settingsForm").addEventListener("change", (e) => {
     }).catch(()=>{state.cfg[key]=previous;if(el.type==='checkbox')el.checked=previous;else el.value=previous;setStatus('启动方式保存失败，请重试');});
   } else if (key === "theme") {
     state.cfg.theme = val;
-    document.documentElement.dataset.theme = val || "modern";
-    applyUiAppearance();   // 主题切换：重算 --primary/主题色 + 重刷代理按钮标签（经典 emoji / Metro 无）
+    document.documentElement.dataset.theme = normalizeEndfieldTheme(val, state.cfg);
+    applyUiAppearance();   // 主题切换：同步终末地亮暗与现有代理按钮。
   } else if (["show_file_paths", "custom_accent_enabled", "custom_accent", "ui_density", "ui_corners", "ambient_bg"].includes(key)) {
     if (state.cfg) state.cfg[key] = val;
     applyUiAppearance();
     api.call("save_config", { [key]: val }).then((ok) => {
       if (!ok) setStatus("外观已预览，保存失败，请重试");
     }).catch(() => setStatus("外观已预览，保存失败，请重试"));
-  } else if (["effects_fps_limit", "cache_original_images", "gallery_cache_mb", "zebra_rows", "masonry_info_mode", "masonry_overlay_size", "name_scroll_speed", "name_scroll_start_pause", "name_scroll_end_pause", "pointer_effects", "pointer_effect_quality", "cache_detail_images", "ui_font", "ui_text_size", "window_appearance", "integrated_titlebar", "folder_picker_show_paths"].includes(key)) {
+  } else if (key === "model_glow_opacity") {
+    state.cfg[key]=Math.max(0,Math.min(100,Number(val)||0));applyUiAppearance();
+    api.call("save_config",{[key]:state.cfg[key]}).catch(()=>setStatus("设置保存失败"));
+  } else if (["show_fps", "effects_fps_limit", "cache_original_images", "gallery_cache_mb", "zebra_rows", "masonry_info_mode", "model_list_hover", "masonry_overlay_size", "name_scroll_speed", "name_scroll_start_pause", "name_scroll_end_pause", "pointer_effects", "pointer_effect_quality", "cache_detail_images", "ui_font", "ui_text_size", "window_appearance", "integrated_titlebar", "folder_picker_show_paths"].includes(key)) {
     state.cfg[key] = val;
     if(key==="cache_original_images" && val===false && typeof clearViewerImageCache==="function")clearViewerImageCache();
     applyUiAppearance();
     api.call("save_config", { [key]: val }).catch(() => setStatus("设置保存失败"));
   } else if (key === "masonry_card_width") {
     setMasonrySize(val,true);
-  } else if (key === "ui_scheme" || key === "metro_accent") {
-    if (state.cfg) state.cfg[key] = val;
-    applyUiAppearance();
+
   } else if (key === "ui_zoom") {
     applyZoom(Number(val) || 100);
   }
 });
 $("#settingsForm").addEventListener("input", (e) => {
+  if(e.target.type==="range"){const output=e.target.closest(".setting-range")?.querySelector("output");if(output)output.textContent=e.target.value+(e.target.dataset.key==="model_glow_opacity"?"%":e.target.dataset.key==="model_page_size"?" 个":" px");}
+  if(e.target.dataset.key === "model_glow_opacity"){state.cfg.model_glow_opacity=Number(e.target.value);applyUiAppearance();return;}
+  if(e.target.dataset.key === "model_grid_size"){window.CFTModelManagement?.setGridSize(e.target.value,true);return;}
   if(e.target.dataset.key === "masonry_card_width") {setMasonrySize(e.target.value,true);return;}
   if (e.target.dataset.key === "custom_accent") {
     state.cfg.custom_accent = e.target.value;
@@ -4747,11 +4651,11 @@ async function init() {
   refreshApiKeyGates();
   window.__ready = true;
   refreshDlTarget();
-  // 应用主题（dark / light / modern）
-  const theme = state.cfg.theme || "modern";
+  // 旧主题归一到终末地亮/暗后再首屏绘制。
+  normalizeThemeConfig(state.cfg);
+  const theme = state.cfg.theme;
   document.documentElement.dataset.theme = theme;
-  // 主题既已确定：立即重算 亮暗/主题色/设置页联动，并重刷代理按钮标签
-  // （启动时 bindMmMetro 早于 init 运行，那一刻主题还是空的 → 代理标签会走经典分支；这里补一次重刷）
+  // 同步终末地外观、设置页联动和工具栏代理标签。
   try { applyUiAppearance(); } catch (e) { }
   // 界面缩放
   applyZoom(Number(state.cfg.ui_zoom) || 100);
@@ -4760,7 +4664,7 @@ async function init() {
   const tab = document.querySelector('.nav-tab[data-page="' + defPage + '"]');
   if (tab) tab.click();
   // 应用模型管理默认视图（设置项 default_view）
-  state.mmView = state.cfg.default_view === "waterfall" ? "masonry" : "list";
+  state.mmView = state.cfg.default_view === "grid" ? "grid" : state.cfg.default_view === "list" ? "list" : "masonry";
   try { syncViewSeg(); } catch (e) { /* 忽略 */ }
   const vtb = $("#mmViewToggle");
   if (vtb) vtb.textContent = state.mmView === "masonry" ? "列表视图" : "瀑布流";
@@ -4770,6 +4674,7 @@ async function init() {
   setInterval(dlRefresh, 1000);
   setInterval(rpRefresh, 2000);
   setStatus("就绪");
+  window.dispatchEvent(new Event("cft:ui-ready"));
   // 首次使用引导（未配置 API key 时自动弹出）
   if (!state.cfg.api_key && !state.cfg.onboarding_done) {
     showOnboarding();
@@ -4779,7 +4684,7 @@ async function init() {
 // ===== 首次使用引导（主题 / 下载目录 / API key / 模型目录 / 反向解析） =====
 const OB_STEPS = ["申请 API Key", "页面介绍", "主题", "下载目录", "模型目录", "反向解析"];
 let obStep = 0;
-let obTheme = "dark";
+let obTheme = "dark_endfield";
 let obDirVal = "";   // 跨步骤保存（输入框只在对应步骤渲染）
 let obKeyVal = "";
 let obModelDirs = []; // 模型管理目录（多目录）
@@ -4791,6 +4696,7 @@ function setObMini(mini) {
   obMini = mini;
   const mask = $("#obMask");
   mask.classList.toggle("mini", mini);
+  setOnboardingBackground(!mini);
   if (mini) {
     $("#obMiniTitle").textContent = OB_STEPS[obStep] + "（第 " + (obStep + 1) + "/" + OB_STEPS.length + " 步）";
   }
@@ -4800,23 +4706,28 @@ $("#obMiniClose").addEventListener("click", async () => {
   setObMini(false);
   await finishOnboarding();
 });
+function setOnboardingBackground(blocked){for(const element of document.querySelectorAll("body>.nav-wrap,body>.content"))element.inert=blocked;}
 function showOnboarding() {
   if(typeof settingsHaveChanges==="function"&&settingsHaveChanges()){requestSettingsLeave(showOnboarding);return;}
   obStep = 0;obStartPage=document.querySelector(".nav-tab.active")?.dataset.page||"models";
-  obTheme = state.cfg.theme || "dark";
+  obTheme = normalizeEndfieldTheme(state.cfg.theme, state.cfg);
   obDirVal = state.cfg.download_dir || "";
   obKeyVal = state.cfg.api_key || "";
   const md = state.cfg.models_dirs;
   obModelDirs = (Array.isArray(md) && md.length) ? md.slice() : (state.cfg.models_dir ? [state.cfg.models_dir] : []);
   obMini = false;
+  if($("#obMask").parentElement!==document.body)document.body.append($("#obMask"));
   $("#obMask").classList.remove("mini");
+  setOnboardingBackground(true);
   $("#obMask").style.display = "flex";
+  window.CFTModalMotion?.enter($("#obMask"));
   renderOnboarding();
 }
 function renderOnboarding() {
+  if($("#obStepNumber"))$("#obStepNumber").textContent=String(obStep+1).padStart(2,"0");
   $("#obSteps").innerHTML = OB_STEPS.map((s, i) =>
     '<div class="ob-step ' + (i === obStep ? "active" : i < obStep ? "done" : "") + '">' + s + "</div>").join("");
-  $("#obPrev").style.display = obStep === 0 ? "none" : "inline-block";
+  $("#obPrev").hidden=obStep===0;
   $("#obNext").disabled=obStep===0&&!obKeyVal.trim();
   $("#obNext").textContent = obStep === OB_STEPS.length - 1 ? "完成 " : "下一步";
   const body = $("#obBody");
@@ -4834,7 +4745,7 @@ function renderOnboarding() {
     body.querySelectorAll('[data-page]').forEach(button=>button.onclick=()=>{obStartPage=button.dataset.page;switchPage(obStartPage);setObMini(true);});
   } else if (obStep === 2) {
     const options=SETTING_FIELDS.find(field=>field[1]==='theme')[4];
-    body.innerHTML='<p class="ob-label">选择喜欢的主题，设置里还能调整字体、字号和强调色。</p><div class="ob-themes">'+options.map(([value,label])=>'<button class="btn ob-theme" data-t="'+esc(value)+'">'+esc(label)+'</button>').join('')+'</div>';
+    body.innerHTML='<p class="ob-label">选择终末地亮色或暗色，设置里还能调整字体、字号和布局。</p><div class="ob-themes">'+options.map(([value,label])=>'<button class="btn ob-theme" data-t="'+esc(value)+'">'+esc(label)+'</button>').join('')+'</div>';
     body.querySelectorAll('[data-t]').forEach(button=>{button.classList.toggle('sel',button.dataset.t===obTheme);button.onclick=()=>{obTheme=button.dataset.t;state.cfg.theme=obTheme;document.documentElement.dataset.theme=obTheme;applyUiAppearance();body.querySelectorAll('[data-t]').forEach(b=>b.classList.toggle('sel',b===button));};});
   } else if (obStep === 3) {
     body.innerHTML =
@@ -4859,8 +4770,8 @@ function renderOnboarding() {
       '<div>3. 复制生成的 Key 粘贴到上方输入框即可</div></div>' +
       '<div class="ob-actions2"><button class="btn" id="obToggleGuide">如何注册 API？</button>' +
       '<button class="btn" id="obOpenApi">打开注册页</button></div>' +
-      '<div style="color:var(--text-dim);font-size:calc(12px * var(--type-scale, 1));margin-top:6px">请先完成申请并填写 API Key，再进入页面介绍；Key 仅保存到你的本地配置。</div>';
-    $("#obKey").addEventListener("input", () => { obKeyVal = $("#obKey").value;$("#obNext").disabled=!obKeyVal.trim();$("#obSkipAll").disabled=!obKeyVal.trim(); });
+      '<div style="color:var(--text-dim);font-size:calc(12px * var(--type-scale, 1));margin-top:6px">可先跳过引导使用离线功能；联网查询与下载时再补填 API Key。Key 仅保存到本地。</div>';
+    $("#obKey").addEventListener("input", () => { obKeyVal = $("#obKey").value;$("#obNext").disabled=!obKeyVal.trim(); });
     $("#obToggleGuide").addEventListener("click", () => {
       const g = $("#obGuide");
       g.style.display = g.style.display === "none" ? "block" : "none";
@@ -4910,15 +4821,16 @@ function renderOnboarding() {
   }
   body.scrollTop=0;
   $('#obSkipAll')?.remove();$('#obNext').insertAdjacentHTML('beforebegin','<button class="btn" id="obSkipAll">跳过引导，直接使用</button>');
-  $('#obSkipAll').disabled=!obKeyVal.trim();$('#obSkipAll').title=obKeyVal.trim()?'跳过后续介绍':'请先申请并填写 API Key';
-  $('#obSkipAll').onclick=finishOnboarding;
+  $('#obSkipAll').disabled=false;$('#obSkipAll').title='无需填写 Key，可先使用离线功能';
+  $('#obSkipAll').onclick=()=>finishOnboarding({skip:true});
 }
 
 // 引导完成：保存全部配置
-async function finishOnboarding() {
-  if(!obKeyVal.trim()){obStep=0;renderOnboarding();showToast("请先申请并填写 Civitai API Key");return false;}
+async function finishOnboarding(options={}) {
+  const skip=options.skip===true;
+  if(!skip&&!obKeyVal.trim()){obStep=0;renderOnboarding();showToast("请先申请并填写 Civitai API Key");return false;}
   state.cfg.onboarding_done = true;
-  state.cfg.api_key = (obKeyVal || "").trim();
+  state.cfg.api_key = (obKeyVal || "").trim() || (skip ? state.cfg.api_key || "" : "");
   state.cfg.download_dir = (obDirVal || state.cfg.download_dir || "").trim();
   state.cfg.theme = obTheme;
   const dirs = obModelDirs.filter(Boolean);
@@ -4930,10 +4842,11 @@ async function finishOnboarding() {
   state.cfg = await api.call("get_config");
   buildSettingsForm();
   applyZoom(Number(state.cfg.ui_zoom) || 100);
-  document.documentElement.dataset.theme = state.cfg.theme || "modern";
-  $("#obMask").style.display = "none";
+  document.documentElement.dataset.theme = normalizeEndfieldTheme(state.cfg.theme, state.cfg);
+  if(window.CFTModalMotion)await CFTModalMotion.hide($("#obMask"));else $("#obMask").style.display = "none";
+  setOnboardingBackground(false);
   switchPage(obStartPage);
-  setStatus('引导已完成。可在设置里随时重新打开。');
+  setStatus(skip?'已跳过引导；可在设置里重新打开，联网功能使用时再填写 Key。':'引导已完成。可在设置里随时重新打开。');
   return true;
 }
 $("#obNext").addEventListener("click",async()=>{
@@ -4983,10 +4896,12 @@ function syncViewSeg() {
   const l = document.getElementById("mmViewList"), m = document.getElementById("mmViewMasonry");
   if (l) l.classList.toggle("on", state.mmView === "list");
   if (m) m.classList.toggle("on", state.mmView === "masonry");
+  const g=document.getElementById("mmViewGrid");if(g)g.classList.toggle("on",state.mmView==="grid");
+  for(const [button,value] of [[l,"list"],[m,"masonry"],[g,"grid"]])button?.setAttribute("aria-pressed",String(state.mmView===value));
 }
 
 function mmSetView(v) {
-  state.mmView = (v === "masonry") ? "masonry" : "list";
+  state.mmView = ["masonry","grid"].includes(v) ? v : "list";
   const t = document.getElementById("mmViewToggle");
   if (t) t.textContent = state.mmView === "masonry" ? "\ud83d\udccb \u5217\u8868\u89c6\u56fe" : "\ud83d\uddbc\ufe0f \u7011\u5e03\u6d41";
   syncViewSeg();
@@ -5168,6 +5083,7 @@ function bindMmMetro() {
   const _vl = document.getElementById("mmViewList"), _vm = document.getElementById("mmViewMasonry");
   if (_vl) _vl.addEventListener("click", () => mmSetView("list"));
   if (_vm) _vm.addEventListener("click", () => mmSetView("masonry"));
+  document.getElementById("mmViewGrid")?.addEventListener("click",()=>mmSetView("grid"));
   syncViewSeg();
   });
   _sec("appearance", () => { applyUiAppearance(); });
@@ -5176,10 +5092,9 @@ function bindMmMetro() {
     const src = document.getElementById(el.dataset.proxy);
     if (!src) return;
     const _clean = (t) => String(t || "").replace(/^[\u{1F300}-\u{1FAFF}\u{2300}-\u{27BF}\u{2B00}-\u{2BFF}\uFE0F\u200D\s]+/u, "");
-    const _isMetro = () => document.documentElement.dataset.theme === "metro";
     const sync = () => {
       const raw = String(src.textContent || "");
-      const lbl = _clean(raw);       // 经典主题：保留 emoji（原样）
+      const lbl = _clean(raw);       // SVG 代理标签不重复显示装饰符号。
       const ic = el.dataset.icon ? _icon(el.dataset.icon) : "";
       if (el.innerHTML !== (ic + lbl)) el.innerHTML = ic + lbl;
       el.disabled = !!src.disabled;
@@ -5203,10 +5118,15 @@ document.addEventListener("click", (e) => {
   if (btn) {
     e.stopPropagation();
     const wrap = btn.closest(".btn-group");
-    const menu = wrap && wrap.querySelector(".mm-menu");
+    const menu = wrap && (wrap.querySelector(".mm-menu") || wrap._menu);
     const wasOpen = wrap && wrap.classList.contains("open");
     _closeMmMenus();
-    if (!wasOpen && menu) _mmOpenMenu(wrap, menu, btn);
+    if (!wasOpen && menu) {
+      _mmOpenMenu(wrap, menu, btn);
+      const r=btn.getBoundingClientRect(),m=menu.getBoundingClientRect(),z=parseFloat(getComputedStyle(document.documentElement).zoom)||1;
+      menu.style.left=Math.max(8,Math.min(r.left,innerWidth-m.width-8))/z+'px';
+      menu.style.top=Math.max(8,r.bottom+m.height+2>innerHeight-8?r.top-m.height-2:r.bottom+2)/z+'px';
+    }
     return;
   }
   // 选择版本
@@ -5231,3 +5151,6 @@ document.addEventListener("click", (e) => {
 // Escape 先关闭右键菜单，不同时关闭背后的模型详情。
 document.addEventListener('keydown',e=>{const menu=$('#ctxMenu');if(e.key==='Escape' && menu.style.display==='block'){menu.style.display='none';e.preventDefault();e.stopImmediatePropagation();}},true);
 window.addEventListener('resize',()=>{const menu=$('#ctxMenu');if(menu)menu.style.display='none';});
+
+// Manual recovery entry: hiding the HUD never stops downloads.
+document.getElementById("dlShowHud")?.addEventListener("click",async()=>{try{const r=await api.call("download_hud_control","show");setStatus(r?.ok?"桌面悬浮窗已显示":r?.msg||"悬浮窗不可用");}catch{setStatus("悬浮窗打开失败");}});

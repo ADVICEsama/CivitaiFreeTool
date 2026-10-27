@@ -1,0 +1,29 @@
+/* Same editorial language as About, with the form kept in a readable left column. */
+html[data-endfield=true] #obMask:not(.mini){z-index:22000;backdrop-filter:blur(9px);background:#080b0dbb}
+html[data-endfield=true] #obMask:not(.mini) .ob-card{width:100%;max-width:100%;max-height:calc(var(--app-height,100dvh) - 110px);overflow:visible;border:0;border-block:1px solid var(--border);border-radius:0;padding:0;background:var(--bg);box-shadow:0 10px 24px #0006;position:relative;isolation:isolate}
+html[data-endfield=true] #obMask:not(.mini) .ob-card:before{content:'';position:absolute;inset:0 0 auto;height:3px;background:var(--ef-band-stripe);z-index:3}
+html[data-endfield=true] #obMask:not(.mini) .ob-main{box-sizing:border-box;position:relative;isolation:isolate;width:min(1160px,100%);max-height:inherit;min-height:560px;margin:auto;padding:34px 42px 40px;overflow:hidden}
+.ob-art{position:absolute;inset:0;z-index:-1;overflow:hidden;pointer-events:none;background:repeating-linear-gradient(135deg,transparent 0 3px,color-mix(in srgb,var(--text) 3%,transparent) 3px 4px)}
+.ob-art:before,.ob-art:after{content:'';position:absolute;inset:0 auto 0 0;width:40%;opacity:.1;background:url('terrain-contours.svg') center/650px 650px;mask-image:linear-gradient(90deg,#000,transparent)}
+.ob-art:after{left:auto;right:0;transform:rotate(180deg)}
+html[data-theme=dark_endfield] .ob-art:before,html[data-theme=dark_endfield] .ob-art:after{filter:invert(1)}
+.ob-art>span{position:absolute;left:42px;top:130px;font-size:clamp(65px,7vw,110px);font-weight:850;line-height:1.2;color:transparent;-webkit-text-stroke:1px var(--text);opacity:.06;white-space:nowrap}
+.ob-art>img{position:absolute;right:35px;top:150px;width:30%;max-height:370px;object-fit:contain;filter:drop-shadow(12px 20px 0 color-mix(in srgb,var(--ef-yellow) 15%,transparent))}
+.ob-heading{display:flex;justify-content:space-between;align-items:start;margin-bottom:26px;gap:20px}
+.ob-wordmark{width:235px;max-width:50%;height:auto;object-fit:contain}.ob-heading>small{font-size:10px;letter-spacing:.14em;padding:8px 0;color:var(--text-dim)}.ob-heading>small b{font-size:23px;padding:2px 9px;color:#282c26;background:var(--ef-yellow);letter-spacing:0;margin-left:10px}
+html[data-theme=dark_endfield] .ob-wordmark{filter:invert(1)}
+html[data-endfield=true] .ob-title{font-size:clamp(23px,2.8vw,36px);line-height:1.35;font-weight:800;margin:0 0 22px}.ob-title>span{display:inline-block;padding:0 12px;background:var(--ef-yellow);color:#272c22;clip-path:polygon(0 0,82% 0,100% 50%,82% 100%,0 100%)}
+html[data-endfield=true] .ob-steps{width:68%;gap:0;margin-bottom:20px;border-bottom:1px solid var(--border)}
+html[data-endfield=true] .ob-step{background:none;color:var(--text-dim);border-radius:0;padding:8px 3px;font-size:11px;position:relative}
+html[data-endfield=true] .ob-step.active{color:var(--text);font-weight:750;border-bottom:3px solid var(--ef-yellow)}html[data-endfield=true] .ob-step.done{color:var(--text);opacity:.65}
+html[data-endfield=true] #obBody{width:66%;min-height:220px;max-height:min(40vh,360px);padding:0 14px 0 0;box-sizing:border-box;scrollbar-width:thin;line-height:1.8;font-size:13px;overflow:auto}
+html[data-endfield=true] #obBody .input{border-radius:0!important;background:color-mix(in srgb,var(--bg) 75%,transparent);color:var(--text);padding:10px 12px;font:inherit;box-sizing:border-box}
+html[data-endfield=true] #obBody .ob-guide{padding:12px 15px;border-left:3px solid var(--ef-yellow);background:color-mix(in srgb,var(--text) 4%,transparent);margin-top:15px}
+html[data-endfield=true] #obBody .ob-label{font-weight:700;margin-top:0;font-size:14px}
+html[data-endfield=true] .ob-actions{flex-shrink:0;width:66%;gap:12px;justify-content:flex-end;padding-top:22px;margin:0}
+html[data-endfield=true] .ob-actions>.btn{min-width:130px;min-height:42px}html[data-endfield=true] .ob-actions>#obSkipAll{font-size:11px;min-width:155px}
+html[data-endfield=true] .ob-page-grid{grid-template-columns:1fr 1fr;gap:8px}html[data-endfield=true] .ob-page-card{border-radius:0;border:0;border-left:2px solid var(--border);background:color-mix(in srgb,var(--text) 4%,transparent);padding:10px;gap:9px}html[data-endfield=true] .ob-page-card:hover{border-left-color:var(--ef-yellow);background:color-mix(in srgb,var(--ef-yellow) 12%,transparent)}
+html[data-endfield=true] .ob-themes{display:flex;gap:15px;flex-wrap:wrap;margin-top:25px}
+html[data-endfield=true] #obMask.mini .ob-card{border-radius:0;border-top:2px solid var(--ef-yellow);background:var(--bg)}
+@media(max-width:850px){html[data-endfield=true] #obMask:not(.mini) .ob-main{padding:25px 25px 34px;min-height:510px}.ob-art>img{opacity:.13;right:-40px;width:50%;top:190px}html[data-endfield=true] #obBody,html[data-endfield=true] .ob-steps,html[data-endfield=true] .ob-actions{width:100%}.ob-heading{margin-bottom:18px}.ob-wordmark{width:190px}}
+@media(max-width:520px){html[data-endfield=true] #obMask:not(.mini) .ob-card{max-height:calc(var(--app-height,100dvh) - 40px)}html[data-endfield=true] #obMask:not(.mini) .ob-main{min-height:0;padding:20px 17px 24px}.ob-heading>small{font-size:8px}.ob-heading>small b{font-size:17px}.ob-wordmark{width:155px}html[data-endfield=true] #obBody{min-height:230px;max-height:40vh}html[data-endfield=true] .ob-step{font-size:9px}html[data-endfield=true] .ob-actions{flex-wrap:wrap;gap:8px}html[data-endfield=true] .ob-actions>.btn{min-width:110px}html[data-endfield=true] .ob-page-grid{grid-template-columns:1fr}.ob-art>img{width:75%}}

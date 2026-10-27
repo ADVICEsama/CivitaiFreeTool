@@ -5,10 +5,30 @@
 """
 import re
 import sys
+from config import normalize_theme
 
 MODES = {"theme", "mica", "mica_alt", "system", "external"}
 DEFAULT_COLOR = 0xFFFFFFFF
 NO_BORDER = 0xFFFFFFFE
+ENDFIELD_THEMES = {"light_endfield", "dark_endfield"}
+
+
+def effective_appearance_options(options):
+    """Resolve theme-only overrides without changing the saved material preference."""
+    options = dict(options or {})
+    if "theme" in options:
+        options["theme"] = normalize_theme(options["theme"], options.get("ui_scheme", "light"))
+    mode = options.get("mode", "theme")
+    if mode not in MODES:
+        raise ValueError("未知窗口外观模式")
+    # External mode may also expose a DWM backdrop. Endfield must explicitly
+    # clear that backdrop rather than leave control with an external tool.
+    suppressed = options.get("theme") in ENDFIELD_THEMES
+    options["requested_mode"] = mode
+    options["material_suppressed"] = suppressed
+    if suppressed and mode in ("mica", "mica_alt", "external"):
+        options["mode"] = "theme"
+    return options
 
 
 def colorref(value):
@@ -19,11 +39,12 @@ def colorref(value):
 
 
 def appearance_plan(options, previous=None):
+    options = effective_appearance_options(options)
     mode = options.get("mode", "theme")
     if mode not in MODES:
         raise ValueError("未知窗口外观模式")
-    background = options.get("background", "#171221")
-    foreground = options.get("text", "#eceaf2")
+    background = options.get("background", "#17191b")
+    foreground = options.get("text", "#f2f3ed")
     bg, fg = colorref(background), colorref(foreground)
     rgb = [int(background[i:i+2], 16) for i in (1, 3, 5)]
     dark = int(sum(c*w for c, w in zip(rgb, (.2126, .7152, .0722))) < 140)
@@ -78,7 +99,7 @@ class WindowAppearance:
 
     def request(self, options):
         try:
-            options = dict(options or {})
+            options = effective_appearance_options(options)
             appearance_plan(options, self.previous)  # 验证输入；不允许任意 DWM 属性或 HWND
             if sys.platform != "win32":
                 return {"ok": False, "msg": "原生标题栏外观仅适用于 Windows；网页主题仍正常生效"}
@@ -184,7 +205,9 @@ class WindowAppearance:
                     if chrome_error:msg += ' '+chrome_error
                     if restart_required:msg += ' 窗口框架改动需重启生效，当前保持单一窗口栏。'
                     if self.runtime_chrome_disabled:msg += ' 原生窗口栏已因异常禁用，本次运行保留系统标题栏。'
-                    self.status = {"ok": not failures, "mode": mode, "integrated":self.chrome is not None,"client_material":material,"webview_alpha":int(form.browser.webview.DefaultBackgroundColor.A),"native_error_count":self.native_error_count,"restart_required":restart_required,"border_style":str(form.FormBorderStyle),"transparency_enabled":transparency,"high_contrast":high_contrast,"active":active,"failed_attributes": failures, "msg": msg}
+                    if options["material_suppressed"]:
+                        msg += ' 终末地主题已自动关闭 Mica，原材质设置保留，切回其他主题后恢复。'
+                    self.status = {"ok": not failures, "mode": mode, "requested_mode":options["requested_mode"],"material_suppressed":options["material_suppressed"],"integrated":self.chrome is not None,"client_material":material,"webview_alpha":int(form.browser.webview.DefaultBackgroundColor.A),"native_error_count":self.native_error_count,"restart_required":restart_required,"border_style":str(form.FormBorderStyle),"transparency_enabled":transparency,"high_contrast":high_contrast,"active":active,"failed_attributes": failures, "msg": msg}
                     # 不在 WinForms UI 线程同步 evaluate_js，避免阻塞 WebView2 的回调。
                 except Exception as e:
                     import logging

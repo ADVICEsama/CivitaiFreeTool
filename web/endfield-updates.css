@@ -1,0 +1,197 @@
+/* One shared terrain surface: control shelf, large progress, dated batches and the active batch. */
+html[data-endfield=true] #page-updates{--up-paper:#e8ece4;--up-ink:#29332e;--up-dim:#66726b;--up-line:#7b8b7b40;--up-panel:#e4e8dfb8;--up-row:#f3f5ee91;box-sizing:border-box;min-width:0;overflow-x:hidden;padding:22px 24px 14px;gap:0;background:none!important}
+html[data-theme=dark_endfield] #page-updates{--up-paper:#272d2b;--up-ink:#eef0e6;--up-dim:#a6b0a6;--up-line:#a2afa23d;--up-panel:#242c28ad;--up-row:#b7c5b70e}
+html[data-endfield=true] #page-updates>.upd-toolbar{flex:none;background:none!important;border:0!important;border-radius:0;box-shadow:none;padding:0;margin:0;min-width:0}
+.ef-update-kicker{font-size:10px;letter-spacing:.12em;color:var(--text-dim);margin-bottom:9px}
+html[data-endfield=true] #page-updates .upd-title-row{align-items:center;gap:18px;margin:0}
+html[data-endfield=true] #page-updates .page-title{font-size:28px;line-height:1.3;margin:0;font-weight:750}
+html[data-endfield=true] #page-updates .page-title:before{display:none}
+html[data-endfield=true] #page-updates .upd-sub{font-size:11px;color:var(--text-dim)}
+.ef-update-tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:18px 0 16px}
+html[data-endfield=true] .ef-update-tools>.btn{min-height:34px;min-width:130px}
+.ef-update-progress{flex:none;display:flex;align-items:center;gap:18px;margin:4px 0 24px;padding:14px 20px 18px;position:relative;color:var(--text);min-width:0;background:linear-gradient(90deg,color-mix(in srgb,var(--text) 7%,transparent),transparent 90%);border-bottom:1px solid var(--up-line)}
+.ef-update-progress:after{content:'';position:absolute;right:0;top:0;width:130px;height:100%;background:repeating-linear-gradient(125deg,transparent 0 7px,var(--up-line) 7px 8px);mask-image:linear-gradient(90deg,transparent,#0003);pointer-events:none}
+.ef-update-seal{display:flex;align-items:center;gap:12px;flex:none;border-right:1px solid var(--up-line);padding-right:22px}
+.ef-update-seal svg{width:44px;height:44px;fill:currentColor;opacity:.68}
+.ef-update-seal span{font-size:10px;font-weight:700;letter-spacing:.12em;line-height:1.5}
+.ef-update-big{display:flex;align-items:baseline;gap:5px;flex:none;line-height:1}
+.ef-update-big strong{font-size:72px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.05em}
+.ef-update-big>span{font-size:22px;color:var(--text-dim)}
+.ef-update-progress-copy{flex:1;min-width:0;padding-top:8px}
+.ef-update-progress-copy h2{margin:0 0 6px;font-size:18px;font-weight:700}
+.ef-update-progress-copy p{font-size:11px;margin:0 0 12px;color:var(--text-dim)}
+.ef-update-meter{height:4px;background:color-mix(in srgb,var(--text) 12%,transparent);overflow:hidden;max-width:620px}
+.ef-update-meter>i{display:block;height:100%;width:var(--update-progress,0%);background:var(--ef-yellow);transition:width .4s ease-out}
+.ef-update-found{flex:none;display:grid;grid-template-columns:auto auto;gap:2px 8px;align-items:baseline;z-index:1;min-width:126px}
+.ef-update-found>strong{font-size:30px;font-weight:750;color:var(--ef-yellow);line-height:1.2}
+html[data-theme=light_endfield] .ef-update-found>strong{color:#687015}
+.ef-update-found>span{font-size:11px;font-weight:600}
+.ef-update-found>small{grid-column:1/-1;text-align:right;color:var(--text-dim);font-size:9px}
+.ef-update-workspace{display:grid;grid-template-columns:216px minmax(0,1fr);gap:18px;flex:1 1 auto;min-height:260px;min-width:0}
+.ef-update-batches{min-width:0;display:flex;flex-direction:column;background:linear-gradient(180deg,var(--up-panel),transparent);color:var(--up-ink)}
+.ef-update-batches>header{padding:16px 16px 14px;border-bottom:1px solid var(--up-line)}
+.ef-update-batches>header>span{font-size:8px;letter-spacing:.15em;color:var(--up-dim)}
+.ef-update-batches h3{font-size:18px;margin:4px 0 0;font-weight:700}
+.ef-update-batch-list{overflow-y:auto;scrollbar-width:thin;padding:0 0 20px;min-height:0}
+.ef-update-batch-list>h4{font-size:10px;font-weight:500;padding:15px 16px 6px;margin:0;color:var(--up-dim);letter-spacing:.06em}
+html[data-endfield=true] .ef-update-batch{display:flex;flex-direction:column;gap:4px;position:relative;width:100%;box-sizing:border-box;padding:15px 16px 18px;text-align:left;border:0;border-bottom:1px solid var(--up-line);border-radius:0;background:transparent;color:var(--up-ink);font-family:var(--font);cursor:pointer;isolation:isolate;overflow:hidden}
+.ef-update-batch>strong{font-size:14px;font-weight:700;line-height:1.4}
+.ef-update-batch>span{font-size:10px;opacity:.7}
+.ef-update-batch>small{position:absolute;right:13px;bottom:5px;font-size:8px;opacity:.6}
+html[data-endfield=true] .ef-update-batch[aria-pressed=true]{background:var(--ef-yellow);color:#2d351c;box-shadow:0 5px 8px #0002;z-index:1}
+.ef-update-batch[aria-pressed=true]:after{content:'';position:absolute;inset:0;z-index:-1;opacity:.1;background:repeating-linear-gradient(125deg,transparent 0 7px,#59651a 7px 8px);animation:ef-update-hatch 5s linear infinite}
+.ef-update-batch:not([aria-pressed=true]):hover{background:color-mix(in srgb,var(--text) 8%,transparent)}
+.ef-update-batch:focus-visible{outline:2px solid var(--ef-yellow);outline-offset:-3px}
+.ef-update-no-history{font-size:10px;line-height:1.8;padding:18px 16px;color:var(--up-dim);margin:0}
+@keyframes ef-update-hatch{to{background-position:40px 0}}
+.ef-update-results{min-width:0;min-height:0;display:flex;flex-direction:column;background:linear-gradient(180deg,var(--up-panel) 0%,color-mix(in srgb,var(--up-panel) 60%,transparent) 70%,transparent);color:var(--up-ink);padding:16px 16px 0;position:relative}
+.ef-update-results-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.ef-update-results-head h3{font-size:17px;font-weight:700;line-height:1.4;margin:0;border-left:3px solid var(--ef-yellow);padding-left:10px}
+.ef-update-results-head p{font-size:10px;color:var(--up-dim);margin:0}
+html[data-endfield=true] #page-updates .upd-tabs{display:flex;flex-wrap:wrap;gap:0;min-width:0;flex:none;margin:0 0 12px;background:repeating-linear-gradient(125deg,transparent 0 4px,var(--up-line) 4px 5px)}
+html[data-endfield=true] #page-updates .upd-tab{display:flex;gap:6px;align-items:center;justify-content:center;padding:7px 10px;font-size:11px;border:0;border-radius:0;background:transparent;min-width:0;box-shadow:none;color:var(--up-dim)}
+html[data-endfield=true] #page-updates .upd-tab.on{background:var(--up-paper);color:var(--up-ink);box-shadow:inset 0 -2px var(--ef-yellow)}
+html[data-endfield=true] #page-updates .upd-filters{display:flex;align-items:center;gap:8px;margin:0 0 10px;flex:none;min-width:0}
+html[data-endfield=true] #page-updates .upd-filters>.upd-spacer{display:none}
+html[data-endfield=true] #page-updates .upd-search{flex:1 1 150px;min-width:90px;width:100%;height:32px;background:color-mix(in srgb,var(--up-paper) 75%,transparent);border:1px solid var(--up-line);border-radius:0;font-size:11px;color:var(--up-ink)}
+html[data-endfield=true] #page-updates .upd-sel{min-width:90px;height:32px;font-size:10px;color:var(--up-ink);background:var(--up-paper);border:1px solid var(--up-line);border-radius:0}
+html[data-endfield=true] #page-updates .upd-table-wrap{border:0;border-radius:0;margin:0;min-width:0;min-height:100px;overflow-y:auto;overflow-x:hidden!important;flex:1 1 auto;scrollbar-width:thin}
+html[data-endfield=true] #updTable{display:block;table-layout:auto;width:100%!important;max-width:100%;min-width:0!important;border:0;background:none}
+html[data-endfield=true] #updTable colgroup{display:none}
+html[data-endfield=true] #updTable :is(thead,tbody){display:block;width:100%}
+html[data-endfield=true] #updTable thead{position:sticky;top:0;background:var(--up-paper);z-index:3}
+html[data-endfield=true] #updTable tr{display:grid;grid-template-columns:22px minmax(0,1.7fr) minmax(90px,.85fr) minmax(80px,.7fr) minmax(96px,.7fr);column-gap:10px;min-width:0}
+html[data-endfield=true] #updTable :is(th,td){box-sizing:border-box;width:auto!important;max-width:100%;min-width:0;border:0!important;white-space:normal;overflow-wrap:anywhere;background:none!important;position:relative;z-index:1;padding:6px 0;text-align:left;color:var(--up-ink);font-size:11px}
+html[data-endfield=true] #updTable thead th{position:static;font-size:9px;font-weight:600;color:var(--up-dim);align-self:center}
+html[data-endfield=true] #updTable thead .c-cur,html[data-endfield=true] #updTable thead .c-date{display:none}
+html[data-endfield=true] #updTable tbody{display:flex;flex-direction:column;gap:8px;padding:9px 0 18px}
+html[data-endfield=true] #updTable tbody tr{position:relative;isolation:isolate;min-height:104px;background:var(--up-row);border-radius:0;box-shadow:none;border:0;align-items:center;padding:8px 11px}
+html[data-endfield=true] #updTable tbody tr:before{content:'';position:absolute;inset:0;pointer-events:none;z-index:0;background:repeating-linear-gradient(125deg,transparent 0 12px,var(--up-line) 12px 13px);mask-image:linear-gradient(90deg,transparent 40%,#0002)}
+html[data-endfield=true] #updTable tbody tr:after{content:'';position:absolute;left:100px;right:14px;bottom:0;height:2px;background:color-mix(in srgb,var(--up-dim) 15%,transparent)}
+html[data-endfield=true] #updTable tbody tr[data-update-state=upd]:after{background:var(--ef-yellow)}
+html[data-endfield=true] #updTable tbody tr.is-sel{background:color-mix(in srgb,var(--ef-yellow) 9%,var(--up-paper));box-shadow:inset 3px 0 var(--ef-yellow)}
+html[data-endfield=true] #updTable .c-ck{grid-column:1;grid-row:1/3;align-self:center}
+html[data-endfield=true] #updTable .c-info{grid-column:2;grid-row:1/3}
+html[data-endfield=true] #updTable .c-cur{grid-column:3;grid-row:1;align-self:end}
+html[data-endfield=true] #updTable .c-ver{grid-column:3;grid-row:2;align-self:start}
+html[data-endfield=true] #updTable .c-st{grid-column:4;grid-row:1;align-self:end}
+html[data-endfield=true] #updTable .c-date{grid-column:4;grid-row:2;align-self:start;color:var(--up-dim);font-size:9px}
+html[data-endfield=true] #updTable .c-act{grid-column:5;grid-row:1/3;align-self:center}
+html[data-endfield=true] #updTable thead :is(.c-info,.c-ver,.c-st,.c-act){grid-row:1}
+html[data-endfield=true] #updTable .upd-info{display:flex;align-items:center;gap:10px;min-width:0}
+html[data-endfield=true] #updTable .upd-thumb{display:block;flex:none;width:58px;height:72px;object-fit:cover;border-radius:0;max-width:35%}
+html[data-endfield=true] #updTable .upd-nm{font-size:14px;font-weight:750;white-space:normal;line-height:1.4;overflow-wrap:anywhere}
+html[data-endfield=true] #updTable .upd-sub2{font-size:9px;color:var(--up-dim);line-height:1.6}
+html[data-endfield=true] #updTable .file-subpath{max-width:100%;white-space:nowrap}
+html[data-endfield=true] #updTable .ver-badge{background:none;padding:0;border:0;border-radius:0;font-size:10px;color:var(--up-dim);max-width:100%}
+html[data-endfield=true] #updTable .vsel-btn{display:flex;align-items:center;justify-content:space-between;gap:5px;width:100%;min-width:0;padding:5px 7px;border:1px solid var(--up-line);border-radius:0;background:var(--up-paper);color:var(--up-ink);font:600 10px var(--font);cursor:pointer}
+html[data-endfield=true] #updTable .vsel-wrap{display:block;max-width:100%}
+html[data-endfield=true] #updTable .vsel-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html[data-endfield=true] #updTable .vsel-btn .ic{flex:none;width:12px;height:12px}
+html[data-endfield=true] #updTable .st-badge{background:none;font-size:10px;padding:0;color:var(--up-dim)}
+html[data-endfield=true] #updTable [data-update-state=upd] .st-badge{color:var(--up-ink);font-weight:750}
+html[data-endfield=true] #updTable .upd-acts2{justify-content:flex-end;gap:4px;flex-wrap:wrap}
+html[data-endfield=true] #updTable .upd-acts2>.upd-go{min-width:90px;max-width:100%;min-height:27px;font-size:10px}
+html[data-endfield=true] #updTable .upd-site{display:none}
+html[data-endfield=true] #updTable .upd-more{border:0;background:none;width:24px;height:22px;min-width:24px;min-height:22px;font-size:16px;color:var(--up-dim);padding:0}
+html[data-endfield=true] #page-updates .upd-footer{padding:9px 0 10px;flex-wrap:wrap;gap:8px;border-top:1px solid var(--up-line);font-size:10px;background:none}
+html[data-endfield=true] #page-updates .ef-update-cache-summary{width:100%;font-size:9px;color:var(--up-dim)}
+html[data-endfield=true] #page-updates .upd-empty{padding:42px 15px;font-size:12px;line-height:1.8;color:var(--up-dim)}
+html[data-endfield=true] #page-updates[data-update-historical=true] #updTable .c-ck{visibility:hidden}
+@media(max-width:1200px){html[data-endfield=true] #page-updates{padding:18px 16px 12px}.ef-update-workspace{grid-template-columns:176px minmax(0,1fr);gap:12px}.ef-update-seal{padding-right:12px}.ef-update-seal span{display:none}.ef-update-big strong{font-size:60px}.ef-update-progress{padding:12px;gap:14px}.ef-update-results{padding:13px 12px 0}html[data-endfield=true] #updTable tr{grid-template-columns:20px minmax(0,1.4fr) minmax(84px,.8fr) 76px;gap:0 8px}html[data-endfield=true] #updTable .c-act{grid-column:2/5;grid-row:3;justify-self:end}html[data-endfield=true] #updTable .upd-acts2{flex-wrap:nowrap}html[data-endfield=true] #updTable thead .c-act{display:none}html[data-endfield=true] #updTable tbody tr{padding-bottom:8px}html[data-endfield=true] #updTable .upd-thumb{width:44px;height:58px}.ef-update-tools{gap:7px}html[data-endfield=true] .ef-update-tools>.btn{min-width:110px}}
+@media(max-width:850px){.ef-update-workspace{grid-template-columns:1fr;flex:none}.ef-update-batches{max-height:210px}.ef-update-batches>header{padding:10px 14px}.ef-update-batches h3{font-size:15px}.ef-update-batches>header>span{display:none}.ef-update-batch-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));align-content:start}.ef-update-batch-list>h4{grid-column:1/-1;padding:7px 12px 0}.ef-update-batch-list>.ef-update-no-history{font-size:9px;padding:10px 12px}.ef-update-results{min-height:420px}.ef-update-found{min-width:100px}.ef-update-seal{display:none}.ef-update-progress-copy h2{font-size:15px}.ef-update-progress{margin-bottom:14px}.ef-update-progress-copy p{font-size:9px}.ef-update-big strong{font-size:52px}html[data-endfield=true] #page-updates{overflow-y:auto}html[data-endfield=true] #page-updates .upd-table-wrap{max-height:none;overflow:visible}.ef-update-workspace{min-height:0}}
+@media(max-width:520px){html[data-endfield=true] #page-updates{padding:16px 10px 10px}html[data-endfield=true] #page-updates .upd-title-row{gap:6px}html[data-endfield=true] #page-updates .page-title{font-size:24px}html[data-endfield=true] #page-updates .upd-sub{font-size:9px}.ef-update-tools{display:grid;grid-template-columns:1fr 1fr}.ef-update-tools>.btn{width:100%;min-width:0!important}.ef-update-progress{gap:10px;flex-wrap:wrap}.ef-update-big strong{font-size:48px}.ef-update-found{display:flex;align-items:baseline;gap:6px;width:100%}.ef-update-found>strong{font-size:20px}.ef-update-found>small{margin-left:auto}.ef-update-results{padding:12px 8px 0}html[data-endfield=true] #updTable tr{grid-template-columns:18px minmax(0,1fr) 88px;gap:0 6px}html[data-endfield=true] #updTable .c-info{grid-column:2/4;grid-row:1}html[data-endfield=true] #updTable .c-cur{grid-column:2;grid-row:2}html[data-endfield=true] #updTable .c-ver{grid-column:2;grid-row:3}html[data-endfield=true] #updTable .c-st{grid-column:3;grid-row:2}html[data-endfield=true] #updTable .c-date{grid-column:3;grid-row:3}html[data-endfield=true] #updTable .c-act{grid-column:2/4;grid-row:4}html[data-endfield=true] #updTable .c-ck{grid-row:1/5}html[data-endfield=true] #updTable thead{display:none}html[data-endfield=true] #updTable .upd-nm{font-size:13px}html[data-endfield=true] #updTable .upd-thumb{width:42px;height:52px}html[data-endfield=true] #page-updates .upd-tabs{gap:0}html[data-endfield=true] #page-updates .upd-tab{font-size:9px;padding:6px 7px}.ef-update-batch-list{grid-template-columns:1fr 1fr}.ef-update-batch>strong{font-size:12px}html[data-endfield=true] .ef-update-batch{padding:10px 10px 16px}}
+@media(prefers-reduced-motion:reduce){.ef-update-batch[aria-pressed=true]:after{animation:none}.ef-update-meter>i{transition:none}}
+
+html[data-endfield=true] #updTable .dl-col-resize{display:none}
+.ef-update-preview-note{margin-left:auto;font-size:9px;color:var(--text-dim)}
+
+.ef-update-batch-list{grid-auto-rows:max-content;flex:1 1 auto}
+html[data-endfield=true] .ef-update-batch{min-height:76px;align-self:start}
+@media(max-width:850px){html[data-endfield=true] .ef-update-batch{min-height:66px}}
+
+/* Keep the version action on one readable line, even with the local navigation expanded. */
+@media(min-width:1201px){html[data-endfield=true] #updTable tr{grid-template-columns:22px minmax(0,1.7fr) minmax(90px,.85fr) minmax(80px,.7fr) minmax(146px,.9fr)}}
+html[data-endfield=true] #updTable .upd-acts2{display:grid;grid-template-columns:minmax(116px,1fr) 20px;gap:6px;width:max-content;max-width:100%;margin-left:auto;align-items:center}
+html[data-endfield=true] #updTable .upd-acts2>.upd-go{width:116px;min-width:116px}
+html[data-endfield=true] #updTable .upd-go>.ef-action-caption{white-space:nowrap;font-size:10px;padding-inline:22px}
+html[data-endfield=true] #updTable .upd-more{grid-column:2;width:20px;min-width:20px}
+
+/* The whitelist is a real accessible dialog, not a detached unbound fragment. */
+.ef-update-whitelist-mask{background:#0009}
+html[data-endfield=true] .ef-update-whitelist{top:50%;width:min(680px,calc(100vw - 40px))!important;max-height:calc(100dvh - 90px);box-sizing:border-box;overflow:auto;border:0;border-radius:0!important;background:#272d2b;color:#eef0e6;padding:26px 28px 24px;box-shadow:0 15px 50px #0008;border-top:3px solid transparent;border-image:var(--ef-band-stripe) 1}
+html[data-theme=light_endfield] .ef-update-whitelist{background:#f0f1eb;color:#29332e}
+html[data-endfield=true] .ef-update-whitelist .rd-title{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:22px;margin:0 0 18px}
+html[data-endfield=true] .ef-update-whitelist .rd-title .dt-dim{font-size:12px;font-weight:400;opacity:.65}
+html[data-endfield=true] .ef-update-whitelist .dlg-x{display:grid;place-items:center;margin-left:auto;border:0;border-radius:0;background:none;color:inherit;width:28px;height:28px;padding:4px;cursor:pointer}
+html[data-endfield=true] .ef-update-whitelist #wlQ{border-radius:0;font-size:12px;min-height:36px}
+html[data-endfield=true] .ef-update-whitelist .dd-hint{font-size:11px;line-height:1.8;opacity:.7;padding:5px 0 12px}
+html[data-endfield=true] .ef-update-whitelist .cf-row{display:flex;align-items:center;gap:12px;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--border)}
+html[data-endfield=true] .ef-update-whitelist .dd-text{font-size:14px}
+html[data-endfield=true] .ef-update-whitelist .dedup-dir{font-size:10px;opacity:.65;line-height:1.8}
+html[data-endfield=true] .ef-update-whitelist .rd-actions{justify-content:center;margin:22px 0 0}
+html[data-endfield=true] .ef-update-whitelist #wlClose{width:210px;max-width:100%}
+html[data-endfield=true] .ef-update-whitelist :is(button,input):focus-visible{outline:2px solid var(--ef-yellow);outline-offset:3px}
+@media(max-width:520px){html[data-endfield=true] .ef-update-whitelist{padding:22px 16px;width:calc(100vw - 24px)!important}html[data-endfield=true] .ef-update-whitelist .rd-title{font-size:19px}}
+
+html[data-endfield=true] body>.vmenu{min-width:min(220px,calc(100vw - 24px));max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px);overflow:auto;box-sizing:border-box}
+
+html[data-endfield=true] #page-updates .ef-update-tools .ef-action-caption{white-space:nowrap;font-size:11px}
+html[data-endfield=true] .ef-update-tools>#updDlSel{min-width:142px}
+@media(max-width:520px){html[data-endfield=true] .ef-update-tools>#updDlSel{min-width:0}}
+
+/* Dedicated whitelist page: the same full-width band as font fallback configuration. */
+.update-whitelist-mask{position:fixed;inset:0;z-index:100100;display:flex;align-items:center;justify-content:center;background:#060909b5;backdrop-filter:blur(12px)}
+html[data-endfield=true] .update-whitelist-dialog{--wl-face-height:48px;--wl-base-height:56px;--wl-face-inset:3px;box-sizing:border-box;display:flex;flex-direction:column;min-height:0;background:var(--surface);color:var(--text);font-family:var(--font);text-align:left;animation:font-band-arrive 220ms ease-out;position:relative;isolation:isolate;width:100%;max-width:none;height:min(760px,calc(100dvh - 110px));padding:24px clamp(24px,6vw,110px) 46px;gap:12px;border:0;border-top:3px solid transparent;border-radius:0!important;border-image:var(--ef-band-stripe) 1;overflow:visible;box-shadow:0 14px 40px #0005}
+.wl-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;flex:none;border-bottom:1px solid var(--border);padding-bottom:12px}
+.wl-heading small{font-size:9px;letter-spacing:.14em;color:var(--text-dim)}
+.wl-heading h2{font-size:24px;margin:4px 0 0;font-weight:700}
+.wl-close{display:grid;place-items:center;width:30px;height:30px;background:none;border:0;color:var(--text);padding:3px;cursor:pointer}
+.wl-intro{font-size:11px;line-height:1.8;color:var(--text-dim);margin:0;flex:none}
+.wl-workspace{display:grid;grid-template-columns:178px minmax(0,1fr);gap:22px;flex:1;min-height:0;min-width:0}
+.wl-sidebar{min-width:0;display:flex;flex-direction:column;gap:7px}
+.wl-sidebar>button{font:600 12px var(--font);text-align:left;border:0;border-radius:0;padding:13px 12px;display:flex;align-items:center;justify-content:space-between;color:var(--text);background:color-mix(in srgb,var(--text) 6%,transparent);cursor:pointer}
+.wl-sidebar>button span{font-size:10px;font-weight:400;opacity:.6}
+.wl-sidebar>button[aria-pressed=true]{background:color-mix(in srgb,var(--ef-yellow) 14%,transparent);box-shadow:inset 3px 0 var(--ef-yellow)}
+.wl-sidebar>p{margin-top:auto;font-size:10px;color:var(--text-dim);line-height:1.9}
+.wl-main{min-width:0;min-height:0;display:flex;flex-direction:column;position:relative}
+.wl-search-row{display:flex;gap:12px;align-items:center;margin-bottom:5px;flex:none}
+.wl-search-row input{flex:1;min-width:0;width:100%;font-size:12px;border-radius:0}
+.wl-search-row>span{font-size:10px;color:var(--text-dim);white-space:nowrap}
+/* Scroll the natural-height gallery, never paginate CSS columns sideways. Card visuals
+   come exclusively from the shared model-card-gallery selectors in endfield-models.css. */
+#updateWhitelistScroll{flex:1;min-width:0;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin}
+html[data-endfield=true] body #updateWhitelistGrid{flex:none;min-height:0;height:auto;overflow:visible;padding:18px 16px 32px;column-gap:16px;column-fill:balance}
+html[data-endfield=true] body #updateWhitelistGrid>.wl-card{display:inline-block;width:100%;vertical-align:top;margin-bottom:18px}
+html[data-endfield=true] body #updateWhitelistGrid[data-model-view=grid]{padding:24px 22px 32px;gap:26px 26px;column-width:auto!important}
+html[data-endfield=true] body #updateWhitelistGrid[data-model-view=grid]>.wl-card{margin:0;display:block}
+#updateWhitelistGrid .wl-favorite{position:absolute;top:4px;right:4px;z-index:9;color:var(--ef-yellow);pointer-events:none}
+#updateWhitelistGrid .wl-favorite svg{width:27px;height:27px;margin:0}
+#updateWhitelistGrid>.wl-card-disabled{opacity:.4;cursor:not-allowed}
+.wl-unavailable{position:absolute;z-index:8;left:6px;top:7px;padding:3px 5px;background:#272d2be6;color:#eef0e6;font-size:9px}
+#updateWhitelistGrid .ms-img-wrap[data-ph=none]:after{content:'暂无本地封面';position:absolute;inset:0;display:grid;place-items:center;font-size:11px;color:var(--text-dim);background:var(--surface2);z-index:0}
+#updateWhitelistGrid .wl-card:has(.ms-img-wrap[data-ph=none]) .ms-info{opacity:1!important;transform:none!important}
+html[data-endfield=true] body #updateWhitelistGrid>.wl-card:focus-visible{outline:2px solid var(--ef-yellow)!important;outline-offset:6px}
+.wl-empty{position:absolute;left:0;right:0;top:40%;font-size:13px;color:var(--text-dim);text-align:center;line-height:1.9;pointer-events:none}
+.wl-empty[hidden]{display:none}
+#updateWhitelistError{min-height:16px;font-size:11px;color:#e36d64;margin:0;flex:none}
+.wl-footer{position:absolute!important;bottom:-.5px;left:50%;transform:translate(-50%,calc((var(--wl-base-height) - var(--wl-face-height)/2 - var(--wl-face-inset))/2));width:min(510px,calc(100% - 36px));display:flex;justify-content:center;gap:24px;height:var(--wl-base-height)}
+.wl-footer>span{position:absolute;bottom:calc(100% + 12px);left:0;font-size:11px;color:var(--text-dim);white-space:nowrap}
+.wl-footer>.font-action-base{box-sizing:border-box;position:relative;isolation:isolate;overflow:hidden;height:var(--wl-base-height);flex:1;min-width:0;padding:var(--wl-face-inset) 3px 5px;background:var(--surface);border:0;border-radius:999px;box-shadow:none}
+html[data-endfield=true] body #updateWhitelistMenu .wl-footer .font-action-base>.ef-footer-action{width:100%;height:var(--wl-face-height);min-height:var(--wl-face-height);box-shadow:0 3px 5px #0007,inset 0 0 0 1px #ffffff70}
+.update-whitelist-dialog[aria-busy=true] .wl-workspace{pointer-events:none;opacity:.6}
+.update-whitelist-dialog :is(button,input):focus-visible{outline:2px solid var(--ef-yellow);outline-offset:3px}
+@media(max-width:760px){html[data-endfield=true] .update-whitelist-dialog{padding:18px 18px 44px;gap:9px}.wl-workspace{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr);gap:9px}.wl-sidebar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}.wl-sidebar>p{display:none}.wl-sidebar>button{font-size:10px;padding:10px 7px;gap:5px}.wl-heading h2{font-size:21px}.wl-intro{font-size:10px}html[data-endfield=true] body #updateWhitelistGrid{column-width:140px!important;padding:16px 12px 28px}html[data-endfield=true] body #updateWhitelistGrid[data-model-view=grid]{column-width:auto!important;gap:24px 20px}.wl-footer{gap:12px}.wl-search-row>span{font-size:9px}}
+@media(max-width:420px){.wl-heading small{font-size:7px}.wl-sidebar>button{flex-wrap:wrap}.wl-footer>span{font-size:10px}.wl-search-row{gap:7px}}
+@media(prefers-reduced-motion:reduce){#updateWhitelistGrid .ms-info{transition:none}}
+
+/* A separate contour plane for the dedicated band; no terrain layer over photos/text. */
+html[data-endfield=true] .update-whitelist-dialog>.wl-terrain{position:absolute;inset:0;z-index:-1;overflow:hidden;pointer-events:none;mask-image:linear-gradient(90deg,#000, #0009 24%,#0004 50%,#0009 76%,#000)}
+.update-whitelist-dialog>.wl-terrain>.ef-terrain-canvas{display:block;width:100%;height:100%}
+
+/* A retained ID without a local cover is an information card, not a permanently
+   dark hover overlay. Keep it readable in either theme and avoid duplicate hints. */
+html[data-endfield=true] body #updateWhitelistGrid .wl-card.wl-card-no-cover .ms-img-wrap:after{content:none}
+html[data-endfield=true] body #updateWhitelistGrid .wl-card.wl-card-no-cover .ms-info{background:var(--surface2)!important;color:var(--text)!important;opacity:1!important;transform:none!important;padding:14px!important;min-height:110px;display:flex!important;flex-direction:column;justify-content:center}
+html[data-endfield=true] body #updateWhitelistGrid .wl-card.wl-card-no-cover .ms-info :is(.ms-name,.ms-sub,.ms-meta,.ms-size,.ms-author){color:inherit!important;text-shadow:none}
+#updateWhitelistGrid .wl-card-no-cover .ms-size{display:none!important}

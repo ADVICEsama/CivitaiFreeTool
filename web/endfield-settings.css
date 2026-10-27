@@ -1,0 +1,172 @@
+/* Endfield settings only: the original form and save handlers remain authoritative. */
+html[data-endfield=true] #page-settings{height:100%;min-height:0;overflow:hidden}
+html[data-endfield=true] body #page-settings>.card{height:100%;min-height:0;display:flex;flex-direction:column;padding:0 24px;background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;font-family:var(--font)}
+html[data-endfield=true] #page-settings>.card>.title-row{position:relative;min-height:48px;margin:0;flex:none;border-bottom:1px solid var(--border)}
+html[data-endfield=true] #page-settings .page-title{font-size:22px;padding:0;margin:0;border:0}
+html[data-endfield=true] #page-settings .page-title:before{content:'//';display:inline;font:inherit;margin-right:7px;color:var(--ef-yellow)}
+html[data-endfield=true] #page-settings #openLogs{font-size:11px;background:transparent;min-height:28px}
+html[data-endfield=true] #settingsForm{display:flex;flex-direction:column;flex:1;min-height:0}
+html[data-endfield=true] #settingsForm .settings-workspace{display:contents}
+/* Keep the original theme-aware category layout; only the active yellow
+   instrument block uses the reference treatment. */
+html[data-endfield=true] #settingsForm .settings-nav{order:-2;position:relative;display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:0;flex:none;align-self:stretch;background:repeating-linear-gradient(130deg,transparent 0 3px,color-mix(in srgb,var(--text) 4%,transparent) 3px 4px);border-bottom:1px solid var(--border);margin:0 0 12px;isolation:isolate}
+html[data-endfield=true] #settingsForm .settings-tab{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:7px;min-height:77px;padding:9px 3px;position:relative;isolation:isolate;z-index:1;font-size:11px;color:var(--text-dim);border:0!important}
+html[data-endfield=true] #settingsForm .settings-tab .ic{width:26px;height:26px;stroke-width:2.3;color:inherit}
+html[data-endfield=true] #settingsForm .settings-tab.active{--ef-tab-cut:10px;background:#111713;color:#171c16;clip-path:polygon(10px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 10px);box-shadow:none}
+/* The black outside polygon and inset yellow polygon form a real, clear 2px
+   frame along every side, including the upper-left and lower-right cuts. */
+html[data-endfield=true] #settingsForm .settings-tab.active:before{content:'';position:absolute;inset:2px;z-index:-1;background:var(--ef-yellow) url('terrain-contours.svg') 25% 40%/600px;clip-path:polygon(8px 0,100% 0,100% calc(100% - 4px),calc(100% - 4px) 100%,0 100%,0 8px);pointer-events:none}
+/* One independently moving background. Labels and glyphs stay on their tabs. */
+.ef-settings-selection{display:none}
+html[data-endfield=true] #settingsForm .ef-settings-selection{display:block;position:absolute;left:0;top:0;z-index:0;pointer-events:none;background:#111713;clip-path:polygon(10px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 10px);will-change:transform}
+html[data-endfield=true] #settingsForm .ef-settings-selection:before{content:'';position:absolute;inset:2px;background:var(--ef-yellow) url('terrain-contours.svg') 25% 40%/600px;clip-path:polygon(8px 0,100% 0,100% calc(100% - 4px),calc(100% - 4px) 100%,0 100%,0 8px)}
+html[data-endfield=true] #settingsForm .ef-settings-selection[hidden]{display:none}
+html[data-endfield=true] #settingsForm .settings-nav.ef-selection-ready .settings-tab.active{background:transparent}
+html[data-endfield=true] #settingsForm .settings-nav.ef-selection-ready .settings-tab.active:before{content:none}
+html[data-endfield=true] #settingsForm .settings-tab.active:after{display:none}
+html[data-endfield=true] #settingsForm .settings-tab:hover:not(.active){background:color-mix(in srgb,var(--text) 9%,transparent);color:var(--text)}
+html[data-endfield=true] #settingsForm .settings-tab:focus-visible{outline:0}
+html[data-endfield=true] #settingsForm .settings-tab:focus-visible:after{content:'';display:block;position:absolute;inset:9px;width:auto;background:none;border:1px solid currentColor;pointer-events:none}
+html[data-endfield=true] #settingsForm .settings-search{order:-1;margin:0 0 12px;gap:12px;flex:none}
+html[data-endfield=true] #settingsSearch{height:32px;background:transparent;border:0;border-bottom:1px solid var(--border);font-size:12px}
+html[data-endfield=true] #settingsForm .settings-panels{min-height:0;overflow:auto;scrollbar-width:thin;scrollbar-color:var(--text-dim) transparent;padding:0 16px 20px 0;overscroll-behavior:contain}
+html[data-endfield=true] #settingsForm .settings-category header{margin:12px 0 16px;border-bottom:1px solid var(--text-dim);padding-bottom:9px}
+html[data-endfield=true] #settingsForm .settings-category header h3{font-size:19px;color:var(--ef-yellow);border-left:5px solid var(--ef-yellow);padding-left:9px;margin:0 0 5px}
+html[data-theme=light_endfield] #settingsForm .settings-category header h3{color:#596000}
+html[data-endfield=true] #settingsForm .settings-category header p{font-size:11px;margin-left:14px}
+html[data-endfield=true] #settingsForm .setting-row{position:relative;isolation:isolate;grid-template-columns:minmax(0,1fr) minmax(230px,34%);align-items:center;gap:28px;padding:15px 22px;min-height:78px;margin:0 0 7px;border:1px solid color-mix(in srgb,var(--text) 19%,transparent);background:linear-gradient(100deg,color-mix(in srgb,var(--text) 8%,transparent),transparent 60%,color-mix(in srgb,var(--text) 5%,transparent));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--text) 3%,transparent)}
+html[data-endfield=true] #settingsForm .setting-row:before{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;background:url('terrain-contours.svg') 0 45%/700px;opacity:.055;mask-image:linear-gradient(90deg,#000,transparent 45%)}
+html[data-theme=dark_endfield] #settingsForm .setting-row:before{filter:invert(1)}
+html[data-endfield=true] #settingsForm .setting-row:hover{border-color:color-mix(in srgb,var(--text) 42%,transparent)}
+html[data-endfield=true] #settingsForm .setting-copy label{font-size:17px;font-weight:500;margin-bottom:3px}
+html[data-endfield=true] #settingsForm .setting-copy p{font-size:11px;line-height:1.65;margin:0;max-width:680px}
+html[data-endfield=true] #settingsForm .setting-control{width:100%;text-align:right}
+html[data-endfield=true] #settingsForm :is(input.input,textarea.input){font-family:inherit;background:color-mix(in srgb,var(--surface) 88%,transparent);font-size:14px;border-color:var(--border);min-height:38px}
+html[data-endfield=true] #settingsForm .setting-control select.ef-select-native{display:none}
+.ef-select-trigger,.ef-switch-off,.ef-settings-summary{display:none}
+html[data-endfield=true] #settingsForm .ef-select-trigger{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:40px;border:1px solid #aaa;background:#ebebeb;color:#292b29;border-radius:30px!important;padding:7px 18px;font:500 15px var(--ef-settings-font,'HarmonyOS Sans SC',sans-serif);text-align:left;cursor:pointer}
+html[data-endfield=true] #settingsForm .ef-select-trigger span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html[data-endfield=true] #settingsForm .ef-select-trigger:after{content:'';border-left:6px solid transparent;border-right:6px solid transparent;border-top:7px solid #353735;flex:none}
+html[data-endfield=true] #settingsForm .ef-select-trigger[aria-expanded=true]{background:#a3a5a3;color:#fff}
+html[data-endfield=true] #settingsForm .ef-select-trigger:focus-visible{outline:2px solid var(--ef-yellow);outline-offset:3px}
+html[data-endfield=true] #settingsForm .setting-switch{position:relative;padding:0;height:40px;border-radius:24px;background:color-mix(in srgb,var(--text) 23%,transparent);display:grid;grid-template-columns:1fr 1fr;gap:0;isolation:isolate;overflow:hidden}
+html[data-endfield=true] #settingsForm .setting-switch input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;z-index:2;cursor:pointer}
+html[data-endfield=true] #settingsForm .setting-switch span{display:flex;justify-content:center;align-items:center;border-radius:24px;font-size:15px;height:100%;color:var(--text-dim);pointer-events:none}
+html[data-endfield=true] #settingsForm .setting-switch:before{content:'';position:absolute;inset:0 auto 0 0;width:50%;background:#ececec;border-radius:24px;transform:translateX(100%);transition:transform 240ms cubic-bezier(.2,.75,.25,1);z-index:-1}
+html[data-endfield=true] #settingsForm .setting-switch:has(input:checked):before{transform:translateX(0)}
+html[data-endfield=true] #settingsForm .setting-switch span{transition:color 180ms ease}
+html[data-endfield=true] #settingsForm .setting-switch input:checked+span,html[data-endfield=true] #settingsForm .setting-switch input:not(:checked)~.ef-switch-off{background:transparent;color:#333}
+html[data-endfield=true] #settingsForm .setting-switch:focus-within{outline:2px solid var(--ef-yellow);outline-offset:2px}
+html[data-endfield=true] #settingsForm .appearance-preview{margin:0 0 12px;padding:10px 16px;background:transparent;border:1px solid var(--border);border-radius:0}
+html[data-endfield=true] #settingsForm .appearance-swatch{width:8px;height:8px;border-radius:0;background:var(--ef-yellow)}
+html[data-endfield=true] #settingsForm .setting-range{display:flex;align-items:center;gap:14px}
+html[data-endfield=true] #settingsForm input[type=range]{appearance:none;-webkit-appearance:none;min-width:0;flex:1;height:28px;background:transparent;cursor:pointer}
+html[data-endfield=true] #settingsForm input[type=range]::-webkit-slider-runnable-track{height:4px;background:color-mix(in srgb,var(--text) 28%,transparent);border-radius:4px}
+html[data-endfield=true] #settingsForm input[type=range]::-webkit-slider-thumb{appearance:none;-webkit-appearance:none;width:35px;height:13px;margin-top:-4.5px;background:#fff;border:1px solid #aaa;border-radius:14px;box-shadow:0 1px 4px #0008}
+html[data-endfield=true] #settingsForm input[type=range]::-moz-range-track{height:4px;background:#8888;border-radius:4px}
+html[data-endfield=true] #settingsForm input[type=range]::-moz-range-thumb{width:35px;height:13px;background:#fff;border:1px solid #aaa;border-radius:14px;box-shadow:0 1px 4px #0008}
+html[data-endfield=true] #settingsForm .setting-range output{font-family:var(--font);font-weight:500;font-size:15px;font-variant-numeric:tabular-nums;white-space:nowrap;min-width:48px}
+html[data-endfield=true] body #settingsActions{flex:none;position:static;margin:0;padding:14px 0 5px;display:flex;justify-content:flex-end;gap:10px;background:transparent;border-top:1px solid var(--border)}
+html[data-endfield=true] body #settingsActions .btn{min-height:40px;border-radius:24px!important;padding:8px 20px;font-size:13px;box-shadow:inset 0 0 0 2px var(--bg),inset 0 0 0 3px var(--text-dim)}
+html[data-endfield=true] body #settingsActions #btnSaveSettings{order:5;min-width:170px;color:#282b16!important;background:var(--ef-yellow)!important;clip-path:none}
+html[data-endfield=true] #settingsForm .organize-layout{display:block}
+html[data-endfield=true] #settingsForm .organize-guide{border:0;padding:15px 22px}
+html[data-endfield=true] #settingsForm .font-preview{text-align:left}
+.ef-settings-select-menu{position:fixed;z-index:100050;background:#d4d2d2;color:#282828;border:1px solid #8b8b8b;border-top:0;border-radius:0 0 5px 5px;box-shadow:0 5px 15px #0005;padding:9px 0 4px;overflow:auto;max-height:300px;font-family:var(--font);font-weight:500;scrollbar-width:thin;animation:ef-select-reveal 150ms ease-out;transform-origin:top;outline:none}
+.ef-settings-select-menu [role=option]{position:relative;display:block;padding:13px 38px 13px 18px;min-height:44px;border-bottom:1px solid #aaa;cursor:pointer;font-size:15px}
+.ef-settings-select-menu [role=option][aria-selected=true]{color:white;background:#5b5d5b}
+.ef-settings-select-menu [role=option][aria-selected=true]:after{content:none}
+.ef-settings-select-menu [role=option][aria-selected=true]:before{content:'';position:absolute;left:3px;top:25%;height:50%;width:3px;background:#fff}
+.ef-settings-select-menu [role=option].focused:not([aria-selected=true]),.ef-settings-select-menu [role=option]:hover:not([aria-disabled=true]):not([aria-selected=true]){background:#bababa;box-shadow:inset 3px 0 #fff}
+.ef-settings-select-menu [role=option][aria-disabled=true]{box-shadow:none}
+html[data-endfield=true] #settingsForm .ef-select-trigger[aria-expanded=true]{position:relative;z-index:1;box-shadow:none}
+html[data-endfield=true] #settingsForm .ef-select-trigger[aria-expanded=true]:after{border-top:0;border-bottom:7px solid #fff}
+html[data-endfield=true] #settingsForm .setting-control:has(>.ef-select-trigger[aria-expanded=true]){position:relative;isolation:isolate}
+html[data-endfield=true] #settingsForm .setting-control:has(>.ef-select-trigger[aria-expanded=true]):before{content:'';position:absolute;top:50%;left:0;right:0;bottom:-9px;background:#d4d2d2;border-radius:0;z-index:-1;pointer-events:none}
+@keyframes ef-select-reveal{from{opacity:0;clip-path:inset(0 0 100% 0);transform:translateY(-5px)}to{opacity:1;clip-path:inset(0);transform:translateY(0)}}
+.ef-settings-select-menu [aria-disabled=true]{opacity:.4;cursor:not-allowed}
+@media(max-width:1100px){html[data-endfield=true] #settingsForm .setting-row{grid-template-columns:minmax(0,1fr) minmax(220px,38%);padding:12px 15px;gap:18px}html[data-endfield=true] #settingsForm .setting-copy label{font-size:15px}html[data-endfield=true] #settingsForm .settings-tab{font-size:10px}html[data-endfield=true] body #settingsActions .btn{padding:7px 12px}}
+@media(max-width:760px){html[data-endfield=true] #settingsForm .settings-nav{display:flex;flex-direction:row;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden}.settings-tab{flex:0 0 72px}html[data-endfield=true] #settingsForm .settings-tab{min-height:60px}html[data-endfield=true] #settingsForm .setting-row{grid-template-columns:1fr;gap:10px}html[data-endfield=true] body #settingsActions{flex-wrap:wrap}}
+
+.font-stack-row{display:flex;align-items:center;gap:5px;margin:7px 0}.font-stack-row>span{flex:1;text-align:left;overflow-wrap:anywhere}.font-stack-row .btn{font-size:11px;padding:4px 8px}#fontStack p{font-size:11px;color:var(--text-dim);text-align:left}
+html[data-endfield=true] #page-settings>.card{font-family:var(--font)}
+html[data-endfield=true] #settingsForm .ef-select-trigger{font-family:var(--font)}
+
+
+
+/* Key binding rows are a single full-width strip, not a table of small cards.
+   CFT has one binding per command: do not invent a nonfunctional second slot. */
+html[data-endfield=true] #shortcutCatalog .shortcut-note{font-size:11px;font-weight:400;line-height:1.7;color:var(--text-dim);margin:8px 0}
+html[data-endfield=true] #shortcutSearch{max-width:440px;width:100%;background:transparent!important;border:0;border-bottom:1px solid var(--border);margin-bottom:12px}
+html[data-endfield=true] #shortcutCatalog .shortcut-group{border:0;padding:0;margin:0 0 20px;border-radius:0}
+html[data-endfield=true] #shortcutCatalog .shortcut-group summary{position:relative;padding:7px 18px;background:color-mix(in srgb,var(--text) 7%,transparent);font-weight:500;font-size:17px;margin-bottom:9px}
+html[data-endfield=true] #shortcutCatalog .shortcut-group summary:after{content:'快捷键';position:absolute;right:0;width:36%;text-align:center;color:var(--text-dim);font-size:14px;top:9px}
+html[data-endfield=true] #shortcutCatalog .shortcut-row{position:relative;isolation:isolate;grid-template-columns:minmax(0,1fr) 66px minmax(180px,36%);gap:6px;min-height:74px;padding:6px 16px 6px 24px;margin-bottom:7px;border:1px solid color-mix(in srgb,var(--text) 23%,transparent);border-radius:2px;background:linear-gradient(100deg,color-mix(in srgb,var(--text) 10%,transparent),color-mix(in srgb,var(--text) 4%,transparent) 65%,color-mix(in srgb,var(--text) 12%,transparent));box-shadow:inset 0 0 0 1px #ffffff08}
+html[data-endfield=true] #shortcutCatalog .shortcut-row:before{content:'';position:absolute;inset:0;pointer-events:none;z-index:-1;opacity:.1;background:url('terrain-contours.svg') 0 50%/700px;mask-image:linear-gradient(90deg,#000,transparent 42%)}
+html[data-theme=dark_endfield] #shortcutCatalog .shortcut-row:before{filter:invert(1)}
+html[data-endfield=true] #shortcutCatalog .shortcut-row>span{font-size:17px;font-weight:500}
+html[data-endfield=true] #shortcutCatalog .shortcut-key{height:60px;border:1px solid color-mix(in srgb,var(--text) 16%,transparent);border-radius:2px!important;background:radial-gradient(circle,#ffffff0a .6px,transparent .9px) 0 0/4px 4px;color:var(--text-dim);font-size:13px;box-shadow:inset 0 0 0 1px #ffffff04}
+html[data-endfield=true] #shortcutCatalog .shortcut-key:not(.recording)[data-key-display]:not([value='']){font-size:0}
+html[data-endfield=true] #shortcutCatalog .shortcut-key:not(.recording)[data-key-display]:not([value='']):after{content:attr(data-key-display);display:inline-block;min-width:22px;padding:1px 7px;line-height:23px;border:1px solid color-mix(in srgb,var(--text) 38%,transparent);border-radius:3px;background:color-mix(in srgb,var(--bg) 38%,transparent);color:var(--text);box-shadow:0 1px 5px #0006,inset 0 0 0 2px #ffffff06;font-family:var(--font);font-size:13px;font-weight:400}
+html[data-endfield=true] #shortcutCatalog .shortcut-key:hover{background-color:color-mix(in srgb,var(--text) 7%,transparent);border-color:var(--text-dim)}
+html[data-endfield=true] #shortcutCatalog .shortcut-key.recording{color:var(--ef-yellow);border-color:var(--ef-yellow)}
+html[data-endfield=true] #shortcutCatalog .shortcut-reset{min-height:28px;font-size:11px;background:transparent;border:0}
+html[data-endfield=true] #settingsForm .setting-copy p,html[data-endfield=true] #settingsForm .settings-category header p{font-weight:400;color:var(--text-dim)}
+/* Routine setting values are UI text, not display numerals. A custom stack wins. */
+html[data-endfield=true] #page-settings #settingsForm :is(output,input[type=number]){font-family:var(--font)!important;font-weight:500}
+/* The title and category rail share one header baseline, as in the reference. */
+@media(min-width:1101px){
+html[data-endfield=true] body #page-settings>.card{position:relative}
+html[data-endfield=true] #page-settings>.card>.title-row{position:absolute;inset:0 24px auto;min-height:77px;border:0;pointer-events:none}
+html[data-endfield=true] #page-settings .page-title{align-self:center;font-size:22px}
+html[data-endfield=true] #page-settings #openLogs{pointer-events:auto;position:absolute;right:0;top:24px;font-size:10px;padding:4px 8px}
+html[data-endfield=true] #settingsForm .settings-nav{margin-left:125px;margin-right:146px}
+}
+/* Shortcut search stays available; remove only the repeated explanatory header. */
+html[data-endfield=true] #settings-shortcuts>header p{display:none}
+html[data-endfield=true] #settings-shortcuts>header{margin-bottom:12px}
+html[data-endfield=true] #settingsForm:has([data-settings-category=shortcuts].active)>.settings-search{display:none}
+html[data-endfield=true] #settings-shortcuts .setting-copy p{display:none}
+html[data-endfield=true] #settings-shortcuts>.setting-row{min-height:64px;padding-top:10px;padding-bottom:10px}
+html[data-endfield=true] #shortcutCatalog .shortcut-note{margin:6px 0;font-size:10px}
+html[data-endfield=true] #shortcutSearch{min-height:28px!important;height:28px;margin-bottom:9px;font-size:11px!important}
+html[data-endfield=true] #settingsForm .setting-switch:focus-within{outline:none}
+html[data-endfield=true] #settingsForm .setting-switch:has(input:focus-visible){outline:2px solid var(--ef-yellow);outline-offset:2px}
+.ef-settings-symbol{display:none}
+html[data-endfield=true] #settingsForm .ef-settings-original{display:none}
+html[data-endfield=true] #settingsForm .ef-settings-symbol{display:block;fill:currentColor;stroke:none}
+html[data-endfield=true] #settingsForm .settings-tab.active{animation:none}
+html[data-endfield=true] .nav-tab.active{animation:ef-navigation-arrive 180ms cubic-bezier(.2,.75,.25,1)}
+@keyframes ef-navigation-arrive{from{opacity:.25;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){html[data-endfield=true] #settingsForm .settings-tab.active,html[data-endfield=true] .nav-tab.active{animation:none}}
+@media(max-width:760px){html[data-endfield=true] #shortcutCatalog .shortcut-row{grid-template-columns:minmax(0,1fr) 40px minmax(95px,32%);padding:6px 10px;min-height:64px}html[data-endfield=true] #shortcutCatalog .shortcut-row>span{font-size:14px}html[data-endfield=true] #shortcutCatalog .shortcut-key{height:50px}html[data-endfield=true] body #page-settings>.card{padding:0 12px}}
+@media(prefers-reduced-motion:reduce){html[data-endfield=true] #settingsForm .setting-switch:before,html[data-endfield=true] #settingsForm .setting-switch span{transition:none}.ef-settings-select-menu{animation:none}}
+
+/* Clear engineering strips; only the lower half of the expanded capsule has a backplate. */
+html[data-endfield=true] #settingsForm .setting-row{border-color:color-mix(in srgb,var(--text) 32%,transparent);box-shadow:inset 0 1px 0 color-mix(in srgb,var(--text) 10%,transparent),0 1px 0 color-mix(in srgb,var(--bg) 40%,transparent)}
+html[data-endfield=true] #settingsForm .settings-category>header{border-bottom:2px solid color-mix(in srgb,var(--text) 55%,transparent)}
+html[data-endfield=true] #settingsForm .settings-tab+.settings-tab:not(.active){border-left:1px solid color-mix(in srgb,var(--text) 22%,transparent)!important}
+html[data-endfield=true] #settingsActions>.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;line-height:1.25}
+html[data-endfield=true] #settingsActions>.btn>.ic{display:block;align-self:center;vertical-align:initial;margin:0;transform:translateY(1px)}
+html[data-endfield=true] #settingsActions .settings-action-label{display:block;line-height:1.25}
+
+html[data-endfield=true] #settingsForm .settings-panels [hidden]{display:none!important}
+
+/* Deterministic tick, independent of the chosen text font; no shadow under the capsule. */
+.ef-settings-select-menu{box-shadow:none;border-color:#aaa;box-sizing:border-box}
+.ef-settings-select-menu .ef-select-check{position:absolute;right:14px;top:50%;transform:translateY(-50%);width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+html[data-endfield=true] #settingsForm .ef-select-trigger[aria-expanded=true]{box-shadow:none}
+/* Shared settings repairs: dark key wells in both schemes, readable links and a single directory field. */
+html[data-endfield=true] #shortcutCatalog .shortcut-key{background:#202622!important;color:#f0f2e9!important;border-color:#4b554b}
+html[data-endfield=true] #shortcutCatalog .shortcut-key:not(.recording):after{background:#171d18!important;color:#f0f2e9!important;border-color:#7a8477!important}
+html[data-endfield=true] #settingsForm .dir-pick{display:flex;align-items:center;gap:0;min-width:0;width:100%;height:38px;border:1px solid var(--border);background:var(--bg)}
+html[data-endfield=true] #settingsForm .dir-pick>.input{flex:1;min-width:0;width:0!important;border:0!important;background:transparent!important;height:36px;padding:6px 10px;font-size:12px;border-radius:0!important}
+html[data-endfield=true] #settingsForm .dir-icon-button{display:grid;place-items:center;flex:none;width:34px;height:34px;border:0;background:none;color:var(--text);cursor:pointer}
+html[data-endfield=true] #settingsForm .dir-icon-button:hover{background:color-mix(in srgb,var(--text) 12%,transparent)}
+html[data-endfield=true] #settingsForm .dir-icon-button>.ic{width:18px;height:18px}
+html[data-endfield=true] #settingsForm .bd-links{display:flex;flex-direction:column;gap:8px}
+html[data-endfield=true] #settingsForm .bd-links h3{margin:0 0 4px}
+html[data-endfield=true] #settingsForm .bd-link{width:100%;min-height:35px;margin:0;justify-content:flex-start;color:var(--ef-secondary-text)!important}
+html[data-endfield=true] #settingsForm .bd-link .bd-link-label{color:inherit!important;position:relative;font-size:12px;font-weight:600;flex:none}
+html[data-endfield=true] #settingsForm .bd-link .bd-link-desc{color:inherit!important;opacity:.8;position:relative;font-size:11px;margin-left:10px}
+html[data-endfield=true] #settingsForm .bd-link>.ef-action-caption{display:flex;align-items:center;justify-content:flex-start;flex-wrap:wrap;padding:3px 28px 3px 20px!important;text-align:left}

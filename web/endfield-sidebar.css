@@ -1,0 +1,79 @@
+/* Reference geometry: full-height left yellow block and outside right bracket. */
+.ef-nav-preview,.ef-nav-key,.ef-nav-marker,.ef-nav-gutter,.ef-nav-stamp,.ef-nav-sweep{display:none}
+html[data-endfield=true]{--sidebar-width:244px;--ef-nav-shell:#151819;--ef-nav-shell-text:#f0f1eb;--ef-nav-shell-dim:#a9afa9;--ef-nav-shell-border:#3b4140;--ef-nav-rail:#9ba49566;--ef-nav-card:#303536;--ef-nav-card-text:#e9ece5;--ef-nav-card-hover:#3b4141;--ef-nav-preview:#d5dcd0;--ef-nav-stamp-color:var(--ef-yellow)}
+html[data-theme=light_endfield]{--ef-nav-shell:#f0f0e9;--ef-nav-shell-text:#30372e;--ef-nav-shell-dim:#626d60;--ef-nav-shell-border:#c5cbc0;--ef-nav-rail:#67756088;--ef-nav-card:#d8dcd5;--ef-nav-card-text:#323a31;--ef-nav-card-hover:#e3e6df;--ef-nav-preview:#65705f;--ef-nav-stamp-color:#596418}
+html[data-endfield=true] body .nav{--text:var(--ef-nav-shell-text);--text-dim:var(--ef-nav-shell-dim);--border:var(--ef-nav-shell-border);background:transparent;border:0;box-shadow:none;gap:12px}
+/* Measuring ticks run independently of the card-center markers. */
+html[data-endfield=true] body #navTabs{position:relative;gap:16px;padding:2px 10px 12px 32px;isolation:isolate}
+html[data-endfield=true] body #navTabs:before{content:'';position:absolute;top:0;bottom:0;left:27px;width:1px;background:var(--ef-nav-rail);pointer-events:none}
+html[data-endfield=true] body #navTabs:after{content:'';position:absolute;top:0;bottom:0;left:15px;width:4px;background:repeating-linear-gradient(to bottom,var(--ef-nav-rail) 0 2px,transparent 2px 26px);pointer-events:none}
+html[data-endfield=true] body #navTabs>.nav-tab{box-sizing:border-box;position:relative;isolation:isolate;width:calc(100% - 8px);height:52px;min-height:52px;flex:none;margin:0;padding:8px 10px;display:flex;align-items:center;justify-content:flex-start;gap:0;border:0;border-radius:0 8px 8px 0!important;clip-path:none;overflow:visible;background:var(--ef-nav-card);color:var(--ef-nav-card-text);font-size:calc(14px * var(--type-scale,1));font-weight:600;text-align:left;box-shadow:0 3px 10px #00000012;animation:none;transition:height 180ms cubic-bezier(.2,.75,.25,1),width 180ms ease,margin 180ms ease}
+html[data-endfield=true] body #navTabs>.nav-tab:hover:not(.active){background:var(--ef-nav-card-hover);color:var(--ef-nav-card-text)}
+html[data-endfield=true] body #navTabs>.nav-tab.active{width:calc(100% + 8px);height:70px;min-height:52px;margin-left:-8px;padding-left:23px;background:#f5f4f3;background-image:radial-gradient(#66746020 .65px,transparent .85px);background-size:6px 6px;color:#232923;border:0;font-size:calc(16px * var(--type-scale,1));font-weight:700;box-shadow:0 5px 14px #0002;transition:none;animation:ef-nav-card var(--ef-nav-enter-ms,300ms) linear both}
+/* Selected stripe reaches the sidebar edge; no thin all-around yellow border. */
+html[data-endfield=true] #navTabs .active>.ef-nav-gutter{display:block;position:absolute;left:-36px;top:0;bottom:0;width:36px;background-color:var(--ef-yellow);background-image:linear-gradient(135deg,#34390038 12.5%,transparent 12.5% 50%,#34390038 50% 62.5%,transparent 62.5%);background-size:8px 8px;pointer-events:none;animation:ef-nav-gutter-enter var(--ef-nav-enter-ms,300ms) linear both,ef-nav-stripes 1000ms linear infinite}
+/* The opaque white face always sits above the moving yellow layer.
+   Its bounds/radius follow the actual card, not an independently animated mask. */
+html[data-endfield=true] body #navTabs>.nav-tab:before{content:none}
+html[data-endfield=true] body #navTabs>.nav-tab.active:before{content:'';display:block;position:absolute;inset:0;z-index:1;border-radius:inherit;background:#f5f4f3 radial-gradient(#66746020 .65px,transparent .85px);background-size:6px 6px;pointer-events:none}
+html[data-endfield=true] #navTabs .active>.ef-nav-sweep{display:block;position:absolute;top:0;bottom:0;left:-36px;right:0;z-index:0;border-radius:inherit;overflow:hidden;pointer-events:none;animation:ef-nav-sweep-anchor var(--ef-nav-enter-ms,300ms) linear both}
+html[data-endfield=true] #navTabs .active>.ef-nav-sweep:before{content:"";position:absolute;inset:0;background:var(--ef-yellow);animation:ef-sidebar-fill var(--ef-nav-enter-ms,300ms) linear both}
+html[data-endfield=true] body #navTabs>.nav-tab:after{content:none;display:none}
+html[data-endfield=true] body #navTabs>.nav-tab.active:after{content:'';display:block;box-sizing:border-box;position:absolute;top:0;bottom:0;right:-10px;left:auto;width:8px;height:auto;border:3px solid var(--ef-yellow);border-left:0;border-radius:0;background:none;box-shadow:none;clip-path:none;pointer-events:none;animation:ef-nav-bracket var(--ef-nav-enter-ms,300ms) linear both}
+html[data-endfield=true] #navTabs>.nav-tab>.ic{display:none!important}
+html[data-endfield=true] #navTabs .nav-label{position:relative;z-index:2;max-width:calc(100% - 39px);line-height:1.3;white-space:nowrap}
+html[data-endfield=true] #navTabs .nav-label:after{content:attr(data-ef-nav-meta);display:block;margin-top:7px;font:500 7px/1.2 var(--font);letter-spacing:.09em;opacity:.55}
+html[data-endfield=true] #navTabs .ef-nav-preview{display:block;position:absolute;z-index:0;right:6px;top:50%;width:46px;height:46px;transform:translateY(-50%);color:var(--ef-nav-preview);opacity:.22;pointer-events:none;transition:width 180ms ease,height 180ms ease,color 120ms ease,opacity 120ms ease}
+html[data-endfield=true] #navTabs .ef-nav-preview svg{display:block;width:100%;height:100%;fill:currentColor;stroke:none}
+html[data-endfield=true] #navTabs .active .ef-nav-preview{z-index:2;width:56px;height:56px;color:#30382b;opacity:.22;animation:ef-nav-art var(--ef-nav-enter-ms,300ms) linear both}
+html[data-endfield=true] #navTabs .ef-nav-marker{display:block;position:absolute;left:-10px;top:50%;width:14px;height:3px;border:1px solid var(--ef-nav-shell-dim);background:var(--bg);transform:translateY(-50%);pointer-events:none}
+html[data-endfield=true] #navTabs .active .ef-nav-marker{z-index:2;left:9px;width:8px;height:8px;background:#30372e;border:0;clip-path:polygon(0 0,100% 50%,0 100%);animation:ef-nav-marker-enter var(--ef-nav-enter-ms,300ms) linear both}
+/* The page reveal supplies one shared finish time for CFT, arrow and bracket. */
+html[data-endfield=true] #navTabs .active>.ef-nav-stamp{display:flex;align-items:center;gap:4px;position:absolute;right:-7px;bottom:-13px;height:10px;color:var(--ef-nav-stamp-color);background:transparent;padding:0;pointer-events:none}
+html[data-endfield=true] #navTabs .ef-nav-stamp:before{content:'CFT';display:block;width:24px;text-align:right;font:700 9px/10px var(--font);letter-spacing:.12em}
+html[data-endfield=true] #navTabs .active>.ef-nav-stamp:before{animation:ef-nav-scramble var(--ef-nav-enter-ms,300ms) steps(1,end) both}
+html[data-endfield=true] #navTabs .ef-nav-stamp>svg{display:block;width:10px;height:10px;fill:currentColor;stroke:none}
+html[data-endfield=true] #navTabs .active>.ef-nav-stamp:after{content:'';position:absolute;right:0;top:0;width:10px;text-align:center;font:700 10px/10px var(--font);animation:ef-nav-symbol-scramble var(--ef-nav-enter-ms,300ms) steps(1,end) both}
+html[data-endfield=true] #navTabs .active>.ef-nav-stamp>svg{animation:ef-nav-arrow-settle var(--ef-nav-enter-ms,300ms) steps(1,end) both}
+html[data-endfield=true] #navTabs .ef-nav-key:not([hidden]){display:block;position:absolute;right:8px;bottom:5px;z-index:1;font:500 8px/1 var(--font);letter-spacing:.03em;opacity:.75}
+html[data-endfield=true] #navTabs .ef-nav-key:after{content:'需 Key'}
+html[data-endfield=true] #navTabs>.nav-tab:focus-visible{outline:2px solid var(--ef-yellow);outline-offset:3px}
+/* CFT settles at 320ms; bracket finishes at var(--ef-nav-enter-ms,300ms). White never fades or sweeps. */
+@keyframes ef-nav-card{0%,4.35093776%{width:calc(100% - 8px);height:52px;margin-left:0;padding-left:10px;font-size:calc(14px * var(--type-scale,1));animation-timing-function:cubic-bezier(.2,.75,.25,1)}55%,100%{width:calc(100% + 8px);height:70px;margin-left:-8px;padding-left:23px;font-size:calc(16px * var(--type-scale,1))}}
+@keyframes ef-nav-sweep-anchor{0%,4.35093776%{left:-44px;right:-8px;animation-timing-function:cubic-bezier(.2,.75,.25,1)}55%,100%{left:-36px;right:0}}
+@keyframes ef-sidebar-fill{0%{clip-path:inset(0 100% 0 0);animation-timing-function:cubic-bezier(.2,.75,.25,1)}82%,100%{clip-path:inset(0 0% 0 0)}}
+@keyframes ef-nav-gutter-enter{0%{left:-44px;clip-path:inset(0 100% 0 0)}4.35093776%{left:-44px;clip-path:inset(0 0 0 0);animation-timing-function:cubic-bezier(.2,.75,.25,1)}55%,100%{left:-36px;clip-path:inset(0 0 0 0)}}
+@keyframes ef-nav-art{0%,4.35093776%{width:46px;height:46px;color:var(--ef-nav-preview);animation-timing-function:cubic-bezier(.2,.75,.25,1)}55%,100%{width:56px;height:56px;color:#30382b}}
+@keyframes ef-nav-marker-enter{0%,4.35093776%{opacity:0}9%,100%{opacity:1}}
+@keyframes ef-nav-bracket{0%,82%{opacity:0;clip-path:inset(0 0 100% 0);animation-timing-function:cubic-bezier(.2,.75,.25,1)}100%{opacity:1;clip-path:inset(0 0 0% 0)}}
+@keyframes ef-nav-scramble{0%{content:'7#X'}10%{content:'K/4'}20%{content:'#2?'}30%{content:'9X/'}40%{content:'?7K'}50%{content:'4#2'}60%{content:'X/9'}70%{content:'2?7'}80%{content:'/K#'}90%{content:'9X4'}100%{content:'CFT'}}
+@keyframes ef-nav-symbol-scramble{0%{content:'+'}10%{content:'×'}20%{content:'⌁'}30%{content:'/'}40%{content:'□'}50%{content:'#'}60%{content:'↗'}70%{content:'='}80%{content:'?'}90%{content:'◊'}100%{content:''}}
+@keyframes ef-nav-arrow-settle{0%,99.99%{opacity:0}100%{opacity:1}}
+@keyframes ef-nav-stripes{from{background-position:0 0}to{background-position:8px 0}}
+html[data-ef-motion=false] #navTabs .active>.ef-nav-gutter{animation-name:ef-nav-gutter-enter}
+/* Collapse/narrow-layout keeps the established 66px icon rail. */
+html[data-endfield=true]:is([data-sidebar=collapsed],[data-narrow-layout=true]){--sidebar-width:66px}
+html[data-endfield=true]:is([data-sidebar=collapsed],[data-narrow-layout=true]) body #navTabs{padding:2px 0 6px;gap:8px}
+html[data-endfield=true]:is([data-sidebar=collapsed],[data-narrow-layout=true]) body #navTabs:before,html[data-endfield=true]:is([data-sidebar=collapsed],[data-narrow-layout=true]) body #navTabs:after{display:none}
+html[data-endfield=true]:is([data-sidebar=collapsed],[data-narrow-layout=true]) body #navTabs>.nav-tab{width:100%;height:44px;min-height:44px;margin:0;padding:0;justify-content:center;border-radius:0!important}
+html[data-endfield=true]:is([data-sidebar=collapsed],[data-narrow-layout=true]) body #navTabs>.nav-tab.active{height:54px;box-shadow:inset 0 0 0 2px var(--ef-yellow);animation:none}
+html[data-endfield=true]:is([data-sidebar=collapsed],[data-narrow-layout=true]) #navTabs .ef-nav-preview{position:relative;right:auto;top:auto;transform:none;width:26px;height:26px;opacity:.95;animation:none}
+html[data-endfield=true]:is([data-sidebar=collapsed],[data-narrow-layout=true]) #navTabs :is(.ef-nav-marker,.ef-nav-key,.ef-nav-gutter,.ef-nav-stamp,.ef-nav-sweep),html[data-endfield=true]:is([data-sidebar=collapsed],[data-narrow-layout=true]) body #navTabs>.nav-tab.active:after{display:none!important}
+@media(max-width:760px){html[data-endfield=true]{--sidebar-width:66px}html[data-endfield=true] body #navTabs{padding:2px 0 6px;gap:8px}html[data-endfield=true] body #navTabs:before,html[data-endfield=true] body #navTabs:after{display:none}html[data-endfield=true] body #navTabs>.nav-tab{width:100%;height:44px;min-height:44px;margin:0;padding:0;justify-content:center;border-radius:0!important}html[data-endfield=true] body #navTabs>.nav-tab.active{height:54px;box-shadow:inset 0 0 0 2px var(--ef-yellow);animation:none}html[data-endfield=true] #navTabs .ef-nav-preview{position:relative;right:auto;top:auto;transform:none;width:26px;height:26px;opacity:.95;animation:none}html[data-endfield=true] #navTabs :is(.ef-nav-marker,.ef-nav-key,.ef-nav-gutter,.ef-nav-stamp,.ef-nav-sweep),html[data-endfield=true] body #navTabs>.nav-tab.active:after{display:none!important}}
+@media(prefers-reduced-motion:reduce){html[data-endfield=true] body #navTabs>.nav-tab,html[data-endfield=true] #navTabs .ef-nav-preview{transition:none}html[data-endfield=true] body #navTabs>.nav-tab.active,html[data-endfield=true] body #navTabs>.nav-tab.active:after,html[data-endfield=true] #navTabs .active>:is(.ef-nav-preview,.ef-nav-marker,.ef-nav-gutter,.ef-nav-stamp),html[data-endfield=true] #navTabs .active>.ef-nav-stamp:before,html[data-endfield=true] #navTabs .active>.ef-nav-stamp:after,html[data-endfield=true] #navTabs .active>.ef-nav-stamp>svg{animation:none}html[data-endfield=true] #navTabs .active>.ef-nav-sweep,.active>.ef-nav-sweep:before,.active>.ef-nav-sweep:after{animation:none;opacity:0}}
+/* The page already reserves --sidebar-width. Keep the rail unboxed, and let
+   the cards cast their own small shadows over the continuous terrain scene. */
+html[data-endfield=true] body .nav-wrap{border:0;box-shadow:none}
+html[data-endfield=true] .sidebar-brand{border-bottom:0;min-height:50px;padding-bottom:0;padding-right:28px;margin-left:32px;margin-bottom:0}
+html[data-endfield=true] body .sidebar-toggle{position:absolute;top:25px;right:12px;width:27px;height:27px;min-height:27px;padding:5px;border:0!important;background:transparent!important;box-shadow:none;color:var(--text-dim)}
+html[data-endfield=true] .sidebar-toggle>span{display:none}
+html[data-endfield=true] body .sidebar-toggle:hover{color:var(--text)}
+html[data-endfield=true] body #aboutFloat{width:fit-content;align-self:flex-start;margin-left:23px;padding:4px 0;gap:7px;background:transparent;line-height:1.4;font-size:11px}
+html[data-endfield=true] body #aboutFloat:hover{background:transparent;color:var(--text)}
+html[data-endfield=true] body .nav-right{border:0;padding-top:0;margin-left:23px;margin-top:-6px}
+html[data-endfield=true] body .nav-right .status-pill{font-size:10px;line-height:1.5;color:var(--text-dim)}
+html[data-endfield=true]:is([data-sidebar=collapsed],[data-narrow-layout=true]) .sidebar-brand{padding-right:0;margin-left:0}
+html[data-endfield=true]:is([data-sidebar=collapsed],[data-narrow-layout=true]) body .sidebar-toggle{position:static;align-self:center}
+html[data-endfield=true]:is([data-sidebar=collapsed],[data-narrow-layout=true]) body #aboutFloat{margin-left:0;align-self:center}
+@media(max-width:760px){html[data-endfield=true] .sidebar-brand{padding-right:0;margin-left:0}html[data-endfield=true] body .sidebar-toggle{position:static;align-self:center}html[data-endfield=true] body #aboutFloat{margin-left:0;align-self:center}}
+

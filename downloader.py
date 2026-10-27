@@ -32,7 +32,7 @@ class DownloadTask:
         self.expected_sha256 = expected_sha256 or ""
         self.actual_sha256 = ""
         self.verification_status = "unverified"
-        self.info = info or {}
+        self.info = info if isinstance(info, dict) else {}
         self.status = ST_PENDING
         self.progress = 0.0          # 0-100
         self.downloaded = 0
@@ -41,6 +41,8 @@ class DownloadTask:
         self.error = ""
         self.id = "%d_%s" % (time.time_ns(), uuid.uuid4().hex[:12])
         self.created_at = time.time()
+        self.batch_id = str(self.info.get("batch_id") or self.id)
+        self.batch_started_at = self.info.get("batch_started_at") or self.created_at
         self.updated_at = self.created_at
         self.finished_at = None
         self._last_notified_status = self.status
@@ -51,6 +53,7 @@ class DownloadTask:
     def to_dict(self):
         return {
             "id": self.id, "created_at": self.created_at, "updated_at": self.updated_at,
+            "batch_id": self.batch_id, "batch_started_at": self.batch_started_at,
             "finished_at": self.finished_at, "error": self.error, "progress": self.progress,
             "url": self.url, "dest_dir": self.dest_dir, "filename": self.filename,
             "expected_sha256": self.expected_sha256, "actual_sha256": self.actual_sha256,
@@ -68,6 +71,8 @@ class DownloadTask:
         # 旧版没有保存 id：稳定生成一次，重启不再产生多份相同历史。
         t.id = str(d.get("id") or "legacy_" + hashlib.sha256(
             json.dumps([t.url, t.dest_dir, t.filename], ensure_ascii=False).encode("utf-8")).hexdigest()[:24])
+        t.batch_id = str(d.get("batch_id") or t.info.get("batch_id") or "")
+        t.batch_started_at = d.get("batch_started_at") or t.info.get("batch_started_at") or None
         t.created_at = d.get("created_at") or None
         t.updated_at = d.get("updated_at") or t.created_at
         t.finished_at = d.get("finished_at") or None
@@ -305,6 +310,7 @@ class Downloader:
             "status": task.status, "downloaded": task.downloaded, "total": task.total,
             "error": task.error, "created_at": task.created_at, "updated_at": task.updated_at,
             "finished_at": task.finished_at,
+            "batch_id": task.batch_id, "batch_started_at": task.batch_started_at,
             "actual_sha256": task.actual_sha256, "expected_sha256": task.expected_sha256,
             "verification_status": task.verification_status,
             "partial_cleanup_error": task.partial_cleanup_error,

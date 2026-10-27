@@ -32,7 +32,7 @@ let passed=0;const ok=s=>{console.log('OK '+s);passed++;};
     return original(method,...args);
    };await dlRefresh();
   });
-  await page.locator('[data-task-id=a] .dl-task-check').check();
+  await page.locator('[data-task-id=a] .c-file').click();
   await page.locator('[data-task-id=b]').click({button:'right'});assert.equal(await page.locator('#ctxMenu [data-act=dl_remove]').count(),1);ok('下载列表右键提供移除此任务');
   await page.locator('[data-act=dl_site]').click();assert.deepEqual(await page.evaluate(()=>window.opened),['https://civitai.red/models/222']);ok('右键操作定位点击行 ID，不取上一条选中行或同名文件');
   await page.locator('[data-task-id=b]').click({button:'right'});await page.locator('[data-act=dl_remove]').click();await page.locator('#cfCancel').click();assert.equal(await page.evaluate(()=>window.removed.length),0);ok('取消移除不提交请求');

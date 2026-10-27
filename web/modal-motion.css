@@ -1,0 +1,5 @@
+/* A closing dialog must not accept another action during its short exit. */
+[data-cft-modal-motion="closing"]{pointer-events:none!important}
+@media(prefers-reduced-motion:reduce){
+  [data-cft-modal-motion="closing"]{transition:none!important;animation:none!important}
+}

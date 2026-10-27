@@ -6,38 +6,28 @@ import time
 import tkinter as tk
 import tkinter.font as tkfont
 from tkinter import ttk
+from config import normalize_theme
 
-# ---------------- 色板（iOS 风格） ----------------
+# ---------------- 终末地亮 / 暗色板 ----------------
 LIGHT = {
-    "bg": "#f2f2f7", "surface": "#ffffff", "surface2": "#e5e5ea",
-    "border": "#c7c7cc", "text": "#1c1c1e", "text_dim": "#8e8e93",
-    "primary": "#007aff", "primary_hover": "#3395ff", "primary_press": "#0062cc",
-    "primary_fg": "#ffffff", "danger": "#ff3b30", "danger_hover": "#ff6b61",
-    "hover": "#e9e9ee", "selection": "#d9e9ff", "tab_active": "#ffffff",
-    "glow": "#007aff", "progress": "#007aff", "disabled": "#d8d8dd",
+    "bg": "#eaece6", "surface": "#f7f8f2", "surface2": "#e3e6dc",
+    "border": "#bcc2b5", "text": "#202520", "text_dim": "#555e53",
+    "primary": "#ffef01", "primary_hover": "#fff22a", "primary_press": "#e0d201",
+    "primary_fg": "#252619", "danger": "#b52b35", "danger_hover": "#d53c46",
+    "hover": "#e3e6dc", "selection": "#e2e6ab", "tab_active": "#ffef01",
+    "glow": "#ffef01", "progress": "#687000", "disabled": "#d1d4cb",
 }
 DARK = {
-    "bg": "#1c1c1e", "surface": "#2c2c2e", "surface2": "#3a3a3c",
-    "border": "#48484a", "text": "#ffffff", "text_dim": "#98989d",
-    "primary": "#0a84ff", "primary_hover": "#409cff", "primary_press": "#0060df",
-    "primary_fg": "#ffffff", "danger": "#ff453a", "danger_hover": "#ff6b61",
-    "hover": "#3a3a3c", "selection": "#2d4a7a", "tab_active": "#2c2c2e",
-    "glow": "#0a84ff", "progress": "#0a84ff", "disabled": "#444446",
+    "bg": "#17191b", "surface": "#24272a", "surface2": "#303438",
+    "border": "#484e52", "text": "#f2f3ed", "text_dim": "#b2b8ba",
+    "primary": "#ffef01", "primary_hover": "#fff22a", "primary_press": "#e0d201",
+    "primary_fg": "#252619", "danger": "#ff8578", "danger_hover": "#ffaba2",
+    "hover": "#303438", "selection": "#535734", "tab_active": "#ffef01",
+    "glow": "#ffef01", "progress": "#ffef01", "disabled": "#44494b",
 }
-MODERN_LIGHT = {
-    # Axion Studio 风格：浅灰底 + 白卡片 + 深灰文字 + 橙 #F26522
-    "bg": "#efefef", "surface": "#ffffff", "surface2": "#e6e6e6",
-    "border": "#d8d8d8", "text": "#1a1a1a", "text_dim": "#6b6b6b",
-    "primary": "#f26522", "primary_hover": "#e05a1a", "primary_press": "#c94e12",
-    "primary_fg": "#ffffff", "danger": "#e5484d", "danger_hover": "#f26b70",
-    "hover": "#f5f0eb", "selection": "#ffe8dc", "tab_active": "#ffffff",
-    "glow": "#f26522", "progress": "#f26522", "disabled": "#dcdcdc",
-}
-CURRENT = DARK  # 运行时色板引用（apply_theme 时替换）
-
-# 主题注册表（设置页三选）
-THEMES = {"dark": DARK, "light": LIGHT, "modern": MODERN_LIGHT}
-THEME_LABELS = {"dark": "深色", "light": "浅色", "modern": "现代浅色"}
+CURRENT = DARK
+THEMES = {"dark_endfield": DARK, "light_endfield": LIGHT}
+THEME_LABELS = {"dark_endfield": "终末地主题-暗", "light_endfield": "终末地主题-亮"}
 
 
 # ---------------- CJK 字体（跨平台） ----------------
@@ -112,10 +102,11 @@ def ease_out_spring(t):
 _glow_buttons = []  # 所有 GlowButton 实例（主题切换时统一重绘）
 
 
-def apply_theme(root, style, theme="dark"):
-    """按主题名（dark/light/modern）应用色板到整个 ttk 样式体系与根窗口"""
+def apply_theme(root, style, theme="dark_endfield"):
+    """应用终末地亮暗色板，旧主题输入仅用于兼容迁移。"""
     global CURRENT
-    C = THEMES.get(theme, DARK)
+    theme = normalize_theme(theme)
+    C = THEMES[theme]
     CURRENT = C
     resolve_font_family(root)
     try:
@@ -130,21 +121,12 @@ def apply_theme(root, style, theme="dark"):
                     focuscolor=C["primary"], font=main_font(10))
     style.configure("TFrame", background=C["bg"])
     style.configure("TLabel", background=C["bg"], foreground=C["text"])
-    if theme == "modern":
-        # Axion 风格白色胶囊导航：选中白底、间距大、padding 饱满
-        style.configure("TNotebook", background=C["bg"], borderwidth=0, tabmargins=(6, 8, 6, 0))
-        style.configure("TNotebook.Tab", background=C["surface2"], foreground=C["text_dim"],
-                        padding=(22, 9), borderwidth=0)
-        style.map("TNotebook.Tab",
-                  background=[("selected", C["surface"]), ("active", C["hover"])],
-                  foreground=[("selected", C["text"]), ("active", C["text"])])
-    else:
-        style.configure("TNotebook", background=C["bg"], borderwidth=0)
-        style.configure("TNotebook.Tab", background=C["surface2"], foreground=C["text_dim"],
-                        padding=(16, 7), borderwidth=0)
-        style.map("TNotebook.Tab",
-                  background=[("selected", C["tab_active"]), ("active", C["surface"])],
-                  foreground=[("selected", C["text"]), ("active", C["text"])])
+    style.configure("TNotebook", background=C["bg"], borderwidth=0)
+    style.configure("TNotebook.Tab", background=C["surface2"], foreground=C["text_dim"],
+                    padding=(16, 7), borderwidth=0)
+    style.map("TNotebook.Tab",
+              background=[("selected", C["tab_active"]), ("active", C["surface"])],
+              foreground=[("selected", C["primary_fg"]), ("active", C["text"])])
     style.configure("TLabelframe", background=C["bg"], bordercolor=C["border"])
     style.configure("TLabelframe.Label", background=C["bg"], foreground=C["text"])
     style.configure("TCheckbutton", background=C["bg"], foreground=C["text"])
@@ -161,17 +143,10 @@ def apply_theme(root, style, theme="dark"):
                     lightcolor=C["border"], darkcolor=C["border"])
     style.map("TCombobox", fieldbackground=[("readonly", C["surface"])],
               selectbackground=[("readonly", C["selection"])])
-    if theme == "modern":
-        # 卡片感列表：行更高、表头白底大内边距
-        style.configure("Treeview", background=C["surface"], fieldbackground=C["surface"],
-                        foreground=C["text"], bordercolor=C["border"], rowheight=32)
-        style.configure("Treeview.Heading", background=C["surface"], foreground=C["text"],
-                        bordercolor=C["border"], relief="flat", padding=(6, 7))
-    else:
-        style.configure("Treeview", background=C["surface"], fieldbackground=C["surface"],
-                        foreground=C["text"], bordercolor=C["border"], rowheight=26)
-        style.configure("Treeview.Heading", background=C["surface2"], foreground=C["text_dim"],
-                        bordercolor=C["border"], relief="flat", padding=4)
+    style.configure("Treeview", background=C["surface"], fieldbackground=C["surface"],
+                    foreground=C["text"], bordercolor=C["border"], rowheight=26)
+    style.configure("Treeview.Heading", background=C["surface2"], foreground=C["text_dim"],
+                    bordercolor=C["border"], relief="flat", padding=4)
     style.map("Treeview.Heading", background=[("active", C["hover"])],
               foreground=[("active", C["text"])])
     style.map("Treeview",

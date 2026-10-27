@@ -1,0 +1,47 @@
+/* A real, larger capsule is part of the panel surface, not a translated ring.
+   Only the inset button face casts a shadow, clipped inside its capsule base.
+   The baseline bisects face-center -> base-bottom: translateY =
+   (base-height - face-height/2 - face-top-inset)/2. */
+html[data-endfield=true] .settings-exit-mask{display:flex;align-items:center;justify-content:center;padding:56px 0;background:#080b0dca;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);overflow-y:auto;overscroll-behavior:contain}
+html[data-endfield=true] .settings-exit-dialog{--confirm-face-height:56px;--confirm-base-height:68px;--confirm-face-inset:4px;--confirm-bg:#f5f4f3;--confirm-text:#30352f;--confirm-dim:#777d74;position:relative;left:auto;top:auto;transform:none;flex:none;isolation:isolate;width:100%;height:clamp(264px,31vh,340px);min-height:264px;max-height:none;overflow:visible;padding:clamp(52px,6vh,76px) 32px 110px;background:var(--confirm-bg);color:var(--confirm-text);border:0;border-block:1px solid #b9bdb5;border-radius:0;box-shadow:0 8px 22px #0008,0 -4px 22px #0005;font-family:var(--font);text-align:left}
+html[data-theme=dark_endfield] .settings-exit-dialog{--confirm-bg:#282c2d;--confirm-text:#f1f2eb;--confirm-dim:#aeb6ae;border-color:#667068}
+/* The confirmation band uses only contour decoration, no brand SVG. */
+html[data-endfield=true] .settings-exit-dialog:before,html[data-endfield=true] .settings-exit-dialog:after{content:'';position:absolute;z-index:-1;pointer-events:none;background:url('terrain-contours.svg') center/760px 760px no-repeat;opacity:.32;mask-image:linear-gradient(90deg,#000 0%,#000 48%,transparent 100%);animation:ef-confirm-contour-flow 20s linear infinite alternate}
+html[data-endfield=true] .settings-exit-dialog:before{inset:0 auto 0 0;width:32%;max-width:490px}
+html[data-endfield=true] .settings-exit-dialog:after{inset:0 0 0 auto;width:32%;max-width:490px;transform:rotate(180deg);opacity:.32;animation-direction:alternate-reverse}
+html[data-theme=dark_endfield] .settings-exit-dialog:before,html[data-theme=dark_endfield] .settings-exit-dialog:after{filter:invert(1);opacity:.3}
+html[data-endfield=true] .settings-exit-art{position:absolute;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+html[data-endfield=true] .settings-exit-copy{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);width:min(760px,calc(100% - 64px));margin:0;text-align:center}
+html[data-endfield=true] .settings-exit-art:before{content:'';position:absolute;left:0;right:0;top:0;height:3px;background:var(--ef-band-stripe)}
+html[data-endfield=true] .settings-exit-art:after{content:'';position:absolute;left:32px;top:8px;width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:10px solid var(--ef-yellow)}
+html[data-endfield=true] .settings-exit-dialog .rd-title,html[data-endfield=true] .settings-exit-dialog .settings-exit-hint{margin:0;font-size:22px;line-height:1.6;font-weight:500;color:var(--confirm-text)}
+html[data-endfield=true] .settings-exit-dialog #settingsExitDescription{position:absolute;bottom:70px;left:24px;right:24px;margin:0;text-align:center;font-size:15px;line-height:1.6;font-weight:400;color:var(--confirm-dim)}
+html[data-endfield=true] body .settings-exit-dialog .rd-actions{position:absolute;bottom:-.5px;left:50%;transform:translate(-50%,calc((var(--confirm-base-height) - var(--confirm-face-height)/2 - var(--confirm-face-inset))/2));display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:center;gap:14px;width:min(854px,calc(100% - 48px));margin:0;flex-wrap:nowrap}
+html[data-endfield=true] .settings-exit-base{box-sizing:border-box;position:relative;height:var(--confirm-base-height);padding:var(--confirm-face-inset) 5px 8px;background:var(--confirm-bg);border:0;border-radius:999px;box-shadow:none;overflow:hidden;isolation:isolate}
+html[data-endfield=true] body .settings-exit-dialog .settings-exit-base>:is(#settingsStay,#settingsDiscard,#settingsSaveLeave).ef-footer-action{width:100%;height:var(--confirm-face-height);min-height:var(--confirm-face-height);font-size:16px;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:12px;padding:6px 11px!important;box-shadow:0 3px 5px #0009,inset 0 0 0 1px #ffffff70}
+html[data-endfield=true] body .settings-exit-dialog .settings-exit-base>:is(#settingsStay,#settingsDiscard).ef-action-secondary{background:var(--ef-secondary-bg)!important;color:var(--ef-secondary-text)!important;border-color:var(--ef-secondary-border)!important;box-shadow:0 3px 5px #0009,inset 0 0 0 1px #ffffff60}
+html[data-endfield=true] .settings-exit-dialog .ef-action-circle{width:32px;height:32px}
+html[data-endfield=true] .settings-exit-dialog .ef-action-secondary>.ef-action-circle{color:var(--ef-secondary-icon)}
+html[data-endfield=true] .settings-exit-dialog .ef-action-secondary>.ef-action-texture{filter:var(--ef-secondary-texture-filter);opacity:.17}
+html[data-endfield=true] .settings-exit-dialog #settingsExitError{position:absolute;top:calc(42% + 54px);left:50%;transform:translateX(-50%);width:min(760px,calc(100% - 64px));margin:0;text-align:center;font-size:13px;line-height:1.65;color:#b52b35}
+html[data-theme=dark_endfield] .settings-exit-dialog #settingsExitError{color:#ffaba0}
+html[data-endfield=true] .settings-exit-dialog #settingsExitError:empty{display:none}
+html[data-endfield=true] .settings-exit-dialog:has(#settingsExitError:not(:empty)){height:auto;min-height:360px;padding-bottom:130px}
+/* Modal status replaces the floating strip; old navigation tooltips/toasts must
+   not sit on top of this confirmation band either. */
+html[data-endfield=true] body:has(.settings-exit-mask) :is(#efUnsavedNotice,.tip-float,#toast){display:none!important}
+@media(max-width:700px){html[data-endfield=true] .settings-exit-dialog{--confirm-face-height:48px;--confirm-base-height:60px;height:284px;padding:48px 28px 110px}html[data-endfield=true] .settings-exit-dialog .rd-title,html[data-endfield=true] .settings-exit-dialog .settings-exit-hint{font-size:19px}html[data-endfield=true] body .settings-exit-dialog .rd-actions{gap:4px;width:calc(100% - 28px);bottom:-.5px}html[data-endfield=true] body .settings-exit-dialog .settings-exit-base>:is(#settingsStay,#settingsDiscard,#settingsSaveLeave).ef-footer-action{font-size:13px;gap:7px;padding:5px 8px!important;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr)}html[data-endfield=true] .settings-exit-dialog .ef-action-circle{width:26px;height:26px}}
+@media(max-width:520px){html[data-endfield=true] .settings-exit-mask{padding:46px 0}html[data-endfield=true] .settings-exit-dialog{height:auto;min-height:0;padding:36px 24px 0}html[data-endfield=true] .settings-exit-dialog #settingsExitDescription{position:static;margin:26px 0 20px}html[data-endfield=true] body .settings-exit-dialog .rd-actions{position:relative;left:auto;bottom:-24px;transform:none;width:min(300px,100%);grid-template-columns:1fr;gap:16px;margin:0 auto}html[data-endfield=true] .settings-exit-copy{position:relative;left:auto;top:auto;transform:none;width:100%}html[data-endfield=true] .settings-exit-dialog #settingsExitError:not(:empty){position:static;transform:none;width:100%;padding:32px 0 0}}
+
+/* Move only the contour paint; typography, masks and controls remain stationary. */
+@keyframes ef-confirm-contour-flow{from{background-position:calc(50% - 32px) calc(50% - 24px)}to{background-position:calc(50% + 48px) calc(50% + 36px)}}
+@media(prefers-reduced-motion:reduce){html[data-endfield=true] .settings-exit-dialog:before,html[data-endfield=true] .settings-exit-dialog:after{animation:none}}
+
+/* Equal side tracks center the caption on the face, not in the leftover space.
+   Keep the existing integrated base and clipped face shadow unchanged. */
+html[data-endfield=true] .settings-exit-dialog .ef-action-circle{justify-self:end}
+html[data-endfield=true] body .settings-exit-dialog .settings-exit-base>:is(#settingsStay,#settingsDiscard,#settingsSaveLeave).ef-footer-action:hover:not(:disabled){outline:2px solid var(--ef-yellow);outline-offset:2px}
+
+/* While pointing at another action, only that action gets the yellow ring.
+   Keyboard focus indication returns when no button is hovered. */
+html[data-endfield=true] body .settings-exit-dialog:has(.ef-footer-action:hover) .settings-exit-base>:is(#settingsStay,#settingsDiscard,#settingsSaveLeave).ef-footer-action:focus-visible:not(:hover){outline:none}

@@ -4,7 +4,7 @@ window.CftDownloadFiles = (() => {
   const h = s => String(s ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   function close() {
     if (!current) return;
-    current.dialog.remove();
+    if(window.CFTModalMotion)CFTModalMotion.remove(current.dialog);else current.dialog.remove();
     document.removeEventListener('keydown', current.keydown, true);
     current = null;
     if (lastFocus?.isConnected) lastFocus.focus();

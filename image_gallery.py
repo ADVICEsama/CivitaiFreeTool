@@ -4,7 +4,7 @@ import json
 import re
 from urllib.parse import urlsplit
 
-from comfy_metadata import PARSER_REVISION, extract_prompts
+from comfy_metadata import PARSER_REVISION, extract_prompts, extract_novelai_metadata
 
 LIMIT = 25 * 1024 * 1024
 
@@ -183,13 +183,18 @@ def generation(image=None, local_path=None, saved=None):
                 meta['comfyPrompt' if key=='prompt' and isinstance(value,dict) else key]=value
         source='原图内嵌 ComfyUI 元数据' if saved is not None else '本地图片 ComfyUI 元数据'
     else:
-        comment=data.get('UserComment') or data.get('comment')
-        if isinstance(comment,bytes):comment=comment.removeprefix(b'ASCII\0\0\0').decode('utf-8',errors='replace')
-        if isinstance(comment,str):
-            try:
-                fields=json.loads(comment,parse_constant=lambda _:None)
-                if isinstance(fields,dict):meta.update(fields);source='原图内嵌 EXIF/Comment 元数据'
-            except (ValueError,TypeError):pass
+        novelai=extract_novelai_metadata(data)
+        if novelai:
+            meta.update(novelai)
+            source='原图内嵌 NovelAI 元数据' if saved is not None else '本地图片 NovelAI 元数据'
+        else:
+            comment=data.get('UserComment') or data.get('Comment') or data.get('comment')
+            if isinstance(comment,bytes):comment=comment.removeprefix(b'ASCII\0\0\0').decode('utf-8',errors='replace')
+            if isinstance(comment,str):
+                try:
+                    fields=json.loads(comment,parse_constant=lambda _:None)
+                    if isinstance(fields,dict):meta.update(fields);source='原图内嵌 EXIF/Comment 元数据'
+                except (ValueError,TypeError):pass
     if isinstance(meta.get('comfyPrompt'),dict):
         for key,value in comfy_generation(meta['comfyPrompt']).items():
             if key in ('prompt','negativePrompt','promptExtractionNote'):meta[key]=value

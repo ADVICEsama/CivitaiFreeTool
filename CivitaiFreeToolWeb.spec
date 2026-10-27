@@ -5,6 +5,7 @@ from pathlib import Path
 import runpy
 native_dll = runpy.run_path(str(Path(SPECPATH)/'scripts'/'build_native.py'))['build'](SPECPATH)
 extra_data = [(str(native_dll), 'native')] if native_dll else []
+extra_data += runpy.run_path(str(Path(SPECPATH)/'scripts'/'bundle_ssl_data.py'))['collect_ssl_runtime_data']()
 a = Analysis(
     ['main_web.py'],
     pathex=[],

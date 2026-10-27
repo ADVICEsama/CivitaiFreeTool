@@ -42,13 +42,13 @@ class StorageTests(unittest.TestCase):
     def test_collision_requires_confirmation_and_keeps_destination_backup(self):
         self.target.mkdir();(self.target/'user_config.json').write_text('{"old":true}',encoding='utf-8')
         result=self.migrate();self.assertTrue(result['need_confirm'])
-        self.assertEqual(json.loads((self.target/'user_config.json').read_text())['old'],True)
+        self.assertEqual(json.loads((self.target/'user_config.json').read_text(encoding='utf-8'))['old'],True)
         result=self.migrate(replace_existing=True);self.assertTrue(result['ok'])
-        self.assertEqual(json.loads((Path(result['backup'])/'user_config.json').read_text())['old'],True)
+        self.assertEqual(json.loads((Path(result['backup'])/'user_config.json').read_text(encoding='utf-8'))['old'],True)
     def test_write_failure_rolls_back_target_and_location(self):
         self.target.mkdir();(self.target/'user_config.json').write_text('{"old":true}',encoding='utf-8')
         with patch.object(storage,'_atomic_record',side_effect=PermissionError('fixture denied')):result=self.migrate(replace_existing=True)
-        self.assertFalse(result['ok']);self.assertTrue(json.loads((self.target/'user_config.json').read_text())['old'])
+        self.assertFalse(result['ok']);self.assertTrue(json.loads((self.target/'user_config.json').read_text(encoding='utf-8'))['old'])
         self.assertFalse((self.source/storage.RECORD_NAME).exists())
     def test_copy_failure_does_not_switch_or_overwrite(self):
         with patch.object(storage.shutil,'copy2',side_effect=OSError('fixture copy failed')):result=self.migrate()
@@ -66,14 +66,14 @@ class StorageTests(unittest.TestCase):
             self.assertFalse(storage.migrate(self.source,target,self.source)['ok'])
     def test_newer_personal_locator_overrides_stale_exe_locator(self):
         self.migrate(use_global=True)
-        record=json.loads(self.global_record.read_text());record.update(data_dir=str(self.source),updated_at=record['updated_at']+1)
+        record=json.loads(self.global_record.read_text(encoding='utf-8'));record.update(data_dir=str(self.source),updated_at=record['updated_at']+1)
         storage._atomic_record(self.global_record,record)
         self.assertEqual(storage.resolve_directory(self.source,True)[0],str(self.source))
     def test_memory_snapshot_is_used_instead_of_stale_disk(self):
         result=self.migrate(snapshot={'user_config.json':{'fixture':'latest'},'download_tasks.json':[{'id':'new'}]})
-        self.assertTrue(result['ok']);self.assertEqual(json.loads((self.target/'user_config.json').read_text())['fixture'],'latest')
-        self.assertEqual(json.loads((self.target/'download_tasks.json').read_text())[0]['id'],'new')
-        self.assertEqual(json.loads((self.source/'user_config.json').read_text())['fixture'],'test')
+        self.assertTrue(result['ok']);self.assertEqual(json.loads((self.target/'user_config.json').read_text(encoding='utf-8'))['fixture'],'latest')
+        self.assertEqual(json.loads((self.target/'download_tasks.json').read_text(encoding='utf-8'))[0]['id'],'new')
+        self.assertEqual(json.loads((self.source/'user_config.json').read_text(encoding='utf-8'))['fixture'],'test')
     def test_snapshot_path_cannot_escape_target(self):
         self.assertFalse(self.migrate(snapshot={'../outside.json':{}})['ok'])
     def test_same_directory_is_noop(self):
@@ -93,7 +93,7 @@ class StorageTests(unittest.TestCase):
         task.status=downloader.ST_PAUSED
         result=api.migrate_data_storage(str(self.target));self.assertTrue(result['ok'])
         self.assertEqual(config.CONFIG_PATH,str(self.target/'user_config.json'))
-        self.assertEqual(json.loads((self.target/'download_tasks.json').read_text())[0]['id'],task.id)
+        self.assertEqual(json.loads((self.target/'download_tasks.json').read_text(encoding='utf-8'))[0]['id'],task.id)
         self.assertTrue((self.source/'user_config.json').exists());self.assertFalse(api._storage_migrating)
 
     def test_detail_cache_write_follows_location_changed_during_fetch(self):

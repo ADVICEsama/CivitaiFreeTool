@@ -8,6 +8,29 @@ from PIL import Image,PngImagePlugin
 
 
 class WorkflowForgeSyncTests(unittest.TestCase):
+    def test_plain_image_has_only_real_dimensions_and_no_inferred_graph(self):
+        for ext in ('.png', '.webp', '.jpg'):
+            with self.subTest(ext=ext), tempfile.TemporaryDirectory() as d:
+                p=Path(d)/('plain'+ext);Image.new('RGB',(80,120)).save(p)
+                r=json.loads(webui.Api.__new__(webui.Api).analyze_workflow(str(p)))
+                self.assertTrue(r['ok']);self.assertEqual(r['source'],'image')
+                self.assertEqual(r['generation_parameters']['宽度'],80)
+                self.assertEqual(r['generation_parameters']['高度'],120)
+                self.assertEqual(r['nodes'],[]);self.assertEqual(r['edges'],[]);self.assertEqual(r['models'],[])
+                self.assertTrue(r['preview_b64']);self.assertIn('不推测',r['prompt_notes'])
+
+    def test_api_enrichment_keeps_ui_socket_order_and_types(self):
+        with tempfile.TemporaryDirectory() as d:
+            p=Path(d)/'both.png';meta=PngImagePlugin.PngInfo()
+            meta.add_text('workflow',json.dumps({'nodes':[{'id':1,'type':'Loader','size':[300,180],'outputs':[{'name':'CLIP','type':'CLIP'},{'name':'MODEL','type':'MODEL'}]},{'id':2,'type':'Sampler','inputs':[{'name':'positive','type':'CONDITIONING','link':8},{'name':'model','type':'MODEL','link':9}]}],'links':[[8,1,0,2,0,'CONDITIONING'],[9,1,1,2,1,'MODEL']]}))
+            meta.add_text('prompt',json.dumps({'2':{'class_type':'Sampler','inputs':{'model':['1',1],'positive':['1',0],'steps':20}}}))
+            Image.new('RGB',(8,8)).save(p,pnginfo=meta)
+            r=json.loads(webui.Api.__new__(webui.Api).analyze_workflow(str(p)))
+            self.assertEqual(r['nodes'][0]['size'],[300,180])
+            ports=r['nodes'][1]['inputs'];self.assertEqual([p['name'] for p in ports],['positive','model'])
+            self.assertEqual(ports[0]['type'],'CONDITIONING');self.assertEqual(ports[1]['slot'],1)
+            self.assertEqual(r['edges'][1],{'source':'1','target':2,'input':'model','slot':1})
+
     def test_forge_prompts_model_lora_and_parameters(self):
         with tempfile.TemporaryDirectory() as d:
             p=Path(d)/'forge.png';meta=PngImagePlugin.PngInfo();meta.add_text('parameters','watercolor landscape <lora:Watercolor:0.8>\nNegative prompt: blurry\nSteps: 24, Sampler: Euler, CFG scale: 7, Seed: 123, Model: Mountain, Size: 512x768')

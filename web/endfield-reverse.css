@@ -1,0 +1,145 @@
+/* Mission-board composition on the existing shared terrain. No opaque page frame. */
+html[data-endfield=true] #page-reverse{--rp-error:#d45b55;height:100%;min-height:0;overflow:hidden}
+html[data-endfield=true] body #page-reverse>.ef-reverse-workspace{height:100%;min-height:0;min-width:0;display:flex;flex-direction:column;gap:14px;padding:6px 8px 8px;background:transparent;border:0;box-shadow:none;overflow:hidden}
+html[data-endfield=true] #page-reverse .title-row{display:flex;gap:12px;align-items:center;margin:0;padding:0;flex:none}
+.rp-kicker{width:100%;font-size:10px;letter-spacing:.12em;color:var(--text-dim)}
+html[data-endfield=true] #page-reverse .rp-title{display:block;margin:0;padding:0;border:0;font-size:27px;font-weight:700;line-height:1.35}
+html[data-endfield=true] #page-reverse .rp-title:before{content:none}
+html[data-endfield=true] #page-reverse .title-row>.hint{margin-left:auto;font-size:11px}
+html[data-endfield=true] #page-reverse .rp-controls{margin:0;gap:10px;flex:none}
+html[data-endfield=true] #page-reverse .rp-grp{gap:8px}
+html[data-endfield=true] #page-reverse .rp-grp-label{font-size:10px;padding-right:4px}
+html[data-endfield=true] #page-reverse .rp-grp+.rp-grp{padding-left:14px}
+html[data-endfield=true] #page-reverse .rp-controls button{min-width:86px;min-height:31px;font-size:11px}
+#rpPhaseTabs{display:flex;align-items:stretch;justify-content:center;gap:0;flex:none;isolation:isolate;margin:0;min-width:0;background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--text) 5%,transparent),transparent)}
+#rpPhaseTabs>button{position:relative;isolation:isolate;flex:0 1 128px;min-width:0;display:grid;grid-template-columns:32px auto;align-items:center;justify-content:center;column-gap:9px;row-gap:2px;min-height:61px;border:0;border-right:1px solid var(--border);border-radius:0;background:transparent;color:var(--text-dim);padding:9px 12px;cursor:pointer;font-family:var(--font)}
+#rpPhaseTabs>button:last-child{border-right:0}
+#rpPhaseTabs>button:before{content:'';position:absolute;inset:0;z-index:-1;background:repeating-linear-gradient(130deg,transparent 0 3px,color-mix(in srgb,currentColor 9%,transparent) 3px 4px)}
+#rpPhaseTabs>button[aria-selected=true]{background:var(--ef-yellow);color:#252b18;clip-path:polygon(8px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 8px)}
+#rpPhaseTabs>button[aria-selected=true]:before{background:url('button-contours.svg') center/220px 80px;opacity:.35}
+#rpPhaseTabs>button:hover{color:var(--text);background-color:color-mix(in srgb,var(--text) 8%,transparent)}
+#rpPhaseTabs>button[aria-selected=true]:hover{color:#252b18;background-color:var(--ef-yellow)}
+#rpPhaseTabs>button:focus-visible{outline:2px solid var(--ef-yellow);outline-offset:-3px}
+.rp-tab-glyph{grid-row:1/3;display:grid;place-items:center;font:bold 13px var(--font)}
+.rp-tab-glyph>.ic{width:26px;height:26px;stroke-width:2.4}
+#rpPhaseTabs b{font-size:13px;font-weight:650;white-space:nowrap}
+#rpPhaseTabs small{font-size:10px;opacity:.7;text-align:left}
+.rp-split{display:grid;grid-template-columns:minmax(250px,34%) minmax(0,1fr);gap:26px;flex:1;min-width:0;min-height:0}
+.rp-queue{display:flex;flex-direction:column;gap:11px;min-height:0;min-width:0}
+.rp-queue-heading{display:flex;justify-content:space-between;align-items:center;gap:10px;border-bottom:1px solid var(--border);padding:0 0 9px}
+.rp-queue-heading h3{font-size:14px;font-weight:650;margin:0}
+.rp-queue-heading h3 small{font-size:10px;margin-left:7px;color:var(--text-dim);font-weight:400}
+#rpAllLabel{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-dim);cursor:pointer}
+#rpAllLabel input{width:15px;height:15px;margin:0;accent-color:var(--ef-yellow)}
+html[data-endfield=true] #page-reverse .rp-tools{display:flex;gap:8px;align-items:center;margin:0;flex:none}
+html[data-endfield=true] #page-reverse .rp-search{flex:1 1 100%;max-width:none;min-width:0;height:34px;background:color-mix(in srgb,var(--surface) 46%,transparent);border:0;border-bottom:1px solid var(--border);border-radius:0;padding:0 8px}
+html[data-endfield=true] #page-reverse .rp-search input{width:0;min-width:0;font-size:11px}
+html[data-endfield=true] #page-reverse .rp-failed-filter{font-size:10px;gap:5px}
+html[data-endfield=true] #page-reverse .rp-failed-filter input{width:15px;height:15px}
+html[data-endfield=true] #page-reverse #rpSelectedCount{font-size:10px;margin-left:auto;white-space:nowrap;color:var(--text-dim)}
+html[data-endfield=true] #page-reverse #rpFilterClear{font-size:10px;min-height:24px}
+html[data-endfield=true] #page-reverse .rp-wrap{min-width:0;min-height:0;flex:1;border:0;border-radius:0;background:transparent;overflow:auto;scrollbar-width:thin;padding:2px 1px 18px;overscroll-behavior:contain}
+html[data-endfield=true] body #rpTable{display:block;table-layout:auto;width:100%!important;min-width:0!important;max-width:100%;border:0;background:transparent}
+html[data-endfield=true] #rpTable :is(colgroup,thead){display:none}
+html[data-endfield=true] #rpTable tbody{display:flex;width:100%;flex-direction:column;gap:14px}
+html[data-endfield=true] body #rpTable tbody tr{--rp-state:#a5aaa5;position:relative;isolation:isolate;display:grid;grid-template-columns:minmax(0,1fr);align-content:center;flex:none;min-height:92px;width:100%;padding:12px 16px 12px 67px;border:1px solid color-mix(in srgb,var(--text) 20%,transparent);border-left:4px solid var(--rp-state);border-radius:2px;background:linear-gradient(100deg,color-mix(in srgb,var(--surface2) 48%,transparent),transparent)!important;box-shadow:none;cursor:pointer;transition:border-color 160ms,background 160ms}
+html[data-endfield=true] body #rpTable tbody tr[data-rp-status=run]{--rp-state:var(--ef-yellow)}
+html[data-endfield=true] body #rpTable tbody tr[data-rp-status=ok]{--rp-state:var(--ef-yellow)}
+html[data-endfield=true] body #rpTable tbody tr[data-rp-status=err]{--rp-state:var(--rp-error)}
+html[data-endfield=true] body #rpTable tbody tr:before{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;background:repeating-linear-gradient(130deg,transparent 0 3px,color-mix(in srgb,var(--text) 6%,transparent) 3px 4px);opacity:0;transition:opacity 160ms}
+html[data-endfield=true] body #rpTable tbody tr:is(.rp-current,:hover):before{opacity:1}
+html[data-endfield=true] body #rpTable tbody tr.rp-current{border-color:var(--text-dim);border-left-color:var(--ef-yellow);background:linear-gradient(90deg,color-mix(in srgb,var(--ef-yellow) 24%,transparent),transparent 60%)!important;box-shadow:0 2px 8px #0002}
+html[data-endfield=true] body #rpTable tbody tr.sel-row:not(.rp-current){border-left-color:var(--ef-yellow);box-shadow:none;background:color-mix(in srgb,var(--ef-yellow) 9%,transparent)!important}
+html[data-endfield=true] body #rpTable tbody tr:focus-visible{outline:2px solid var(--ef-yellow);outline-offset:0}
+html[data-endfield=true] #rpTable tbody td{display:none;border:0!important;padding:0!important;min-width:0;max-width:100%;background:transparent!important;color:var(--text);white-space:normal;text-align:left;height:auto}
+html[data-endfield=true] #rpTable tbody .c-file{display:block;overflow:hidden}
+html[data-endfield=true] #rpTable .rp-fname{font-size:15px;line-height:1.5;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html[data-endfield=true] #rpTable .rp-fdir{font-size:10px;line-height:1.6;margin-top:3px;opacity:.75}
+.rp-list-mission{position:absolute!important;left:7px;top:50%;transform:translateY(-50%);width:52px;height:52px}
+html[data-endfield=true] #rpTable .rp-status-cell{display:block;min-width:0;padding-top:3px!important}
+html[data-endfield=true] #rpTable .rp-st{border:0;padding:0;border-radius:0;font-size:10px;line-height:1.5;color:var(--text-dim)}
+html[data-endfield=true] #rpTable .rp-st.err{color:var(--danger)}
+html[data-endfield=true] #rpTable .rp-check-col{display:none}
+html[data-endfield=true] #rpTable .rp-row-check{display:block;width:16px;height:16px;margin:0;accent-color:var(--ef-yellow)}
+html[data-endfield=true] #rpTable .rp-empty{border:0;background:none!important;padding:30px 10px;cursor:default}
+html[data-endfield=true] #rpTable .rp-empty td{display:block;padding:0!important;line-height:1.8}
+#rpInspector{min-width:0;min-height:0;display:flex;flex-direction:column;position:relative;padding:0 0 0 2px}
+.rp-inspector-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;text-align:center;padding:30px;color:var(--text-dim);gap:12px}
+.rp-inspector-empty>span>.ic{width:58px;height:58px;opacity:.25;stroke-width:1}
+.rp-inspector-empty h3{font-size:20px;color:var(--text);margin:0}
+.rp-inspector-empty p{font-size:12px;max-width:360px;line-height:1.9;margin:0}
+.rp-dossier-heading{padding-bottom:12px;border-bottom:1px solid var(--border);flex:none}
+.rp-dossier-heading>small{font-size:9px;letter-spacing:.1em;color:var(--text-dim)}
+.rp-dossier-heading>h2{margin:8px 0 4px;font-size:26px;font-weight:700;line-height:1.4;overflow-wrap:anywhere}
+.rp-dossier-status{display:flex;align-items:center;gap:6px;min-width:0;flex-wrap:wrap;line-height:1.6}
+.rp-dossier-status>img{width:25px;height:25px;object-fit:contain;flex:none}
+.rp-dossier-status>strong{font-size:12px;color:var(--text);font-weight:600}
+.rp-dossier-status>span:not(.rp-mission-mark){font-size:10px;color:var(--text-dim);overflow-wrap:anywhere;min-width:0;flex:1 1 130px;margin-left:4px}
+.rp-dossier-status[data-status=err]>strong{color:var(--danger)}
+.rp-dossier-scroll{flex:1;min-height:0;min-width:0;overflow:auto;scrollbar-width:thin;padding:16px 10px 12px 0;overscroll-behavior:contain}
+.rp-dossier-hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(130px,35%);gap:24px;align-items:start;margin-bottom:14px}
+.rp-dossier-facts{margin:0;min-width:0}
+.rp-dossier-facts>div{display:grid;grid-template-columns:76px minmax(0,1fr);gap:8px;align-items:center;border-bottom:1px solid color-mix(in srgb,var(--border) 50%,transparent);padding:12px 0;font-size:13px;line-height:1.5}
+.rp-dossier-facts dt{color:var(--text-dim);font-size:11px}
+.rp-dossier-facts dd{margin:0;font-weight:600;overflow-wrap:anywhere}
+.rp-cover{position:relative;aspect-ratio:4/5;max-height:265px;min-width:0;overflow:hidden;background:color-mix(in srgb,var(--surface2) 34%,transparent);mask-image:linear-gradient(#000 80%,transparent)}
+.rp-cover>img{display:block;width:100%;height:100%;object-fit:contain;object-position:top center}
+.rp-cover-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--text-dim);border-top:1px solid var(--border);border-bottom:1px solid var(--border);mask-image:none;min-height:150px}
+.rp-cover-empty .ic{width:45px;height:45px;opacity:.3}
+.rp-cover-empty small{font-size:10px}
+.rp-dossier-section{padding:16px 0;border-top:1px solid var(--border);min-width:0}
+.rp-dossier-section h3{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:650;margin:0 0 12px}
+.rp-dossier-section h3>.ic{width:16px;height:16px;color:var(--text-dim)}
+.rp-dossier-section h3>small{color:var(--text-dim);font-size:10px;font-weight:400}
+#rpTriggerWords{display:flex;flex-wrap:wrap;gap:6px}
+.rp-trigger{display:inline-flex;align-items:center;gap:7px;max-width:100%;min-width:0;overflow-wrap:anywhere;padding:6px 10px;border:0;border-radius:0;background:color-mix(in srgb,var(--text) 8%,transparent);color:var(--text);font:12px var(--font);cursor:pointer}
+.rp-trigger>.ic{width:13px;height:13px;opacity:.65;flex:none}
+.rp-trigger:is(:hover,:focus-visible){outline:1px solid var(--ef-yellow);outline-offset:1px}
+.rp-muted{font-size:11px;color:var(--text-dim);margin:0}
+.rp-description{font-size:13px;line-height:1.9;white-space:pre-line;overflow-wrap:anywhere;margin:0;color:var(--text-dim)}
+.rp-file-facts :is(p,small){font-size:10px;line-height:1.8;margin:0;color:var(--text-dim);overflow-wrap:anywhere;white-space:normal}
+.rp-dossier-actions{padding-top:12px;flex:none;min-width:0;border-top:1px solid var(--border)}
+.rp-dossier-actions>span{display:block;font-size:10px;color:var(--text-dim);line-height:1.8;margin-bottom:9px}
+.rp-dossier-actions>div{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;min-width:0}
+html[data-endfield=true] #rpInspector .rp-dossier-actions .btn{min-width:110px;min-height:36px;font-size:12px}
+@media(max-width:1100px){.rp-split{grid-template-columns:minmax(220px,36%) minmax(0,1fr);gap:18px}html[data-endfield=true] #page-reverse .rp-grp-label{display:none}html[data-endfield=true] #page-reverse .title-row>.hint{display:none}.rp-dossier-hero{gap:14px;grid-template-columns:minmax(0,1fr) minmax(100px,35%)}.rp-dossier-facts>div{grid-template-columns:64px minmax(0,1fr);font-size:12px}.rp-dossier-heading>h2{font-size:23px}html[data-endfield=true] #rpTable .rp-fname{font-size:13px}html[data-endfield=true] body #rpTable tbody tr{padding-left:55px}.rp-list-mission{left:4px;width:44px;height:44px}#rpPhaseTabs>button{padding:8px;column-gap:4px}#rpPhaseTabs b{font-size:12px}}
+@media(max-width:760px){html[data-endfield=true] #page-reverse{overflow:auto}html[data-endfield=true] body #page-reverse>.ef-reverse-workspace{height:auto;min-height:100%;overflow:visible;gap:12px;padding:4px}.rp-split{grid-template-columns:minmax(0,1fr);gap:22px;flex:none}.rp-queue{height:350px}#rpInspector{min-height:480px}.rp-dossier-scroll{flex:none;max-height:none;overflow:visible}.rp-dossier-actions{margin-top:auto}.rp-dossier-hero{grid-template-columns:minmax(0,1fr) minmax(100px,32%)}#rpPhaseTabs>button{flex:1;grid-template-columns:minmax(0,1fr);justify-items:center;row-gap:4px;padding:8px 4px;min-height:66px}.rp-tab-glyph{grid-row:1}.rp-tab-glyph .ic{width:20px;height:20px}#rpPhaseTabs b{font-size:10px}#rpPhaseTabs small{position:absolute;right:5px;top:4px;font-size:8px}.rp-dossier-heading>h2{font-size:23px}html[data-endfield=true] #page-reverse .rp-controls button{min-width:80px}html[data-endfield=true] #page-reverse .rp-grp+.rp-grp{border:0;padding:0}.rp-dossier-section h3{flex-wrap:wrap}.rp-dossier-heading{padding-bottom:12px}}
+@media(prefers-reduced-motion:reduce){html[data-endfield=true] body #rpTable tbody tr,html[data-endfield=true] body #rpTable tbody tr:before{transition:none}}
+
+
+.rp-preview-note{margin-left:auto;font-size:9px;color:var(--text-dim)}
+
+/* The source target is centered at pixel (35,37) in its 72px canvas, not (36,36).
+   Offset the image by (+1,-1)/72, so both source target and CSS wave share the exact
+   wrapper center. Gold = matched or running (only running radiates), red = error, others = gray.
+   One alpha mask makes both gray states identical and avoids white-hot recolored
+   centers. The extra ring starts at the existing outer ring (radius 18/72), never
+   inside the target. The underlying target is completely stationary. */
+.rp-mission-mark{position:relative;display:inline-block;flex:none;isolation:isolate;pointer-events:none;--mission-ink:#a6aaa7;filter:none;opacity:1}
+.rp-mission-mark:is([data-mission-state=run],[data-mission-state=ok]){--mission-ink:#f5da4d}
+.rp-mission-mark[data-mission-state=err]{--mission-ink:var(--rp-error)}
+.rp-mission-mark[data-mission-state=paused]{opacity:1}
+.rp-mission-mark>.rp-mission-icon{display:block;width:100%;height:100%;position:relative;z-index:1;transform:translate(1.388889%,-1.388889%);background:var(--mission-ink);mask:url('mission-icons/icon_mission_yellow.png') center/contain no-repeat}
+.rp-mission-mark:before,.rp-mission-mark:after{box-sizing:border-box;content:'';position:absolute;inset:25%;border:1.3px solid var(--mission-ink);border-radius:50%;box-shadow:0 0 4px color-mix(in srgb,var(--mission-ink) 65%,transparent);pointer-events:none;z-index:0;opacity:0;animation:none;transform-origin:50% 50%}
+.rp-mission-mark[data-mission-state=run]:before,.rp-mission-mark[data-mission-state=run]:after{animation:rp-mission-radiate 2.6s cubic-bezier(.12,.5,.4,1) infinite;will-change:transform,opacity}
+.rp-mission-mark[data-mission-state=run]:after{animation-delay:-1.3s}
+.rp-tab-mission:before,.rp-tab-mission:after{animation:none!important;opacity:0!important}
+.rp-mission-mark[data-mission-state=paused]:before,.rp-mission-mark[data-mission-state=paused]:after{animation:none}
+.rp-tab-mission{width:32px;height:32px}
+.rp-status-mission{width:28px;height:28px}
+@keyframes rp-mission-radiate{0%{transform:scale(1);opacity:0}12%{transform:scale(1.12);opacity:.65}100%{transform:scale(2.1);opacity:0}}
+#page-reverse:not(.active) .rp-mission-mark:before,#page-reverse:not(.active) .rp-mission-mark:after,#rpTable tr[data-rp-visible=false] .rp-mission-mark:before,#rpTable tr[data-rp-visible=false] .rp-mission-mark:after{animation-play-state:paused}
+html[data-endfield=true] body #rpTable tbody tr.rp-has-cover:after{content:'';position:absolute;inset:0;z-index:-2;pointer-events:none;background-image:var(--rp-row-cover);background-size:cover;background-position:35% 38%;opacity:.4;mask-image:linear-gradient(90deg,#000 0,#000b 28%,transparent 85%)}
+html[data-theme=light_endfield] body #rpTable tbody tr.rp-has-cover:after{opacity:.26}
+@media(max-width:760px){.rp-tab-mission{width:26px;height:26px}}
+@media(prefers-reduced-motion:reduce){.rp-mission-mark:before,.rp-mission-mark:after{animation:none;opacity:0;will-change:auto}}
+
+.rp-dossier-status>.rp-status-mission{flex:0 0 28px;width:28px;height:28px;margin:0}
+
+/* Selection is the full gold edge, not a separate checkbox or nested frame. */
+html[data-endfield=true] body #rpTable tbody tr.sel-row{border-color:var(--ef-yellow);border-left-color:var(--ef-yellow);box-shadow:none}
+html[data-endfield=true] #rpTable .rp-st.err,.rp-dossier-status[data-status=err]>strong{color:var(--rp-error)}
+@media(prefers-reduced-motion:reduce){.rp-mission-mark[data-mission-state=run]:before,.rp-mission-mark[data-mission-state=run]:after{animation:none;opacity:0;will-change:auto}}
+
+/* Static states are quieter without moving their row's text or target center. */
+.rp-mission-mark:not([data-mission-state=run])>.rp-mission-icon{position:absolute;left:9%;top:9%;width:82%;height:82%}

@@ -31,6 +31,7 @@ window.CftWorkflow = (() => {
   function select(index) {
     const n = nodes[index];
     if (!n) { q('#wfNodeDetail').innerHTML = '<div class="wf-empty">未识别到节点参数</div>'; return; }
+    window.CFTWorkflowAtlas?.prepareSelection(n);
     selected = index;
     q('#wfNodes').querySelectorAll('.wf-node').forEach((row,i) => row.setAttribute('aria-pressed', String(i === index)));
     const params = Array.isArray(n.parameters) ? n.parameters.map(p => [p.name,p.value]) : (n.widgets || []).map((w,i) => [`参数 ${i+1}`,w]);
@@ -42,6 +43,7 @@ window.CftWorkflow = (() => {
       (n.parameter_names_known === false && params.length ? '<p class="wf-hint">UI 工作流未提供参数名，按原始顺序显示，不猜测含义。</p>' : '') +
       (ports.length ? '<h4>输入与关联</h4>' + pairs(ports.map(p => [p.name, p.source != null ? `节点 #${p.source} · 输出 ${p.slot ?? 0}` : p.link != null ? `连接 #${p.link}` : p.value ?? p.type ?? '未连接'])) : '') +
       (outputs.length ? '<h4>输出</h4>' + pairs(outputs.map(p => [p.name,p.type || '未标注类型'])) : '');
+    window.CFTWorkflowAtlas?.selected(n,index);
   }
   function overview(r, total, matches, status) {
     const hit = matches.filter(m => m.local).length;
@@ -54,6 +56,7 @@ window.CftWorkflow = (() => {
     alert.textContent = status === 'error' ? '无法完成本地匹配，请重新分析。未将未知结果标为缺失。' : status === 'done' ? `缺少 ${missing} 个引用模型，可搜索下载或检查模型目录。` : '正在核对本地模型与哈希，请稍候…';
   }
   async function render(r) {
+    window.CFTWorkflowAtlas?.beforeRender();
     const token = ++revision;
     q('#wfResult').style.display = 'block';
     workspace.classList.add('has-result');
@@ -62,13 +65,13 @@ window.CftWorkflow = (() => {
     const refs = Array.isArray(r.models) ? r.models : [];
     adapt();
     q('#wfNodeSection').open = workspace.dataset.layout === 'columns';
-    q('#wfResultTitle').innerHTML = `<div class="wf-file">${r.preview_b64 ? `<img class="wf-file-preview" src="data:image/jpeg;base64,${h(r.preview_b64)}" alt="工作流图片预览"/>` : icon('file')}<span class="wf-file-name" title="${h(r.file)}">${h(r.file || '工作流文件')}</span><span class="wf-tags"><span class="wf-tag">${/\.png$/i.test(r.file || '') ? 'PNG' : 'JSON'}</span><span class="wf-tag">${r.source==='forge' ? 'Forge / A1111 参数' : r.has_workflow ? '内嵌 Workflow' : 'API / 提示词'}</span></span><span class="wf-file-actions"><button class="btn" id="wfRechoose">重新选择</button><button class="btn btn-primary" id="wfReanalyze">重新分析</button></span></div>`;
+    q('#wfResultTitle').innerHTML = `<div class="wf-file wf-quick-drop"><button type="button" id="wfQuickPick" class="wf-source-pick" aria-label="选择图片或工作流，也可拖入替换">${r.preview_b64 ? `<img class="wf-file-preview" src="data:image/jpeg;base64,${h(r.preview_b64)}" alt="上传图片缩略图"/>` : `<span class="wf-file-placeholder">${icon('image')}</span>`}<span class="wf-source-copy"><strong class="wf-file-name" title="${h(r.file)}">${h(r.file || '工作流文件')}</strong><small>拖入图片替换 · 点击选择</small></span></button><span class="wf-tags"><span class="wf-tag">${(/\.(png|webp|jpe?g)$/i.exec(r.file||'')?.[1]||'JSON').toUpperCase()}</span><span class="wf-tag">${r.source==='novelai'?'NovelAI 生成参数':r.source==='forge'?'Forge / A1111 参数':r.source==='image'?'图片信息 · 无节点元数据':r.has_workflow?'内嵌 Workflow':'API / 提示词'}</span></span></div>`;
     q('#wfNodeCount').textContent = `${nodes.length} 个`;
     q('#wfModelCount').textContent = `${refs.length} 个`;
     q('#wfNodeSearch').value = '';
     q('#wfNodes').innerHTML = nodes.length ? nodes.map((n,i) => `<button type="button" class="wf-node" data-index="${i}" data-search="${h([n.id,n.type,n.title,...(n.widgets || []),...(n.parameters || []).map(p=>text(p.value))].join(' ').toLowerCase())}" aria-pressed="${i === selected}">${icon('grid')}<span class="wf-node-copy"><span class="wf-node-type">${h(n.title || n.type || '未命名节点')}</span>${n.title && n.title !== n.type ? `<span class="wf-node-sub">${h(n.type)}</span>` : ''}</span><span class="wf-node-id">#${h(n.id ?? i+1)}</span></button>`).join('') : '<div class="wf-empty">未识别到节点</div>';
     filter(); select(selected);
-    if(r.source==='forge')q('#wfNodeDetail').innerHTML='<div class="wf-detail-title">Forge / A1111 生成参数</div>'+pairs(Object.entries(r.generation_parameters||{}));
+    if(['forge','novelai'].includes(r.source))q('#wfNodeDetail').innerHTML='<div class="wf-detail-title">'+(r.source==='novelai'?'NovelAI':'Forge / A1111')+' 生成参数</div>'+pairs(Object.entries(r.generation_parameters||{}));
     window.CftWorkflowGraph.render(r);
     const pos = r.positive || r.pos_prompt || '', neg = r.negative || r.neg_prompt || '';
     wfLastPromptText = [pos ? '正向:\n'+pos : '',neg ? '负向:\n'+neg : ''].filter(Boolean).join('\n\n');
@@ -79,6 +82,7 @@ window.CftWorkflow = (() => {
       setStatus(ok ? '提示词已复制' : '复制失败，可选中文字手动复制');
     }));
     q('#wfModels').innerHTML = '<div class="wf-hint">本地匹配计算中…</div>';
+    window.CFTWorkflowAtlas?.render(r);
     overview(r,refs.length,[],'loading');
     try {
       const raw = refs.length ? decode(await api.call('workflow_model_matches',refs)) : [];

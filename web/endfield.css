@@ -1,0 +1,46 @@
+/* Endfield presentation only. Original controls, IDs and event handlers stay intact. */
+html[data-endfield=true]{--ef-yellow:#ffef01;--ef-cyan:#007d91;--ef-green:#237a45;--ef-magenta:#a82f77;--ef-context:var(--ef-yellow);--radius:0;--radius-sm:0;--ef-ease:cubic-bezier(.16,1,.3,1)}
+html[data-theme=dark_endfield]{--ef-cyan:#58dbe7;--ef-green:#6cdb91;--ef-magenta:#ef82c1}
+html[data-endfield=true] body{font-family:var(--font);font-weight:500;background:var(--bg)}
+html[data-endfield=true] body .nav{position:relative;isolation:isolate;background:color-mix(in srgb,var(--surface) 88%,transparent);border-right:1px solid var(--border)}
+html[data-endfield=true] body .nav:before{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;background:url('terrain-contours.svg') 40% 40% / 950px 950px;opacity:.15;animation:ef-contour-drift 36s ease-in-out infinite alternate;mask-image:linear-gradient(transparent,#000 20%,#000)}
+html[data-theme=dark_endfield] body .nav:before{filter:invert(1)}
+@keyframes ef-contour-drift{from{background-position:40% 40%}to{background-position:52% 48%}}
+html[data-endfield=true] .sidebar-brand{min-height:58px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+html[data-endfield=true] .sidebar-name{font-weight:700}html[data-endfield=true] .sidebar-name small{font-weight:400}
+html[data-endfield=true] body .nav-tab{border-radius:0;min-height:46px;font-weight:500}
+html[data-endfield=true] body .nav-tab.active .ic{color:#24280a!important}html[data-endfield=true] body .nav-tab.active:after{display:none}
+html[data-endfield=true] .ef-icon{stroke-linecap:square!important;stroke-linejoin:miter!important;stroke-width:1.8}
+html[data-endfield=true] body .content{position:relative;z-index:1;background:transparent}
+html[data-endfield=true] body .page>.card{border:0;border-radius:0;background:color-mix(in srgb,var(--surface) 88%,transparent);padding:24px;box-shadow:none}
+html[data-endfield=true] body .page-title{font-size:calc(27px * var(--type-scale,1));font-weight:700;letter-spacing:-.025em;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+html[data-endfield=true] .page-title:before{content:attr(data-ef-label);display:block;font:500 10px 'HarmonyOS Sans SC',sans-serif;letter-spacing:.16em;color:var(--text-dim);margin-bottom:7px}
+html[data-endfield=true] body :is(.input,select,.settings-tab,.ctx-menu,.ms-card,.dialog){border-radius:0!important}
+html[data-endfield=true] body .btn{font-weight:500;min-height:32px}
+html[data-endfield=true] body .btn-primary{background:var(--ef-yellow)!important;color:#24280a!important;border-color:transparent;clip-path:polygon(0 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%)}
+html[data-endfield=true] body .ms-card{border:1px solid var(--border);background:var(--surface);box-shadow:none}
+html[data-endfield=true] body .ms-card.checked{outline:2px solid var(--primary);outline-offset:-2px}
+html[data-endfield=true] body #detailPanel{background:var(--surface);box-shadow:none;border-left:1px solid var(--border)}
+html[data-endfield=true] body #detailPanel .dt-head{background:var(--ef-yellow);color:#24280a;padding:18px}
+html[data-endfield=true] body #detailPanel .dt-head :is(.dt-head-t,.dt-author,.icon-btn){color:#24280a;background:transparent}
+html[data-endfield=true] body #detailPanel .detail-title{font-weight:700;font-size:22px;color:var(--text);line-height:1.4}
+html[data-endfield=true] body #detailPanel .detail-left{background:var(--surface2)}
+html[data-endfield=true] :is(.author-chip,.wf-node-name,.rd-home,.about-up-item b){color:var(--text)}
+html[data-endfield=true] .settings-workspace{grid-template-columns:170px minmax(0,850px);justify-content:center;gap:38px}
+html[data-endfield=true] .setting-row{padding:24px 0;gap:30px;border-bottom:1px solid var(--border)}
+html[data-endfield=true] .setting-copy label{font-weight:500}html[data-endfield=true] .setting-copy p{font-weight:400;line-height:1.8}
+html[data-endfield=true] .settings-tab.active{border-left:3px solid var(--primary);background:var(--surface2)}
+html[data-endfield=true] body #settingsActions{background:var(--surface);box-shadow:none;border-top:1px solid var(--border)}
+html[data-endfield=true] #btnSaveSettings{background:var(--ef-yellow)!important;color:#24280a!important}
+#efTerrain{display:none;position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+/* One continuous projected scene under both columns: no separate flat sidebar map. */
+html[data-endfield=true] body .nav{z-index:1;background:color-mix(in srgb,var(--surface) 56%,transparent)}
+html[data-endfield=true] body .nav:before{display:none}
+#efTerrain canvas{display:block;width:100%;height:100%}
+html[data-endfield=true] #efTerrain{display:block}html[data-endfield=true] #bg{visibility:hidden}
+html[data-endfield=true] :is([data-ef-state=downloading],.wf-status.loading,.wf-search){color:var(--ef-cyan)!important}
+html[data-endfield=true] :is([data-ef-state=done],.wf-status.done,.wf-model-local){color:var(--ef-green)!important}
+html[data-endfield=true] [data-ef-state=update]{color:var(--ef-magenta)!important}
+html[data-endfield=true] :is(.dlg-title,.modal-title){border-top:3px solid var(--ef-context);font-weight:700}
+/* About presentation lives in endfield-about.css. */
+/* Download workbench presentation lives in endfield-downloads.css. */
