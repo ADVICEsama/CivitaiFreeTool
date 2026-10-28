@@ -12,3 +12,9 @@
 8. `python scripts/release_github.py <版本> docs/releases/v<版本>.md --assets-dir <附件目录>` 只发布完整、哈希匹配的附件：先草稿，上传并验证远端 SHA256/大小，全部通过后才公开。出错保持草稿，不把“建了 Release”当作完成。
 
 认证使用环境变量或 Git Credential Manager，认证信息不写日志、源码、清单或聊天。Firefox 包未签名，仅支持临时加载；永久安装需要 Mozilla 签名。
+
+## 项目说明与首页
+
+应用功能变化时同步维护根 README.md 与 docs/index.html；不要在首页叠加旧版本教程。历史细节放 CHANGELOG.md 和 docs/releases/。首页截图由 scripts/capture_public_docs.cjs 使用隔离示例生成，不能发布用户模型、凭据和个人路径。docs/ 通过 main 分支 GitHub Pages 发布；提交后核对 Pages 构建和线上内容。仅文档变更不重打或覆盖已发布的应用二进制附件。
+
+本机发布目录遵循 `发布\v<版本号>`：`CivitaiFreeToolWeb-<版本号>.exe`、`CivitaiFreeTool-EXE-v<版本号>.zip`、`CivitaiFreeTool-ChromeExtension-v<版本号>.zip`、`CivitaiFreeTool-FirefoxExtension-v<版本号>.zip`。保留旧版本目录。
