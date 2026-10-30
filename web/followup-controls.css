@@ -75,3 +75,10 @@ html[data-endfield=true] body.external-model-detail-open #detailPanel .detail-ti
 html[data-endfield=true] body.external-model-detail-open #detailPanel .dt-desc-cn{border-radius:0;background:color-mix(in srgb,var(--text) 6%,transparent);border-left:3px solid var(--ef-yellow)}
 /* An image opened from model information must cover its parent dialog. */
 html body .image-viewer{z-index:200000}
+/* Wide standalone workspaces use the available band, not a fixed 1320px island. */
+@media(min-width:701px) and (min-height:551px){
+ html[data-endfield=true] body .folder-picker.ef-folder-band{height:min(900px,calc(var(--app-height,100dvh) - 120px))!important;max-height:calc(var(--app-height,100dvh) - 120px)!important;padding-inline:clamp(24px,4%,96px)!important}
+ html[data-endfield=true] .ef-folder-band .fp-layout{grid-template-columns:minmax(0,1.35fr) minmax(0,1fr)}
+ html[data-endfield=true] .model-style-dialog{padding-inline:clamp(24px,4%,96px);height:min(840px,84dvh)}
+ html[data-endfield=true] .update-whitelist-dialog{height:min(860px,calc(100dvh - 110px));padding-inline:clamp(24px,4%,96px)}
+}

@@ -2,9 +2,9 @@
 
 **把模型下载、整理和生成信息，放在一个工作台。**
 
-免费的 Civitai / Hugging Face 模型下载与本地模型管理工具。当前 Windows 稳定版 **3.0.8**，浏览器扩展 **1.3.1**。
+免费的 Civitai / Hugging Face 模型下载与本地模型管理工具。当前 Windows 稳定版 **3.0.9**，浏览器扩展 **1.3.1**。
 
-[下载 Windows 版](https://github.com/ADVICEsama/CivitaiFreeTool/releases/tag/v3.0.8) · [项目首页](https://advicesama.github.io/CivitaiFreeTool/) · [所有版本](https://github.com/ADVICEsama/CivitaiFreeTool/releases) · [反馈问题](https://github.com/ADVICEsama/CivitaiFreeTool/issues)
+[下载 Windows 版](https://github.com/ADVICEsama/CivitaiFreeTool/releases/tag/v3.0.9) · [项目首页](https://advicesama.github.io/CivitaiFreeTool/) · [所有版本](https://github.com/ADVICEsama/CivitaiFreeTool/releases) · [反馈问题](https://github.com/ADVICEsama/CivitaiFreeTool/issues)
 
 ![终末地暗色工作台示例](docs/screenshots/overview-models-v3.png)
 
@@ -14,14 +14,14 @@
 
 | 需要什么 | 下载入口 |
 | --- | --- |
-| Windows 10 / 11 主程序 | [便携 ZIP](https://github.com/ADVICEsama/CivitaiFreeTool/releases/download/v3.0.8/CivitaiFreeTool-Windows-v3.0.8.zip) · [独立 EXE](https://github.com/ADVICEsama/CivitaiFreeTool/releases/download/v3.0.8/CivitaiFreeToolWeb-3.0.8.exe) |
-| Chrome / Edge 插件 | [Chrome ZIP](https://github.com/ADVICEsama/CivitaiFreeTool/releases/download/v3.0.8/CivitaiFreeTool-ChromeExtension-v3.0.8.zip) |
-| Firefox 插件 | [Firefox ZIP](https://github.com/ADVICEsama/CivitaiFreeTool/releases/download/v3.0.8/CivitaiFreeTool-FirefoxExtension-v3.0.8.zip)（未签名，临时加载） |
-| 对应源码与校验 | [源码 ZIP](https://github.com/ADVICEsama/CivitaiFreeTool/releases/download/v3.0.8/CivitaiFreeTool-Source-v3.0.8.zip) · [SHA256SUMS](https://github.com/ADVICEsama/CivitaiFreeTool/releases/download/v3.0.8/SHA256SUMS.txt) |
+| Windows 10 / 11 主程序 | [便携 ZIP](https://github.com/ADVICEsama/CivitaiFreeTool/releases/download/v3.0.9/CivitaiFreeTool-Windows-v3.0.9.zip) · [独立 EXE](https://github.com/ADVICEsama/CivitaiFreeTool/releases/download/v3.0.9/CivitaiFreeToolWeb-3.0.9.exe) |
+| Chrome / Edge 插件 | [Chrome ZIP](https://github.com/ADVICEsama/CivitaiFreeTool/releases/download/v3.0.9/CivitaiFreeTool-ChromeExtension-v3.0.9.zip) |
+| Firefox 插件 | [Firefox ZIP](https://github.com/ADVICEsama/CivitaiFreeTool/releases/download/v3.0.9/CivitaiFreeTool-FirefoxExtension-v3.0.9.zip)（未签名，临时加载） |
+| 对应源码与校验 | [源码 ZIP](https://github.com/ADVICEsama/CivitaiFreeTool/releases/download/v3.0.9/CivitaiFreeTool-Source-v3.0.9.zip) · [SHA256SUMS](https://github.com/ADVICEsama/CivitaiFreeTool/releases/download/v3.0.9/SHA256SUMS.txt) |
 
 - ZIP 解压后运行 `CivitaiFreeToolWeb.exe`，不是安装向导；Windows 窗口使用 WebView2。
 - **更新前正常退出旧版**，再替换 EXE。保留原有配置、任务、历史和缓存，不需要重新下载模型。
-- 请从本仓库 Releases 获取文件。上表对应 3.0.8；后续版本见「所有版本」。
+- 请从本仓库 Releases 获取文件。上表对应 3.0.9；后续版本见「所有版本」。
 - Linux / macOS 使用源码与 Qt 后端，见 [平台说明](LINUX.md)；本文的 EXE、原生窗框与桌面悬浮窗说明针对 Windows。
 
 ## 三步开始
@@ -102,6 +102,6 @@ Windows 发布构建使用 PyInstaller 与 `CivitaiFreeToolWeb.spec`；构建环
 python -m unittest discover -s tests -p "test_*.py"
 ```
 
-[更新日志](CHANGELOG.md)保留历史版本；[发布说明](docs/releases/v3.0.8.md)记录本版修复；[发布流程](docs/RELEASING.md)供维护者使用。反馈问题请附版本、操作步骤与脱敏日志，不要附账号凭据。
+[更新日志](CHANGELOG.md)保留历史版本；[发布说明](docs/releases/v3.0.9.md)记录本版修复；[发布流程](docs/RELEASING.md)供维护者使用。反馈问题请附版本、操作步骤与脱敏日志，不要附账号凭据。
 
 字体与素材请遵守各自授权，见 [字体声明](docs/FONT-NOTICES.md)。终末地风格为视觉参考，本项目不代表《明日方舟：终末地》官方，也不承诺对所有元数据和来源提供完整兼容。
