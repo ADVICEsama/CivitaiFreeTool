@@ -38,7 +38,7 @@
    }
    function tick(now=performance.now()){frame=0;if(disposed||document.hidden||!enabled||!visible||window.CFTMotion?.paused())return;
      const flowing=flow&&!(motion.matches||window.CFTMotion?.reduced());
-     if(now-lastFrame<1000/Math.max(1,fps)){frame=requestAnimationFrame(tick);return;}
+     if(now-lastFrame<1000/Math.max(1,window.CFTMotion?.effectiveFps(fps)??fps)){frame=requestAnimationFrame(tick);return;}
      lastFrame=now;phase=now*.00013;
      x+=(tx-x)*.22;y+=(ty-y)*.22;
      const moving=Math.abs(tx-x)+Math.abs(ty-y)>=.002;
@@ -50,6 +50,7 @@
    function pointer(e){if(!visible||!interactive||(motion.matches||window.CFTMotion?.reduced())||!enabled||document.hidden||e.pointerType==='touch')return;const r=host.getBoundingClientRect();tx=Math.max(-1,Math.min(1,(e.clientX-r.left)/Math.max(r.width,1)*2-1));ty=Math.max(-1,Math.min(1,(e.clientY-r.top)/Math.max(r.height,1)*2-1));request();}
    function resize(){const r=host.getBoundingClientRect();width=Math.round(r.width);height=Math.round(r.height);const dpr=Math.min(devicePixelRatio||1,1.5);canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);request();}
    const intersection=new IntersectionObserver(entries=>{visible=entries[0]?.isIntersecting!==false;if(!visible){cancelAnimationFrame(frame);frame=0;}else request();});intersection.observe(host);
+   window.addEventListener('cft:activity-changed',request);
    window.addEventListener('cft:config-saved',reset);
    window.addEventListener('cft:window-moving',request);
    const observer=new ResizeObserver(resize);observer.observe(host);
@@ -57,7 +58,7 @@
    document.addEventListener('pointermove',pointer,{passive:true});document.documentElement.addEventListener('pointerleave',reset);document.addEventListener('visibilitychange',reset);motion.addEventListener('change',reset);
    loadGeometry().then(data=>{if(disposed)return;contours=data;request();}).catch(()=>{canvas.dataset.ready='error';});
    return {reset,setFlow(value){flow=!!value;reset();},setFps(value){fps=Math.max(1,Math.min(24,Number(value)||24));},setInteractive(value){interactive=!!value;reset();},setEnabled(value){enabled=!!value;if(!enabled&&frame){cancelAnimationFrame(frame);frame=0;}if(enabled){resize();request();}},
-     destroy(){disposed=true;cancelAnimationFrame(frame);observer.disconnect();intersection.disconnect();window.removeEventListener('cft:config-saved',reset);window.removeEventListener('cft:window-moving',request);themeObserver.disconnect();document.removeEventListener('pointermove',pointer);document.documentElement.removeEventListener('pointerleave',reset);document.removeEventListener('visibilitychange',reset);motion.removeEventListener('change',reset);canvas.remove();}};
+     destroy(){window.removeEventListener('cft:activity-changed',request);disposed=true;cancelAnimationFrame(frame);observer.disconnect();intersection.disconnect();window.removeEventListener('cft:config-saved',reset);window.removeEventListener('cft:window-moving',request);themeObserver.disconnect();document.removeEventListener('pointermove',pointer);document.documentElement.removeEventListener('pointerleave',reset);document.removeEventListener('visibilitychange',reset);motion.removeEventListener('change',reset);canvas.remove();}};
  }
  window.CFTTerrain={mount};
 })();

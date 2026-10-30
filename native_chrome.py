@@ -20,7 +20,29 @@ class IntegratedChrome:
         self.webview.Dock = getattr(DockStyle, 'None')
         self.layout_handler = lambda *_: self.layout()
         form.Resize += self.layout_handler
+        self.activity_handler = self.on_activity
+        form.Activated += self.activity_handler
+        form.Deactivate += self.activity_handler
+        form.Resize += self.activity_handler
+        form.VisibleChanged += self.activity_handler
         self.layout()
+        self.on_activity()
+
+    def on_activity(self, *_):
+        # UI-thread, fire-and-forget; never wait for JavaScript while switching windows.
+        try:
+            from System.Windows.Forms import Form, FormWindowState
+            active = Form.ActiveForm == self.form
+            hidden = not self.form.Visible or self.form.WindowState == FormWindowState.Minimized
+            core = self.webview.CoreWebView2
+            if core is not None:
+                core.ExecuteScriptAsync(
+                    "document.documentElement.dataset.nativeWindowActive='" + str(active).lower()
+                    + "';document.documentElement.dataset.nativeWindowHidden='" + str(hidden).lower()
+                    + "';window.dispatchEvent(new Event('cft:native-activity'));"
+                )
+        except Exception:
+            pass
 
     def on_size_move(self, *_):
         # Already on the WinForms UI thread: fire-and-forget IPC only. Synchronous
@@ -61,6 +83,10 @@ class IntegratedChrome:
     def close(self):
         from System.Windows.Forms import DockStyle, FormBorderStyle
         self.form.Resize -= self.layout_handler
+        self.form.Activated -= self.activity_handler
+        self.form.Deactivate -= self.activity_handler
+        self.form.Resize -= self.activity_handler
+        self.form.VisibleChanged -= self.activity_handler
         self.frame.SizeMoveChanged -= self.move_handler
         self.frame.RestoreFrame()
         self.form.FormBorderStyle=FormBorderStyle.Sizable

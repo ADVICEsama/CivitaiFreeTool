@@ -2,7 +2,24 @@
 (()=>{'use strict';const root=document.documentElement,revision=1;let dialog=null,saving=false,timer=0;
  const presets={extreme:{performance_profile:'extreme',ui_animations:true,pause_effects_while_dragging:false,endfield_parallax:true,effects_fps_limit:0,terrain_pixel_ratio:2},high:{performance_profile:'high',ui_animations:true,pause_effects_while_dragging:true,endfield_parallax:true,effects_fps_limit:60,terrain_pixel_ratio:1.5},balanced:{performance_profile:'balanced',ui_animations:true,pause_effects_while_dragging:true,endfield_parallax:true,effects_fps_limit:30,terrain_pixel_ratio:1},low:{performance_profile:'low',ui_animations:false,pause_effects_while_dragging:true,endfield_parallax:false,effects_fps_limit:30,terrain_pixel_ratio:1}};
  const profileName=name=>({full:'high',static:'low'})[name]||name;
- const paused=()=>root.dataset.nativeWindowMoving==='true'&&root.dataset.pauseDragEffects!=='false';
+ let backgroundMode='foreground';
+ const paused=()=>backgroundMode==='hidden'||root.dataset.nativeWindowMoving==='true'&&root.dataset.pauseDragEffects!=='false';
+ const effectiveFps=value=>backgroundMode==='background'?Math.min(Number(value)||360,10):Number(value);
+ const backgroundAnimations=new Set();
+ function syncActivity(){
+  const hidden=document.hidden||root.dataset.nativeWindowHidden==='true';
+  const focused=root.dataset.nativeWindowActive===undefined?document.hasFocus():root.dataset.nativeWindowActive==='true';
+  const next=hidden?'hidden':focused?'foreground':'background';
+  if(next===backgroundMode)return;
+  backgroundMode=next;root.dataset.effectActivity=next;
+  if(next!=='foreground'){for(const a of document.getAnimations()){if(a.playState==='running'&&a.effect?.getComputedTiming().endTime===Infinity){backgroundAnimations.add(a);a.pause();}}}
+  else {for(const a of backgroundAnimations){if(!reduced()&&!paused()&&a.playState==='paused'&&a.effect?.target?.isConnected)a.play();}backgroundAnimations.clear();}
+  window.dispatchEvent(new CustomEvent('cft:activity-changed',{detail:{mode:next}}));
+ }
+ document.addEventListener('visibilitychange',syncActivity);
+ window.addEventListener('focus',syncActivity);window.addEventListener('blur',syncActivity);
+ window.addEventListener('cft:native-activity',syncActivity);
+ window.addEventListener('cft:ui-ready',syncActivity);
  const reduced=()=>root.dataset.uiAnimations==='false'||matchMedia('(prefers-reduced-motion: reduce)').matches;
  function sync(cfg){window.cftEffectsFpsLimit=Number(cfg.effects_fps_limit??60);root.dataset.pauseDragEffects=String(cfg.pause_effects_while_dragging!==false);root.dataset.uiAnimations=String(cfg.ui_animations!==false);root.dataset.performanceProfile=cfg.performance_profile||'custom';root.dataset.terrainPixelRatio=String(cfg.terrain_pixel_ratio||1.5);if(reduced())for(const a of document.getAnimations()){if(a.playState!=='running')continue;try{const end=a.effect?.getComputedTiming().endTime;if(Number.isFinite(end))a.finish();else a.pause();}catch{}}}
  async function savePatch(patch){saving=true;try{const ok=await api.call('save_config',patch);if(!ok)throw Error('save');Object.assign(state.cfg,patch);sync(state.cfg);applyUiAppearance();window.CFTEndfield?.reset();window.dispatchEvent(new CustomEvent('cft:config-saved',{detail:patch}));for(const [k,v] of Object.entries(patch)){const e=document.querySelector('#settingsForm [data-key="'+k+'"]');if(e){e.type==='checkbox'?e.checked=!!v:e.value=v;if(typeof markSettingSaved==='function')markSettingSaved(k);}}window.CFTEndfieldSettings?.refresh();setStatus('性能设置已保存');return true;}catch{for(const k of Object.keys(patch)){const e=document.querySelector('#settingsForm [data-key="'+k+'"]');if(e)e.type==='checkbox'?e.checked=state.cfg[k]!==false:e.value=state.cfg[k]??'custom';}setStatus('性能设置保存失败，原设置未改变');return false;}finally{saving=false;}}
@@ -19,6 +36,6 @@
  const dragAnimations=new Set();
  window.addEventListener('cft:window-moving',()=>{if(paused()){for(const a of document.getAnimations()){if(a.playState==='running'){dragAnimations.add(a);a.pause();}}}else{for(const a of dragAnimations){if(!reduced()&&a.playState==='paused'&&a.effect?.target?.isConnected)a.play();}dragAnimations.clear();}});
  const ob=document.querySelector('#obMask');if(ob)new MutationObserver(schedule).observe(ob,{attributes:true,attributeFilter:['style','class','hidden']});
- window.CFTMotion={reduced,paused,sync,applyPatch,applyProfile,open,presets};window.addEventListener('cft:ui-ready',schedule);
+ window.CFTMotion={reduced,paused,effectiveFps,activity:()=>backgroundMode,sync,applyPatch,applyProfile,open,presets};window.addEventListener('cft:ui-ready',schedule);
  document.addEventListener('mousedown',e=>{if(e.button!==0||root.dataset.windowButtons!=='true'||!e.target.closest?.('.pywebview-drag-region')||e.target.closest('button,input,select,textarea,a,[role=button]'))return;e.preventDefault();e.stopImmediatePropagation();api.call('window_begin_move').then(r=>{if(r?.ok===false)setStatus(r.msg||'原生拖动暂不可用');}).catch(()=>setStatus('原生拖动失败，请重试'));},true);window.addEventListener('cft:config-saved',()=>{sync(state.cfg);schedule();});
 })();

@@ -3,3 +3,6 @@ html[data-ui-animations=false] *,html[data-ui-animations=false] *:before,html[da
 html[data-ui-animations=false] .wf-flow-dot{display:none!important}
 
 @layer cft-drag-pause {html[data-native-window-moving=true][data-pause-drag-effects=true] *,html[data-native-window-moving=true][data-pause-drag-effects=true] *:before,html[data-native-window-moving=true][data-pause-drag-effects=true] *:after{animation-play-state:paused!important}}
+
+/* Suspend decorative CSS animations while the app is not foreground. */
+html[data-effect-activity=background] *,html[data-effect-activity=background] *:before,html[data-effect-activity=background] *:after,html[data-effect-activity=hidden] *,html[data-effect-activity=hidden] *:before,html[data-effect-activity=hidden] *:after{animation-play-state:paused!important}

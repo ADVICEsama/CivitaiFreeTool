@@ -156,12 +156,12 @@
   let rafId = 0, lastDraw = 0, running=false;
   function draw(ts) {
     rafId=0;if(!running)return;
-    const cap=Number(window.cftEffectsFpsLimit ?? 60);
+    const cap=window.CFTMotion?.effectiveFps(Number(window.cftEffectsFpsLimit ?? 60))??Number(window.cftEffectsFpsLimit ?? 60);
     if(!cap||ts-lastDraw>=1000/cap-.5){lastDraw=ts;gl.uniform1f(uTime,ts*.001);gl.uniform2f(uRes,canvas.width,canvas.height);gl.drawArrays(gl.TRIANGLE_STRIP,0,4);}
     rafId=requestAnimationFrame(draw);
   }
   function syncLoop(){running=!document.hidden&&!window.CFTMotion?.reduced()&&!window.CFTMotion?.paused()&&canvas.offsetParent!==null&&getComputedStyle(canvas).display!=='none'&&!document.getElementById('imageViewer');if(!running&&rafId){cancelAnimationFrame(rafId);rafId=0;}if(running&&!rafId)rafId=requestAnimationFrame(draw);canvas.dataset.loopRunning=String(running);}
-  document.addEventListener('visibilitychange',syncLoop);window.addEventListener('cft:window-moving',syncLoop);window.addEventListener('cft:config-saved',syncLoop);window.addEventListener('cft:page-changed',syncLoop);
+  window.addEventListener('cft:activity-changed',syncLoop);document.addEventListener('visibilitychange',syncLoop);window.addEventListener('cft:window-moving',syncLoop);window.addEventListener('cft:config-saved',syncLoop);window.addEventListener('cft:page-changed',syncLoop);
   new MutationObserver(syncLoop).observe(canvas,{attributes:true,attributeFilter:['style']});
   new MutationObserver(syncLoop).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme','data-ui-animations']});
   new MutationObserver(syncLoop).observe(document.body,{attributes:true,attributeFilter:['class'],childList:true});syncLoop();
