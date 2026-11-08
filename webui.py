@@ -15,7 +15,7 @@ import uuid
 
 import webview
 
-APP_VERSION = "3.0.9"
+APP_VERSION = "3.0.10"
 
 from functools import wraps
 

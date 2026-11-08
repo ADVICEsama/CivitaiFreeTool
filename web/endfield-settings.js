@@ -1,27 +1,29 @@
 /* Theme-scoped accessible presentation; native selects still own values and change events. */
 (()=>{'use strict';
- const root=document.documentElement,form=document.getElementById('settingsForm');let menu=null,owner=null,index=0;
+ const root=document.documentElement,form=document.getElementById('settingsForm');let menu=null,owner=null,index=0,positionFrame=0;
  const active=()=>['light_endfield','dark_endfield'].includes(root.dataset.theme);
- function close(restore=false){if(!menu)return;const button=owner?.nextElementSibling;menu.remove();menu=null;owner=null;button?.setAttribute('aria-expanded','false');if(restore&&button?.isConnected)button.focus();}
+ function close(restore=false){cancelAnimationFrame(positionFrame);positionFrame=0;if(!menu)return;const button=owner?.nextElementSibling;if(owner)delete owner.parentElement.dataset.selectDirection;menu.remove();menu=null;owner=null;button?.setAttribute('aria-expanded','false');if(restore&&button?.isConnected)button.focus();}
  function position(){
   if(!menu||!owner)return;
   const r=owner.nextElementSibling.getBoundingClientRect(),zoom=Number(root.style.zoom)||1;
   const rowHeight=menu.firstElementChild?.getBoundingClientRect().height/zoom||48,count=owner.options.length;
-  const below=(innerHeight-r.bottom-8)/zoom,above=(r.top-8)/zoom;
+  const gap=-1;const below=(innerHeight-r.bottom-gap-8)/zoom,above=(r.top-gap-8)/zoom;
   const opensBelow=below>=Math.min(180,(count*rowHeight+9));
   const available=Math.max(0,opensBelow?below:above),padding=9,cap=Math.min(300,available);
   // Always show a half-row hint while more options exist; no fake hint at the true end.
   let height=count*rowHeight+padding;
   if(height>cap){const whole=Math.max(0,Math.floor((cap-padding)/rowHeight-.5));height=padding+(whole+.5)*rowHeight;}
   height=Math.min(height,available);
-  const top=opensBelow?r.bottom-1:Math.max(8,r.top-height*zoom);
+  const top=opensBelow?r.bottom+gap:Math.max(8,r.top-gap-height*zoom);
   Object.assign(menu.style,{left:Math.max(8,Math.min(r.left,innerWidth-r.width-8))/zoom+'px',top:top/zoom+'px',width:r.width/zoom+'px',paddingTop:opensBelow?'9px':'0',paddingBottom:opensBelow?'0':'9px',height:height+'px',maxHeight:height+'px'});
   menu.dataset.partial=String(count*rowHeight+padding>height+.5);
+  menu.dataset.direction=opensBelow?'below':'above';
+  owner.parentElement.dataset.selectDirection=menu.dataset.direction;
  }
  function highlight(){if(!menu)return;menu.querySelectorAll('[role=option]').forEach((el,i)=>el.classList.toggle('focused',i===index));menu.children[index]?.scrollIntoView({block:'nearest'});}
  function select(i){if(!owner||owner.options[i]?.disabled)return;const original=owner;original.value=original.options[i].value;close(true);original.dispatchEvent(new Event('change',{bubbles:true}));refresh();}
- function open(el){if(owner===el){close(true);return;}close();owner=el;menu=document.createElement('div');menu.className='ef-settings-select-menu';menu.id='efSettingsSelectMenu';menu.setAttribute('role','listbox');menu.setAttribute('aria-label',el.getAttribute('aria-label')||'选择设置');menu.tabIndex=-1;index=el.selectedIndex;
- [...el.options].forEach((o,i)=>{const item=document.createElement('div');item.setAttribute('role','option');item.setAttribute('aria-selected',String(o.selected));item.setAttribute('aria-disabled',String(o.disabled));item.textContent=o.textContent;if(o.selected){const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('class','ef-select-check');svg.setAttribute('aria-hidden','true');const path=document.createElementNS(svg.namespaceURI,'path');path.setAttribute('d','M6 12.5 10 17 18 6');svg.append(path);item.append(svg);}item.addEventListener('click',()=>select(i));menu.append(item);});document.body.append(menu);el.nextElementSibling.setAttribute('aria-expanded','true');position();menu.focus();menu.scrollTop=Math.min(Math.max(0,index*(menu.firstElementChild?.offsetHeight||48)-Math.floor(menu.clientHeight/(menu.firstElementChild?.offsetHeight||48)/2)*(menu.firstElementChild?.offsetHeight||48)),menu.scrollHeight-menu.clientHeight);
+ function open(el){if(el.disabled)return;if(owner===el){close(true);return;}close();owner=el;menu=document.createElement('div');menu.className='ef-settings-select-menu';menu.id='efSettingsSelectMenu';menu.setAttribute('role','listbox');menu.setAttribute('aria-label',el.getAttribute('aria-label')||'选择设置');menu.tabIndex=-1;index=el.selectedIndex;
+ [...el.options].forEach((o,i)=>{const item=document.createElement('div');item.setAttribute('role','option');item.setAttribute('aria-selected',String(o.selected));item.setAttribute('aria-disabled',String(o.disabled));item.textContent=o.textContent;if(o.selected){const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('class','ef-select-check');svg.setAttribute('aria-hidden','true');const path=document.createElementNS(svg.namespaceURI,'path');path.setAttribute('d','M6 12.5 10 17 18 6');svg.append(path);item.append(svg);}item.addEventListener('click',()=>select(i));menu.append(item);});document.body.append(menu);el.nextElementSibling.setAttribute('aria-expanded','true');position();menu.focus({preventScroll:true});const openedAt=performance.now();const track=()=>{if(!menu)return;position();if(performance.now()-openedAt<600)positionFrame=requestAnimationFrame(track);};positionFrame=requestAnimationFrame(track);menu.scrollTop=Math.min(Math.max(0,index*(menu.firstElementChild?.offsetHeight||48)-Math.floor(menu.clientHeight/(menu.firstElementChild?.offsetHeight||48)/2)*(menu.firstElementChild?.offsetHeight||48)),menu.scrollHeight-menu.clientHeight);
  menu.addEventListener('keydown',e=>{if(['Escape','Tab'].includes(e.key)){close(e.key==='Escape');if(e.key==='Escape')e.preventDefault();return;}if(['ArrowDown','ArrowUp','Home','End','Enter',' '].includes(e.key)){e.preventDefault();e.stopPropagation();if(e.key==='Enter'||e.key===' '){select(index);return;}index=e.key==='Home'?0:e.key==='End'?el.options.length-1:Math.max(0,Math.min(el.options.length-1,index+(e.key==='ArrowDown'?1:-1)));highlight();}});
  }
  function refreshKeys(){for(const button of form?.querySelectorAll('.shortcut-key')||[]){const names={ArrowUp:'↑',ArrowDown:'↓',ArrowLeft:'←',ArrowRight:'→',Space:'␣',Delete:'DEL',Enter:'ENTER',Escape:'ESC',Control:'CTRL',Shift:'SHIFT',Alt:'ALT',Meta:'WIN'};button.dataset.keyDisplay=(button.value||'').split('+').map(key=>names[key]||key).join(' + ');}}
@@ -68,8 +70,8 @@
   attachSelection(nav);syncSelection(animate);
  }
  function refresh(){if(!form)return;refreshNavigation();refreshKeys();
- for(const el of form.querySelectorAll('select[data-key]:not([hidden])')){if(!el.classList.contains('ef-select-native')){el.classList.add('ef-select-native');const button=document.createElement('button');button.type='button';button.className='ef-select-trigger';button.setAttribute('aria-haspopup','listbox');button.setAttribute('aria-expanded','false');button.setAttribute('aria-controls','efSettingsSelectMenu');button.setAttribute('aria-label',el.getAttribute('aria-label')||'选择');button.innerHTML='<span></span>';el.after(button);button.addEventListener('click',()=>open(el));button.addEventListener('keydown',e=>{if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();open(el);}});}
- const button=el.nextElementSibling;button.querySelector('span').textContent=el.selectedOptions[0]?.textContent||'请选择';button.disabled=el.disabled;
+ for(const el of document.querySelectorAll('#settingsForm select[data-key]:not([hidden]),select[data-cft-language]')){if(!el.classList.contains('ef-select-native')){el.classList.add('ef-select-native');const button=document.createElement('button');button.type='button';button.className='ef-select-trigger';button.setAttribute('aria-haspopup','listbox');button.setAttribute('aria-expanded','false');button.setAttribute('aria-controls','efSettingsSelectMenu');button.setAttribute('aria-label',el.getAttribute('aria-label')||'选择');button.innerHTML='<span></span>';el.after(button);button.addEventListener('click',()=>open(el));button.addEventListener('keydown',e=>{if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();open(el);}});}
+ const button=el.nextElementSibling,value=el.selectedOptions[0]?.textContent||'请选择';if(button.querySelector('span').textContent!==value)button.querySelector('span').textContent=value;button.disabled=el.disabled;button.setAttribute('aria-label',el.getAttribute('aria-label')||'选择');
  }
  for(const label of form.querySelectorAll('.setting-switch'))if(!label.querySelector('.ef-switch-off')){const off=document.createElement('span');off.className='ef-switch-off';off.textContent='关闭';off.setAttribute('aria-hidden','true');label.append(off);}
  }
@@ -77,7 +79,7 @@
  form?.addEventListener('click',e=>{if(e.target.closest('#resetAppearance'))queueMicrotask(refresh);});
  form?.addEventListener('keydown',e=>{const tab=e.target.closest('[data-settings-category]');if(!active()||!tab||!['ArrowLeft','ArrowRight'].includes(e.key))return;e.preventDefault();const tabs=[...form.querySelectorAll('[data-settings-category]')],next=tabs[(tabs.indexOf(tab)+(e.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length];next.click();next.focus();});
  document.addEventListener('pointerdown',e=>{if(menu&&!menu.contains(e.target)&&!owner.nextElementSibling.contains(e.target))close();},true);
- document.addEventListener('scroll',e=>{if(menu&&!menu.contains(e.target))close();},true);window.addEventListener('resize',()=>{close();syncSelection(false);});window.addEventListener('cft:zoom',()=>syncSelection(false));
+ document.addEventListener('scroll',e=>{if(menu&&!menu.contains(e.target))close();},true);window.addEventListener('resize',()=>{close();syncSelection(false);});window.addEventListener('cft:zoom',()=>{close();syncSelection(false);});
  new MutationObserver(()=>{close();refresh();}).observe(root,{attributes:true,attributeFilter:['data-theme']});
  window.addEventListener('cft:config-saved',refresh);
  const reduced=matchMedia('(prefers-reduced-motion: reduce)');let entryAnimations=[];

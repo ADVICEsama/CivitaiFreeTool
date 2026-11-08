@@ -35,6 +35,7 @@
 <link rel="stylesheet" href="onboarding.css"/>
 <link rel="stylesheet" href="followup-controls.css"/>
 <link rel="stylesheet" href="performance-preferences.css"/>
+<link rel="stylesheet" href="i18n.css"/>
 </head>
 <body>
 <div id="startupStage" role="status" aria-live="polite"><h1>CFT</h1><p>正在连接本地服务与加载设置…</p><div class="startup-track" aria-hidden="true"><i></i></div><button type="button" hidden>重新加载界面</button></div>
@@ -504,7 +505,7 @@
       <div class="ob-mini-bar" id="obMiniBar">
         <span class="ob-mini-title" id="obMiniTitle"></span>
         <button class="btn" id="obMiniContinue"><span class="emj">▶️</span> ▶继续引导</button>
-        <button class="btn" id="obMiniClose" title="结束引导"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-x"/></svg></button>
+        <button class="btn" id="obMiniClose" data-i18n-title="ob.close" title="结束引导"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-x"/></svg></button>
       </div>
       <div class="ob-main" id="obMain">
       <div class="ob-art" aria-hidden="true"><span>YOUR MODELS<br/>YOUR WORKBENCH</span><img src="about-character-v1.png" alt=""/></div><div class="ob-heading"><img class="ob-wordmark" src="about-wordmark.svg" alt="CivitaiFreeTool 下载器"/><small>GETTING STARTED / <b id="obStepNumber">01</b></small></div><div class="ob-title" id="obTitle">模型收藏，从这里开始 <span aria-hidden="true">↗</span></div>
@@ -523,6 +524,9 @@
   </div>
 </main>
 
+<script src="i18n-catalog.js"></script>
+<script src="i18n-onboarding.js"></script>
+<script src="i18n.js"></script>
 <script src="shader.js"></script>
 <script src="workbench.js"></script>
 <script src="font-routing.js"></script>

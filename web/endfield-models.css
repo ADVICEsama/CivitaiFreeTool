@@ -424,3 +424,19 @@ html[data-endfield=true] .ef-model-filters:before{content:'';position:absolute;z
 
 /* Skip painting and layout of offscreen cards; keep a stable waterfall placeholder. */
 #mmMasonry>.ms-card{content-visibility:auto;contain-intrinsic-size:auto 260px}
+
+/* Update is a model status, not a warning: unboxed like the Favorite thumb above it. */
+html[data-endfield=true] :is(.ms-upd,.mm-upd).model-update-marker{
+ display:inline-grid;place-items:center;box-sizing:border-box;width:27px;height:27px;
+ padding:3px;border:0;border-radius:0;background:none!important;box-shadow:none;
+ color:var(--ef-yellow);text-decoration:none;line-height:1;flex:none;
+ filter:drop-shadow(0 1px 1px #18201cbb);transition:filter 120ms ease,opacity 120ms ease;
+}
+html[data-endfield=true] .model-update-marker>.ef-model-update-icon{
+ display:block;width:100%;height:100%;margin:0;fill:currentColor;stroke:none;
+}
+html[data-endfield=true] .ms-card>.ms-upd.model-update-marker{top:36px;right:7px;z-index:9}
+html[data-endfield=true] :is(#mmMasonry,.model-card-gallery)[data-model-view=grid] .ms-card>.ms-upd.model-update-marker{right:4px;top:33px}
+html[data-endfield=true] .mm-upd.model-update-marker{width:23px;height:23px;margin-right:5px;align-self:center}
+html[data-endfield=true] .model-update-marker:hover{filter:drop-shadow(0 0 3px #ffef0170)}
+html[data-endfield=true] .model-update-marker:focus-visible{outline:2px solid var(--ef-yellow);outline-offset:2px}

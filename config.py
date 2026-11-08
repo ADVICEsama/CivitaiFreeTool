@@ -126,6 +126,7 @@ DEFAULTS = {
     "ui_text_size": "standard",         # small / standard / large / xlarge / huge；不改变界面缩放
     "integrated_titlebar": True,        # 应用内窗口栏；失败保留标准系统框
     "window_appearance": "theme",       # theme / mica / mica_alt / system / external
+    "ui_language": "zh-CN",          # Interface locale; independent from model text
     "ui_font": "",                    # 空=软件默认；其他=已安装的本地字体族
     "ui_font_scripts": {},             # 各文字用途的独立字体回退列表
     "ui_font_picker_view": {"expanded": False, "scope": "default"},  # 字库分配视图，不包含字体草稿
@@ -286,6 +287,7 @@ def normalize_model_card_styles(value):
 
 def normalize_ui_preferences(cfg):
     normalize_theme_preferences(cfg)
+    if cfg.get("ui_language") not in ("zh-CN", "zh-TW", "en", "ja", "ko", "de", "fr", "es", "pt-BR", "ru"): cfg["ui_language"] = "zh-CN"
     profile = cfg.get("performance_profile")
     cfg["performance_profile"] = {"full": "high", "static": "low"}.get(profile, profile) if isinstance(profile, str) else "custom"
     if cfg.get("performance_profile") not in ("extreme", "high", "balanced", "low", "custom"): cfg["performance_profile"] = "custom"

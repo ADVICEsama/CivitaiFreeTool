@@ -2,7 +2,7 @@
 html[data-endfield=true] #obMask:not(.mini){z-index:22000;backdrop-filter:blur(9px);background:#080b0dbb}
 html[data-endfield=true] #obMask:not(.mini) .ob-card{width:100%;max-width:100%;max-height:calc(var(--app-height,100dvh) - 110px);overflow:visible;border:0;border-block:1px solid var(--border);border-radius:0;padding:0;background:var(--bg);box-shadow:0 10px 24px #0006;position:relative;isolation:isolate}
 html[data-endfield=true] #obMask:not(.mini) .ob-card:before{content:'';position:absolute;inset:0 0 auto;height:3px;background:var(--ef-band-stripe);z-index:3}
-html[data-endfield=true] #obMask:not(.mini) .ob-main{box-sizing:border-box;position:relative;isolation:isolate;width:min(1160px,100%);max-height:inherit;min-height:560px;margin:auto;padding:34px 42px 40px;overflow:hidden}
+html[data-endfield=true] #obMask:not(.mini) .ob-main{box-sizing:border-box;position:relative;isolation:isolate;width:100%;max-width:1160px;max-height:inherit;min-height:560px;margin:0 auto;align-self:center;padding:34px 42px 40px;overflow:hidden}
 .ob-art{position:absolute;inset:0;z-index:-1;overflow:hidden;pointer-events:none;background:repeating-linear-gradient(135deg,transparent 0 3px,color-mix(in srgb,var(--text) 3%,transparent) 3px 4px)}
 .ob-art:before,.ob-art:after{content:'';position:absolute;inset:0 auto 0 0;width:40%;opacity:.1;background:url('terrain-contours.svg') center/650px 650px;mask-image:linear-gradient(90deg,#000,transparent)}
 .ob-art:after{left:auto;right:0;transform:rotate(180deg)}
@@ -27,3 +27,41 @@ html[data-endfield=true] .ob-themes{display:flex;gap:15px;flex-wrap:wrap;margin-
 html[data-endfield=true] #obMask.mini .ob-card{border-radius:0;border-top:2px solid var(--ef-yellow);background:var(--bg)}
 @media(max-width:850px){html[data-endfield=true] #obMask:not(.mini) .ob-main{padding:25px 25px 34px;min-height:510px}.ob-art>img{opacity:.13;right:-40px;width:50%;top:190px}html[data-endfield=true] #obBody,html[data-endfield=true] .ob-steps,html[data-endfield=true] .ob-actions{width:100%}.ob-heading{margin-bottom:18px}.ob-wordmark{width:190px}}
 @media(max-width:520px){html[data-endfield=true] #obMask:not(.mini) .ob-card{max-height:calc(var(--app-height,100dvh) - 40px)}html[data-endfield=true] #obMask:not(.mini) .ob-main{min-height:0;padding:20px 17px 24px}.ob-heading>small{font-size:8px}.ob-heading>small b{font-size:17px}.ob-wordmark{width:155px}html[data-endfield=true] #obBody{min-height:230px;max-height:40vh}html[data-endfield=true] .ob-step{font-size:9px}html[data-endfield=true] .ob-actions{flex-wrap:wrap;gap:8px}html[data-endfield=true] .ob-actions>.btn{min-width:110px}html[data-endfield=true] .ob-page-grid{grid-template-columns:1fr}.ob-art>img{width:75%}}
+
+/* Modal content must never cover native caption controls or become horizontally stranded. */
+html[data-onboarding-open=true] body #windowControls{z-index:220001}
+html[data-onboarding-open=true] #windowDragSurface{z-index:220000}
+html[data-endfield=true] #obMask:not(.mini) .ob-card{min-width:0;max-height:calc(var(--app-height,100dvh) - 48px)}
+html[data-endfield=true] #obMask:not(.mini) .ob-main{min-width:0;min-height:0;flex:0 1 auto;overflow-x:hidden;overflow-y:auto;scrollbar-width:thin}
+html[data-endfield=true] #obBody{min-height:120px;flex:1 0 120px}
+html[data-endfield=true] #obMask .ob-heading>*{min-width:0}
+html[data-endfield=true][data-narrow-layout=true] #obMask .ob-heading{flex-wrap:wrap;gap:10px;margin-bottom:14px}
+html[data-endfield=true][data-narrow-layout=true] #obLanguagePicker{width:100%;justify-content:flex-start;margin-left:0}
+html[data-endfield=true][data-narrow-layout=true] #obMask :is(#obBody,.ob-steps,.ob-actions){width:100%}
+html[data-endfield=true][data-narrow-layout=true] #obMask .ob-art>img{opacity:.13;right:0;width:45%}
+html[data-endfield=true][data-narrow-layout=true] #obMask .ob-title{font-size:23px;margin-bottom:12px}
+html[data-endfield=true] #obMask.mini .ob-card{box-sizing:border-box;width:320px;max-width:100%;min-width:0;flex:0 1 320px;max-height:calc(var(--app-height,100dvh) - 110px)}
+html[data-endfield=true] #obMask.mini .ob-main{display:none!important}
+
+/* Bound the compact helper by its own viewport, not the full editorial dialog width. */
+html[data-endfield=true] #obMask.mini{box-sizing:border-box;width:100%;max-width:100%;overflow:clip}
+html[data-endfield=true] #obMask.mini .ob-mini-bar{min-width:0;flex-wrap:wrap}
+html[data-endfield=true] #obMask.mini .ob-mini-title{min-width:0;flex:1 1 100%}
+html[data-endfield=true] #obMask.mini #obMiniContinue{min-width:0;max-width:calc(100% - 48px);white-space:normal}
+html[data-endfield=true] #obMask.mini #obMiniClose{flex:none;margin-left:auto}
+/* The normal guide reflows against the available content width even at high UI zoom. */
+html[data-endfield=true] #obMask:not(.mini) .ob-main{container-type:inline-size}
+@container(max-width:760px){
+ #obMain .ob-heading{flex-wrap:wrap;gap:10px;margin-bottom:14px}
+ #obMain #obLanguagePicker{width:100%;margin-left:0;justify-content:flex-start}
+ html[data-endfield=true] #obMain :is(#obBody,.ob-steps,.ob-actions){width:100%}
+ #obMain .ob-art>img{opacity:.13;right:0;width:45%}
+}
+
+@media(max-height:800px){
+ html[data-endfield=true] #obMask:not(.mini) .ob-main{padding-top:20px;padding-bottom:22px}
+ #obMain .ob-heading{margin-bottom:14px}
+ #obMain .ob-wordmark{width:170px}
+ html[data-endfield=true] #obMain .ob-title{margin-bottom:12px}
+ html[data-endfield=true] #obMain .ob-steps{margin-bottom:12px}
+}

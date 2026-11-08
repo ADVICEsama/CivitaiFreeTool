@@ -83,3 +83,7 @@ html[data-theme=light_endfield] .ef-number-stepper>.ef-number-step:hover:not(:di
 html[data-endfield=true] .ef-footer-action>.ef-action-circle{justify-self:end}
 html[data-endfield=true] body .ef-footer-action:hover:not(:disabled){outline:2px solid var(--ef-yellow)!important;outline-offset:2px!important}
 html[data-endfield=true] body :is(#settingsActions,.font-picker-footer,.rd-actions,.ms-footer,.ob-actions,.ob-actions2,.upd-footer,.model-style-actions):has(.ef-footer-action:hover) .ef-footer-action:focus-visible:not(:hover){outline:none!important}
+
+/* LINE Seed Sans Bold: original single weight; digits retain existing routing. */
+@font-face{font-family:'CFT LINE Latin';src:url('fonts/LINESeedSans_Bd.otf') format('opentype');font-weight:700;font-style:normal;font-display:swap;unicode-range:U+0041-005A,U+0061-007A,U+00C0-024F,U+1E00-1EFF}
+html[data-endfield=true]{--font:'CFT LINE Latin','CFT Endfield Latin','HarmonyOS Sans SC','Microsoft JhengHei UI','Microsoft YaHei UI',sans-serif}

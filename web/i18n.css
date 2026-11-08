@@ -1,0 +1,29 @@
+.cft-language-picker{display:flex;align-items:center;justify-content:flex-end;gap:12px;font-size:12px;min-width:0;padding:8px 0;flex-wrap:wrap}.cft-language-picker select{width:220px;max-width:100%;height:36px;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:0}.cft-language-picker:focus-within{outline:1px solid var(--ef-yellow);outline-offset:3px}#settingsLanguagePicker{order:-1;align-self:stretch}#obLanguagePicker{margin-left:auto}#obLanguagePicker span{white-space:nowrap}@media(max-width:700px){#obMain .ob-heading{flex-wrap:wrap}#obLanguagePicker{width:100%;justify-content:flex-start}.cft-language-picker select{width:180px}}
+
+/* Share the theme chooser presentation and its existing listbox behavior. */
+html[data-endfield=true] .cft-language-picker select.ef-select-native{display:none}
+html[data-endfield=true] .cft-language-picker .ef-select-trigger{display:flex;align-items:center;justify-content:space-between;gap:10px;width:250px;max-width:100%;min-height:40px;border:1px solid #aaa;background:#ebebeb;color:#292b29;border-radius:30px!important;padding:7px 18px;font:500 15px var(--ef-settings-font,'HarmonyOS Sans SC',sans-serif);text-align:left;cursor:pointer}
+html[data-endfield=true] .cft-language-picker .ef-select-trigger span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html[data-endfield=true] .cft-language-picker .ef-select-trigger:after{content:'';border-left:6px solid transparent;border-right:6px solid transparent;border-top:7px solid #353735;flex:none}
+html[data-endfield=true] .cft-language-picker .ef-select-trigger[aria-expanded=true]{background:#a3a5a3;color:#fff}
+html[data-endfield=true] .cft-language-picker .ef-select-trigger:focus-visible{outline:2px solid var(--ef-yellow);outline-offset:3px}
+.cft-language-picker:focus-within{outline:none}
+html[data-endfield=true] .cft-language-picker .ef-select-trigger:disabled{opacity:.55;cursor:wait}
+#efSettingsSelectMenu{z-index:100150}
+@media(max-width:700px){html[data-endfield=true] .cft-language-picker .ef-select-trigger{width:220px}}
+
+/* Translation is staged: make the remaining scope visible rather than hiding fallback text. */
+.cft-language-note{font-size:11px;line-height:1.5;color:var(--text-dim);margin:7px 0;max-width:100%;overflow-wrap:anywhere}
+.cft-language-note[hidden]{display:none}
+.ob-local-note{color:var(--text-dim);font-size:calc(12px * var(--type-scale,1));margin-top:6px;line-height:1.6}
+#obBody .ob-actions2{flex-wrap:wrap}
+#obBody .ob-actions2>.btn{max-width:100%;min-width:0}
+#obBody .ob-actions2 .ef-action-caption{white-space:normal;overflow-wrap:anywhere}
+
+/* The language chooser is the same connected capsule/listbox as the Theme chooser. */
+.cft-language-control{position:relative;isolation:isolate;width:250px;max-width:100%;min-width:0}
+html[data-endfield=true] .cft-language-control:has(>.ef-select-trigger[aria-expanded=true]):before{content:'';position:absolute;left:0;right:0;top:50%;bottom:-9px;background:#d4d2d2;z-index:-1;pointer-events:none}
+html[data-endfield=true] .cft-language-control>.ef-select-trigger[aria-expanded=true]{position:relative;z-index:1;box-shadow:none}
+html[data-endfield=true] .cft-language-control>.ef-select-trigger[aria-expanded=true]:after{border-top:0;border-bottom:7px solid #fff}
+html[data-endfield=true] .cft-language-control[data-select-direction=above]:has(>.ef-select-trigger[aria-expanded=true]):before{top:-9px;bottom:50%}
+@media(max-width:700px){.cft-language-control{width:220px}}

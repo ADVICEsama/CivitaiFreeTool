@@ -1382,7 +1382,7 @@ function renderMm() {
     return '<tr '+(window.CFTModelCards?.cardAttributes(r)||'')+' data-idx="' + (i+(window.CFTModelManagement?.offset()||0)) + '" data-path="' + esc(r.path) + '" class="' + (state.mmChecked.has(r.path) ? "sel-row" : "") + (normalizedModelPath(state.historyFocusPath)===normalizedModelPath(r.path)?" history-focus":"") + '">' +
       "<td class='c-name' data-col='name'><div class='ml-wrap'>" +
         '<img data-idx="' + (i+(window.CFTModelManagement?.offset()||0)) + '" data-path="' + esc(r.path) + '" class="thumb ml-thumb" alt=""/>' +
-        (r.upd && r.upd.has_update ? '<a href="#" class="mm-upd" data-url="' + esc(r.upd.url || "") + '" title="' + esc(updTip(r.upd)) + '">' + _icon("alert") + '</a>' : "") +
+        (r.upd && r.upd.has_update ? modelUpdateBadge(r.upd,'mm-upd') : "") +
         '<div class="ml-txt">' +
           '<div class="ml-1" data-tip="' + esc((r.civitai_name || r.name) + "\n" + String(r.name || "")) + '">' + (isModelFavorite(r.path)?window.CFTModelCards.favoriteIcon():"")+esc(r.civitai_name || r.name) + "</div>" +
           ((r.civitai_name && r.name && String(r.civitai_name) !== String(r.name)) ? '<div class="ml-2" data-tip="本地文件名">' + esc(r.name) + "</div>" : "") +
@@ -1642,6 +1642,12 @@ document.addEventListener("keydown", (e) => {
 // 渲染后应用列显隐（在 renderMm 列表分支后调用）
 
 // ===== 瀑布流视图 =====
+// Model update markers share the same unboxed, bold corner language as Favorite.
+function modelUpdateBadge(update,className){
+  const name=window.CFTI18n.t('models.update.available');
+  return '<a href="#" class="'+className+' model-update-marker" data-url="'+esc(update.url||'')+'" data-i18n-aria-label="models.update.available" aria-label="'+esc(name)+'" title="'+esc(updTip(update))+'">'+_icon('update','ef-model-update-icon')+'</a>';
+}
+
 function modelCardHtml(r,i,options={}){
     const checked = options.checked ? "checked" : "";
     const _cn = String(r.civitai_name || "").trim();
@@ -1652,7 +1658,7 @@ function modelCardHtml(r,i,options={}){
     return '<div class="ms-card' + (checked ? " checked" : "") + (!options.selectionOnly&&normalizedModelPath(state.historyFocusPath)===normalizedModelPath(r.path)?' history-focus':'') + '" '+(window.CFTModelCards?.cardAttributes(r)||'')+' role="'+(options.role||'option')+'" aria-'+(options.role==='checkbox'?'checked':'selected')+'="'+!!checked+'" tabindex="0" data-idx="' + i + '" data-path="' + esc(r.path) + '" aria-label="' + esc(String(r.name || "") + " · " + String(r.path || "")) + '">' +
       (options.decoration??(window.CFTModelCards?.cardDecoration(r)||'')) +
       _msTag(r) +
-      (!options.selectionOnly && r.upd && r.upd.has_update ? '<a href="#" class="ms-upd" data-url="' + esc(r.upd.url || "") + '" title="' + esc(updTip(r.upd)) + '">' + _icon("alert") + '</a>' : "") +
+      (!options.selectionOnly && r.upd && r.upd.has_update ? modelUpdateBadge(r.upd,'ms-upd') : "") +
       '<div class="ms-img-wrap" data-ph="loading"><img class="ms-img" data-idx="' + i + '" data-path="' + esc(r.path) + '" alt=""/><span class="model-underlight" aria-hidden="true"></span></div>' +
       '<div class="ms-info"><div class="ms-titles"><div class="ms-name" data-civitai-name="' + (_cn ? 'true' : 'false') + '">' + (isModelFavorite(r.path)?window.CFTModelCards.favoriteIcon():'') + esc(_disp) + "</div>" +
       (_sub ? '<div class="ms-sub">' + esc(_sub) + "</div>" : "") +
@@ -4365,6 +4371,7 @@ function applyCustomUi() {
 function applyUiAppearance() {
   if(!state.cfg)return;
   normalizeThemeConfig(state.cfg);
+  window.CFTI18n?.apply(state.cfg.ui_language);
   const root = document.documentElement;
   root.dataset.theme = state.cfg.theme;
   delete root.dataset.scheme;
@@ -4700,7 +4707,7 @@ async function init() {
 }
 
 // ===== 首次使用引导（主题 / 下载目录 / API key / 模型目录 / 反向解析） =====
-const OB_STEPS = ["申请 API Key", "页面介绍", "主题", "下载目录", "模型目录", "反向解析"];
+const OB_STEPS = ["ob.step.0", "ob.step.1", "ob.step.2", "ob.step.3", "ob.step.4", "ob.step.5"];
 let obStep = 0;
 let obTheme = "dark_endfield";
 let obDirVal = "";   // 跨步骤保存（输入框只在对应步骤渲染）
@@ -4716,7 +4723,7 @@ function setObMini(mini) {
   mask.classList.toggle("mini", mini);
   setOnboardingBackground(!mini);
   if (mini) {
-    $("#obMiniTitle").textContent = OB_STEPS[obStep] + "（第 " + (obStep + 1) + "/" + OB_STEPS.length + " 步）";
+    $("#obMiniTitle").textContent = window.CFTI18n.t("ob.stepSummary",{step:window.CFTI18n.t("ob.step."+obStep),current:obStep+1,total:OB_STEPS.length});
   }
 }
 $("#obMiniContinue").addEventListener("click", () => setObMini(false));
@@ -4724,7 +4731,7 @@ $("#obMiniClose").addEventListener("click", async () => {
   setObMini(false);
   await finishOnboarding();
 });
-function setOnboardingBackground(blocked){for(const element of document.querySelectorAll("body>.nav-wrap,body>.content"))element.inert=blocked;}
+function setOnboardingBackground(blocked){document.documentElement.dataset.onboardingOpen=String(blocked);for(const element of document.querySelectorAll("body>.nav-wrap,body>.content"))element.inert=blocked;}
 function showOnboarding() {
   if(typeof settingsHaveChanges==="function"&&settingsHaveChanges()){requestSettingsLeave(showOnboarding);return;}
   obStep = 0;obStartPage=document.querySelector(".nav-tab.active")?.dataset.page||"models";
@@ -4742,111 +4749,60 @@ function showOnboarding() {
   renderOnboarding();
 }
 function renderOnboarding() {
-  if($("#obStepNumber"))$("#obStepNumber").textContent=String(obStep+1).padStart(2,"0");
-  $("#obSteps").innerHTML = OB_STEPS.map((s, i) =>
-    '<div class="ob-step ' + (i === obStep ? "active" : i < obStep ? "done" : "") + '">' + s + "</div>").join("");
-  $("#obPrev").hidden=obStep===0;
-  $("#obNext").disabled=obStep===0&&!obKeyVal.trim();
-  $("#obNext").textContent = obStep === OB_STEPS.length - 1 ? "完成 " : "下一步";
-  const body = $("#obBody");
-  if (obStep === 1) {
-    const pages=[
-      ['download','download','批量下载','粘贴模型链接，解析后选择文件和保存位置，再开始下载。'],
-      ['dlmanager','list','下载管理','查看进度，暂停或重试；已结束任务可收进历史，打开实际文件位置。'],
-      ['models','layers','模型管理','扫描本地目录；单击选中并更新右侧详情，星标收藏置顶。'],
-      ['updates','refresh','检查更新','检查已有模型的新版本，选择需要更新的文件，不会自动删除旧版。'],
-      ['reverse','search','反向解析','已有文件但缺少封面、名称或触发词？从这里识别 C站模型信息。'],
-      ['workflow','workflow','工作流分析','打开 ComfyUI 的 JSON / PNG，查看节点、参数与缺少的模型。'],
-      ['settings','settings','设置','目录、账号、字体、主题、启动方式与分类规则；关键词可搜索。']
-    ];
-    body.innerHTML='<p class="ob-label">先认识这些页面。点击任意页面直接体验，引导会缩到右下角，随时可以继续。</p><div class="ob-page-grid">'+pages.map(([page,icon,title,text])=>'<button class="ob-page-card" data-page="'+page+'">'+_icon(icon)+'<span><b>'+title+'</b><small>'+text+'</small></span></button>').join('')+'</div>';
+  const tr=(key,params)=>window.CFTI18n.t(key,params);
+  const text=(key,tag='span')=>`<${tag} data-i18n="${key}">${esc(tr(key))}</${tag}>`;
+  if($('#obStepNumber'))$('#obStepNumber').textContent=String(obStep+1).padStart(2,'0');
+  $('#obSteps').innerHTML=OB_STEPS.map((_,i)=>`<div class="ob-step ${i===obStep?'active':i<obStep?'done':''}" data-i18n="ob.step.${i}">${esc(tr('ob.step.'+i))}</div>`).join('');
+  $('#obPrev').hidden=obStep===0;
+  $('#obNext').disabled=obStep===0&&!obKeyVal.trim();
+  const body=$('#obBody');
+  if(obStep===0){
+    body.innerHTML=`<div class="ob-label">${text('ob.key.heading')}</div>
+      <input class="input" id="obKey" type="password" value="${esc(obKeyVal)}" data-i18n-placeholder="ob.key.placeholder" placeholder="${esc(tr('ob.key.placeholder'))}"/>
+      <div class="ob-guide" id="obGuide"><div style="font-weight:600;margin-bottom:6px">${text('ob.key.guide')}</div>
+      <div>${text('ob.key.open')} <a class="ob-link" id="obApiPage">civitai.red/user/account</a> ${text('ob.key.account')}</div>
+      <div>${text('ob.key.generate')}</div><div>${text('ob.key.paste')}</div></div>
+      <div class="ob-actions2"><button class="btn" id="obToggleGuide" data-action-icon="check">${text('ob.key.help')}</button>
+      <button class="btn" id="obOpenApi" data-action-icon="check">${text('ob.key.openPage')}</button></div>
+      <div class="ob-local-note">${text('ob.key.offline')}</div>`;
+    $('#obKey').oninput=()=>{obKeyVal=$('#obKey').value;$('#obNext').disabled=!obKeyVal.trim();};
+    $('#obToggleGuide').onclick=()=>{const g=$('#obGuide');g.hidden=false;const zoom=parseFloat(getComputedStyle(document.documentElement).zoom)||1;const top=(g.getBoundingClientRect().top-body.getBoundingClientRect().top)/zoom+body.scrollTop;body.scrollTo({top,behavior:'instant'});};
+    $('#obOpenApi').onclick=$('#obApiPage').onclick=()=>api.call('open_url','https://civitai.red/user/account');
+  }else if(obStep===1){
+    const pages=[['download','download'],['dlmanager','list'],['models','layers'],['updates','refresh'],['reverse','search'],['workflow','workflow'],['settings','settings']];
+    body.innerHTML=`<p class="ob-label">${text('ob.pages.intro')}</p><div class="ob-page-grid">`+pages.map(([page,icon])=>`<button class="ob-page-card" data-page="${page}">${_icon(icon)}<span>${text('nav.'+page,'b')}${text('ob.page.'+page,'small')}</span></button>`).join('')+'</div>';
     body.querySelectorAll('[data-page]').forEach(button=>button.onclick=()=>{obStartPage=button.dataset.page;switchPage(obStartPage);setObMini(true);});
-  } else if (obStep === 2) {
+  }else if(obStep===2){
     const options=SETTING_FIELDS.find(field=>field[1]==='theme')[4];
-    body.innerHTML='<p class="ob-label">选择终末地亮色或暗色，设置里还能调整字体、字号和布局。</p><div class="ob-themes">'+options.map(([value,label])=>'<button class="btn ob-theme" data-t="'+esc(value)+'">'+esc(label)+'</button>').join('')+'</div>';
+    body.innerHTML=`<p class="ob-label">${text('ob.theme.intro')}</p><div class="ob-themes">`+options.map(([value])=>`<button class="btn ob-theme" data-t="${esc(value)}">${text('ob.theme.'+value)}</button>`).join('')+'</div>';
     body.querySelectorAll('[data-t]').forEach(button=>{button.classList.toggle('sel',button.dataset.t===obTheme);button.onclick=()=>{obTheme=button.dataset.t;state.cfg.theme=obTheme;document.documentElement.dataset.theme=obTheme;applyUiAppearance();body.querySelectorAll('[data-t]').forEach(b=>b.classList.toggle('sel',b===button));};});
-  } else if (obStep === 3) {
-    body.innerHTML =
-      '<div class="ob-label">下载目录（模型下载后存放位置，可修改）</div>' +
-      '<div style="display:flex;gap:8px"><input class="input" id="obDir" style="flex:1" value="' + esc(obDirVal) + '"/>' +
-      '<button class="btn" id="obBrowse">浏览</button></div>' +
-      '<div style="color:var(--text-dim);font-size:calc(12px * var(--type-scale, 1));margin-top:6px">默认：软件根目录下的 downloads/models 文件夹</div>';
-    $("#obDir").addEventListener("input", () => { obDirVal = $("#obDir").value; });
-    $("#obBrowse").addEventListener("click", async () => {
-      const picked = await api.call("pick_dir");
-      if (picked) { obDirVal = picked; $("#obDir").value = picked; }
-    });
-    $("#obBrowse2") && null;
-  } else if (obStep === 0) {
-    body.innerHTML =
-      '<div class="ob-label">第一步：先申请 Civitai API Key（免费申请，用于查询模型信息与下载）</div>' +
-      '<input class="input" id="obKey" type="password" value="' + esc(obKeyVal) + '" placeholder="粘贴你的 API Key"/>' +
-      '<div class="ob-guide" id="obGuide">' +
-      '<div style="font-weight:600;margin-bottom:6px">如何注册 API Key：</div>' +
-      '<div>1. 打开 <a class="ob-link" id="obApiPage">civitai.red/user/account</a>（登录后点 Account Settings 生成 API Keys）</div>' +
-      '<div>2. 登录账号后点击「New API Key」生成</div>' +
-      '<div>3. 复制生成的 Key 粘贴到上方输入框即可</div></div>' +
-      '<div class="ob-actions2"><button class="btn" id="obToggleGuide">如何注册 API？</button>' +
-      '<button class="btn" id="obOpenApi">打开注册页</button></div>' +
-      '<div style="color:var(--text-dim);font-size:calc(12px * var(--type-scale, 1));margin-top:6px">可先跳过引导使用离线功能；联网查询与下载时再补填 API Key。Key 仅保存到本地。</div>';
-    $("#obKey").addEventListener("input", () => { obKeyVal = $("#obKey").value;$("#obNext").disabled=!obKeyVal.trim(); });
-    $("#obToggleGuide").addEventListener("click", () => {
-      const g = $("#obGuide");
-      g.style.display = g.style.display === "none" ? "block" : "none";
-    });
-    $("#obOpenApi").addEventListener("click", () => api.call("open_url", "https://civitai.red/user/account"));
-    $("#obApiPage").addEventListener("click", () => api.call("open_url", "https://civitai.red/user/account"));
-  } else if (obStep === 4) {
-    // 模型管理目录：手把手选择（可多目录）
-    body.innerHTML =
-      '<div class="ob-label">模型管理目录 —— 你本地存放模型的地方</div>' +
-      '<div class="ob-hint">软件从这里扫描模型、显示封面和触发词。WebUI 与 ComfyUI 分开存放的，把两个目录都填上（每行一个）：</div>' +
-      '<textarea class="input" id="obModelDirs" rows="3" style="width:100%;box-sizing:border-box">' + esc(obModelDirs.join("\n")) + '</textarea>' +
-      '<div class="ob-actions2"><button class="btn" id="obBrowseModels">选择文件夹</button>' +
-      '<button class="btn" id="obBrowseModels2">再添加一个</button></div>' +
-      '<div style="color:var(--text-dim);font-size:calc(12px * var(--type-scale, 1));margin-top:6px">常见路径：D:\\sd-webui-forge-neo\\webui\\models（WebUI）、D:\\ComfyUI\\models（ComfyUI）</div>';
-    const sync = () => { obModelDirs = $("#obModelDirs").value.split("\n").map((s) => s.trim()).filter(Boolean); };
-    $("#obModelDirs").addEventListener("input", sync);
-    const addDir = async () => {
-      const picked = await api.call("pick_dir");
-      if (!picked) return;
-      sync();
-      if (!obModelDirs.includes(picked)) obModelDirs.push(picked);
-      $("#obModelDirs").value = obModelDirs.join("\n");
-    };
-    $("#obBrowseModels").addEventListener("click", async () => {
-      const picked = await api.call("pick_dir");
-      if (!picked) return;
-      obModelDirs = [picked];
-      $("#obModelDirs").value = picked;
-    });
-    $("#obBrowseModels2").addEventListener("click", addDir);
-  } else {
-    // 反向解析：推荐但可跳过
-    body.innerHTML =
-      '<div class="ob-label">反向解析（强烈推荐，也可跳过）</div>' +
-      '<div class="ob-hint">把你已下载的模型文件识别出 C 站信息：自动匹配模型名、触发词（tags）、类型和基础模型，并生成封面。</div>' +
-      '<div class="ob-hint" style="margin-top:4px">做完后，模型管理里每个模型才有名字和触发词可复制；<b>跳过也不影响其他功能</b>。</div>' +
-      '<div class="ob-actions2"><button class="btn btn-primary" id="obGoRp">立即体验（推荐）</button>' +
-      '<button class="btn" id="obSkipRp">跳过（以后在 反向解析 页随时可用）</button></div>';
-    $("#obGoRp").addEventListener("click", async () => {
-      if(await finishOnboarding()!==true)return;
-      startReverseTutorial();
-    });
-    $("#obSkipRp").addEventListener("click", async () => {
-      await finishOnboarding();
-    });
+  }else if(obStep===3){
+    body.innerHTML=`<div class="ob-label">${text('ob.download.heading')}</div><div style="display:flex;gap:8px"><input class="input" id="obDir" style="flex:1;min-width:0" value="${esc(obDirVal)}"/><button class="btn" id="obBrowse" data-action-icon="folder">${text('ob.browse')}</button></div><div class="ob-local-note">${text('ob.download.default')}</div>`;
+    $('#obDir').oninput=()=>{obDirVal=$('#obDir').value;};
+    $('#obBrowse').onclick=async()=>{const picked=await api.call('pick_dir');if(picked){obDirVal=picked;$('#obDir').value=picked;}};
+  }else if(obStep===4){
+    body.innerHTML=`<div class="ob-label">${text('ob.models.heading')}</div><div class="ob-hint">${text('ob.models.intro')}</div><textarea class="input" id="obModelDirs" rows="3" style="width:100%;box-sizing:border-box">${esc(obModelDirs.join('\n'))}</textarea><div class="ob-actions2"><button class="btn" id="obBrowseModels" data-action-icon="folder">${text('ob.models.choose')}</button><button class="btn" id="obBrowseModels2" data-action-icon="plus">${text('ob.models.add')}</button></div><div class="ob-local-note">${text('ob.models.paths')} <bdi>D:\\sd-webui-forge-neo\\webui\\models</bdi> (WebUI)、<bdi>D:\\ComfyUI\\models</bdi> (ComfyUI)</div>`;
+    const sync=()=>{obModelDirs=$('#obModelDirs').value.split('\n').map(s=>s.trim()).filter(Boolean);};
+    $('#obModelDirs').oninput=sync;
+    $('#obBrowseModels').onclick=async()=>{const picked=await api.call('pick_dir');if(picked){obModelDirs=[picked];$('#obModelDirs').value=picked;}};
+    $('#obBrowseModels2').onclick=async()=>{const picked=await api.call('pick_dir');if(!picked)return;sync();if(!obModelDirs.includes(picked))obModelDirs.push(picked);$('#obModelDirs').value=obModelDirs.join('\n');};
+  }else{
+    body.innerHTML=`<div class="ob-label">${text('ob.reverse.heading')}</div><div class="ob-hint">${text('ob.reverse.intro')}</div><div class="ob-hint" style="margin-top:4px">${text('ob.reverse.note')} <b>${text('ob.reverse.optional')}</b></div><div class="ob-actions2"><button class="btn btn-primary" id="obGoRp" data-action-icon="right">${text('ob.reverse.try')}</button><button class="btn" id="obSkipRp" data-action-icon="right">${text('ob.reverse.skip')}</button></div>`;
+    $('#obGoRp').onclick=async()=>{if(await finishOnboarding()!==true)return;startReverseTutorial();};
+    $('#obSkipRp').onclick=()=>finishOnboarding();
   }
   body.scrollTop=0;
-  $('#obSkipAll')?.remove();$('#obNext').insertAdjacentHTML('beforebegin','<button class="btn" id="obSkipAll">跳过引导，直接使用</button>');
-  $('#obSkipAll').disabled=false;$('#obSkipAll').title='无需填写 Key，可先使用离线功能';
+  $('#obSkipAll')?.remove();$('#obNext').insertAdjacentHTML('beforebegin','<button class="btn" id="obSkipAll" data-action-icon="info"></button>');
+  $('#obSkipAll').append(document.createTextNode(tr('skip')));
+  $('#obSkipAll').disabled=false;$('#obSkipAll').dataset.i18nTitle='ob.skipHint';$('#obSkipAll').title=tr('ob.skipHint');
   $('#obSkipAll').onclick=()=>finishOnboarding({skip:true});
+  window.CFTEndfieldControls?.refresh();window.CFTI18n.refresh();
 }
 
 // 引导完成：保存全部配置
 async function finishOnboarding(options={}) {
   const skip=options.skip===true;
-  if(!skip&&!obKeyVal.trim()){obStep=0;renderOnboarding();showToast("请先申请并填写 Civitai API Key");return false;}
+  if(!skip&&!obKeyVal.trim()){obStep=0;renderOnboarding();showToast(window.CFTI18n.t("ob.key.required"));return false;}
   state.cfg.onboarding_done = true;
   state.cfg.api_key = (obKeyVal || "").trim() || (skip ? state.cfg.api_key || "" : "");
   state.cfg.download_dir = (obDirVal || state.cfg.download_dir || "").trim();
@@ -4856,7 +4812,7 @@ async function finishOnboarding(options={}) {
   if (dirs.length) state.cfg.models_dir = dirs[0];
   document.documentElement.dataset.theme = obTheme;
         applyUiAppearance();
-  if(!await api.call("save_config", state.cfg)){showToast("设置保存失败，请重试");return;}
+  if(!await api.call("save_config", state.cfg)){showToast(window.CFTI18n.t("ob.saveFailed"));return;}
   state.cfg = await api.call("get_config");
   buildSettingsForm();
   applyZoom(Number(state.cfg.ui_zoom) || 100);
@@ -4906,7 +4862,7 @@ function _icon(name, cls) {
 
 function _msTag(r) {
   // 卡片上不再显示「已最新」等文字标签（无更新默认不显示任何标记）；
-  // 有更新的模型用右上角 ❗ 角标（.ms-upd，点击去 C 站）
+  // 有更新的模型用右上角无底色直角循环角标（.ms-upd，点击去 C 站）
   return "";
 }
 

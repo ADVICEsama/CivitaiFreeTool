@@ -83,7 +83,7 @@ html[data-endfield=true] #settingsForm .ef-select-trigger[aria-expanded=true]{po
 html[data-endfield=true] #settingsForm .ef-select-trigger[aria-expanded=true]:after{border-top:0;border-bottom:7px solid #fff}
 html[data-endfield=true] #settingsForm .setting-control:has(>.ef-select-trigger[aria-expanded=true]){position:relative;isolation:isolate}
 html[data-endfield=true] #settingsForm .setting-control:has(>.ef-select-trigger[aria-expanded=true]):before{content:'';position:absolute;top:50%;left:0;right:0;bottom:-9px;background:#d4d2d2;border-radius:0;z-index:-1;pointer-events:none}
-@keyframes ef-select-reveal{from{opacity:0;clip-path:inset(0 0 100% 0);transform:translateY(-5px)}to{opacity:1;clip-path:inset(0);transform:translateY(0)}}
+@keyframes ef-select-reveal{from{opacity:0;clip-path:inset(0 0 100% 0);transform:translateY(0)}to{opacity:1;clip-path:inset(0);transform:translateY(0)}}
 .ef-settings-select-menu [aria-disabled=true]{opacity:.4;cursor:not-allowed}
 @media(max-width:1100px){html[data-endfield=true] #settingsForm .setting-row{grid-template-columns:minmax(0,1fr) minmax(220px,38%);padding:12px 15px;gap:18px}html[data-endfield=true] #settingsForm .setting-copy label{font-size:15px}html[data-endfield=true] #settingsForm .settings-tab{font-size:10px}html[data-endfield=true] body #settingsActions .btn{padding:7px 12px}}
 @media(max-width:760px){html[data-endfield=true] #settingsForm .settings-nav{display:flex;flex-direction:row;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden}.settings-tab{flex:0 0 72px}html[data-endfield=true] #settingsForm .settings-tab{min-height:60px}html[data-endfield=true] #settingsForm .setting-row{grid-template-columns:1fr;gap:10px}html[data-endfield=true] body #settingsActions{flex-wrap:wrap}}
@@ -170,3 +170,5 @@ html[data-endfield=true] #settingsForm .bd-link{width:100%;min-height:35px;margi
 html[data-endfield=true] #settingsForm .bd-link .bd-link-label{color:inherit!important;position:relative;font-size:12px;font-weight:600;flex:none}
 html[data-endfield=true] #settingsForm .bd-link .bd-link-desc{color:inherit!important;opacity:.8;position:relative;font-size:11px;margin-left:10px}
 html[data-endfield=true] #settingsForm .bd-link>.ef-action-caption{display:flex;align-items:center;justify-content:flex-start;flex-wrap:wrap;padding:3px 28px 3px 20px!important;text-align:left}
+
+.ef-settings-select-menu[data-direction=above]{border-top:1px solid #aaa;border-bottom:0;border-radius:5px 5px 0 0;transform-origin:bottom}
