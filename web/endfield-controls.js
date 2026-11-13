@@ -56,7 +56,7 @@
   }
  }
  let queued=false;function queue(){if(queued)return;queued=true;queueMicrotask(()=>{queued=false;refresh();});}
- new MutationObserver(queue).observe(document.body,{subtree:true,childList:true});
+ new MutationObserver(records=>{if(records.some(r=>[...r.addedNodes].some(n=>n.nodeType===1&&(n.matches?.(actionSelector+',input[type=number]')||n.querySelector?.(actionSelector+',input[type=number]')))))queue();}).observe(document.body,{subtree:true,childList:true});
  new MutationObserver(queue).observe(root,{attributes:true,attributeFilter:['data-theme']});
  document.addEventListener('input',e=>{if(e.target.matches('input[type=number]'))syncNumber(e.target);});
  document.addEventListener('change',e=>{if(e.target.matches('input[type=number]'))queueMicrotask(()=>syncNumber(e.target));});

@@ -45,7 +45,7 @@ html[data-endfield=true] #dlTable .dl-check-col{grid-column:1;grid-row:1/4}
 html[data-endfield=true] #dlTable .c-file{grid-column:2;grid-row:1/4;text-align:left}
 /* The chosen model cover becomes a full-height left wash, not a poster/thumbnail tile. */
 html[data-endfield=true] #dlTable .c-thumb{position:absolute;left:0;top:0;bottom:0;width:36%!important;height:100%;max-width:none;overflow:hidden;z-index:-2;pointer-events:auto;mask-image:linear-gradient(90deg,#000 0 36%,#000b 60%,transparent 100%)}
-html[data-endfield=true] #dlTable .c-thumb .thumb{display:block;width:100%;height:100%;object-fit:cover;object-position:50% 38%;border-radius:0;background:none;opacity:.86}
+html[data-endfield=true] #dlTable .c-thumb .thumb{display:block;width:100%;height:100%;object-fit:cover;object-position:center center;border-radius:0;background:none;opacity:.86}
 html[data-endfield=true] #dlTable .c-thumb:after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,#131b1b05,#1c252477 50%,#26302be6);pointer-events:none}
 html[data-endfield=true] #dlTable .thumb-empty{display:none!important}
 html[data-endfield=true] #dlTable .c-file>div:first-child{font-size:17px;line-height:1.5;font-weight:700;color:#fff;text-shadow:0 1px 3px #000b}
@@ -131,7 +131,7 @@ html[data-endfield=true] #dlHistoryTable tbody{display:flex;flex-direction:colum
 html[data-endfield=true] body #dlHistoryTable tbody tr[data-history-id]{position:relative;isolation:isolate;min-height:110px;border:0;border-left:3px solid transparent;border-radius:3px;background:var(--transfer-face)!important;color:var(--transfer-ink);overflow:hidden}
 html[data-endfield=true] #dlHistoryTable td{display:block;width:auto!important;min-width:0;max-width:100%;border:0;background:none;padding:3px 0;align-self:center;text-align:center;white-space:normal;overflow-wrap:anywhere;font-size:11px;line-height:1.7;z-index:1;color:inherit}
 html[data-endfield=true] #dlHistoryTable .history-thumb{position:absolute;inset:0 auto 0 0;width:32%;height:100%;margin:0;border:0;border-radius:0;overflow:hidden;pointer-events:auto;z-index:-2;mask-image:linear-gradient(90deg,#0008,transparent)}
-html[data-endfield=true] #dlHistoryTable .history-thumb img{width:100%;height:100%;object-fit:cover;object-position:center top}
+html[data-endfield=true] #dlHistoryTable .history-thumb img{width:100%;height:100%;object-fit:cover;object-position:center center}
 html[data-endfield=true] #dlHistoryTable .history-thumb>.ic{display:none}
 html[data-endfield=true] #dlHistoryTable .history-file-name{font-size:14px;font-weight:600;color:#fff;text-shadow:0 1px 3px #000}
 html[data-endfield=true] #dlHistoryTable .file-subpath,html[data-endfield=true] #dlHistoryTable .history-model{font-size:10px;line-height:1.6;color:#d9e2d5;margin-top:4px;overflow-wrap:anywhere}
@@ -235,7 +235,7 @@ html[data-endfield=true] #dlTable tbody tr:is([data-ef-status=retrying],[data-ef
 html[data-endfield=true] #dlTable tbody tr[data-ef-status=paused]:not([data-ef-progress="0"]):before{background-image:url('transfer-ripples-neutral.svg'),linear-gradient(90deg,#54b96421,#53b76a90 38%,#59c575d9)}
 /* Anchor the primary filename on the status centerline; metadata sits below it. */
 html[data-endfield=true] #dlHistoryTable .history-file-copy{position:relative;min-width:0}
-html[data-endfield=true] #dlHistoryTable .history-file-meta{position:absolute;top:100%;left:0;right:0}
+html[data-endfield=true] #dlHistoryTable .history-file-meta{position:static}
 @media(max-width:800px){html[data-endfield=true] #dlHistoryTable .history-file-meta{position:static}}
 
 html[data-endfield=true] #dlHistoryTable td.c-file{overflow:visible}
@@ -247,3 +247,9 @@ html[data-endfield=true] #dlQueuePanel>.table-wrap,html[data-endfield=true] #dlH
 html[data-endfield=true] #dlQueueUtilities.ef-transfer-footer{position:relative;bottom:auto;flex:0 0 auto;z-index:9;padding-bottom:8px}
 
 .ef-transfer-selection-tools{display:flex;justify-content:center;gap:8px;flex-basis:100%;flex-wrap:wrap;margin-top:6px}
+
+/* Center the complete filename + metadata group, not just its first line. */
+html[data-endfield=true] #dlHistoryTable tr[data-history-id]>.c-file{display:flex;align-items:center;justify-content:center;min-height:0}
+html[data-endfield=true] #dlHistoryTable .history-file-copy{display:flex;flex-direction:column;justify-content:center;gap:4px;width:100%;min-height:0}
+html[data-endfield=true] #dlHistoryTable thead{position:relative;top:auto}
+html[data-endfield=true] #dlQueueActions #dlShowHud{display:inline-grid!important;visibility:visible;flex:none}

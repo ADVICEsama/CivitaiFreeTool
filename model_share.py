@@ -32,19 +32,43 @@ def render(detail,cover=None,theme='dark',labels=None,previews=None):
     bg,fg,muted=('#eef0e8','#252e29','#536052') if theme=='light' else ('#242a29','#eff1e8','#b4bfb3')
     image=Image.new('RGB',(1200,600),bg);d=ImageDraw.Draw(image)
     base=Path(getattr(sys,'_MEIPASS',Path(__file__).resolve().parent))/'web/fonts'
-    def font(size,bold=False):return ImageFont.truetype(str(base/('HarmonyOS_Sans_SC_Bold.ttf' if bold else 'HarmonyOS_Sans_SC_Regular.ttf')),size)
-    def block(text,x,y,width,size,rows,color,bold=False):
-        f=font(size,bold);lines=[];line=''
+    font_cache={}
+    def runs(text):
+        result=[]
         for c in str(text):
-            if d.textlength(line+c,font=f)>width and line:lines.append(line);line=c
-            else:line+=c
-        if line:lines.append(line)
+            family='line' if ('A'<=c<='Z' or 'a'<=c<='z' or '\u00c0'<=c<='\u024f' or '\u1e00'<=c<='\u1eff') else 'latin' if ord(c)<=0x024f else 'han'
+            if result and result[-1][0]==family:result[-1]=(family,result[-1][1]+c)
+            else:result.append((family,c))
+        return result
+    def font(size,bold=False,family='han'):
+        key=(size,bold,family)
+        if key not in font_cache:
+            filename='LINESeedSans_Bd.otf' if family=='line' else ('GeourceAltCHS-Bold.ttf' if bold else 'GeourceAltCHS-Regular.ttf') if family=='latin' else ('HarmonyOS_Sans_SC_Bold.ttf' if bold else 'HarmonyOS_Sans_SC_Regular.ttf')
+            font_cache[key]=ImageFont.truetype(str(base/filename),size)
+        return font_cache[key]
+    def measure(text,size,bold=False):return sum(d.textlength(t,font=font(size,bold,f)) for f,t in runs(text))
+    def bounds(text,size,bold=False):
+        boxes=[font(size,bold,f).getbbox(t,anchor='ls') for f,t in runs(text)]
+        return (min((b[1] for b in boxes),default=-size),max((b[3] for b in boxes),default=0))
+    def text(text,x,baseline,size,color,bold=False):
+        for family,part in runs(text):
+            f=font(size,bold,family);d.text((x,baseline),part,font=f,fill=color,anchor='ls');x+=d.textlength(part,font=f)
+    def clip(text,width,size,bold=False):
+        value=str(text)
+        if measure(value,size,bold)<=width:return value
+        while value and measure(value+'…',size,bold)>width:value=value[:-1]
+        return value+'…'
+    def block(value,x,y,width,size,rows,color,bold=False):
+        lines=[];line=''
+        for token in re.findall(r'[A-Za-z0-9]+(?:[._/:-][A-Za-z0-9]+)*|[^A-Za-z0-9]',str(value)):
+            if line and measure(line+token,size,bold)>width:lines.append(line.rstrip());line=''
+            for c in token:
+                if line and measure(line+c,size,bold)>width:lines.append(line);line=''
+                line+=c
+        if line.strip():lines.append(line.rstrip())
         clipped=len(lines)>rows;lines=lines[:rows]
-        if clipped:
-            last=lines[-1]
-            while last and d.textlength(last+'…',font=f)>width:last=last[:-1]
-            lines[-1]=last+'…'
-        for line in lines:d.text((x,y),line,font=f,fill=color);y+=int(size*1.45)
+        if clipped:lines[-1]=clip(lines[-1]+'…',width,size,bold)
+        for line in lines:text(line,x,y+size,size,color,bold);y+=int(size*1.4)
         return y
     # Constant-opacity contours, not a gradient; only the information panel is textured.
     texture=Image.open(base.parent/'model-share-contours.png').convert('RGBA')
@@ -58,7 +82,7 @@ def render(detail,cover=None,theme='dark',labels=None,previews=None):
     else:
         d.rectangle((0,4,399,599),fill='#637b75');d.polygon([(0,600),(150,180),(400,600)],fill='#334d46')
     for a,b,c in [(0,600,'#ffef01'),(600,900,'#00d0fd'),(900,1200,'#f954fd')]:d.rectangle((a,0,b,3),fill=c)
-    d.text((438,30),'CFT / MODEL SHARE',font=font(15),fill=muted)
+    text('CFT / MODEL SHARE',438,45,15,muted)
     title=plain(info.get('name') or detail.get('name'),250)
     title_end=block(title,438,70,710,36,2,fg,True)
     author_end=block(creator,438,title_end+8,710,20,1,muted)
@@ -66,12 +90,12 @@ def render(detail,cover=None,theme='dark',labels=None,previews=None):
     tags=[info.get('baseModel') or version.get('baseModel'),info.get('type'),version.get('name')]
     x=438
     for i,tag in enumerate(filter(None,tags)):
-        tag=plain(tag,32);f=font(17);w=min(220,int(d.textlength(tag,font=f))+26)
+        tag=plain(tag,32);w=min(220,int(measure(tag,17))+26)
         if x+w>1150:break
-        d.rectangle((x,tag_y,x+w,tag_y+35),fill='#ffef01' if i==0 else bg,outline='#8c957f');block(tag,x+12,tag_y+5,w-24,17,1,'#283024' if i==0 else fg);x+=w+10
+        d.rectangle((x,tag_y,x+w,tag_y+35),fill='#ffef01' if i==0 else bg,outline='#8c957f');caption=clip(tag,w-24,17);top,bottom=bounds(caption,17);text(caption,x+12,tag_y+17.5-(top+bottom)/2,17,'#283024' if i==0 else fg);x+=w+10
     description=plain(info.get('description'))
     desc_y=tag_y+55
-    end=block(description or labels.get('noDescription','—'),438,desc_y,710,28,max(1,(452-desc_y)//40),fg)
+    end=block(description or labels.get('noDescription','—'),438,desc_y,710,24,max(1,(452-desc_y)//34),fg)
     # A short description may leave room for real additional gallery previews.
     thumb_y=end+18;available=466-thumb_y
     if available>=72:
@@ -91,7 +115,7 @@ def render(detail,cover=None,theme='dark',labels=None,previews=None):
         alpha=logo.getchannel('A');logo=ImageOps.invert(logo.convert('RGB')).convert('RGBA');logo.putalpha(alpha)
     logo.thumbnail((300,91),Image.Resampling.LANCZOS)
     image.paste(logo,(730 if url else 860,488),logo)
-    block(url or labels.get('noLink','—'),438,550,280 if url else 410,16,2,muted)
+    link=clip(url or labels.get('noLink','—'),280 if url else 410,16);text(link,438,580-bounds(link,16)[1],16,muted)
     if url:
         qr=qrcode.QRCode(box_size=4,border=4,error_correction=qrcode.constants.ERROR_CORRECT_M);qr.add_data(url);qr.make(fit=True)
         matrix=qr.get_matrix();scale=max(1,132//len(matrix));size=len(matrix)*scale;left=1160-size;top=580-size

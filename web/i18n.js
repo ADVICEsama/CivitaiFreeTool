@@ -21,6 +21,6 @@ function refresh(){
 }
 function apply(value){locale=catalogs[value]?value:'zh-CN';document.documentElement.lang=locale;refresh();}
 function schedule(){if(!frame)frame=requestAnimationFrame(()=>{frame=0;refresh();});}
-new MutationObserver(schedule).observe(document.body,{childList:true,subtree:true});
+new MutationObserver(records=>{if(records.some(r=>[...r.addedNodes].some(n=>n.nodeType===1&&(n.matches?.('[data-i18n],[data-cft-language],#obMask,#settingsForm')||n.querySelector?.('[data-i18n],[data-cft-language]')))))schedule();}).observe(document.body,{childList:true,subtree:true});
 window.CFTI18n={t,apply,refresh,change,get locale(){return locale;}};
 })();

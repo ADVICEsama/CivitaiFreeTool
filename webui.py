@@ -15,7 +15,7 @@ import uuid
 
 import webview
 
-APP_VERSION = "3.0.11"
+APP_VERSION = "3.0.12"
 
 from functools import wraps
 
@@ -87,6 +87,7 @@ class Api:
         self._model_scan_cache = {}
         # 封面缩略图缓存：{(path, mtime_ns, size, edge): b64} —— 删除/刷新后无需重算重传
         self._cover_cache = {}
+        self._cover_cache_lock = threading.RLock()
         self.mm_checked_paths = []
         self.mm_progress = {"running": False, "total": 0, "done": 0, "msg": "", "result": None}
         self._mm_cancel = False          # 长任务的中断标志（检查更新/查重/扫描共用）
@@ -2519,6 +2520,9 @@ class Api:
     def get_covers(self, paths, size=64):
         """批量返回封面（JSON 字符串：{path: base64}），size 为缩略边长（列表 64 / 瀑布流 320）"""
         out = {}
+        if not hasattr(self,"_cover_cache_lock"):self._cover_cache_lock=threading.RLock()
+        try:size=max(64,min(1280,int(size)))
+        except (TypeError,ValueError):size=64
         for p in (paths or [])[:80]:
             cover = model_manager.find_cover(p)
             if not cover or not os.path.exists(cover):
@@ -2526,21 +2530,29 @@ class Api:
             try:
                 stt = os.stat(cover)
                 key = (p, int(stt.st_mtime_ns), stt.st_size, int(size))
-                hit = self._cover_cache.get(key)
+                with self._cover_cache_lock:
+                    hit = self._cover_cache.pop(key,None)
+                    if hit:self._cover_cache[key]=hit
                 if hit:
                     out[p] = hit
                     continue
                 from PIL import Image
                 import io
                 import base64
-                im = Image.open(cover).convert("RGB")
-                im.thumbnail((size, size))
+                with Image.open(cover) as original:
+                    original.draft("RGB", (size,size))
+                    original.thumbnail((size,size), Image.Resampling.LANCZOS)
+                    im = original.convert("RGB")
                 buf = io.BytesIO()
-                im.save(buf, "JPEG", quality=(96 if int(size)>=1024 else 88 if int(size)>320 else 82), subsampling=(0 if int(size)>=1024 else 2))
+                im.save(buf, "JPEG", quality=(94 if size>=640 else 88), subsampling=0 if size>=640 else 2)
+                im.close()
                 b64s = base64.b64encode(buf.getvalue()).decode()
-                if len(self._cover_cache) > 4000:
-                    self._cover_cache.clear()
-                self._cover_cache[key] = b64s
+                with self._cover_cache_lock:
+                    self._cover_cache[key] = b64s
+                    # Keep a bounded encoded cache, never thousands of decoded originals.
+                    cache_bytes=sum(len(v) for v in self._cover_cache.values())
+                    while len(self._cover_cache)>192 or cache_bytes>32*1024*1024:
+                        oldest=next(iter(self._cover_cache));cache_bytes-=len(self._cover_cache.pop(oldest))
                 out[p] = b64s
             except Exception:
                 continue

@@ -15,10 +15,10 @@ const SETTINGS_CATEGORIES = [
 const PERFORMANCE_SETTING_KEYS = new Set(["performance_profile","ui_animations","pause_effects_while_dragging","endfield_parallax","show_fps","effects_fps_limit","webview_disable_gpu","cache_detail_images","cache_original_images","gallery_cache_mb","download_hud_motion","ambient_bg","model_pagination","model_page_size"]);
 const ADVANCED_SETTING_KEYS = new Set(["ui_mode", "window_wait_seconds", "browser_fallback_enabled", "close_action", "webview_disable_gpu", "tray_icon", "exit_when_page_closed", "default_page", "confirm_buttons_flip", "rename_menu_default"]);
 const WORKBENCH_SETTING_HELP = {
-  download_hud_enabled: "独立桌面小窗，不抢焦点。关闭小窗不会停止下载；重新显示请关闭再开启此项。当前需要 Windows 软件窗口模式。",
+  download_hud_enabled: "独立桌面小窗，不抢焦点。关闭小窗不会停止下载；可用下载管理顶部的桌面悬浮窗按钮显示或隐藏。当前需要 Windows 软件窗口模式。",
   download_hud_dock: "拖到屏幕左右边缘后，移出鼠标收成小进度环，移入恢复；展开任务时不收起。",
   download_hud_scale: "75–150%，独立于软件界面缩放。",
-  download_hud_motion: "线条展开、进度弧平滑推进、悬停图标淡入；隐藏时停止动画，系统减少动画设置优先。",
+  download_hud_motion: "线条展开、进度线平滑推进、窗口入场；隐藏时停止动画，系统减少动画设置优先。",
   download_hud_theme: "可跟随软件亮暗模式，或固定使用终末地亮色、暗色；使用细长平面胶囊布局。",
   endfield_parallax: "终末地侧栏与背景的等高线缓慢流动，背景随鼠标呈现分层透视。文字和控件不动；关闭或系统减少动画时静止，隐藏窗口暂停绘制。",
   theme: "只提供终末地亮色和暗色，强调色统一使用黄色。等高线替代顶部氛围背景，自动关闭 Mica；字体、字号、信息密度和圆角可独立调整。旧主题配置会按原亮暗迁移。",
@@ -413,7 +413,7 @@ function renderDownloadHistory() {
         if(!historyThumbRequests.has(key))historyThumbRequests.set(key,api.call("get_history_thumbnail",item.id));
         try{b64=await historyThumbRequests.get(key);if(b64){if(historyThumbCache.size>=200)historyThumbCache.clear();historyThumbCache.set(key,b64);}}finally{historyThumbRequests.delete(key);}
       }
-      if (b64 && cell.isConnected) cell.innerHTML = '<img alt="历史封面" src="data:image/jpeg;base64,' + b64 + '"/>';
+      if (b64 && cell.isConnected) cell.innerHTML = '<img alt="历史封面" loading="lazy" decoding="async" src="data:image/jpeg;base64,' + b64 + '"/>';
     } catch (e) {}
   });
   $("#dlHistoryCount").textContent = rows.length + " / " + historyItems.length + " 条记录";
@@ -423,8 +423,8 @@ function renderDownloadHistory() {
   $("#historyNext").disabled = historyPage >= pages;
 }
 function updateDownloadQueueCount() {
-  $("#dlQueueTab").dataset.count = document.querySelectorAll("#dlTable tbody tr[data-task-id]").length;
-  if (!$("#dlHistoryPanel").hidden) refreshDownloadHistory();
+  $("#dlQueueTab").dataset.count = state.dlPresentedCount??state.dlTasks?.length??0;
+  if ($("#page-dlmanager").classList.contains("active")&&!$("#dlHistoryPanel").hidden) refreshDownloadHistory();
 }
 
 const WORKBENCH_ICON_IDS = {
@@ -455,7 +455,7 @@ function applyModelToolbarLock(){
   const locked=state.cfg?.model_toolbar_locked===true;
   document.body.classList.toggle('model-toolbar-locked',locked);
   const viewport=$('#mmMasonryViewport');if(viewport)viewport.hidden=state.mmView==='list';
-  const button=$('#mmToolbarLock');if(button){button.setAttribute('aria-pressed',String(locked));button.innerHTML=_icon('pin')+(locked?'取消固定':'固定菜单');}
+  const button=$('#mmToolbarLock');if(button&&button.getAttribute('aria-pressed')!==String(locked)){button.setAttribute('aria-pressed',String(locked));button.innerHTML=_icon('pin')+(locked?'取消固定':'固定菜单');}
 }
 document.addEventListener('click',async e=>{
   if(e.target.closest('#mmToolbarLock')){
@@ -557,7 +557,7 @@ function initializeWorkbench() {
   }
   let queued = false;
   new MutationObserver(records => {
-    if (!records.some(record => record.addedNodes.length) || queued) return;
+    if (!records.some(record => [...record.addedNodes].some(n=>n.nodeType===1&&(n.matches?.('button,.page-title,.shortcut-row')||n.querySelector?.('button,.page-title,.shortcut-row')))) || queued) return;
     queued = true;
     queueMicrotask(() => { queued = false; decorateWorkbenchIcons(); });
   }).observe(document.body, {childList:true, subtree:true});

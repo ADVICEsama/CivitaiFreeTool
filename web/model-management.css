@@ -1,7 +1,7 @@
 /* Independent lanes do not rebalance when a thumbnail decodes or leaves the viewport. */
 html[data-endfield=true] body #mmMasonry[data-model-view=masonry]{display:flex;column-width:auto;column-count:auto;gap:12px;align-items:flex-start}
 #mmMasonry .ms-stable-column{flex:0 0 min(var(--model-card-width,220px),100%);min-width:0;display:flex;flex-direction:column;gap:12px}
-#mmMasonry .ms-stable-column>.ms-card{width:100%;margin:0;break-inside:auto;content-visibility:visible;contain-intrinsic-size:none}
+#mmMasonry .ms-stable-column>.ms-card{width:100%;margin:0;break-inside:auto;content-visibility:auto;contain-intrinsic-size:auto 300px}
 html[data-endfield=true] body #mmMasonry[data-model-view=grid]{grid-template-columns:repeat(auto-fill,minmax(min(100%,var(--model-grid-size,220px)),1fr));gap:18px 16px}
 html[data-endfield=true] #detailPanel .ef-inspector-heading{min-width:0;overflow:hidden}
 html[data-endfield=true] #detailPanel .detail-title{display:block;min-width:0;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.35!important;font-size:clamp(18px,1.7vw,26px)!important}
@@ -24,3 +24,8 @@ html[data-endfield=true] .ef-model-filters{flex-wrap:wrap;row-gap:8px}
 .model-style-main-heading{justify-content:flex-start;gap:12px!important}.model-style-main-heading h3{min-width:0;max-width:100%;text-overflow:ellipsis;overflow:hidden;white-space:nowrap;flex-basis:100%;margin:0 0 3px}.model-style-main-heading input[type=range]{width:105px;accent-color:var(--ef-yellow)}.model-style-main-heading output{font-size:10px;min-width:35px}.model-style-empty{font-size:11px;line-height:1.8;padding:10px;color:var(--text-dim)}
 @media(max-width:900px){.model-style-dialog .model-style-workspace{grid-template-columns:175px minmax(0,1fr)}.model-info-controls>small{flex-basis:100%}}@media(max-width:520px){.model-style-dialog .model-style-workspace{grid-template-columns:110px minmax(0,1fr)}.model-target-row{padding:8px 3px;gap:5px}.model-target-row>span{font-size:10px}.model-assignment-tabs>button{font-size:10px}.model-style-dropdown>summary{min-width:105px;padding:7px}.model-style-dropdown>div{width:210px}.model-info-controls{gap:7px}.model-info-controls>span{display:none}.model-style-main-heading input[type=range]{width:68px}}
 html[data-endfield=true] #detailPanel .ef-inspector-more{border:0!important;border-radius:0!important;box-shadow:none!important}
+
+#mmMasonry{width:100%;min-width:0}html[data-endfield=true] #mmTable tbody tr{content-visibility:auto;contain-intrinsic-size:auto 78px}
+
+html[data-endfield=true] body #mmTable .ml-cover{position:absolute;inset:0 auto 0 0;width:52%;overflow:hidden;pointer-events:none;z-index:0;mask-image:linear-gradient(90deg,#000 0%,#000b 40%,transparent 100%)}
+html[data-endfield=true] body #mmTable .ml-cover .ml-thumb{position:static!important;display:block!important;width:100%!important;height:100%!important;object-fit:cover;object-position:center center;mask-image:none;aspect-ratio:auto!important}

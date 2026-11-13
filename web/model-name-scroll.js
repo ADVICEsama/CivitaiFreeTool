@@ -74,7 +74,7 @@
       }else r.animation.play();
     }
   }
-  new MutationObserver(schedule).observe(document.body,{childList:true,subtree:true,characterData:true});
+  new MutationObserver(changes=>{if(changes.some(r=>!r.target.closest?.('.name-scroll-viewport')&&(r.target.matches?.(selectors)||[...r.addedNodes].some(n=>n.nodeType===1&&(n.matches?.(selectors)||n.querySelector?.(selectors))))))schedule();}).observe(document.body,{childList:true,subtree:true,characterData:true});window.addEventListener('cft:model-layout-ready',schedule);
   new MutationObserver(schedule).observe(document.documentElement,{attributes:true,attributeFilter:['style','data-theme','data-masonry-info','data-masonry-overlay']});
   document.addEventListener('visibilitychange',schedule);motion.addEventListener('change',schedule);window.addEventListener('cft:zoom',schedule);window.addEventListener('cft:name-scroll-options',schedule);
   document.addEventListener('pointerover',e=>{const card=e.target.closest('.ms-card');if(!card||card.contains(e.relatedTarget))return;for(const [el,r] of records)if(card.contains(el)&&r.animation)r.animation.currentTime=0;schedule();});
