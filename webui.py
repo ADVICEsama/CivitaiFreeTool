@@ -15,7 +15,7 @@ import uuid
 
 import webview
 
-APP_VERSION = "3.0.10"
+APP_VERSION = "3.0.11"
 
 from functools import wraps
 
@@ -425,6 +425,15 @@ class Api:
     def download_hud_control(self, action="show"):
         hud = getattr(self, "_download_hud", None)
         if hud is None: return {"ok":False,"msg":"桌面悬浮窗需要 Windows 软件窗口模式；浏览器页面不能置顶桌面"}
+        if action == "toggle":
+            if hud.window is not None and not hud._hidden_requested:
+                hud.hide()
+                return {"ok":True,"visible":False}
+            result = hud.show()
+            return {**result,"visible":bool(result.get("ok"))}
+        if action == "hide":
+            hud.hide()
+            return {"ok":True,"visible":False}
         if action == "show": return hud.show()
         if action == "sync":
             hud.sync()
@@ -1053,6 +1062,43 @@ class Api:
         return json.dumps({"ok":True,"path":path,"name":row["filename"],"info":info,"cached_history":True,
                            "covers":[{"b64":thumb,"local":False}] if thumb else []},ensure_ascii=False)
 
+    def history_retry(self, task_id):
+        """Retry the exact archived file; never silently choose a different primary file."""
+        row = next((r for r in self.dl.get_history() if r["id"] == task_id), None)
+        if not row or row.get("status") not in (downloader.ST_ERROR, downloader.ST_CANCELED):
+            return {"ok":False,"msg":"只有失败或取消的记录可以重试"}
+        with self.dl._lock:
+            task = next((t for t in self.dl.tasks if t.id == task_id), None)
+        if task:
+            if task.status not in (downloader.ST_ERROR, downloader.ST_CANCELED):
+                return {"ok":False,"msg":"任务已在队列中"}
+            self.dl.retry_task(task)
+            return {"ok":True,"msg":"已重新加入下载队列"}
+        model_id, version_id, file_id = row.get("model_id"), row.get("version_id"), row.get("file_id")
+        # Older archives did not persist IDs; recover only provable identity from
+        # the existing metadata snapshot and recorded hash, never the latest file.
+        if not model_id or not version_id:
+            try:
+                with open(self._history_asset(task_id, ".json"), encoding="utf-8") as f: cached = json.load(f)
+                model_id = model_id or cached.get("modelId") or cached.get("id")
+                version_id = version_id or cached.get("versionId") or (cached.get("version") or {}).get("id")
+            except (OSError, ValueError, AttributeError): pass
+        if not model_id or not version_id:
+            return {"ok":False,"msg":"旧记录缺少准确文件信息，请从原模型页面重新下载"}
+        try:
+            version = self.api.get_model_version(version_id)
+            files = self.api.model_files(version)
+            if file_id:
+                file = next((f for f in files if str(f.get("id")) == str(file_id)), None)
+            else:
+                digest = str(row.get("expected_sha256") or "").lower()
+                matches = [f for f in files if digest and str((f.get("hashes") or {}).get("SHA256") or "").lower() == digest]
+                file = matches[0] if len(matches) == 1 else None
+            if not file: return {"ok":False,"msg":"原文件已不可用，未改为下载其他文件"}
+            return self._enqueue_one(self._site_url(model_id, version_id), row.get("dest_dir"), True, version, file, model_id)
+        except Exception as e:
+            return {"ok":False,"msg":str(e)[:200]}
+
     def history_move_to(self, task_id, dest_dir):
         row = next((r for r in self.dl.get_history() if r["id"] == task_id), None)
         if not row: return {"ok":False,"msg":"历史记录不存在"}
@@ -1599,6 +1645,31 @@ class Api:
             if result.get('meta') or result.get('resources'):image_gallery.cache_store(item,self.cfg,'metadata',result)
             return result
         except Exception:return {'ok':False,'msg':'生成数据不可用，保留原图参数；可打开 C站原图页查看'}
+
+    def share_model_card(self, path, labels=None):
+        """Render A-layout locally; never claim clipboard success without a successful write."""
+        import base64, model_share, image_gallery
+        try:
+            detail=json.loads(self.get_model_detail(path))
+            if not detail.get('ok'):return {'ok':False}
+            cover=None
+            if detail.get('covers'):
+                preview=self.get_gallery_image(path,0)
+                if preview.get('ok') and preview.get('b64'):cover=base64.b64decode(preview['b64'],validate=True)
+            safe={key:str((labels or {}).get(key,'—'))[:160] for key in ('noDescription','noLink')}
+            previews=[]
+            if len(model_share.plain((detail.get('info') or {}).get('description'))) < 200:
+                for index in range(1,min(6,len(detail.get('covers') or []))):
+                    try:
+                        item=self.get_gallery_image(path,index)
+                        if item.get('ok') and item.get('b64'):previews.append(base64.b64decode(item['b64'],validate=True))
+                    except Exception:continue
+            data=model_share.render(detail,cover,self.cfg.get('model_share_theme','dark'),safe,previews)
+            controller=getattr(self,'_window_appearance_controller',None)
+            form=getattr(getattr(controller,'window',None),'native',None)
+            copied=bool(form is not None and image_gallery.copy_clipboard_image(data,form.Handle.ToInt64()))
+            return {'ok':True,'copied':copied,'b64':base64.b64encode(data).decode('ascii')}
+        except Exception:return {'ok':False}
 
     def copy_gallery_image(self, path, index, history_id=''):
         import image_gallery,base64

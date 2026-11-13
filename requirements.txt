@@ -24,3 +24,6 @@ pystray>=0.19; sys_platform == "win32"
 
 # 打包（可选，仅发布需要）
 # pyinstaller>=6.0
+
+# Model share cards: local QR rendering
+qrcode>=8.0,<9

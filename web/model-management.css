@@ -1,6 +1,6 @@
 /* Independent lanes do not rebalance when a thumbnail decodes or leaves the viewport. */
 html[data-endfield=true] body #mmMasonry[data-model-view=masonry]{display:flex;column-width:auto;column-count:auto;gap:12px;align-items:flex-start}
-#mmMasonry .ms-stable-column{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:12px}
+#mmMasonry .ms-stable-column{flex:0 0 min(var(--model-card-width,220px),100%);min-width:0;display:flex;flex-direction:column;gap:12px}
 #mmMasonry .ms-stable-column>.ms-card{width:100%;margin:0;break-inside:auto;content-visibility:visible;contain-intrinsic-size:none}
 html[data-endfield=true] body #mmMasonry[data-model-view=grid]{grid-template-columns:repeat(auto-fill,minmax(min(100%,var(--model-grid-size,220px)),1fr));gap:18px 16px}
 html[data-endfield=true] #detailPanel .ef-inspector-heading{min-width:0;overflow:hidden}

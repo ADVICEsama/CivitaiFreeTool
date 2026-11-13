@@ -106,10 +106,10 @@ function applyZoom(v) {
   window.dispatchEvent(new Event("cft:zoom"));
 }
 document.addEventListener("wheel", (e) => {
-  if (e.altKey && !e.ctrlKey && !e.metaKey && state.mmView === "list" && e.target.closest && e.target.closest("#mmTableWrap, #mmListSizeControl")) {
+  if (e.altKey && !e.ctrlKey && !e.metaKey && state.mmView === "list" && e.target.closest && e.target.closest("#mmTableWrap, #mmListSizeControl, #mmViewList")) {
     e.preventDefault(); setModelListSize(Number(state.cfg.model_list_size || 3) + (e.deltaY < 0 ? 1 : -1), true); return;
   }
-  if (e.altKey && !e.ctrlKey && e.target.closest && e.target.closest("#mmMasonry, #mmImageSizeControl")) {
+  if (e.altKey && !e.ctrlKey && e.target.closest && e.target.closest("#mmMasonry, #mmImageSizeControl, #mmViewMasonry, #mmViewGrid")) {
     e.preventDefault(); if(state.mmView==='grid')window.CFTModelManagement?.setGridSize(Number(state.cfg.model_grid_size||220)+(e.deltaY<0?20:-20),true);else setMasonrySize(Number(state.cfg.masonry_card_width || 220) + (e.deltaY < 0 ? 20 : -20), true); return;
   }
   if (!e.ctrlKey) return;
@@ -1050,7 +1050,7 @@ async function dlRefresh() {
       }
       const destTip = (destFull ? destFull : (effFull + "\n（全局目标）")) + "\n点击选择该文件的保存文件夹";
       const destLeaf = String(destShow || effFull || "未设置").replace(/[\\/]$/, "").split(/[\\/]/).pop();
-      const destCell = "<td class='c-dest cell-dest' data-task='" + esc(t.id) + "' title='" + esc(destTip) + "'><button type='button' class='dest-picker' aria-label='保存到 " + esc(destLeaf) + "'>" + _icon("folder") + "<span>" + esc(destLeaf) + "</span>" + _icon("chevron-down") + "</button>" + (destFull ? "" : " <span class='dest-def'>默认</span>") + "</td>";
+      const destCell = "<td class='c-dest cell-dest' data-task='" + esc(t.id) + "' title='" + esc(destTip) + "'><button type='button' class='dest-picker' aria-label='保存到 " + esc(destLeaf) + "'>" + _icon("folder") + "<span>" + esc(destLeaf) + "</span>" + _icon("chevron-down") + "</button>" + "</td>";
       return '<tr data-ef-progress="'+Math.max(0,Math.min(100,t.status==='done'?100:Number(t.progress)||0))+'" data-ef-complete="'+String(t.status==='done'&&!t.hash_mismatch)+'" data-ef-status="'+esc(t.status)+'" style="--ef-progress:'+Math.max(0,Math.min(100,t.status==='done'?100:Number(t.progress)||0))+'%" data-task-id="'+esc(t.id)+'" tabindex="0" aria-selected="'+String(selPaths.has(t.id))+'" data-fn="' + esc(t.filename) + '" class="' + (selPaths.has(t.id) ? "sel-row" : "") + '">' +
         '<td class="dl-check-col"><span class="dl-check-controls"><button type="button" class="dl-drag-handle" draggable="true" aria-label="拖动调整下载顺序" data-tip="拖动排序：前面的等待任务优先，不中断当前下载">'+ '<svg class="ic dl-grip" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="8" cy="6" r="1.7"/><circle cx="16" cy="6" r="1.7"/><circle cx="8" cy="12" r="1.7"/><circle cx="16" cy="12" r="1.7"/><circle cx="8" cy="18" r="1.7"/><circle cx="16" cy="18" r="1.7"/></svg>' +'</button></span></td>' + "<td class='c-thumb'>" + thumb + "</td><td class='c-file'><div>" + esc(t.filename) + "</div>" +
         (effFull ? '<div class="file-subpath" title="' + esc(effFull + (/[/\\]$/.test(effFull) ? "" : (effFull.includes("\\") || /^[a-z]:/i.test(effFull) ? "\\" : "/")) + t.filename) + '">' +
@@ -3091,6 +3091,7 @@ async function showModelDetail(path, historyId = "") {
     '<div class="dt-sec"><div class="dt-sec-h">' + _icon("settings") + '操作</div>' +
       '<div class="dt-ag"><div class="dt-ag-h">主要操作</div><div class="dt-ag-b">' +
         '<button class="btn btn-primary" id="dEditInfo">' + _icon("pencil") + '编辑信息</button>' +
+        '<button class="btn" id="dShare" data-action-icon="external"><span data-i18n="share.action">'+esc(CFTI18n.t('share.action'))+'</span></button>'+
         '<button class="btn" id="dSite" data-tip="在浏览器打开该模型在 C 站的主页">' + _icon("external") + '打开 C 站</button>' +
       "</div></div>" +
       '<div class="dt-ag"><div class="dt-ag-h">文件</div><div class="dt-ag-b">' +
@@ -3743,8 +3744,8 @@ function showModelContextMenu(e,row){
   const action=(act,label,icon,tip)=>contextAction(act,label,icon,tip);
   const group=(label,icon,items)=>'<details class="ctx-group"><summary class="ctx-group-label" data-tip="展开'+esc(label)+'功能；菜单项可悬停查看用途">'+_icon(icon)+label+_icon('chevron-down','ic ctx-chevron')+'</summary><div>'+items+'</div></details>';
   menu.innerHTML='<div class="ctx-caption">'+esc(row.civitai_name||row.name||'模型操作')+'</div>'+
-    action('detail','查看模型信息','info')+action('favorite',isModelFavorite(row.path)?'取消收藏置顶':'收藏并置顶','star')+action('folder','打开所在文件夹','folder')+action('move','移动到…文件夹','folder','只移动当前右键模型及附属文件、图片文件夹，不包含其它勾选模型')+action('site','打开 C站','external')+
-    '<hr class="ctx-sep"/>'+group('复制','copy',action('copy_name','复制文件名','copy')+action('copy_cname','复制 C站模型名','copy'))+
+    action('detail','查看模型信息','info')+action('share',CFTI18n.t('share.action'),'external')+action('favorite',isModelFavorite(row.path)?'取消收藏置顶':'收藏并置顶','star')+action('folder','打开所在文件夹','folder')+action('move','移动到…文件夹','folder','只移动当前右键模型及附属文件、图片文件夹，不包含其它勾选模型')+action('site','打开 C站','external')+
+    '<hr class="ctx-sep"/>'+group('复制','copy',action('copy_name','复制文件名','copy')+action('copy_cname','复制 C站模型名','copy')+action('copy_path',CFTI18n.t('models.copyPath'),'copy')+action('copy_site',CFTI18n.t('models.copySite'),'copy')+action('copy_cover',CFTI18n.t('models.copyCover'),'copy'))+
     group('改名与整理','pencil',action('rename','自定义改名','pencil')+action('rename_c','文件名 → C站名称','pencil')+action('localize','文件名翻译为中文','file')+action('organize','按分类规则整理','folder','按设置里的分类规则移动此模型及附属文件；不是刷新或扫描，需先配置目标环境'))+
     group('元数据与更新','settings',action('rp','识别模型信息','search')+action('sdjson','生成 SD 元数据 JSON','file')+action('wl','不再提醒此模型更新','refresh'))+
     '<hr class="ctx-sep"/>'+action('del','移入回收站','trash','可从系统回收站恢复');
@@ -3772,6 +3773,17 @@ $("#ctxMenu").addEventListener("click", async (e) => {
   $("#ctxMenu").style.display = "none";
   const path = ctxRow.path;
   try {
+    if(act==='share'){await window.CFTModelShare.create(ctxRow.path);return;}
+    if(['copy_path','copy_site','copy_cover'].includes(act)){
+      const row=ctxRow;let value=act==='copy_path'?row.path:'';
+      if(act!=='copy_path'){
+        const raw=await api.call('get_model_detail',row.path);const detail=typeof raw==='string'?JSON.parse(raw):raw||{};
+        if(act==='copy_site'){const info=detail.info||{};const mid=row.modelId||info.modelId||info.id;value=row.url||info.url||(mid?'https://civitai.com/models/'+encodeURIComponent(mid):'');if(!/^https:\/\/(?:www\.)?civitai\.(?:com|red)\/models\//i.test(value))value='';}
+        else {const cover=(detail.covers||[]).find(c=>/^https?:\/\//i.test(c.orig_url||c.url||''));value=cover&&(cover.orig_url||cover.url)||'';}
+      }
+      if(!value){showToast(CFTI18n.t('models.noLink'));return;}
+      await window.__copyText(value);showToast(CFTI18n.t('models.copied'));return;
+    }
     if (act === "favorite") {await toggleModelFavorite(path);return;}
     if (act === "detail") {await showModelDetail(path);return;}
     if (act === "folder") { api.call("open_in_folder", path); return; }
@@ -4274,6 +4286,7 @@ const SETTING_FIELDS = [
   ["界面", "name_scroll_start_pause", "名称滚动：开头停顿（毫秒）", "number"],
   ["界面", "name_scroll_end_pause", "名称滚动：末尾停顿（毫秒）", "number"],
   ["界面", "masonry_card_width", "瀑布流图片大小", "range", [140,420,10]],
+  ["界面", "model_share_theme", CFTI18n.t("share.theme"), "select", [["dark",CFTI18n.t("share.dark")],["light",CFTI18n.t("share.light")]]],
   ["界面", "model_list_hover", "列表悬停预览", "select", [["thumbnail","仅缩略图（默认）"],["text","仅文字"],["both","文字和缩略图"],["none","关闭"]]],
   ["界面", "model_grid_size", "方格图片大小", "range", [100,500,10]],
   ["界面", "model_pagination", "模型管理翻页模式", "bool"],
@@ -4587,6 +4600,7 @@ $("#settingsForm").addEventListener("change", (e) => {
     const previous=state.cfg[key];state.cfg[key]=val;
     api.call('save_config',{[key]:val}).then(async ok=>{
       if(!ok)throw new Error('保存失败');
+      if(typeof filterWorkbenchSettings==='function')filterWorkbenchSettings();
       const r=await api.call('download_hud_control','sync');
       setStatus(r?.ok?'悬浮窗设置已保存':r?.msg||'当前无法显示悬浮窗');
     }).catch(()=>{state.cfg[key]=previous;setStatus('悬浮窗设置保存失败');});
@@ -5127,4 +5141,4 @@ document.addEventListener('keydown',e=>{const menu=$('#ctxMenu');if(e.key==='Esc
 window.addEventListener('resize',()=>{const menu=$('#ctxMenu');if(menu)menu.style.display='none';});
 
 // Manual recovery entry: hiding the HUD never stops downloads.
-document.getElementById("dlShowHud")?.addEventListener("click",async()=>{try{const r=await api.call("download_hud_control","show");setStatus(r?.ok?"桌面悬浮窗已显示":r?.msg||"悬浮窗不可用");}catch{setStatus("悬浮窗打开失败");}});
+document.getElementById("dlShowHud")?.addEventListener("click",async()=>{try{const r=await api.call("download_hud_control","toggle");if(r?.ok)document.getElementById("dlShowHud").setAttribute("aria-pressed",String(r.visible));setStatus(r?.ok?(r.visible?"桌面悬浮窗已显示":"桌面悬浮窗已隐藏"):r?.msg||"悬浮窗不可用");}catch{setStatus("悬浮窗打开失败");}});

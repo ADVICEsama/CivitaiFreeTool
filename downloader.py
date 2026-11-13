@@ -318,6 +318,9 @@ class Downloader:
             "removed_partial_path": task._partial_path if getattr(task,'_removed',False) and getattr(task,'_cleanup_partial',False) else None,
             "manual_binding": (task.info or {}).get("manual_binding") if
                 ((task.info or {}).get("manual_binding") or {}).get('actual_sha256') == task.actual_sha256 and task.actual_sha256 else None,
+            "model_id": (task.info or {}).get("model_id"),
+            "version_id": (task.info or {}).get("version_id"),
+            "file_id": (task.info or {}).get("fileId"),
             "modelName": (task.info or {}).get("modelName", ""),
             "versionName": (task.info or {}).get("versionName", ""),
         }

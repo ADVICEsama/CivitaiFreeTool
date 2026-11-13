@@ -113,6 +113,7 @@ DEFAULTS = {
     "model_glow_opacity": 100,       # Inner-light opacity, 0..100
     "model_grid_size": 220,
     "model_list_hover": "thumbnail",
+    "model_share_theme": "dark",
     "model_pagination": False,
     "model_page_size": 60,
     "model_card_styles": {},            # Per-type underlight and square-view shell pool
@@ -328,6 +329,7 @@ def normalize_ui_preferences(cfg):
     for key in ("download_hud_x", "download_hud_y"):
         try: cfg[key] = max(-100000, min(100000, int(cfg.get(key, 40))))
         except (ValueError, TypeError, OverflowError): cfg[key] = 40
+    if cfg.get("model_share_theme") not in ("light","dark"):cfg["model_share_theme"]="dark"
     if cfg.get("model_list_hover","thumbnail") not in ("thumbnail","text","both","none"):cfg["model_list_hover"]="thumbnail"
     if cfg.get("masonry_info_mode","always") not in ("always","slide","fade"):cfg["masonry_info_mode"]="always"
     if cfg.get("masonry_overlay_size","partial") not in ("partial","full"):cfg["masonry_overlay_size"]="partial"

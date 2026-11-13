@@ -187,8 +187,8 @@ function setMasonrySize(value,save=false) {
   const width=Math.max(140,Math.min(420,Math.round((Number(value)||220)/10)*10));
   const previousWidth=state.cfg.masonry_card_width;
   document.documentElement.style.setProperty('--model-card-width',width+'px');
-  if(Number(previousWidth)!==width)window.dispatchEvent(new Event('cft:model-card-size'));
   if(typeof state!=='undefined' && state.cfg)state.cfg.masonry_card_width=width;
+  if(Number(previousWidth)!==width)window.dispatchEvent(new Event('cft:model-card-size'));
   const control=$('#mmImageSizeControl');if(control){control.hidden=typeof state==='undefined' || !['masonry','grid'].includes(state.mmView);if(control.hidden)closeMasonrySizeMenu();}
   for(const id of ['mmImageSize','setting-masonry_card_width']){const input=document.getElementById(id);if(input&&(id!=='mmImageSize'||state.mmView!=='grid'))input.value=width;}
   for(const id of ['mmImageSizeValue','masonrySizeSettings']){const label=document.getElementById(id);if(label&&(id!=='mmImageSizeValue'||state.mmView!=='grid'))label.textContent=width+' px';}
@@ -246,7 +246,7 @@ function bindModelListSize(){
   anchor.addEventListener('click',()=>setTimeout(openListSizeMenu,0));
   anchor.addEventListener('keydown',e=>{if(e.key==='ArrowDown'){openListSizeMenu();$('#mmListSize').focus();e.preventDefault();}});
   menu.addEventListener('input',e=>{if(e.target.id==='mmListSize')setModelListSize(e.target.value,true);});
-  menu.addEventListener('wheel',e=>{if(e.ctrlKey || e.metaKey || e.altKey)return;e.preventDefault();setModelListSize(Number(state.cfg.model_list_size || 3)+(e.deltaY<0?1:-1),true);},{passive:false});
+  for(const surface of [anchor,menu])surface.addEventListener('wheel',e=>{if(e.ctrlKey || e.metaKey || e.altKey)return;e.preventDefault();setModelListSize(Number(state.cfg.model_list_size || 3)+(e.deltaY<0?1:-1),true);},{passive:false});
   document.addEventListener('pointerdown',e=>{if(!e.target.closest('#mmViewSeg'))closeListSizeMenu();});
   document.addEventListener('focusin',e=>{if(!e.target.closest('#mmViewSeg'))closeListSizeMenu();});
   document.addEventListener('keydown',e=>{if(e.key==='Escape' && $('#mmViewSeg').classList.contains('list-size-menu-open')){anchor.focus();closeListSizeMenu();e.preventDefault();e.stopImmediatePropagation();}},true);
@@ -310,6 +310,8 @@ function showSettingsCategory(id) {
 // Keep dormant preferences intact, but do not offer controls whose effect is overridden.
 function isWorkbenchSettingRelevant(key) {
   const theme=document.documentElement.dataset.theme,endfield=['dark_endfield','light_endfield'].includes(theme);
+  if(String(key||'').startsWith('download_hud_')&&key!=='download_hud_enabled'&&key!=='download_hud_motion')return state.cfg.download_hud_enabled!==false;
+  if(key==='download_hud_motion'&&state.cfg.download_hud_enabled===false)return false;
   if(key==='endfield_parallax')return endfield;
   if(['window_appearance','ambient_bg'].includes(key))return !endfield;
   if(['custom_accent_enabled','custom_accent'].includes(key)&&endfield)return false;
@@ -387,7 +389,7 @@ function renderDownloadHistory() {
   if(signature===historyRenderSignature&&$("#dlHistoryTable tbody").children.length)return;
   historyRenderSignature=signature;
   const renderHistoryRow = row =>
-    '<tr data-history-id="' + esc(row.id) + '" data-ef-complete="'+String(row.status==='done'&&row.verification_status!=='mismatch'&&!/SHA256 校验失败/.test(row.error||''))+'" data-history-group="'+esc(window.CFTDownloadPresentation?.groupKey(row).key||'legacy')+'"'+(window.CFTDownloadPresentation?.isGroupCollapsed(window.CFTDownloadPresentation.groupKey(row).key)?' hidden':'')+'><td class="c-file" title="' + esc(row.filename) + '"><div class="history-thumb" data-history-thumb="' + esc(row.id) + '">' + _icon('image') + '</div><div class="history-file-copy"><div class="history-file-name">' + esc(row.filename) + '</div><div class="history-file-meta"><div class="file-subpath" title="' + esc(row.dest_dir) + '">' + esc(row.dest_dir || "") + '</div>' + (row.modelName ? '<div class="history-model">' + esc(row.modelName) + '</div>' : "") + '</div></div></td><td><span class="history-result ' + esc(row.status) + '">' + esc(row.verification_status==='mismatch' || /SHA256 校验失败/.test(row.error||'') ? (row.manual_binding ? '已关联 · 校验不一致' : '已下载 · 校验不一致') : status[row.status] || row.status) + '</span>' + (row.error || row.partial_cleanup_error ? '<div class="history-error" title="' + esc([row.error,row.partial_cleanup_error].filter(Boolean).join("；")) + '">' + esc([row.error,row.partial_cleanup_error].filter(Boolean).join("；")) + '</div>' : "") + '</td><td>' + fmtSize(row.total || row.downloaded) + '</td><td>' + (row.finished_at ? fmtTime(row.finished_at) : '时间未记录') + '</td><td><button class="btn btn-tiny" data-history-open="' + esc(row.id) + '"' + (row.dest_dir ? "" : " disabled") + '>' + _icon("folder") + '打开目录</button><button class="btn btn-tiny" data-history-save="' + esc(row.id) + '"' + (row.file_exists === false || row.status !== 'done' ? ' disabled' : '') + '>' + _icon('folder') + '保存到…</button><button class="btn btn-tiny" data-history-site="' + esc(row.id) + '"' + (row.model_url ? '' : ' disabled') + '>' + _icon('external') + '打开 C 站</button><button class="btn btn-tiny" data-history-info="' + esc(row.id) + '">' + _icon('info') + '模型信息</button></td></tr>';
+    '<tr data-history-id="' + esc(row.id) + '" data-ef-complete="'+String(row.status==='done'&&row.verification_status!=='mismatch'&&!/SHA256 校验失败/.test(row.error||''))+'" data-history-group="'+esc(window.CFTDownloadPresentation?.groupKey(row).key||'legacy')+'"'+(window.CFTDownloadPresentation?.isGroupCollapsed(window.CFTDownloadPresentation.groupKey(row).key)?' hidden':'')+'><td class="c-file" title="' + esc(row.filename) + '"><div class="history-thumb" data-history-thumb="' + esc(row.id) + '">' + _icon('image') + '</div><div class="history-file-copy"><div class="history-file-name">' + esc(row.filename) + '</div><div class="history-file-meta"><div class="file-subpath" title="' + esc(row.dest_dir) + '">' + esc(row.dest_dir || "") + '</div>' + (row.modelName ? '<div class="history-model">' + esc(row.modelName) + '</div>' : "") + '</div></div></td><td><span class="history-result ' + esc(row.status) + '">' + esc(row.verification_status==='mismatch' || /SHA256 校验失败/.test(row.error||'') ? (row.manual_binding ? '已关联 · 校验不一致' : '已下载 · 校验不一致') : status[row.status] || row.status) + '</span>' + (row.error || row.partial_cleanup_error ? '<div class="history-error" title="' + esc([row.error,row.partial_cleanup_error].filter(Boolean).join("；")) + '">' + esc([row.error,row.partial_cleanup_error].filter(Boolean).join("；")) + '</div>' : "") + '</td><td>' + fmtSize(row.total || row.downloaded) + '</td><td>' + (row.finished_at ? fmtTime(row.finished_at) : '时间未记录') + '</td><td>' + (row.status !== 'done' ? '<button class="btn btn-tiny primary" data-i18n="downloads.retry" data-history-retry="' + esc(row.id) + '">' + _icon('refresh') + esc(CFTI18n.t('downloads.retry')) + '</button>' + (row.model_url ? '<button class="btn btn-tiny" data-history-site="' + esc(row.id) + '">' + _icon('external') + '打开 C 站</button>' : '') : '<button class="btn btn-tiny" data-history-open="' + esc(row.id) + '"' + (row.dest_dir ? "" : " disabled") + '>' + _icon("folder") + '打开目录</button><button class="btn btn-tiny" data-history-save="' + esc(row.id) + '"' + (row.file_exists === false || row.status !== 'done' ? ' disabled' : '') + '>' + _icon('folder') + '保存到…</button><button class="btn btn-tiny" data-history-site="' + esc(row.id) + '"' + (row.model_url ? '' : ' disabled') + '>' + _icon('external') + '打开 C 站</button><button class="btn btn-tiny" data-history-info="' + esc(row.id) + '">' + _icon('info') + '模型信息</button>') + '</td></tr>';
   const pageRows=rows.slice((historyPage-1)*100,historyPage*100);let historyHtml='';
   if(document.documentElement.dataset.endfield==='true'&&window.CFTDownloadPresentation){
     const batches=new Map();for(const row of pageRows){const meta=CFTDownloadPresentation.groupKey(row);if(!batches.has(meta.key))batches.set(meta.key,{meta,items:[]});batches.get(meta.key).items.push(row);}
@@ -633,13 +635,16 @@ function initializeWorkbench() {
     await openHistoryModel(item);
   });
   $("#dlHistoryTable").addEventListener("click", async e => {
-    const button = e.target.closest("[data-history-open], [data-history-save], [data-history-site], [data-history-info]");
+    const button = e.target.closest("[data-history-retry], [data-history-open], [data-history-save], [data-history-site], [data-history-info]");
     if (!button) return;
-    const id = button.dataset.historyOpen || button.dataset.historySave || button.dataset.historySite || button.dataset.historyInfo;
+    const id = button.dataset.historyRetry || button.dataset.historyOpen || button.dataset.historySave || button.dataset.historySite || button.dataset.historyInfo;
     const item = historyItems.find(row => row.id === id);
     if (!item) return;
     try {
-      if (button.hasAttribute("data-history-open")) {
+      if (button.hasAttribute("data-history-retry")) {
+        button.disabled=true;
+        try {const result=await api.call("history_retry",id);setStatus(result?.msg||"重试失败");if(result?.ok){await dlRefresh();await refreshDownloadHistory();}}finally{button.disabled=false;}
+      } else if (button.hasAttribute("data-history-open")) {
         const result = await api.call("open_in_folder", item.file_exists ? item.file_path : item.dest_dir);
         if (result?.ok === false) setStatus(result.msg || "目录可能已移动或删除");
       } else if (button.hasAttribute("data-history-save")) {

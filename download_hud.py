@@ -37,7 +37,8 @@ def snapshot(rows, cfg):
                 active=sum(r['status'] == 'downloading' for r in tasks),
                 waiting=sum(r['status'] == 'pending' for r in tasks),
                 failed=sum(r['status'] == 'error' for r in tasks), theme=theme,
-                motion=cfg.get('download_hud_motion', True), enabled=cfg.get('download_hud_enabled', False))
+                motion=cfg.get('download_hud_motion', True), enabled=cfg.get('download_hud_enabled', False),
+                fonts={k:cfg.get(k) for k in ('ui_font','ui_font_stack','ui_font_scripts','ui_language')})
 
 
 class HudBridge:
@@ -115,7 +116,7 @@ class DownloadHud:
         self.height = round((300 if self.expanded else 54)*scale)
         self.window.resize(self.width, self.height)
         self.decorate()
-        self.window.evaluate_js("document.documentElement.style.zoom="+str(scale)+";document.body.dataset.folded="+str(self.folded).lower())
+        self.window.evaluate_js("document.documentElement.style.setProperty('--hud-scale','"+str(scale)+"');document.documentElement.style.zoom="+str(scale)+";document.body.dataset.folded="+str(self.folded).lower())
 
     def decorate(self):
         """Round the actual native region, not a painted rectangle with black corners."""

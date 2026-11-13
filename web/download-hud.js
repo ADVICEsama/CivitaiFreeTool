@@ -1,6 +1,6 @@
 /* Isolated view: only the restricted HudBridge is exposed, never the full application API. */
 'use strict';
-let bridge, expanded=false, dragging=null, signature='', stopped=false, sawActive=false, completionAt=0;
+let fontSignature='', bridge, expanded=false, dragging=null, signature='', stopped=false, sawActive=false, completionAt=0;
 const $=id=>document.getElementById(id);
 const gb=n=>(Number(n||0)/1073741824).toFixed(1);
 const labels={pending:'排队',downloading:'下载中',paused:'已暂停',retrying:'重试中',error:'失败',done:'已完成'};
@@ -8,7 +8,8 @@ async function act(action,id){try{const ok=await bridge.action(action,id);$('mes
 async function poll(){
   if(stopped)return;
   try{
-    const s=await bridge.snapshot(),theme=String(s.theme||'');document.body.dataset.theme=theme.startsWith('light')||['modern','metro'].includes(theme)?'light_endfield':'dark_endfield';document.body.dataset.motion=String(s.motion);
+    const s=await bridge.snapshot(),theme=String(s.theme||'');document.body.dataset.theme=theme.startsWith('light')||['modern','metro'].includes(theme)?'light_endfield':'dark_endfield';document.documentElement.dataset.theme=document.body.dataset.theme;document.body.dataset.motion=String(s.motion);
+    const fontKey=JSON.stringify(s.fonts||{});if(fontKey!==fontSignature){fontSignature=fontKey;const cfg=s.fonts||{},raw=Array.isArray(cfg.ui_font_stack)?cfg.ui_font_stack:cfg.ui_font?[cfg.ui_font]:[];const fonts=raw.filter(f=>typeof f==='string'&&f.trim()).slice(0,20).map(f=>JSON.stringify(f.trim()));document.documentElement.style.setProperty('--font',fonts.concat(["'CFT LINE Latin'","'CFT Endfield Latin'","'HarmonyOS Sans SC'","sans-serif"]).join(','));document.documentElement.lang=cfg.ui_language||'zh-CN';applyFontScriptRouting(cfg);}
     if(s.active){sawActive=true;completionAt=0;}
     if(s.done&&sawActive){if(!completionAt)completionAt=Date.now();if(Date.now()-completionAt>5000){sawActive=false;bridge.hide();}}
     document.body.classList.toggle('running',s.active>0);document.body.classList.toggle('done',s.done);document.body.classList.toggle('failed',s.failed>0);
