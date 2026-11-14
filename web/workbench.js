@@ -77,7 +77,8 @@ function settingCategory(key, oldGroup) {
 // Fallback for older/sparse configs as well as the isolated preview. Keep in sync with config.DEFAULTS.
 const SETTING_NUMBER_DEFAULTS=Object.freeze({max_concurrent_downloads:3,download_timeout:300,download_retry:5,hash_threads:4,name_scroll_speed:70,name_scroll_start_pause:350,name_scroll_end_pause:250,window_wait_seconds:30,effects_fps_limit:60,gallery_cache_mb:1024});
 function settingRow(key, label, type, opts, tip) {
-  const value = state.cfg[key] ?? ({...SETTING_NUMBER_DEFAULTS,ui_text_size:"standard",window_appearance:"theme",performance_profile:"custom",ui_animations:true,pause_effects_while_dragging:true,download_cover:true})[key];
+  if(String(key||'').startsWith('translation_')){label=CFTI18n.t('translation.'+key);tip=CFTI18n.t('translation.help');}
+  const value = (key==='translation_provider'?(state.cfg[key]||(state.cfg.baidu_appid&&state.cfg.baidu_key?'baidu':'mymemory')):state.cfg[key]) ?? ({...SETTING_NUMBER_DEFAULTS,ui_text_size:"standard",window_appearance:"theme",performance_profile:"custom",ui_animations:true,pause_effects_while_dragging:true,download_cover:true})[key];
   const numberDefault=SETTING_NUMBER_DEFAULTS[key];
   const numericHint=type==='number'&&numberDefault!==undefined?' data-default="'+numberDefault+'" placeholder="默认 '+numberDefault+'"':'';
   const id = "setting-" + key;
@@ -312,6 +313,8 @@ function isWorkbenchSettingRelevant(key) {
   const theme=document.documentElement.dataset.theme,endfield=['dark_endfield','light_endfield'].includes(theme);
   if(String(key||'').startsWith('download_hud_')&&key!=='download_hud_enabled'&&key!=='download_hud_motion')return state.cfg.download_hud_enabled!==false;
   if(key==='download_hud_motion'&&state.cfg.download_hud_enabled===false)return false;
+  if(String(key||'').startsWith('translation_')&&key!=='translation_provider')return ['deepseek','opencode','custom'].includes(document.getElementById('setting-translation_provider')?.value||state.cfg.translation_provider);
+  if(['baidu_appid','baidu_key'].includes(key))return (document.getElementById('setting-translation_provider')?.value||state.cfg.translation_provider||((state.cfg.baidu_appid&&state.cfg.baidu_key)?'baidu':'mymemory'))==='baidu';
   if(key==='endfield_parallax')return endfield;
   if(['window_appearance','ambient_bg'].includes(key))return !endfield;
   if(['custom_accent_enabled','custom_accent'].includes(key)&&endfield)return false;

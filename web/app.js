@@ -258,7 +258,7 @@ const state = {
   mmSel: new Set(),
   mmSort: { col: "name", rev: false },
   mmTypeF: "", mmBaseF: "", mmStF: "", mmFolderF: "", mmAuthorF: "",   // Metro 筛选：底模 / 更新状态 / 文件夹 / 作者
-  mmUpdOnly: false,          // 只看有更新的模型（更新检测筛选）
+  mmUpdOnly: false, mmPinnedOnly:false,          // 只看有更新的模型（更新检测筛选）
   mmUpdItems: null,          // 更新检测结果（path → 记录），「更新」页面用
   mmUpdCheckedAt: 0,
   updBatches: [], updBatchId: "current", updProgress: null,
@@ -1419,7 +1419,7 @@ async function loadUpdThumbs() {
   const paths = imgs.map((i) => i.dataset.path).filter(Boolean);
   if (!paths.length) return;
   try {
-    const json = await api.call("get_covers", Array.from(new Set(paths)));
+    const json = await api.call("get_covers", Array.from(new Set(paths)),256);
     const covers = JSON.parse(json || "{}");
     imgs.forEach((i) => { const b = covers[i.dataset.path]; if (b) i.src = "data:image/jpeg;base64," + b; });
   } catch (e) { /* 缩略图失败不影响 */ }
@@ -1709,6 +1709,11 @@ $("#mmViewToggle").addEventListener("click", () => {
   try { syncViewSeg(); } catch (e) { /* 忽略 */ }
   renderMm();
 });
+// Keep the card stationary during a double-click; selection feedback stays immediate.
+let mmDetailClickTimer=null;
+function mmCancelDetailPreview(){clearTimeout(mmDetailClickTimer);mmDetailClickTimer=null;}
+function mmQueueDetailPreview(path){mmCancelDetailPreview();mmDetailClickTimer=setTimeout(()=>{mmDetailClickTimer=null;if($('#page-models.active')&&!document.body.classList.contains('large-model-open'))showModelDetail(path);},300);}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')mmCancelDetailPreview();});
 // 瀑布流：单击卡片打开详情；勾选走卡片角标按钮
 $("#mmMasonry").addEventListener("click", (e) => {
   const favorite=e.target.closest("[data-model-favorite]");
@@ -1727,7 +1732,7 @@ $("#mmMasonry").addEventListener("click", (e) => {
   }
   const card = e.target.closest(".ms-card");
   if (!card) return;
-  if(e.detail>1)return;
+  if(e.detail>1){mmCancelDetailPreview();return;}
   const p = card.dataset.path;
   const cardChk = card.querySelector(".ms-check");
   if (state.mmChecked.has(p)) state.mmChecked.delete(p);
@@ -1736,10 +1741,10 @@ $("#mmMasonry").addEventListener("click", (e) => {
   card.setAttribute("aria-selected",String(state.mmChecked.has(p)));state.mmSel=new Set(state.mmChecked);
   if (cardChk) cardChk.innerHTML = state.mmChecked.has(p) ? '<span class="cbox on"></span>' : '<span class="cbox"></span>';
   $("#mmCheckLabel").textContent = "已勾选 " + state.mmChecked.size + " 个";
-  showModelDetail(p);
+  mmQueueDetailPreview(p);
 });
 $("#mmMasonry").addEventListener("contextmenu",e=>{
-  const card=e.target.closest('.ms-card');if(!card)return;
+  const card=e.target.closest('.ms-card');if(!card)return;mmCancelDetailPreview();
   showModelContextMenu(e,state.display.find(r=>r.path===card.dataset.path));
 });
 
@@ -1749,7 +1754,7 @@ $("#mmTable tbody").addEventListener("click", (e) => {
   if (!tr) return;
   const path = tr.dataset.path;
   const checkboxClick=!!e.target.closest(".cell-sel");
-  if(e.detail>1 && !checkboxClick)return;
+  if(e.detail>1 && !checkboxClick){mmCancelDetailPreview();return;}
   const idx = Number(tr.dataset.idx);
   let targets = [path];
   if (e.shiftKey) {
@@ -1782,7 +1787,7 @@ $("#mmTable tbody").addEventListener("click", (e) => {
   });
   state.mmSel = new Set(state.mmChecked);
   $("#mmCheckLabel").textContent = "已勾选 " + state.mmChecked.size + " 个";
-  if(!e.shiftKey && !checkboxClick)showModelDetail(path);
+  if(!e.shiftKey && !checkboxClick)mmQueueDetailPreview(path);
 });
 
 // 筛选
@@ -1793,7 +1798,7 @@ function applyMmFilter() {
   const kw = $("#mmFilter").value.trim().toLowerCase();
   window.CFTModelManagement?.filterChanged();
   let rows = state.models;
-  if (state.mmUpdOnly) rows = rows.filter((r) => r.upd && r.upd.has_update);
+  if (state.mmPinnedOnly) rows = rows.filter(r=>isModelFavorite(r.path));
   if (kw) {
     rows = rows.filter((r) =>
       (r.name || "").toLowerCase().includes(kw) ||
@@ -1813,6 +1818,7 @@ function applyMmFilter() {
   if (state.mmAuthorF) rows = rows.filter((r) => String(r.author || "") === state.mmAuthorF);
   if (state.mmStF) {
     rows = rows.filter((r) => {
+      if(state.mmStF==="nocover")return r.has_cover===false;
       const u = r.upd || {};
       const st = u.has_update ? "upd" : (r.upd ? (u.other_base ? "other" : "latest") : "none");
       return st === state.mmStF;
@@ -1827,8 +1833,8 @@ function applyMmFilter() {
   fillMmBaseOptions();
   fillMmFolderOptions();
   fillMmAuthorOptions();
-  $("#mmUpdOnly")?.classList.toggle("active",!!state.mmUpdOnly);$("#mmUpdOnly")?.setAttribute("aria-pressed",String(!!state.mmUpdOnly));
-  if (state.mmUpdOnly) setStatus("筛选：有更新的模型 " + state.display.length + " 个（点「有更新」可取消）");
+  $("#mmUpdOnly")?.classList.toggle("active",!!state.mmPinnedOnly);$("#mmUpdOnly")?.setAttribute("aria-pressed",String(!!state.mmPinnedOnly));
+  if (state.mmPinnedOnly) setStatus(CFTI18n.t("models.pinned")+" · "+state.display.length);
 }
 $("#mmFilter").addEventListener("input", () => {
   clearTimeout(mmFilterTimer);
@@ -1836,8 +1842,8 @@ $("#mmFilter").addEventListener("input", () => {
 });
 $("#mmFilterClear").addEventListener("click", () => { $("#mmFilter").value = ""; applyMmFilter(); });
 if ($("#mmUpdOnly")) $("#mmUpdOnly").addEventListener("click", () => {
-  state.mmUpdOnly = !state.mmUpdOnly;
-  $("#mmUpdOnly").classList.toggle("active", !!state.mmUpdOnly);
+  state.mmPinnedOnly = !state.mmPinnedOnly;
+  $("#mmUpdOnly").classList.toggle("active", !!state.mmPinnedOnly);
   applyMmFilter();
 });
 
@@ -2177,7 +2183,7 @@ async function renderUpdatesPage() {
       cursor=row.nextElementSibling;
     }
   loadUpdThumbs();
-    loadDdThumbs(tbody, pageRows.map((x) => x.path), 64);
+    loadDdThumbs(tbody, pageRows.map((x) => x.path), 256);
   }
 
   // 表头排序指示
@@ -2594,9 +2600,7 @@ async function showUpdateResults(items) {
   $("#updClose", box).addEventListener("click", close);
   $("#updFilter", box).addEventListener("click", () => {
     close();
-    state.mmUpdOnly = true;
-    const b = $("#mmUpdOnly");
-    if (b) b.classList.add("active");
+    state.mmStF="upd";$("#mmStF").value="upd";
     applyMmFilter();
     setStatus("已筛选出有更新的模型");
   });
@@ -2804,7 +2808,7 @@ function fmRender() {
 }
 // 独立弹层：锁定工具栏的 overflow 不再裁切文件夹菜单。
 let fmAnchor = null, fmProxyAnchor = null, fmRequest = 0, fmSaving = false;
-document.addEventListener('click',e=>{if(e.target.closest('[data-proxy="mmFolders"]'))fmProxyAnchor=$('[data-menu="mmMoreMenu"]');},true);
+document.addEventListener('click',e=>{if(e.target.closest('[data-proxy="mmFolders"]'))fmProxyAnchor=e.target.closest('[data-proxy="mmFolders"]');},true);
 function fmClose(restoreFocus = false) {
   ++fmRequest;
   $("#mmFoldersPanel").classList.remove("open");
@@ -3039,17 +3043,19 @@ function syncDialogRender(d, st) {
 
 async function revealManagedModel(path){
  switchPage('models');const key=normalizedModelPath(path),row=state.models.find(r=>normalizedModelPath(r.path)===key);
- if(row){$('#mmFilter').value='';for(const name of ['mmTypeF','mmBaseF','mmFolderF','mmAuthorF','mmStF'])state[name]='';state.mmUpdOnly=false;applyMmFilter();const index=state.display.findIndex(r=>normalizedModelPath(r.path)===key);if(state.cfg.model_pagination)state.mmPage=Math.floor(Math.max(0,index)/(Number(state.cfg.model_page_size)||60))+1;state.historyFocusPath=row.path;state.mmChecked.add(row.path);state.mmSel=new Set([row.path]);renderMm();
+ if(row){$('#mmFilter').value='';for(const name of ['mmTypeF','mmBaseF','mmFolderF','mmAuthorF','mmStF'])state[name]='';state.mmPinnedOnly=false;state.mmUpdOnly=false;applyMmFilter();const index=state.display.findIndex(r=>normalizedModelPath(r.path)===key);if(state.cfg.model_pagination)state.mmPage=Math.floor(Math.max(0,index)/(Number(state.cfg.model_page_size)||60))+1;state.historyFocusPath=row.path;state.mmChecked.add(row.path);state.mmSel=new Set([row.path]);renderMm();
   await new Promise(resolve=>{const wait=()=>{const root=state.mmView==='list'?$('#mmTable tbody'):$('#mmMasonry');if(root?.dataset.rendering==='true'){requestAnimationFrame(wait);return;}const node=[...root.querySelectorAll('.ms-card,tr[data-path]')].find(n=>normalizedModelPath(n.dataset.path)===key);if(node){node.scrollIntoView({block:'center',inline:'nearest'});node.focus({preventScroll:true});}resolve();};requestAnimationFrame(wait);});}
  await showModelDetail(path);
 }
-async function showModelDetail(path, historyId = "") {
+async function showModelDetail(path, historyId = "", options = {}) {
   const generation = ++detailGeneration, originPage=document.querySelector(".page.active")?.id;
   let json;try{json = await api.call(historyId ? "get_history_detail" : "get_model_detail", historyId || path);}catch(_){if(generation===detailGeneration)setStatus('详情读取异常，请检查元数据或刷新后重试');return;}
   let d;
   try { d = typeof json==='object' && json!==null?json:JSON.parse(json || "{}"); } catch (e) { d = {}; }
   if (generation !== detailGeneration || document.querySelector(".page.active")?.id!==originPage) return;
   if (!d.ok) { setStatus(d.msg||"详情获取失败：元数据格式异常或文件不可读取"); return; }
+  const fullRequested=options.full ?? (originPage!=="page-models"||document.body.classList.contains("large-model-open"));
+  document.body.classList.toggle("large-model-open",fullRequested);
   detailRow = d;
   detailRow.history_id = historyId;
   document.body.classList.add("model-detail-open");
@@ -3184,7 +3190,7 @@ async function showModelDetail(path, historyId = "") {
     if(warm){image.src=warm.url;image.dataset.hdIndex=String(i);image.style.opacity='1';delete image.dataset.empty;return;}
     if(c.b64){image.src='data:image/jpeg;base64,'+c.b64;delete image.dataset.empty;}
     else if(c.url){
-      image.style.opacity='.5';const b64=await api.call('get_cover_b64',c.url);
+      image.style.opacity='.5';const b64=await api.call('get_cover_b64',c.url,1024);
       if(!current())return;
       if(b64){image.src='data:image/jpeg;base64,'+b64;c.b64=b64;delete image.dataset.empty;}image.style.opacity='1';
     }
@@ -3370,7 +3376,7 @@ async function showModelDetail(path, historyId = "") {
     closeDetail();
   });
   $("#dFavorite", panel).addEventListener("click", () => toggleModelFavorite(d.path));
-  window.CFTModelCards?.finalizeInspector(panel);panel.scrollTop=0;
+  window.CFTModelCards?.finalizeInspector(panel);window.CFTFullModel?.mount(panel,d,fullRequested);panel.scrollTop=0;
   // 只准备本地已有缓存的在线图；未知在线图不会后台下载。串行、空闲调度，避免同时解码整组图片。
   if(typeof warmViewedGallery==='function'){
     const prepare=async i=>{
@@ -3509,7 +3515,7 @@ document.addEventListener("keydown", (e) => {
   }
 });
 function closeDetail() {
-  document.body.classList.remove("model-detail-open","external-model-detail-open");
+  document.body.classList.remove("model-detail-open","external-model-detail-open","large-model-open");window.CFTFullModel?.dispose();
   detailGeneration++;
   $("#detailMask").style.display = "none";
   $("#detailPanel").innerHTML = "";
@@ -3810,7 +3816,7 @@ $("#ctxMenu").addEventListener("click", async (e) => {
       await window.__copyText(value);showToast(CFTI18n.t('models.copied'));return;
     }
     if (act === "favorite") {await toggleModelFavorite(path);return;}
-    if (act === "detail") {await showModelDetail(path);return;}
+    if (act === "detail") {await showModelDetail(path,"",{full:true});return;}
     if (act === "folder") { api.call("open_in_folder", path); return; }
     if (act === "copy_name") {
       try { await window.__copyText(ctxRow.name || ""); setStatus("已复制文件名: " + ctxRow.name); }
@@ -4278,6 +4284,11 @@ const SETTING_FIELDS = [
   ["下载", "ask_move_after_download", "完成后询问移动分类", "bool"],
   ["下载", "rename_clean_rules", "文件名清理符号", "select", [["", "不清理"], ["comma", "去逗号（推荐）"], ["comma,paren", "去逗号 + 括号"], ["comma,paren,dash", "去逗号+括号，横线/下划线→空格"]]],
   ["下载", "metadata_format", "metadata 格式", "select", ["sd", "civitai", "both"]],
+  ["翻译", "translation_provider", "翻译服务", "select", [["mymemory","MyMemory"],["baidu","Baidu"],["deepseek","DeepSeek"],["opencode","OpenCode Zen"],["custom","OpenAI-compatible API"]]],
+  ["翻译", "translation_protocol", "API 协议", "select", [["chat","OpenAI Chat Completions"],["responses","OpenAI Responses"],["anthropic","Anthropic Messages"],["gemini","Google Gemini"]]],
+  ["翻译", "translation_base_url", "API 地址", "text"],
+  ["翻译", "translation_model", "模型 ID", "text"],
+  ["翻译", "translation_api_key", "API Key", "password"],
   ["翻译", "baidu_appid", "百度翻译 APP ID", "text"],
   ["翻译", "baidu_key", "百度翻译密钥", "password"],
   ["翻译", "auto_translate", "反向解析自动翻译", "bool"],
@@ -4676,8 +4687,9 @@ $("#btnTestApi").addEventListener("click", async () => {
   setStatus(r.ok ? "API 正常" : "API 失败");
 });
 $("#btnTestBaidu").addEventListener("click", async () => {
-  const r = await api.call("test_baidu");
-  alert(r.ok ? r.msg : r.msg);
+  const button=document.getElementById('btnTestBaidu');button.disabled=true;
+  try{const fields={};for(const key of ['translation_provider','translation_protocol','translation_base_url','translation_model','translation_api_key','baidu_appid','baidu_key'])fields[key]=document.getElementById('setting-'+key)?.value||'';
+  const r=await api.call('test_translation_service',fields);showToast(r?.ok?CFTI18n.t('translation.test.ok')+' '+r.text:CFTI18n.t('translation.test.failed'));}catch{showToast(CFTI18n.t('translation.test.failed'));}finally{button.disabled=false;}
 });
 $("#btnOnboarding").addEventListener("click", () => showOnboarding());
 
@@ -4979,8 +4991,9 @@ function fillMmBaseOptions() {
   bf.value = cur;
 }
 
-function _closeMmMenus() {
+function _closeMmMenus(force=false) {
   document.querySelectorAll(".btn-group.open").forEach((g) => {
+    if(!force&&g._menu?.classList.contains("ef-model-inline-menu"))return;
     g.classList.remove("open");
     const m = g._menu;
     if (m) m.classList.remove("open");
@@ -4991,11 +5004,13 @@ function _closeMmMenus() {
 // 打开菜单：把菜单移到 body（portal），用 fixed 定位 + 完全不透明背景 —— 任何祖先的
 // overflow / transform / stacking context 都影响不到它
 function _mmOpenMenu(grp, menu, btn) {
+  fmClose();
+  _closeMmMenus(true);
   if(btn.closest('.ef-model-icon-strip')){
     const tools=btn.closest('.ef-model-tools'),strip=tools.querySelector('.ef-model-icon-strip');strip.after(menu);
     menu.classList.add('ef-model-inline-menu');menu.style.cssText='';menu.setAttribute('role','menu');menu.setAttribute('aria-label',btn.textContent.trim());
     for(const item of menu.querySelectorAll('.mm-item')){
-      if(!item.dataset.iconRow||!item.querySelector(':scope>.ef-model-subcaption')){const label=item.textContent.trim();const icon=item.dataset.icon||({custom:'pencil',rename_c:'tag',localize:'globe'})[item.dataset.ract]||({logs:'file'})[item.dataset.act]||({mmSelAll:'check',mmSelNone:'x',mmSelInv:'refresh'})[item.id]||(item.dataset.goto?'settings':item.dataset.proxy?.includes('Covers')?'image':'settings');item.replaceChildren();item.insertAdjacentHTML('afterbegin',_icon(icon));const caption=document.createElement('span');caption.className='ef-model-subcaption';caption.textContent=label;item.append(caption);item.dataset.iconRow='true';item.classList.add('ef-model-subtool','ef-model-tool-button');item.classList.remove('ef-pill-action','ef-footer-action');if(item.tagName!=='BUTTON'){item.tabIndex=0;item.setAttribute('role','menuitem');item.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();item.click();}});}}
+      if(!item.dataset.iconRow||!item.querySelector(':scope>.ef-model-subcaption')){const label=item.textContent.trim();const icon=item.dataset.icon||({custom:'pencil',rename_c:'tag',localize:'globe'})[item.dataset.ract]||({logs:'file'})[item.dataset.act]||({mmSelAll:'check',mmSelNone:'x',mmSelInv:'refresh'})[item.id]||(item.dataset.goto?'settings':item.dataset.proxy?.includes('Covers')?'image':'settings');item.replaceChildren();item.insertAdjacentHTML('afterbegin',_icon(icon));const caption=document.createElement('span');caption.className='ef-model-subcaption';caption.textContent=label;if(item.dataset.i18n){caption.dataset.i18n=item.dataset.i18n;delete item.dataset.i18n;}item.append(caption);item.dataset.iconRow='true';item.classList.add('ef-model-subtool','ef-model-tool-button');item.classList.remove('ef-pill-action','ef-footer-action');if(item.tagName!=='BUTTON'){item.tabIndex=0;item.setAttribute('role','menuitem');item.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();item.click();}});}}
       const source=item.dataset.proxy?document.getElementById(item.dataset.proxy):null;item.setAttribute('aria-disabled',String(!!source?.disabled));
     }
     menu.classList.add('open');grp.classList.add('open');grp._menu=menu;grp._trigger=btn;menu._owner=grp;btn.setAttribute('aria-expanded','true');return;
@@ -5040,7 +5055,7 @@ function bindMmMetro() {
       // 菜单首次打开后会 portal 到 body，此时 grp.querySelector 找不到它 → 用记住的引用兜底（否则第二次点不开）
       const menu = grp.querySelector(".mm-menu") || grp._menu || null;
       const wasOpen = grp.classList.contains("open");
-      _closeMmMenus();
+      _closeMmMenus(true);
       if (!wasOpen && menu) _mmOpenMenu(grp, menu, btn);   // 箭头翻转由 CSS 负责（.btn-group.open .car svg）
     });
   });
@@ -5072,7 +5087,7 @@ function bindMmMetro() {
     if (e.target && e.target.closest && e.target.closest(".mm-menu")) return;   // 点在菜单里不关
     _closeMmMenus();
   });
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") {const trigger=document.querySelector(".btn-group.open")?._trigger;_closeMmMenus();trigger?.focus({preventScroll:true});} });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") {const trigger=document.querySelector(".btn-group.open")?._trigger;_closeMmMenus(true);trigger?.focus({preventScroll:true});} });
   // 窗口尺寸变化时，已打开的菜单重新定位（避免飘走）
   window.addEventListener("resize", () => {
     document.querySelectorAll(".btn-group.open").forEach((g) => {

@@ -95,6 +95,11 @@ DEFAULTS = {
     "theme": "dark_endfield",           # 终末地主题：dark_endfield / light_endfield
     "frameless": False,                 # 无边框窗口（自绘标题栏）
     "site_domain": "civitai.red",       # 站点域名（展示/打开链接用；API 仍走 civitai.com）
+    "translation_provider": "",  # 空值兼容旧百度配置；新用户默认 MyMemory
+    "translation_protocol": "chat",
+    "translation_base_url": "",
+    "translation_model": "",
+    "translation_api_key": "",
     "baidu_appid": "",                  # 百度翻译开放平台 APP ID
     "baidu_key": "",                    # 百度翻译开放平台密钥
     "translate_filename": False,        # 下载时把模型名翻译成中文作为文件名

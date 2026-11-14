@@ -26,7 +26,7 @@ def download_name(cfg, file, model_name, version, multi=False):
     base = model_name if mode in ('civitai','chinese') and model_name else raw
     if mode == 'chinese' and base and not translator._is_cjk(base):
         try:
-            translated = translator.translate(base, appid=(cfg.get('baidu_appid') or '').strip(), key=(cfg.get('baidu_key') or '').strip())
+            translated = translator.translate(base, appid=(cfg.get('baidu_appid') or '').strip(), key=(cfg.get('baidu_key') or '').strip(), cfg=cfg)
             if translated: base = translated
         except Exception: pass  # Keep the Civitai name if translation is unavailable.
     base=clean_model_name(sanitize_filename(base),cfg.get('rename_clean_rules')) or sanitize_filename(raw) or 'model'

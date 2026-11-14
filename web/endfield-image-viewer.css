@@ -58,3 +58,21 @@ html[data-endfield=true] .iv-more>div{border-radius:0;border-color:var(--iv-line
 @media(max-width:1000px){html[data-endfield=true] .iv-heading{max-width:160px}html[data-endfield=true] .image-viewer .iv-toolbar{gap:10px;padding:12px}html[data-endfield=true] .iv-stepper{width:168px}html[data-endfield=true] .iv-actions{gap:5px}}
 @media(max-width:760px){html[data-endfield=true] .iv-body{grid-template-columns:1fr;grid-template-rows:minmax(180px,1.4fr) minmax(130px,.8fr)}html[data-endfield=true] .iv-generation{padding:16px;border:0;border-top:1px solid var(--iv-line)}html[data-endfield=true] .iv-zoom{order:3;width:100%;justify-content:center}html[data-endfield=true] .iv-heading{max-width:none;flex:1 1 100px}html[data-endfield=true] .iv-heading small{display:none}html[data-endfield=true] .iv-actions{flex:1 1 auto;justify-content:flex-end}html[data-endfield=true] .iv-filmstrip{padding:5px 12px}html[data-endfield=true] .iv-filmstrip button{width:28px;height:34px}html[data-endfield=true] .iv-stage :is(.iv-prev,.iv-next){width:28px;min-width:28px;height:42px}html[data-endfield=true] .iv-stepper{height:38px}html[data-endfield=true] .iv-stepper button{height:30px;width:30px}html[data-endfield=true] #ivStatus{font-size:9px;padding:4px 12px}}
 @media(prefers-reduced-motion:reduce){html[data-endfield=true] .iv-stepper button{transition:none}}
+
+html[data-endfield=true] .image-viewer .iv-toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;padding:12px 16px;min-height:76px;box-sizing:border-box}
+.iv-identity{display:flex;align-items:center;gap:14px;min-width:0}
+html[data-endfield=true] .iv-zoom{margin:0;display:flex;align-items:center;justify-content:center}
+html[data-endfield=true] .iv-actions{justify-self:end;display:flex;align-items:center;justify-content:flex-end;margin:0}
+html[data-endfield=true] .iv-stepper #ivActual{display:grid;place-items:center;height:34px;line-height:1;padding:0;margin:0;align-self:center}
+html[data-endfield=true] .iv-toolbar .icon-btn>svg{width:18px;height:18px;display:block;vertical-align:0;margin:0}
+html[data-endfield=true] .iv-generation{position:relative;isolation:isolate;font-size:15px}
+html[data-endfield=true] .iv-generation:before{content:'';position:absolute;inset:0;pointer-events:none;z-index:-1;background:url('terrain-contours.svg') right top/650px 650px repeat-y;opacity:.12;mask-image:linear-gradient(90deg,transparent,#000)}
+html[data-theme=dark_endfield] .iv-generation:before{filter:brightness(3)}
+html[data-endfield=true] .iv-generation :is(p,.iv-prompt,.iv-resource,.iv-missing){font-size:14px;line-height:1.8}
+html[data-endfield=true] .iv-generation h3{font-size:15px}
+html[data-endfield=true] .iv-generation h2{font-size:21px}
+@media(max-width:1050px){html[data-endfield=true] .image-viewer .iv-toolbar{grid-template-columns:minmax(0,1fr) auto}.iv-identity{grid-column:1;grid-row:1}html[data-endfield=true] .iv-actions{grid-column:2;grid-row:1}html[data-endfield=true] .iv-zoom{grid-row:2;grid-column:1/-1;justify-self:center}}
+
+html[data-endfield=true] .iv-identity .iv-heading{flex:0 1 auto;width:max-content;max-width:280px}
+html[data-endfield=true] .iv-identity #ivCount{flex:none;margin-left:0;padding-left:12px}
+#ivActual>.iv-percent-ink{display:block;translate:0 var(--iv-ink-y,0px)}

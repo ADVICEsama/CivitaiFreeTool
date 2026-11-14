@@ -36,11 +36,13 @@
 <link rel="stylesheet" href="followup-controls.css"/>
 <link rel="stylesheet" href="performance-preferences.css"/>
 <link rel="stylesheet" href="i18n.css"/>
+<link rel="stylesheet" href="model-full-detail.css"/>
 </head>
 <body>
 <div id="startupStage" role="status" aria-live="polite"><section class="startup-poster"><div class="startup-stripe" aria-hidden="true"></div><header><img class="startup-wordmark" src="about-wordmark.svg" alt="CivitaiFreeTool 下载器"/><small>CFT / LOCAL WORKBENCH</small></header><div class="startup-copy"><span class="startup-kicker" aria-hidden="true">YOUR MODELS / YOUR WORKBENCH</span><h1><b data-i18n="startup.title">模型收藏，从这里开始</b><span aria-hidden="true">↗</span></h1><p data-i18n="startup.loading">正在连接本地服务与加载设置…</p><div class="startup-track" aria-hidden="true"><i></i></div><button type="button" hidden data-i18n="startup.retry">重新加载界面</button></div><img class="startup-character" src="about-character-v1.png" alt="" aria-hidden="true"/><footer aria-hidden="true">CIVITAI FREE TOOL <span>MODEL WORKBENCH</span></footer></section></div>
 <script src="startup-stage.js"></script>
   <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+    <symbol id="i-shuffle" viewBox="0 0 24 24"><path d="M3 6h4l10 12h4m-4-4 4 4-4 4M3 18h4L17 6h4m-4-4 4 4-4 4"/></symbol>
     <symbol id="i-update" viewBox="0 0 24 24"><path d="M2 2h14.5v4H6v5H2Z M13.5 0 22 4l-8.5 4.5Z M22 22H7.5v-4H18v-5h4Z M10.5 24 2 20l8.5-4.5Z" fill="currentColor" stroke="none"/></symbol>
 <symbol id="i-more-vertical" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></symbol>
 <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V3m0 1c5-4 9 4 14 0v9c-5 4-9-4-14 0"/></symbol>
@@ -190,7 +192,7 @@
           <span class="mm-spacer"></span>
           <span class="btn-group">
             <button class="btn" data-menu="mmMoreMenu"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-more"/></svg> 更多 <span class="car"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-chevron-down"/></svg></span></button>
-            <div class="mm-menu" id="mmMoreMenu">
+            <div class="mm-menu" id="mmMoreMenu"><button type="button" class="mm-item" id="mmRandom" data-icon="shuffle" data-i18n="models.random">随机模型</button>
               <div class="mm-item" data-proxy="mmFolders" data-icon="folder">文件夹显隐</div>
               <div class="mm-item" data-proxy="mmCleanup" data-icon="trash">清理冗余文件</div>
               <div class="mm-sep-h"></div>
@@ -263,7 +265,7 @@
             <option value="">全部状态</option>
             <option value="upd">有更新</option>
             <option value="latest">已是最新</option>
-            <option value="none">未检查</option>
+            <option value="none">未检查</option><option value="nocover" data-i18n="models.noCover">无封面</option>
           </select>
           <select class="input" id="mmSortF" data-tip="排序方式（列表/瀑布流都生效）">
             <option value="name">排序：文件名</option>
@@ -306,7 +308,7 @@
       </div>
       <div class="tool-row mm-filter">
         <span class="mm-search-field"><input id="mmFilter" class="input" placeholder="筛选：文件名 / C站名 / 路径"/><button type="button" id="mmFilterClear" aria-label="清空搜索" data-tip="只清空搜索文字，不清除勾选或其它筛选"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><use href="#i-x"/></svg></button></span>
-        <button class="btn" id="mmUpdOnly" data-tip="只看有更新的模型（先点「检查更新」生成结果）"><span class="emj">❗</span> 有更新</button>
+        <button class="btn" id="mmUpdOnly" data-tip="只显示收藏置顶的模型"><span data-i18n="models.pinned">置顶模型</span></button>
         <button class="btn" id="mmSelAll">全选</button>
         <button class="btn" id="mmSelNone">清除勾选</button>
         <button class="btn" id="mmSelInv">反选</button>
@@ -560,5 +562,7 @@
 <script src="endfield-controls.js"></script>
 <script src="endfield-unsaved.js"></script>
 <script src="endfield-sidebar.js"></script>
+<script src="model-full-detail.js"></script>
+<script src="translation-settings.js"></script>
 </body>
 </html>

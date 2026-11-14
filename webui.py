@@ -15,7 +15,7 @@ import uuid
 
 import webview
 
-APP_VERSION = "3.0.18"
+APP_VERSION = "3.0.19"
 
 from functools import wraps
 
@@ -1368,6 +1368,7 @@ class Api:
                     cached = old_cache.get(f['path'])
                     if signature is not None and cached and cached[0] == signature:
                         row = dict(cached[1], _folder_rel=f['rel'])
+                        row['has_cover'] = bool(model_manager.find_cover(f['path']))
                         rows.append(row)
                         new_cache[f['path']] = (signature, row)
                         continue
@@ -1400,6 +1401,7 @@ class Api:
                         "url": meta.get("url", ""),
                         "trainedWords": tw,
                         "civitai_name": meta.get("name", ""),
+                        "has_cover": bool(model_manager.find_cover(f["path"])),
                         "author": _cre,
                         "info": meta,
                     })
@@ -1454,6 +1456,7 @@ class Api:
                 "modelId": r.get("modelId", ""), "url": r.get("url", ""),
                 "trainedWords": r.get("trainedWords", []),
                 "civitai_name": r.get("civitai_name", ""),
+                "has_cover": bool(r.get("has_cover", False)),
                 "author": r.get("author", ""),
                 "update": r.get("update", ""), "hash": r.get("hash", ""),
             })
@@ -1836,13 +1839,16 @@ class Api:
                 with Image.open(source) as original:
                     image=ImageOps.exif_transpose(original).convert('RGB');image.save(tmp,'PNG');image.close()
                 _os.replace(tmp,target)
+                for row in (getattr(self, '_model_inventory', []) + getattr(self, 'model_rows', [])):
+                    if row.get('path') == path:
+                        row['has_cover'] = True
             finally:
                 if _os.path.exists(tmp):_os.unlink(tmp)
             return {"ok": True, "msg": "已设为缩略图：" + _os.path.basename(target), "cover": target}
         except Exception as e:
             return {"ok": False, "msg": "设置失败: %s" % str(e)[:120]}
 
-    def get_local_img_b64(self, path):
+    def get_local_img_b64(self, path, size=4096):
         """读取本地图片原图 → base64（用于复制图片到剪贴板）。超大图限制 4096px"""
         try:
             if not path or not os.path.exists(path):
@@ -1850,9 +1856,10 @@ class Api:
             from PIL import Image
             import io
             import base64 as _b64
+            size = max(64, min(4096, int(size)))
             im = Image.open(path)
-            if max(im.size) > 4096:
-                im.thumbnail((4096, 4096), Image.LANCZOS)
+            if max(im.size) > size:
+                im.thumbnail((size, size), Image.LANCZOS)
             buf = io.BytesIO()
             if im.mode in ("RGBA", "LA"):
                 im.save(buf, "PNG")
@@ -3849,7 +3856,7 @@ class Api:
                 if act == "localize":
                     nm = (info.get("name") or "").strip()
                     if nm and not translator._is_cjk(nm):
-                        info["name"] = translator.translate(nm, appid, key) or nm
+                        info["name"] = translator.translate(nm, appid, key, cfg=self.cfg) or nm
                 newp, msgs = model_manager.rename_to_civitai(
                     r["path"], info, dry_run=True, clean_rules=self.cfg.get("rename_clean_rules") or "", include_version=self.cfg.get("filename_include_version",False))
                 out.append({"path": r["path"], "old": old,
@@ -3907,7 +3914,7 @@ class Api:
                 try:
                     zh = name
                     if name and not translator._is_cjk(name):
-                        zh = translator.translate(name, appid, key) or name
+                        zh = translator.translate(name, appid, key, cfg=self.cfg) or name
                     if zh and zh != name:
                         meta2 = dict(info)
                         meta2["name"] = zh
@@ -4034,14 +4041,7 @@ class Api:
                         info["description_zh"] = zh_in_sd
                         changed = True
                     elif not translator._is_cjk(desc):
-                        # 翻译前把 HTML 转成带段落换行的纯文本（标签不喂翻译接口，避免译文混入标签）
-                        _d2 = re.sub(r"<\s*br\s*/?>|</\s*(?:p|div|li|h[1-6]|tr)\s*>", "\n", desc, flags=re.IGNORECASE)
-                        _d2 = re.sub(r"<[^>]+>", " ", _d2)
-                        for _a, _b in (("&nbsp;", " "), ("&amp;", "&"), ("&lt;", "<"), ("&gt;", ">"), ("&quot;", '"'), ("&#39;", "'")):
-                            _d2 = _d2.replace(_a, _b)
-                        _d2 = re.sub(r"[ \t]+", " ", _d2)
-                        _d2 = re.sub(r"\n\s*\n+", "\n", _d2).strip()
-                        zh = translator.translate(_d2 or desc, appid, key)
+                        zh = translator.translate(desc, appid, key, cfg=self.cfg)
                         if zh and zh != desc:
                             info["description_zh"] = zh
                             sd["description_zh"] = zh
@@ -4572,6 +4572,17 @@ class Api:
             return {"ok": True, "msg": "API 正常，返回模型数: %d" % len(d.get("items", []))}
         except Exception as e:
             return {"ok": False, "msg": _friendly_api_error(e)}
+
+    def test_translation_service(self, settings=None):
+        allowed = ("translation_provider", "translation_protocol", "translation_base_url", "translation_model", "translation_api_key", "baidu_appid", "baidu_key")
+        cfg = dict(self.cfg)
+        if isinstance(settings, dict):
+            cfg.update({k: str(v) for k, v in settings.items() if k in allowed})
+        try:
+            result = translator.translate("Hello, world.", cfg=cfg, strict=True)
+            return {"ok": True, "text": result}
+        except Exception:
+            return {"ok": False, "error": "translation.failed"}
 
     def test_baidu(self):
         appid = self.cfg.get("baidu_appid", "").strip()

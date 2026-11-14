@@ -64,6 +64,9 @@ function displayViewerEntry(v,c,entry,memory){
   v.root.dataset.imageSource=memory?'memory':entry.full.cache_hit?'disk':'first';
 }
 
+const viewerInkCanvas=document.createElement('canvas').getContext('2d'),viewerInkMetrics=new Map();
+function viewerPercent(button,text){let span=button.querySelector('.iv-percent-ink');if(!span){span=document.createElement('span');span.className='iv-percent-ink';button.replaceChildren(span);}if(span.textContent!==text)span.textContent=text;const css=getComputedStyle(button),font=[css.fontStyle,css.fontWeight,css.fontSize,css.fontFamily].join(' '),key=font+'|'+text;if(!viewerInkMetrics.has(key)){viewerInkCanvas.font=font;const m=viewerInkCanvas.measureText(text),offset=((m.actualBoundingBoxAscent-m.actualBoundingBoxDescent)-(m.fontBoundingBoxAscent-m.fontBoundingBoxDescent))/2;viewerInkMetrics.set(key,Number.isFinite(offset)?offset:0);if(viewerInkMetrics.size>100)viewerInkMetrics.delete(viewerInkMetrics.keys().next().value);}button.style.setProperty('--iv-ink-y',viewerInkMetrics.get(key)+'px');}
+
 const imageText = value => value == null ? '' : typeof value === 'string' ? value : JSON.stringify(value,null,2);
 function closeImageViewer() {
   imageViewerRequest++;
@@ -84,6 +87,7 @@ async function openImageViewer(detail,index=0) {
   root.querySelector('#ivTitle').textContent=detail.civitai_name||detail.name||'模型示例图片';
   const strip=root.querySelector('.iv-filmstrip');strip.hidden=detail.covers.length<2;
   detail.covers.forEach((cover,i)=>{const button=document.createElement('button');button.type='button';button.dataset.ivIndex=i;button.setAttribute('aria-label','查看第 '+(i+1)+' 张图片');if(cover.b64){const img=new Image();img.alt='';img.src='data:image/jpeg;base64,'+cover.b64;button.append(img);}else button.textContent=String(i+1);button.addEventListener('click',()=>loadViewerImage(i));strip.append(button);});
+  const toolbar=root.querySelector('.iv-toolbar'),identity=document.createElement('div');identity.className='iv-identity';for(const selector of ['#ivClose','.iv-heading','#ivCount'])identity.append(toolbar.querySelector(selector));toolbar.prepend(identity);
   document.body.append(root);
   const keyHandler=e=>{
     if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();const menu=root.querySelector('#ivContext');if(menu?.style.display==='block')menu.style.display='none';else closeImageViewer();return;}
@@ -166,7 +170,8 @@ async function openImageViewer(detail,index=0) {
   root.addEventListener('contextmenu',e=>{
     if(!e.target.closest('#ivImage'))return;e.preventDefault();
     const c=imageViewer.detail.covers[imageViewer.index],meta=c.meta||{};
-    menu.innerHTML=contextAction('iv_copy','复制图片','copy')+contextAction('iv_save','保存图片…','download')+contextAction('iv_site','打开 C站原图页','external')+'<hr class="ctx-sep"/>'+contextAction('iv_prompt','复制正面提示词','file')+contextAction('iv_negative','复制负面提示词','file')+contextAction('iv_data','复制全部生成数据','copy');
+    menu.innerHTML=contextAction('iv_cover',CFTI18n.t('models.setCover'),'image')+contextAction('iv_copy','复制图片','copy')+contextAction('iv_save','保存图片…','download')+contextAction('iv_site','打开 C站原图页','external')+'<hr class="ctx-sep"/>'+contextAction('iv_prompt','复制正面提示词','file')+contextAction('iv_negative','复制负面提示词','file')+contextAction('iv_data','复制全部生成数据','copy');
+    menu.querySelector('[data-act=iv_cover]').disabled=!!imageViewer.detail.cached_history||!imageViewer.detail.path;
     menu.querySelector('[data-act=iv_site]').disabled=!(c.image_page||c.orig_url||c.url);
     menu.querySelector('[data-act=iv_prompt]').disabled=!(meta.prompt||c.prompt);
     menu.querySelector('[data-act=iv_negative]').disabled=!(meta.negativePrompt||meta['Negative prompt']||c.negative);
@@ -174,6 +179,7 @@ async function openImageViewer(detail,index=0) {
   });
   menu.addEventListener('click',e=>{
     const button=e.target.closest('[data-act]');if(!button||button.disabled)return;menu.style.display='none';
+    if(button.dataset.act==='iv_cover'){window.CFTFullModel?.setCover(imageViewer.detail,imageViewer.index);return;}
     const ids={iv_copy:'ivCopyImage',iv_save:'ivSave',iv_site:'ivSite'};
     if(ids[button.dataset.act])root.querySelector('#'+ids[button.dataset.act]).click();
     else root.querySelector('[data-iv-copy='+({iv_prompt:'prompt',iv_negative:'negative',iv_data:'all'}[button.dataset.act])+']')?.click();
@@ -210,7 +216,7 @@ function setViewerZoom(zoom,anchor=null,immediate=false){
     area.scrollLeft=12+Math.max(0,(area.clientWidth-24-width)/2)+fractionX*width-x;
     area.scrollTop=12+Math.max(0,(area.clientHeight-24-height)/2)+fractionY*height-y;
     area.dataset.pannable=(width>area.clientWidth-24 || height>area.clientHeight-24)?'true':'false';
-    const percent=width/Math.max(1,v.full?.width||img.naturalWidth||width)*100;v.root.querySelector('#ivActual').textContent=(percent<10?percent.toFixed(1):Math.round(percent))+'%';v.root.querySelector('#ivFit').setAttribute('aria-pressed',String(Math.abs(v.zoom-1)<.001));
+    const percent=width/Math.max(1,v.full?.width||img.naturalWidth||width)*100;viewerPercent(v.root.querySelector('#ivActual'),(percent<10?percent.toFixed(1):Math.round(percent))+'%');v.root.querySelector('#ivFit').setAttribute('aria-pressed',String(Math.abs(v.zoom-1)<.001));
     v.zoomRaf=v.zoom===v.targetZoom?0:requestAnimationFrame(draw);
   };
   draw(performance.now());

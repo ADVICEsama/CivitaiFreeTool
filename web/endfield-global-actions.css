@@ -27,3 +27,7 @@ html[data-endfield=true] body .ef-pill-action.btn-danger>.ef-action-circle{color
 
 html[data-endfield=true] .ef-pill-action[hidden]{display:none!important}
 html[data-endfield=true] body .ef-pill-action.btn-tiny>.ef-action-caption{padding-inline:20px}
+
+/* Absolute discs must not inherit the footer's grid-cell containing block. */
+html[data-endfield=true] body button.ef-pill-action>.ef-action-circle{grid-area:auto!important;align-self:auto!important;justify-self:auto!important;inset:auto 7px auto auto!important;top:50%!important;transform:translateY(-50%)!important;margin:0!important;line-height:0}
+html[data-endfield=true] body button.ef-pill-action>.ef-action-circle>svg{display:block!important;margin:0!important;vertical-align:0!important;transform:none!important}

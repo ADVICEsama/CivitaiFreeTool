@@ -440,3 +440,15 @@ html[data-endfield=true] :is(#mmMasonry,.model-card-gallery)[data-model-view=gri
 html[data-endfield=true] .mm-upd.model-update-marker{width:23px;height:23px;margin-right:5px;align-self:center}
 html[data-endfield=true] .model-update-marker:hover{filter:drop-shadow(0 0 3px #ffef0170)}
 html[data-endfield=true] .model-update-marker:focus-visible{outline:2px solid var(--ef-yellow);outline-offset:2px}
+
+/* Appearance editor uses the viewport height instead of a short centered band. */
+.model-style-mask{padding:20px 0;box-sizing:border-box}
+.model-style-dialog{height:calc((100dvh - 64px) / var(--ui-zoom-factor,1));max-height:none;box-sizing:border-box;padding-top:22px;padding-bottom:42px;gap:14px}
+.model-style-workspace{flex:1;min-height:0}
+.model-style-main{min-height:0;display:flex;flex-direction:column}
+.model-frame-grid{flex:1;min-height:120px}
+html[data-endfield=true] .mm-pagination-options .cft-model-select{min-width:110px}
+html[data-endfield=true] .mm-pagination-options .ef-select-trigger{justify-content:space-between;padding-inline:15px 12px}
+html[data-endfield=true] .mm-pagination-options [hidden]{display:none!important}
+html[data-endfield=true] .model-update-marker{color:var(--ef-yellow)!important;filter:drop-shadow(0 0 2px #141a14) drop-shadow(0 0 5px #0008)}
+html[data-endfield=true] .ms-card:has(.model-update-marker) .ms-img-wrap{outline:2px solid var(--ef-yellow);outline-offset:-2px}

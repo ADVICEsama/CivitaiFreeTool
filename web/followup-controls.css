@@ -77,7 +77,7 @@ html[data-endfield=true] body.external-model-detail-open #detailPanel .dt-desc-c
 html body .image-viewer{z-index:200000}
 /* Shared centered workspaces: enlarge useful content without edge-to-edge mouse travel. */
 @media(min-width:701px) and (min-height:551px){
- html[data-endfield=true] body :is(.folder-picker.ef-folder-band,.model-style-dialog,.update-whitelist-dialog,#fontMenu .font-picker-dialog){
+ html[data-endfield=true] body :is(.folder-picker.ef-folder-band,.update-whitelist-dialog,#fontMenu .font-picker-dialog){
   padding-inline:max(28px,calc((100% - 1200px / var(--ui-zoom-factor,1))/2))!important;
   height:min(calc(740px / var(--ui-zoom-factor,1)),calc(var(--app-height,100dvh) - 140px))!important;
   max-height:calc(var(--app-height,100dvh) - 140px)!important;
