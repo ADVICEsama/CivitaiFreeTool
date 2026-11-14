@@ -377,7 +377,7 @@ html[data-endfield=true] :is(#mmMasonry,.model-card-gallery) .model-underlight{a
 .model-style-custom-color input[type=text]{width:90px;height:28px;padding:3px 8px;background:var(--surface);color:var(--text);border:1px solid var(--border)}
 .model-style-custom-color input:invalid{border-color:#ed655e}
 /* Restore the original whole-cover dimming choice in both card views. */
-html[data-endfield=true]:is([data-masonry-info=slide],[data-masonry-info=fade])[data-masonry-overlay=full] body :is(#mmMasonry,.model-card-gallery) .ms-info{position:absolute!important;inset:0!important;background:rgba(12,18,18,.78)!important;color:#f3f4eb!important;z-index:4;max-height:100%;overflow-y:auto;padding:8px!important;display:flex!important;flex-direction:column}
+html[data-endfield=true]:is([data-masonry-info=slide],[data-masonry-info=fade])[data-masonry-overlay=full] body :is(#mmMasonry,.model-card-gallery) .ms-info{position:absolute!important;inset:0!important;background:rgba(12,18,18,.78)!important;color:#f3f4eb!important;z-index:4;max-height:100%;overflow:hidden;padding:8px!important;display:flex!important;flex-direction:column}
 html[data-endfield=true]:is([data-masonry-info=slide],[data-masonry-info=fade])[data-masonry-overlay=full] body :is(#mmMasonry,.model-card-gallery) .ms-info :is(.ms-name,.ms-sub,.ms-meta,.ms-size,.ms-author){color:inherit!important;text-shadow:none}
 html[data-endfield=true]:is([data-masonry-info=slide],[data-masonry-info=fade])[data-masonry-overlay=full] body :is(#mmMasonry,.model-card-gallery)[data-model-view=grid] .ms-titles{flex:1 0 auto;display:flex!important;flex-direction:column;justify-content:center}
 

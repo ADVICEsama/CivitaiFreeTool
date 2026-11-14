@@ -28,8 +28,11 @@ def source_revision(item):
 
 
 def cache_key(item, cfg, metadata=False):
-    if not cfg.get('cache_original_images', False):return None
+    if not cfg.get('cache_original_images', True):return None
     source=item.get('url') or item.get('orig_url')
+    if source:
+        try:source=original_url(source)
+        except ValueError:pass
     if item.get('local_path'):
         try:
             st=os.stat(item['local_path']);source=str(Path(item['local_path']).resolve())+':'+str(st.st_mtime_ns)+':'+str(st.st_size)

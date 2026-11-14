@@ -16,3 +16,40 @@ table.grid :is(th,td){vertical-align:middle}
 
 .about-dlg{top:50%;max-height:calc(100vh - 40px);overflow:auto}
 @media(prefers-reduced-motion:reduce){#startupStage .startup-track i{animation:none;width:100%;opacity:.6}}
+
+/* Startup is the About poster's light-weight sibling; no extra wait or percentage. */
+#startupStage{display:grid;place-items:center;place-content:normal;padding:clamp(16px,5vw,72px);overflow:auto;background:#171b1b;color:#eff1e8;font-family:'CFT LINE Latin','CFT Harmony Bold',sans-serif}
+#startupStage:before{content:'';position:absolute;inset:0;background:url('terrain-contours.svg') center/cover;opacity:.09;pointer-events:none}
+#startupStage .startup-poster{position:relative;isolation:isolate;width:min(1080px,100%);min-height:480px;padding:44px 48px 28px;box-sizing:border-box;text-align:left;background:repeating-linear-gradient(135deg,transparent 0 3px,#ffffff07 3px 4px),#242a29;box-shadow:0 20px 70px #0005;overflow:hidden}
+#startupStage .startup-stripe{position:absolute;inset:0 0 auto;height:3px;background:linear-gradient(90deg,#ffef01 0 50%,#00d0fd 50% 75%,#f954fd 75%)}
+#startupStage header{position:relative;z-index:2;display:flex;align-items:flex-start;justify-content:space-between;gap:24px}
+#startupStage .startup-wordmark{display:block;width:260px;max-width:52%;height:auto;filter:invert(1)}
+#startupStage header small{font-size:10px;letter-spacing:.1em;color:#bbc2b8;padding-top:8px}
+#startupStage .startup-copy{position:relative;z-index:2;width:62%;margin-top:65px;min-width:0}
+#startupStage .startup-kicker{display:block;color:#afb9ac;font-size:10px;letter-spacing:.09em;margin-bottom:15px}
+#startupStage h1{font:700 clamp(24px,3vw,38px)/1.4 'CFT LINE Latin','CFT Harmony Bold',sans-serif;letter-spacing:0;margin:0 0 22px}
+#startupStage h1 span{display:inline-grid;place-items:center;background:#ffef01;color:#242a29;font-size:35px;line-height:1;width:48px;height:48px;margin-left:12px;clip-path:polygon(0 0,85% 0,100% 50%,85% 100%,0 100%);vertical-align:middle}
+#startupStage p{font:700 14px/1.6 'CFT LINE Latin','CFT Harmony Bold',sans-serif;color:#c5cec1;min-height:24px;margin:0}
+#startupStage .startup-track{width:100%;margin:25px 0;height:3px;background:#56605266}
+#startupStage .startup-track i{background:#ffef01}
+#startupStage .startup-character{position:absolute;z-index:1;right:24px;bottom:58px;width:34%;height:auto;pointer-events:none}
+#startupStage footer{position:relative;z-index:2;margin-top:55px;font-size:10px;letter-spacing:.09em;color:#a9b6a5;display:flex;justify-content:space-between;gap:20px}
+#startupStage button{border:1px solid #b0b89c;border-radius:999px;color:#eff1e8;background:#464d45;padding:9px 22px;font:700 13px 'CFT LINE Latin','CFT Harmony Bold',sans-serif;margin:0;cursor:pointer}
+html[data-theme=light_endfield] #startupStage{background:#e9ece4;color:#252e29}
+html[data-theme=light_endfield] #startupStage .startup-poster{background:repeating-linear-gradient(135deg,transparent 0 3px,#00000005 3px 4px),#f1f3eb}
+html[data-theme=light_endfield] #startupStage .startup-wordmark{filter:none}
+html[data-theme=light_endfield] #startupStage :is(p,header small,.startup-kicker,footer){color:#52604f}
+@media(max-width:650px){#startupStage{padding:14px}#startupStage .startup-poster{padding:28px 24px;min-height:400px}#startupStage .startup-wordmark{width:220px;max-width:64%}#startupStage header small{font-size:7px}#startupStage .startup-copy{width:100%;margin-top:52px}#startupStage h1{font-size:25px}#startupStage h1 span{width:34px;height:34px;font-size:26px}#startupStage .startup-character{width:29%;right:12px;bottom:18px;opacity:.23}#startupStage footer{font-size:8px;margin-top:46px}}
+
+/* Full-window composition: no centered card, border or shadow. */
+#startupStage{padding:0;place-items:stretch;overflow:auto}
+#startupStage .startup-poster{width:100%;max-width:none;min-height:100%;height:100%;display:flex;flex-direction:column;justify-content:space-between;padding:clamp(28px,6vh,72px) clamp(30px,7vw,120px);border:0;box-shadow:none}
+#startupStage .startup-wordmark{width:clamp(220px,24vw,380px);max-width:55%}
+#startupStage .startup-copy{width:62%;margin-block:auto;padding-block:48px}
+#startupStage header small{font-family:'CFT LINE Latin',sans-serif!important;font-size:12px;font-weight:700;font-synthesis:none;letter-spacing:.02em;color:#c2c9bd;text-shadow:none}
+#startupStage :is(.startup-kicker,footer){font-family:'CFT LINE Latin',sans-serif;font-weight:700;font-synthesis:none;letter-spacing:.03em;text-shadow:none}
+#startupStage .startup-character{width:34%;max-width:480px;right:6%;bottom:14%}
+#startupStage footer{margin:0;font-size:11px;flex:none}
+@media(max-width:650px){#startupStage .startup-poster{padding:24px 22px}#startupStage .startup-copy{width:100%;padding-block:36px}#startupStage header small{font-size:8px;padding-top:4px}#startupStage .startup-character{width:42%;right:14px;bottom:12%;opacity:.18}#startupStage footer{font-size:8px}}
+
+#startupStage .startup-poster:before{content:'';position:absolute;inset:0;background:url('terrain-contours.svg') center/cover;opacity:.09;z-index:-1;pointer-events:none}

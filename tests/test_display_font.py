@@ -8,12 +8,15 @@ from webui import Api
 class DisplayFontTests(unittest.TestCase):
     def test_bundled_font_and_attribution(self):
         root = Path(__file__).resolve().parents[1]
-        for name in ('HarmonyOS_Sans_SC_Regular.ttf', 'GeourceAltCHS-Regular.ttf'):
+        for name in ('HarmonyOS_Sans_SC_Bold.ttf',):
             self.assertEqual((root / 'web/fonts' / name).read_bytes()[:4], b'\x00\x01\x00\x00')
         self.assertFalse((root / 'web/fonts/URBANISM-Regular.ttf').exists())
         app = (root / 'web/app.js').read_text(encoding='utf-8')
         self.assertNotIn('随包字体 / terminator7211', app)
-        self.assertIn('圆构黑体 Alt', app)
+        self.assertNotIn('圆构黑体 Alt', app)
+        self.assertIn('LINE Seed Sans Bold', app)
+        self.assertEqual((root/'web/fonts/LINESeedSans_Bd.otf').read_bytes()[:4],b'OTTO')
+        self.assertFalse(list((root/'web/fonts').glob('Geource*')))
         self.assertIn('鸿蒙黑体 / HarmonyOS Sans', app)
 
     def test_old_override_is_removed_without_reading_file(self):

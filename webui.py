@@ -15,7 +15,7 @@ import uuid
 
 import webview
 
-APP_VERSION = "3.0.12"
+APP_VERSION = "3.0.17"
 
 from functools import wraps
 
@@ -73,6 +73,8 @@ class Api:
     def __init__(self):
         self._file_choices = FileChoiceBroker()
         self.cfg = config.load()
+        from system_proxy import enable_detected_proxy
+        if enable_detected_proxy(self.cfg):config.save(self.cfg)
         self.api = self._new_api()
         self.dl = downloader.Downloader(self.cfg, on_update=self._on_dl_update)
         # 浏览器桥：Chrome 扩展一键下载当前页面（127.0.0.1 本地 HTTP，静默失败）
@@ -158,16 +160,9 @@ class Api:
                             json.dump(sd, f, ensure_ascii=False, indent=2)
                 except Exception:
                     pass
-            # 2) 封面下载（后台，已存在则跳过；走代理，直连 C 站图片 CDN 会被墙）
-            if self.cfg.get("download_cover", True):
-                imgs = (meta.get("info") or {}).get("images") or []
-                if imgs and imgs[0].get("url"):
-                    try:
-                        _download_image(imgs[0]["url"], base + ".preview.png",
-                                        proxy=self.cfg.get("proxy_address") if self.cfg.get("proxy_enabled") else None,
-                                        verify=self.cfg.get("ssl_verify", True))
-                    except Exception:
-                        pass
+            # Reuse the already fetched queue/history preview before requesting any image again.
+            if self.cfg.get('download_cover',True):
+                self._ensure_download_preview(dest,meta.get('info') or {},task.id)
             # Completed files stay where the user classified them. Global target only affects
             # future downloads; relocation is exclusively an explicit move action.
             # 4) 「更新下载」完成：按设置处理旧版本（默认保留；删除走回收站，可还原）
@@ -822,6 +817,45 @@ class Api:
         except (OSError, ValueError, TypeError) as e:
             return {"ok": False, "msg": str(e)}
 
+    def _ensure_download_preview(self, path, info, task_id='', allow_network=True):
+        """Persist a real PNG next to an existing model; never replace a user cover."""
+        import io,base64
+        from PIL import Image,ImageOps
+        if not os.path.isfile(path):return None
+        info=info if isinstance(info,dict) else {}
+        existing=model_manager.find_cover(path)
+        if existing and os.path.dirname(os.path.abspath(existing))==os.path.dirname(os.path.abspath(path)):
+            try:
+                with Image.open(existing) as im:im.verify()
+                return existing
+            except (OSError,ValueError):return None
+        target=os.path.splitext(path)[0]+'.preview.png'
+        if os.path.lexists(target):return None
+        images=[i for i in (info.get('images') or []) if isinstance(i,dict) and i.get('url') and str(i.get('type','')).lower()!='video' and os.path.splitext(str(i['url']).split('?',1)[0])[1].lower() not in ('.mp4','.webm','.mov')]
+        candidates=[]
+        if existing:candidates.append(existing)
+        if task_id:candidates.append(self._history_asset(task_id,'.jpg'))
+        for item in images:
+            for size in (1024,512,256,160):candidates.append(self._detail_cache_path(item['url'],size))
+        def persist(data):
+            with Image.open(io.BytesIO(data)) as im:
+                im.draft('RGB',(2048,2048));im=ImageOps.exif_transpose(im).convert('RGB');im.thumbnail((2048,2048),Image.Resampling.LANCZOS);out=io.BytesIO();im.save(out,'PNG');payload=out.getvalue()
+            # Exclusive create protects covers added by the user while this task was running.
+            with open(target,'xb') as f:f.write(payload)
+            return target
+        for candidate in candidates:
+            if not os.path.isfile(candidate):continue
+            try:
+                with open(candidate,'rb') as f:return persist(f.read(32*1024*1024))
+            except (OSError,ValueError):continue
+        if allow_network:
+            for item in images[:3]:
+                try:
+                    thumb=self.get_cover_b64(item['url'],1024,timeout=8)
+                    if thumb:return persist(base64.b64decode(thumb,validate=True))
+                except (OSError,ValueError,TypeError):continue
+        return None
+
     def _prefetch_task_cover(self, task):
         """Fetch thumbnail before enqueuing model data. Never write into model folders."""
         if not self.cfg.get("download_cover", True): return
@@ -1426,6 +1460,27 @@ class Api:
         return json.dumps(rows, ensure_ascii=False)
 
     def get_model_detail(self, path):
+        """Bounded metadata/preview cache; invalidate on sidecar, cover or gallery changes."""
+        try:
+            base=os.path.splitext(path)[0];info=model_manager.find_info_file(path);cover=model_manager.find_cover(path)
+            assets=[p for p in (path,info,cover) if p]
+            directory=base+'.images'
+            if os.path.isdir(directory):assets.extend(os.path.join(directory,n) for n in sorted(os.listdir(directory)) if n.lower().endswith(('.png','.jpg','.jpeg','.webp')))
+            stamp=tuple((p,os.stat(p).st_mtime_ns,os.stat(p).st_size) for p in assets if os.path.isfile(p))
+            cache=getattr(self,'_model_detail_cache',None)
+            if cache is None:self._model_detail_cache=cache={}
+            cached=cache.get(path)
+            if cached and cached[0]==stamp:
+                self._remember_gallery_detail(path,json.loads(cached[1]).get('covers',[]))
+                return cached[1]
+            result=self._get_model_detail_uncached(path)
+            if len(result)<2_000_000:
+                if len(cache)>=12:cache.pop(next(iter(cache)))
+                cache[path]=(stamp,result)
+            return result
+        except (OSError,ValueError,TypeError):return self._get_model_detail_uncached(path)
+
+    def _get_model_detail_uncached(self, path):
         """模型详情（C 站风格二级界面）：完整 info + 封面画廊"""
         info = {}
         info_path = model_manager.find_info_file(path)
@@ -1647,7 +1702,7 @@ class Api:
             return result
         except Exception:return {'ok':False,'msg':'生成数据不可用，保留原图参数；可打开 C站原图页查看'}
 
-    def share_model_card(self, path, labels=None):
+    def share_model_card(self, path, labels=None, preview_thumbs=None):
         """Render A-layout locally; never claim clipboard success without a successful write."""
         import base64, model_share, image_gallery
         try:
@@ -1657,15 +1712,41 @@ class Api:
             if detail.get('covers'):
                 preview=self.get_gallery_image(path,0)
                 if preview.get('ok') and preview.get('b64'):cover=base64.b64decode(preview['b64'],validate=True)
-            safe={key:str((labels or {}).get(key,'—'))[:160] for key in ('noDescription','noLink')}
+            safe={key:str((labels or {}).get(key,'—'))[:160] for key in ('noDescription','noLink','downloadModel')}
             previews=[]
-            if len(model_share.plain((detail.get('info') or {}).get('description'))) < 200:
-                for index in range(1,min(6,len(detail.get('covers') or []))):
+            supplied={}
+            for entry in (preview_thumbs or [])[:4]:
+                if isinstance(entry,dict) and isinstance(entry.get('b64'),str) and len(entry['b64'])<=1_400_000:
+                    supplied[entry.get('index')]=entry['b64']
+            # Prefer already loaded previews. Only missing auxiliary images may request
+            # a 160px thumbnail, concurrently and within a shared short budget.
+            missing=[];ordered={}
+            for index,item in enumerate((detail.get('covers') or [])[1:5],1):
+                try:
+                    thumb=item.get('b64') or supplied.get(index)
+                    if thumb:ordered[index]=base64.b64decode(thumb,validate=True);continue
+                    url=item.get('url','')
+                    if self.cfg.get('cache_detail_images',True):
+                        for size in (160,256,512,1024):
+                            cached=self._detail_cache_path(url,size)
+                            if os.path.isfile(cached):
+                                with open(cached,'rb') as f:ordered[index]=f.read(1_000_000)
+                                break
+                    if index not in ordered and url:missing.append((index,url))
+                except (OSError,ValueError,TypeError):continue
+            if missing:
+                from concurrent.futures import ThreadPoolExecutor,wait
+                pool=ThreadPoolExecutor(max_workers=4,thread_name_prefix='share-preview')
+                jobs={pool.submit(self.get_cover_b64,url,160,timeout=2):index for index,url in missing}
+                done,_=wait(jobs,timeout=2.4)
+                for job in done:
                     try:
-                        item=self.get_gallery_image(path,index)
-                        if item.get('ok') and item.get('b64'):previews.append(base64.b64decode(item['b64'],validate=True))
-                    except Exception:continue
-            data=model_share.render(detail,cover,self.cfg.get('model_share_theme','dark'),safe,previews)
+                        thumb=job.result()
+                        if isinstance(thumb,str) and thumb:ordered[jobs[job]]=base64.b64decode(thumb,validate=True)
+                    except Exception:pass
+                pool.shutdown(wait=False,cancel_futures=True)
+            previews=[ordered[i] for i in sorted(ordered)]
+            data=model_share.render(detail,cover,self.cfg.get('model_share_theme','dark'),safe,previews,font_config={key:self.cfg.get(key) for key in ('ui_font','ui_font_stack','ui_font_scripts')})
             controller=getattr(self,'_window_appearance_controller',None)
             form=getattr(getattr(controller,'window',None),'native',None)
             copied=bool(form is not None and image_gallery.copy_clipboard_image(data,form.Handle.ToInt64()))
@@ -1730,34 +1811,33 @@ class Api:
                 return {"ok": False, "msg": "模型文件不存在"}
             base, _ = _os.path.splitext(path)
             mdir = _os.path.dirname(_os.path.abspath(path))
+            cached_data=None
             if (not img_path or not _os.path.exists(img_path)) and img_url:
-                idir = _os.path.join(mdir, _os.path.basename(base) + ".images")
-                try:
-                    _os.makedirs(idir, exist_ok=True)
-                except Exception:
-                    pass
-                dl = _os.path.join(idir, "image_cover.png")
-                okd = _download_image(img_url, dl,
-                                      proxy=self.cfg.get("proxy_address") if self.cfg.get("proxy_enabled") else None,
-                                      verify=self.cfg.get("ssl_verify", True))
-                if not okd:
-                    return {"ok": False, "msg": "在线获取这张图失败（网络/代理问题），稍后再试"}
-                img_path = dl
-            if not img_path or not _os.path.exists(img_path):
+                import image_gallery
+                cached_data=image_gallery.read_bytes({'url':img_url},self.cfg)[0]
+            if cached_data is not None:
+                import io
+                source=io.BytesIO(cached_data)
+            else:
+                source=img_path
+            if cached_data is None and (not img_path or not _os.path.exists(img_path)):
                 return {"ok": False, "msg": "图片文件不存在"}
-            idir = _os.path.abspath(img_path)
+            idir = _os.path.abspath(img_path or base)
             bimg = _os.path.abspath(base + ".images")
             same_dir = _os.path.dirname(idir) == mdir
             in_imgs = idir.lower().startswith((bimg + _os.sep).lower())
-            if not (same_dir or in_imgs):
+            if cached_data is None and not (same_dir or in_imgs):
                 return {"ok": False, "msg": "图片不在该模型目录内，已拒绝"}
-            target = model_manager.find_cover(path) or (base + ".preview.png")
-            ext = _os.path.splitext(target)[1].lower()
-            fmt = {".jpg": "JPEG", ".jpeg": "JPEG", ".webp": "WEBP"}.get(ext, "PNG")
-            im = Image.open(img_path)
-            if fmt == "JPEG":
-                im = im.convert("RGB")
-            im.save(target, fmt)
+            target=base+'.cover.png'
+            import tempfile
+            from PIL import ImageOps
+            fd,tmp=tempfile.mkstemp(dir=mdir,prefix='.cft-cover-',suffix='.png');_os.close(fd)
+            try:
+                with Image.open(source) as original:
+                    image=ImageOps.exif_transpose(original).convert('RGB');image.save(tmp,'PNG');image.close()
+                _os.replace(tmp,target)
+            finally:
+                if _os.path.exists(tmp):_os.unlink(tmp)
             return {"ok": True, "msg": "已设为缩略图：" + _os.path.basename(target), "cover": target}
         except Exception as e:
             return {"ok": False, "msg": "设置失败: %s" % str(e)[:120]}
@@ -1784,6 +1864,15 @@ class Api:
                                "mime": "image/png" if im.mode in ("RGBA", "LA") else "image/jpeg"})
         except Exception as e:
             return json.dumps({"ok": False, "msg": str(e)})
+
+    def check_app_update(self):
+        """Read official stable release metadata; never download or execute an updater."""
+        import app_updates
+        try:
+            proxy=self.cfg.get('proxy_address') if self.cfg.get('proxy_enabled') else None
+            opener=civitai_api.build_opener(proxy,verify=self.cfg.get('ssl_verify',True))
+            return app_updates.check(APP_VERSION,opener)
+        except Exception:return {'ok':False}
 
     def get_version(self):
         """当前软件版本号（关于弹窗/更新说明用）"""
@@ -3879,32 +3968,24 @@ class Api:
             api = self._new_api()
             ok = 0
             for r in rows:
-                imgs = []
+                local={}
                 try:
-                    if r.get("verId"):
-                        imgs = (api.get_model_version(r["verId"]).get("images") or [])
-                    elif r.get("modelId"):
-                        m = api.get_model(r["modelId"])
-                        vs = m.get("modelVersions") or []
-                        if vs:
-                            imgs = (api.get_model_version(vs[0]["id"]).get("images") or [])
-                except Exception:
-                    imgs = []
-                b, _ = os.path.splitext(r["path"])
-                dest = b + ".preview.png"
-                if not os.path.exists(dest):
-                    for img in imgs:
-                        u = img.get("url") or ""
-                        if not u:
-                            continue
-                        for _ in range(3):
-                            if _download_image(u, dest,
-                                               proxy=self.cfg.get("proxy_address") if self.cfg.get("proxy_enabled") else None,
-                                               verify=self.cfg.get("ssl_verify", True)):
-                                ok += 1
-                                break
-                        if os.path.exists(dest):
-                            break
+                    source=model_manager.find_info_file(r['path'])
+                    if source:
+                        with open(source,encoding='utf-8') as f:local=json.load(f)
+                except (OSError,ValueError):pass
+                saved=self._ensure_download_preview(r['path'],local,allow_network=False)
+                if not saved:
+                    imgs=local.get('images') or []
+                    if not imgs:
+                        try:
+                            if r.get('verId'):imgs=api.get_model_version(r['verId']).get('images') or []
+                            elif r.get('modelId'):
+                                versions=api.get_model(r['modelId']).get('modelVersions') or []
+                                if versions:imgs=api.get_model_version(versions[0]['id']).get('images') or []
+                        except Exception:imgs=[]
+                    saved=self._ensure_download_preview(r['path'],{'images':imgs})
+                if saved:ok+=1
                 self.mm_progress["done"] += 1
             self.mm_progress["running"] = False
             self.mm_progress["result"] = ok
@@ -4441,6 +4522,9 @@ class Api:
                                 r["version"] = (res["version"] or {}).get("name", "")
                                 try:
                                     with open(res['info_path'],encoding='utf-8') as f: info=json.load(f)
+                                    if self.cfg.get('download_cover',True):
+                                        try:self._ensure_download_preview(r['path'],info)
+                                        except Exception:pass  # Cover failure must not undo a successful identification.
                                     creator=info.get('creator');creator=creator.get('username','') if isinstance(creator,dict) else creator or ''
                                     version=info.get('version');version=version.get('name','') if isinstance(version,dict) else version or ''
                                     for row in self.model_rows:

@@ -109,7 +109,7 @@ window.CftWorkflow = (() => {
     const btn = e.target.closest('.wf-open-model');
     if (!btn) return;
     await switchPage('models');
-    await showModelDetail(btn.dataset.path);
+    await revealManagedModel(btn.dataset.path);
   });
   return {render,adapt,select};
 })();

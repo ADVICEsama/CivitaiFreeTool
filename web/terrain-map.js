@@ -64,7 +64,7 @@
   function project(X,Y,Z){
    X-=camera.x;Y-=camera.y;Z-=camera.z;Z+=tide;
    const a=X*cy-Y*sy,b=X*sy+Y*cy,depth=b*st+Z*ct,p=2200/Math.max(620,2200-depth);
-   return [width*(width<650?.61:.69)+a*p*scale,height*.74+(b*ct-Z*st)*p*scale,p];
+   return [width*(current==='reverse'?.50:width<650?.61:.69)+a*p*scale,height*(current==='reverse'?.94:.74)+(b*ct-Z*st)*p*scale,p];
   }
   function tileVisible(tile,z){
    if(!culling)return true;

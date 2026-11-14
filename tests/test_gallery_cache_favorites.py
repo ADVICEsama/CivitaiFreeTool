@@ -28,7 +28,7 @@ class LocalGalleryTests(unittest.TestCase):
             item={'url':'https://image.civitai.com/fixture/width=450/img.png'}
             image_gallery.cache_store(item,{'cache_original_images':True},'original',self.image_bytes())
             self.assertIsNone(image_gallery.cache_load(item,{'cache_original_images':False},'original'))
-            before=len(list((Path(d)/'gallery_cache').iterdir()));image_gallery.cache_store(item,{},'preview',{'ok':True});self.assertEqual(before,len(list((Path(d)/'gallery_cache').iterdir())))
+            before=len(list((Path(d)/'gallery_cache').iterdir()));image_gallery.cache_store(item,{'cache_original_images':False},'preview',{'ok':True});self.assertEqual(before,len(list((Path(d)/'gallery_cache').iterdir())))
 
     def test_local_file_change_invalidates_cached_preview(self):
         with TemporaryDirectory() as d,patch.object(config,'APP_DIR',d):

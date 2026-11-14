@@ -1,8 +1,3 @@
-/* User-provided Geource Sans Alt, SIL OFL 1.1. Only default Latin/digits; custom stacks win. */
-@font-face{font-family:'CFT Endfield Latin';src:url('fonts/GeourceAltCHS-Regular.ttf') format('truetype');font-weight:400;font-style:normal;font-display:swap;unicode-range:U+0000-024F,U+1E00-1EFF}
-@font-face{font-family:'CFT Endfield Latin';src:url('fonts/GeourceAltCHS-Medium.ttf') format('truetype');font-weight:500;font-style:normal;font-display:swap;unicode-range:U+0000-024F,U+1E00-1EFF}
-@font-face{font-family:'CFT Endfield Latin';src:url('fonts/GeourceAltCHS-Bold.ttf') format('truetype');font-weight:600 900;font-style:normal;font-display:swap;unicode-range:U+0000-024F,U+1E00-1EFF}
-html[data-endfield=true]{--font:'CFT Endfield Latin','HarmonyOS Sans SC','Microsoft YaHei UI',sans-serif;--ef-settings-font:var(--font)}
 /* Shared secondary capsules: pale against dark pages, charcoal against light pages. */
 html[data-endfield=true]{--ef-band-stripe:linear-gradient(90deg,#fffd1f 0 50%,#00d0fd 50% 75%,#f954fd 75% 100%);--ef-secondary-bg:#d1d3cf;--ef-secondary-text:#51564e;--ef-secondary-border:#50554d;--ef-secondary-icon:#434a40;--ef-secondary-edge:#d1d3cf;--ef-secondary-texture-filter:none}
 html[data-theme=light_endfield]{--ef-secondary-bg:#484b47;--ef-secondary-text:#f0f1eb;--ef-secondary-border:#9ca199;--ef-secondary-icon:#f0f1e9;--ef-secondary-edge:#f0f1e9;--ef-secondary-texture-filter:invert(1)}
@@ -84,6 +79,13 @@ html[data-endfield=true] .ef-footer-action>.ef-action-circle{justify-self:end}
 html[data-endfield=true] body .ef-footer-action:hover:not(:disabled){outline:2px solid var(--ef-yellow)!important;outline-offset:2px!important}
 html[data-endfield=true] body :is(#settingsActions,.font-picker-footer,.rd-actions,.ms-footer,.ob-actions,.ob-actions2,.upd-footer,.model-style-actions):has(.ef-footer-action:hover) .ef-footer-action:focus-visible:not(:hover){outline:none!important}
 
-/* LINE Seed Sans Bold: original single weight; digits retain existing routing. */
-@font-face{font-family:'CFT LINE Latin';src:url('fonts/LINESeedSans_Bd.otf') format('opentype');font-weight:700;font-style:normal;font-display:swap;unicode-range:U+0041-005A,U+0061-007A,U+00C0-024F,U+1E00-1EFF}
-html[data-endfield=true]{--font:'CFT LINE Latin','CFT Endfield Latin','HarmonyOS Sans SC','Microsoft JhengHei UI','Microsoft YaHei UI',sans-serif}
+/* Original Bold fonts used at every default UI weight; custom stacks still win. */
+@font-face{font-family:'CFT LINE Latin';src:url('fonts/LINESeedSans_Bd.otf') format('opentype');font-weight:100 900;font-style:normal;font-display:swap;unicode-range:U+0000-024F,U+1E00-1EFF,U+FF10-FF19}
+html[data-endfield=true]{--font:'CFT LINE Latin','CFT Harmony Bold','Microsoft JhengHei UI','Microsoft YaHei UI',sans-serif}
+
+@font-face{font-family:'CFT Harmony Bold';src:url('fonts/HarmonyOS_Sans_SC_Bold.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:swap}
+
+/* Settings pills: anchor discs to the button, not to a text grid row. */
+html[data-endfield=true] #settingsForm .ef-footer-action>.ef-action-circle{
+ position:absolute;right:7px;top:50%;transform:translateY(-50%);margin:0;align-self:center;
+}

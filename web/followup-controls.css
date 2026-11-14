@@ -91,3 +91,180 @@ html body .image-viewer{z-index:200000}
  html[data-endfield=true] .ef-folder-band .fp-model-cover{border:0;background:transparent}
  html[data-endfield=true] .ef-folder-band .fp-model-cover img{max-height:260px}
 }
+
+/* Keep selection light outside the card; text never creates a nested scroller. */
+html[data-endfield=true] body #mmMasonry .ms-card{overflow:visible!important;contain:none!important;content-visibility:visible!important}
+html[data-endfield=true] body #mmMasonry .ms-card>.ms-info{overflow:hidden!important;min-width:0;box-sizing:border-box}
+html[data-endfield=true] body #mmMasonry .ms-card.checked{box-shadow:0 0 18px 3px #ffd74688,0 0 35px 7px #ffdc4433!important}
+html[data-endfield=true] body #mmMasonry .ms-card.checked>.ms-info{background:linear-gradient(transparent,rgba(12,18,18,.76))!important}
+html[data-endfield=true] .mm-metro .btn-group>.btn+.btn{border-left:0!important}
+.cft-model-select{position:relative;min-width:0;flex:1;isolation:isolate}
+html[data-endfield=true] .cft-model-select>.ef-select-native{display:none!important}
+html[data-endfield=true] .cft-model-select>.ef-select-trigger{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:40px;border:1px solid #aaa;background:#ebebeb;color:#292b29;border-radius:30px!important;padding:7px 18px;font:500 15px var(--font);text-align:left;cursor:pointer}
+.cft-model-select>.ef-select-trigger span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cft-model-select>.ef-select-trigger:after{content:'';border:6px solid transparent;border-bottom:0;border-top:7px solid #353735;flex:none}
+html[data-endfield=true] .cft-model-select>.ef-select-trigger[aria-expanded=true]{position:relative;z-index:1;background:#a3a5a3;color:white}
+.cft-model-select>.ef-select-trigger[aria-expanded=true]:after{border-top:0;border-bottom:7px solid white}
+.cft-model-select:has(>[aria-expanded=true]):before{content:'';position:absolute;inset:50% 0 -9px;background:#d4d2d2;z-index:-1}
+.cft-model-select[data-select-direction=above]:has(>[aria-expanded=true]):before{inset:-9px 0 50%}
+.cft-model-select>.ef-select-trigger:focus-visible{outline:2px solid var(--ef-yellow);outline-offset:3px}
+
+html[data-endfield=true] body #mmMasonry .ms-card.checked>.ms-info{flex-direction:column!important;align-items:stretch!important}
+html[data-endfield=true] body #mmMasonry .ms-info>*{min-width:0;max-width:100%;box-sizing:border-box}
+html[data-endfield=true] body #mmMasonry .ms-info :is(.ms-name,.ms-sub,.ms-meta,.ms-author){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+html[data-endfield=true] body #mmMasonry .ms-card.checked .ms-info :is(.ms-name,.ms-sub,.ms-meta,.ms-size,.ms-author),html[data-endfield=true] body #mmTable tr.sel-row .ml-txt{color:var(--ef-yellow)!important}
+html[data-endfield=true] #mmToolbar .sp-caret{width:28px!important;min-width:28px!important;padding:0!important;display:inline-flex!important;align-items:center;justify-content:center;flex:none}
+html[data-endfield=true] #mmToolbar .sp-caret .ic{display:block!important;margin:0!important;width:16px!important;height:16px!important;transform:none!important}
+html[data-endfield=true] #mmToolbar .sp-caret:before,html[data-endfield=true] #mmToolbar .sp-caret:after{display:none!important}
+.ef-settings-select-menu[data-direction=above]{transform-origin:bottom;animation-name:cft-select-up}
+.ef-model-filter-popup[open] .ef-model-filter-panel{animation:cft-filter-up 150ms ease-out;transform-origin:bottom left}
+@keyframes cft-select-up{from{opacity:0;clip-path:inset(100% 0 0 0)}to{opacity:1;clip-path:inset(0)}}
+@keyframes cft-filter-up{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.ef-settings-select-menu[data-direction=above],.ef-model-filter-popup[open] .ef-model-filter-panel{animation:none}}
+html[data-endfield=true] body #dlTable .c-thumb img,html[data-endfield=true] body #dlHistoryTable .history-thumb img{object-position:50% 50%!important}
+
+html[data-endfield=true] body #mmToolbar .ef-model-tool-button:not(.sp-caret){min-height:34px;padding:6px 10px!important;gap:8px;border-bottom:2px solid transparent!important}
+html[data-endfield=true] body #mmToolbar .ef-model-tool-button:not(.sp-caret):is(:hover,:focus-visible){border-bottom-color:var(--ef-yellow)!important;background:color-mix(in srgb,var(--ef-yellow) 9%,transparent)!important}
+html[data-endfield=true] body #mmToolbar .ef-model-tool-button>.ic{width:18px;height:18px;flex:none}
+html[data-endfield=true] body #mmTable .ml-cover{overflow:hidden}
+html[data-endfield=true] body #mmTable .ml-cover .ml-thumb{object-position:50% 50%!important}
+.about-actions{flex-wrap:wrap;justify-content:center}
+
+html[data-endfield=true] body #dlTable .c-thumb img,html[data-endfield=true] body #dlHistoryTable .history-thumb img{display:block!important;width:100%!important;height:100%!important;max-height:none!important;max-width:none!important;object-fit:cover!important}
+
+/* Balanced side tracks keep captions centered without removing their intrinsic width. */
+html[data-endfield=true] body .ef-footer-action{position:relative;display:inline-grid!important;grid-template-columns:minmax(24px,1fr) auto minmax(24px,1fr)!important;align-items:center!important}
+html[data-endfield=true] body .ef-footer-action>.ef-action-caption{position:relative;inset:auto;grid-column:2;grid-row:1;display:flex;align-items:center;justify-content:center;text-align:center;transform:none!important;line-height:1.2;margin:0;padding:0;white-space:nowrap;min-width:0;overflow:hidden}
+html[data-endfield=true] body .ef-footer-action>.ef-action-stem{grid-column:1;grid-row:1;align-self:center}
+html[data-endfield=true] body .ef-footer-action>.ef-action-circle{grid-column:3;grid-row:1;align-self:center;justify-self:end}
+html[data-endfield=true] body #mmTable tr.sel-row :is(.ml-txt,.ml-1,.ml-2,.ml-author,.name-scroll-text){color:var(--ef-yellow)!important}
+html[data-endfield=true] body #mmTable tbody td{vertical-align:middle!important}
+html[data-endfield=true] body #mmTable .ml-wrap{align-items:center!important;height:100%;min-height:inherit}
+html[data-endfield=true] body #mmTable .ml-txt{display:flex!important;flex-direction:column;justify-content:center!important;align-self:center!important;transform:none!important;margin-block:0!important}
+html[data-endfield=true] #ctxMenu{z-index:210000!important;pointer-events:auto!important}
+html[data-endfield=true] #detailPanel :is(.ef-inspector-more,.ef-inspector-more-content){overflow-anchor:none}
+
+/* Primary tools are folded-corner bookmarks, secondary tools remain compact. */
+html[data-endfield=true] body #mmToolbar .mm-row1{align-items:stretch;gap:3px}
+html[data-endfield=true] body #mmToolbar .mm-row1 .ef-model-tool-button{height:55px;min-height:55px;min-width:112px;padding:10px 16px!important;background:color-mix(in srgb,var(--text) 13%,var(--bg))!important;clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,0 100%);border:0!important;gap:10px;color:var(--text)!important;justify-content:center;align-items:center;font-size:12px;line-height:1.2;transform:none!important}
+html[data-endfield=true] body #mmToolbar .mm-row1 .ef-model-tool-button.btn-primary{background:var(--ef-yellow)!important;color:#252b20!important}
+html[data-endfield=true] body #mmToolbar .mm-row1 .ef-model-tool-button>.ic{width:23px;height:23px;flex:none;align-self:center}
+html[data-endfield=true] body #mmToolbar .mm-row1 .ef-model-tool-button:is(:hover,:focus-visible){background:var(--ef-yellow)!important;color:#252b20!important}
+html[data-endfield=true] body #mmToolbar .mm-row2 .ef-model-tool-button{line-height:1.2;align-items:center;transform:none!important}
+html[data-endfield=true] body #detailPanel .ef-inspector-more-content{display:grid;gap:10px}
+
+html[data-endfield=true] body #mmTable tbody td.c-name{display:flex!important;align-items:center!important;justify-content:flex-start!important}
+html[data-endfield=true] body #mmTable .ml-wrap{height:auto!important;min-height:0!important;align-self:center!important;width:100%}
+html[data-endfield=true] body #mmTable tr.sel-row td :is(strong,span,.ml-1,.ml-2,.ml-author){color:var(--ef-yellow)!important}
+
+html[data-endfield=true] #detailPanel .ef-inspector-more-content .ef-footer-action{min-height:32px;min-width:120px;line-height:1.2;vertical-align:middle}
+
+/* Override the older single-column pill rule, which otherwise creates an implicit caption column. */
+html[data-endfield=true] body button.ef-pill-action.ef-footer-action{grid-template-columns:minmax(24px,1fr) auto minmax(24px,1fr)!important}
+html[data-endfield=true] body button.ef-pill-action.ef-footer-action>.ef-action-caption{grid-column:2;grid-row:1;padding-inline:0!important;justify-self:center;max-width:100%}
+html[data-endfield=true] body #mmToolbar .mm-row1 .ef-model-tool-button{clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,0 100%)!important;border-radius:0!important}
+
+/* Inventory tools reuse the settings-style icon/label plane for both rows. */
+html[data-endfield=true] body #mmToolbar .ef-model-tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(82px,1fr));gap:0;margin-bottom:14px;background:repeating-linear-gradient(135deg,transparent 0 3px,color-mix(in srgb,var(--text) 5%,transparent) 3px 4px);border-block:1px solid var(--border)}
+html[data-endfield=true] body #mmToolbar :is(.mm-row1,.ef-model-subtools,.ef-model-toolbox,.mm-row2,.ef-model-selection-tools){display:contents!important}
+html[data-endfield=true] body #mmToolbar .ef-model-toolbox>summary{display:none!important}
+html[data-endfield=true] body #mmToolbar .ef-model-icon-strip .btn-group{position:relative;display:block;min-width:0;height:86px;border-right:1px solid var(--border)}
+html[data-endfield=true] body #mmToolbar .ef-model-icon-strip .ef-model-tool-button:not(.sp-caret){position:relative;display:flex!important;flex-direction:column;align-items:center;justify-content:center;gap:8px;width:100%;height:86px;min-height:86px;min-width:0;padding:9px 5px!important;border:0!important;border-right:1px solid var(--border)!important;border-radius:0!important;clip-path:none!important;background:transparent!important;color:var(--text)!important;font:700 12px/1.25 var(--font);text-align:center;white-space:normal;transform:none!important}
+html[data-endfield=true] body #mmToolbar .ef-model-icon-strip .ef-model-tool-button:not(.sp-caret)>.ic:not(.ef-model-menu-caret){width:27px!important;height:27px!important;flex:none;display:block;align-self:center}
+html[data-endfield=true] body #mmToolbar .ef-model-icon-strip .ef-model-tool-button:not(.sp-caret):is(:hover,:focus-visible){background:var(--ef-yellow) url('terrain-contours.svg') 25% 40%/600px!important;color:#20271d!important}
+html[data-endfield=true] body #mmToolbar .ef-model-icon-strip .ef-model-menu-caret{position:absolute;bottom:9px;right:5px;width:11px!important;height:11px!important;margin:0}
+html[data-endfield=true] body #mmToolbar .ef-model-icon-strip .sp-caret{position:absolute;bottom:4px;right:1px;width:20px!important;min-width:20px!important;height:23px!important;min-height:23px!important;padding:0!important;z-index:2;background:none!important}
+html[data-endfield=true] body #mmToolbar .ef-model-tools #mmViewSeg{grid-column:1/-1;justify-self:end;margin-top:9px;display:flex}
+@media(max-width:900px){html[data-endfield=true] body #mmToolbar .ef-model-tools{grid-template-columns:repeat(5,minmax(0,1fr))}html[data-endfield=true] body #mmToolbar .ef-model-icon-strip .ef-model-tool-button:not(.sp-caret){font-size:10px;height:76px;min-height:76px}html[data-endfield=true] body #mmToolbar .ef-model-icon-strip .btn-group{height:76px}}
+
+html[data-endfield=true] body #mmToolbar .ef-model-tools{display:block;border:0;background:none}
+html[data-endfield=true] body #mmToolbar .ef-model-icon-strip{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:0;width:100%;background:repeating-linear-gradient(135deg,transparent 0 3px,color-mix(in srgb,var(--text) 5%,transparent) 3px 4px);border-block:1px solid var(--border)}
+html[data-endfield=true] body #mmToolbar .ef-model-tools #mmViewSeg{display:flex;justify-content:flex-end;margin-top:9px}
+html[data-endfield=true] body #mmToolbar #mmViewSeg .ef-model-tool-button{height:32px;min-height:32px;width:auto;flex-direction:row;padding:5px 9px!important;background:none!important;color:var(--text)!important;clip-path:none!important;gap:5px}
+@media(max-width:1200px){html[data-endfield=true] body #mmToolbar .ef-model-icon-strip{grid-template-columns:repeat(5,minmax(0,1fr))}}
+
+html[data-endfield=true] body #mmToolbar .ef-model-icon-strip{grid-template-columns:repeat(10,minmax(0,1fr))!important}
+html[data-endfield=true] body #mmToolbar .ef-model-icon-strip .car{display:none!important}
+html[data-endfield=true] body #mmToolbar .ef-model-icon-strip .ef-model-menu-caret{bottom:5px;right:5px}
+html[data-endfield=true] body #mmToolbar .ef-model-inline-menu{display:none!important;position:static!important;width:100%!important;max-width:none!important;max-height:none!important;margin:0!important;padding:0!important;border:0!important;box-shadow:none!important;overflow:visible!important;background:repeating-linear-gradient(135deg,transparent 0 3px,color-mix(in srgb,var(--text) 5%,transparent) 3px 4px)!important}
+html[data-endfield=true] body #mmToolbar .ef-model-inline-menu.open{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));animation:cft-subtool-reveal .15s ease-out;transform-origin:top;border-bottom:1px solid var(--border)!important}
+html[data-endfield=true] body #mmToolbar .ef-model-inline-menu .mm-sep-h{display:none}
+html[data-endfield=true] body #mmToolbar .ef-model-inline-menu .mm-item{display:flex!important;position:relative;flex-direction:column;align-items:center;justify-content:center;gap:8px;height:78px;width:100%;min-width:0;margin:0;padding:8px!important;background:none!important;border:0!important;border-right:1px solid var(--border)!important;border-radius:0!important;color:var(--text)!important;font:700 12px/1.2 var(--font);text-align:center;clip-path:none!important;cursor:pointer}
+html[data-endfield=true] body #mmToolbar .ef-model-inline-menu .mm-item>.ic{width:26px;height:26px;flex:none;display:block}
+html[data-endfield=true] body #mmToolbar .ef-model-inline-menu .mm-item:is(:hover,:focus-visible){background:var(--ef-yellow) url('terrain-contours.svg') 25% 40%/600px!important;color:#20271d!important;outline:0}
+html[data-endfield=true] body #mmToolbar .ef-model-inline-menu .mm-item[aria-disabled=true]{opacity:.4;cursor:not-allowed}
+html[data-endfield=true] body #mmToolbar .btn-group.open>.ef-model-tool-button{background:var(--ef-yellow) url('terrain-contours.svg') 25% 40%/600px!important;color:#20271d!important}
+@keyframes cft-subtool-reveal{from{opacity:0;clip-path:inset(0 0 100%)}to{opacity:1;clip-path:inset(0)}}
+@media(max-width:1200px){html[data-endfield=true] body #mmToolbar .ef-model-icon-strip{grid-template-columns:repeat(5,minmax(0,1fr))!important}}
+@media(prefers-reduced-motion:reduce){html[data-endfield=true] body #mmToolbar .ef-model-inline-menu.open{animation:none}}
+
+html[data-endfield=true] #mmToolbar .btn-group.open>.ef-model-tool-button>.ef-model-menu-caret{transform:rotate(180deg)!important}
+
+/* Second level is inset and shorter, not a duplicate of the primary row. */
+html[data-endfield=true] body #mmToolbar .ef-model-inline-menu{width:100%!important;margin:0!important;box-sizing:border-box;background:repeating-linear-gradient(135deg,transparent 0 3px,color-mix(in srgb,var(--text) 3%,transparent) 3px 4px)!important}
+html[data-endfield=true] body #mmToolbar .ef-model-inline-menu.open{border-left:2px solid var(--ef-yellow)!important}
+html[data-endfield=true] body #mmToolbar .ef-model-inline-menu .mm-item{height:62px;gap:5px;font-size:11px;padding:6px!important}
+html[data-endfield=true] body #mmToolbar .ef-model-inline-menu .mm-item>.ic{width:22px;height:22px}
+
+/* Inventory refinement: calm toolbar surface, a separate selection row, and persistent inline filters. */
+html[data-endfield=true] body #mmToolbar .ef-model-tools{isolation:isolate;background:color-mix(in srgb,var(--bg) 94%,transparent)}
+html[data-endfield=true] body #mmToolbar .ef-model-icon-strip .ef-model-menu-caret{display:none!important}
+html[data-endfield=true] body #mmToolbar .ef-model-inline-menu .mm-item{display:grid!important;grid-template-rows:24px 16px;justify-items:center;align-content:center;justify-content:stretch;gap:4px}
+html[data-endfield=true] body #mmToolbar .ef-model-inline-menu .mm-item>span{display:block;line-height:16px;text-align:center;width:100%;padding:0!important;margin:0!important}
+.ef-model-secondary{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding-top:8px}
+html[data-endfield=true] body #mmToolbar .ef-model-secondary #mmViewSeg{margin:0 0 0 auto}
+.ef-model-secondary>.ef-model-selection-tools{display:flex;gap:8px;align-items:center;margin-right:auto}
+html[data-endfield=true] body #mmToolbar .ef-model-secondary .btn{min-height:30px;padding:5px 10px;display:inline-flex;gap:6px;align-items:center;justify-content:center}
+html[data-endfield=true] body .ef-model-filter-popup{position:relative;display:flex;align-items:center;gap:10px;min-width:0;max-width:100%}
+.ef-model-filter-popup::details-content{display:contents}
+html[data-endfield=true] body .ef-model-filter-popup:not([open])>.ef-model-filter-panel{display:none!important}
+html[data-endfield=true] body .ef-model-filter-popup[open]>.ef-model-filter-panel{position:static;inset:auto;display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px;width:min(850px,calc(100vw - var(--sidebar-width) - 420px));max-width:100%;max-height:none;padding:0;border:0;box-shadow:none;background:none;animation:none;transform:none}
+html[data-endfield=true] .ef-model-filter-panel>.mm-filter{display:flex;flex:1 1 170px;min-width:130px;gap:8px}
+html[data-endfield=true] .ef-model-filter-panel>.mm-row3{display:flex;flex:3 1 380px;gap:8px;min-width:0;margin:0;padding:0;border:0;flex-wrap:wrap}
+.ef-model-filter-panel .cft-model-select{flex:1 1 125px;min-width:125px}
+.ef-model-filter-panel .ef-select-trigger{height:36px;min-height:36px;font-size:12px!important;padding:6px 24px 6px 10px!important}
+html[data-endfield=true] body .ef-model-filter-panel .mm-search-field{width:100%;min-width:0}
+html[data-endfield=true] body .ef-model-filter-panel #mmFilter{box-sizing:border-box;width:100%;height:36px;font:inherit;font-size:12px}
+@media(max-width:1300px){html[data-endfield=true] body .ef-model-filter-popup[open]>.ef-model-filter-panel{width:calc(100vw - var(--sidebar-width) - 100px)}html[data-endfield=true] body .ef-model-filter-popup[open]{flex:1 1 100%;order:5}}
+/* Optical ink centering is measured once per font/text, not guessed with unequal padding. */
+.ef-action-caption>.cft-optical-ink,.cft-optical-ink{display:inline-block;translate:0 var(--ink-center-y,0px)}
+html[data-endfield=true] .about-name{display:table;padding-block:10px}
+html[data-endfield=true] .about-ver{display:flex;align-items:center;justify-content:center;min-height:28px;padding-block:0}
+html[data-endfield=true] .about-poster-caption p{display:table;padding-block:4px}
+
+/* Center-crop the photo itself, independent of the table cell's baseline and text layout. */
+html[data-endfield=true] body #dlTable .c-thumb,html[data-endfield=true] body #dlHistoryTable .history-thumb{display:block!important;box-sizing:border-box;padding:0!important;float:none!important}
+html[data-endfield=true] body #dlTable .c-thumb img,html[data-endfield=true] body #dlHistoryTable .history-thumb img{position:absolute!important;inset:0!important;margin:0!important;object-fit:cover!important;object-position:50% 50%!important}
+
+html[data-endfield=true] body .ef-model-filter-panel>.mm-filter,html[data-endfield=true] body .ef-model-filter-panel>.mm-row3{height:auto;min-height:0;align-self:center}
+
+html[data-endfield=true] body #mmToolbar #mmBatchCovers>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;line-height:15px}
+html[data-endfield=true] body #mmToolbar #mmFoldersWrap[hidden]{display:none!important}
+
+/* The diagonal arrow has asymmetric ink; measured at 125% against the yellow polygon. */
+html[data-endfield=true] .about-poster-caption h3>span:not(.cft-optical-ink)>.cft-optical-ink{translate:0 calc(var(--ink-center-y,0px) + 5.5px)}
+html[data-endfield=true] .about-poster-caption p>.cft-optical-ink{translate:0 calc(var(--ink-center-y,0px) + .8px)}
+
+/* Top search uses the intentional space between actions and view tabs. */
+html[data-endfield=true] body #mmToolbar .ef-model-secondary{gap:10px}
+html[data-endfield=true] body #mmToolbar .ef-model-top-search{flex:1 1 220px;min-width:180px;max-width:none;position:relative}
+html[data-endfield=true] body #mmToolbar .ef-model-top-search #mmFilter{height:34px;border:0;border-bottom:1px solid var(--border);border-radius:0;background:color-mix(in srgb,var(--surface) 60%,transparent);width:100%;font:inherit;font-size:12px;box-sizing:border-box;padding:6px 30px 6px 12px}
+html[data-endfield=true] body #mmToolbar .ef-model-secondary>.ef-model-selection-tools{margin:0;gap:2px}
+html[data-endfield=true] body #mmToolbar .ef-model-selection-tools .btn{white-space:nowrap;background:none;border:0;border-radius:0;padding:5px 7px!important;font-size:11px}
+html[data-endfield=true] body #mmToolbar .ef-model-selection-tools .ic{width:16px;height:16px;margin:0}
+html[data-endfield=true] body #mmToolbar .ef-model-inline-menu .mm-item>.ic{margin:0!important;justify-self:center;align-self:center}
+html[data-endfield=true] body #mmToolbar .ef-model-inline-menu .mm-item>span{justify-self:center;align-self:center;transform:none!important}
+html[data-endfield=true] body .ef-model-filter-popup[open]>.ef-model-filter-panel{width:auto;flex-wrap:nowrap;overflow:visible}
+html[data-endfield=true] body .ef-model-filter-panel>.mm-row3{flex:initial;display:flex;flex-wrap:nowrap;gap:8px}
+html[data-endfield=true] body .ef-model-filter-panel .cft-model-select{flex:0 1 140px;min-width:112px}
+html[data-endfield=true] body .ef-model-filter-popup[open]{flex:0 1 auto;order:initial}
+html[data-endfield=true] body .ef-model-filter-popup{align-items:center}
+html[data-endfield=true] body .ef-model-filter-panel .ef-select-trigger{height:34px;min-height:34px}
+html[data-endfield=true] body #mmTable tbody tr.sel-row :is(td,.ml-txt,.ml-1,.ml-2,.ml-author,.name-scroll-text,span,strong){color:var(--ef-yellow)!important}
+html[data-endfield=true] body .detail-tag-idx{background:var(--ef-yellow);color:#20271d!important;font:700 11px/1 var(--font);display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0;align-self:center;vertical-align:middle}
+@media(max-width:1100px){html[data-endfield=true] body .ef-model-filter-panel>.mm-row3{flex-wrap:wrap}html[data-endfield=true] body .ef-model-filter-panel .cft-model-select{flex:1 1 112px}html[data-endfield=true] body .ef-model-filter-popup[open]>.ef-model-filter-panel{max-width:calc(100vw - var(--sidebar-width) - 130px)}}
+
+html[data-endfield=true] body #mmTable tbody tr.sel-row td :is(span,strong,div,a,em,b,small){color:inherit!important}html[data-endfield=true] body #detailPanel .detail-tag-idx,html[data-endfield=true] body #detailMask .detail-tag-idx{color:#20271d!important}
+
+html[data-endfield=true] body .ef-model-filters :is(.ef-model-sort .ef-select-trigger,#mmSortDir,.ef-model-filter-popup>summary,.ef-model-filter-panel .ef-select-trigger){height:34px!important;min-height:34px!important;box-sizing:border-box;align-self:center}

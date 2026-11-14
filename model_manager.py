@@ -129,13 +129,21 @@ def clean_model_name(name, rules=None):
 
 
 def find_cover(model_path):
-    """查找模型封面图（本地优先）：<名>.cover.* / <名>.preview.png / 同名图片 / info.cover"""
+    """Prefer explicit local covers, then local gallery images (never video)."""
     base, _ = os.path.splitext(model_path)
-    for c in (base + ".cover.jpg", base + ".cover.png", base + ".cover.jpeg",
-              base + ".cover.webp", base + ".preview.png", base + ".preview.jpg",
-              base + ".jpg", base + ".png", base + ".jpeg", base + ".webp"):
-        if os.path.exists(c):
-            return c
+    for suffix in ('.cover.png','.cover.jpg','.cover.jpeg','.cover.webp',
+                   '.preview.png','.preview.jpg','.preview.jpeg','.preview.webp','.preview.gif',
+                   '.jpg','.png','.jpeg','.webp','.gif','.bmp'):
+        candidate=base+suffix
+        if os.path.isfile(candidate):return candidate
+    gallery=base+'.images'
+    if os.path.isdir(gallery):
+        try:
+            files=sorted(os.listdir(gallery),key=lambda name:(not name.lower().startswith('image_cover.'),name.lower()))
+            for name in files:
+                candidate=os.path.join(gallery,name)
+                if os.path.splitext(name)[1].lower() in IMAGE_EXTS and os.path.isfile(candidate):return candidate
+        except OSError:pass
     return None
 
 

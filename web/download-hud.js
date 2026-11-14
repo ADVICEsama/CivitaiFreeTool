@@ -9,7 +9,7 @@ async function poll(){
   if(stopped)return;
   try{
     const s=await bridge.snapshot(),theme=String(s.theme||'');document.body.dataset.theme=theme.startsWith('light')||['modern','metro'].includes(theme)?'light_endfield':'dark_endfield';document.documentElement.dataset.theme=document.body.dataset.theme;document.body.dataset.motion=String(s.motion);
-    const fontKey=JSON.stringify(s.fonts||{});if(fontKey!==fontSignature){fontSignature=fontKey;const cfg=s.fonts||{},raw=Array.isArray(cfg.ui_font_stack)?cfg.ui_font_stack:cfg.ui_font?[cfg.ui_font]:[];const fonts=raw.filter(f=>typeof f==='string'&&f.trim()).slice(0,20).map(f=>JSON.stringify(f.trim()));document.documentElement.style.setProperty('--font',fonts.concat(["'CFT LINE Latin'","'CFT Endfield Latin'","'HarmonyOS Sans SC'","sans-serif"]).join(','));document.documentElement.lang=cfg.ui_language||'zh-CN';applyFontScriptRouting(cfg);}
+    const fontKey=JSON.stringify(s.fonts||{});if(fontKey!==fontSignature){fontSignature=fontKey;const cfg=s.fonts||{},raw=Array.isArray(cfg.ui_font_stack)?cfg.ui_font_stack:cfg.ui_font?[cfg.ui_font]:[];const fonts=raw.filter(f=>typeof f==='string'&&f.trim()).slice(0,20).map(f=>JSON.stringify(f.trim()));document.documentElement.style.setProperty('--font',fonts.concat(["'CFT LINE Latin'","'CFT Harmony Bold'","sans-serif"]).join(','));document.documentElement.lang=cfg.ui_language||'zh-CN';applyFontScriptRouting(cfg);}
     if(s.active){sawActive=true;completionAt=0;}
     if(s.done&&sawActive){if(!completionAt)completionAt=Date.now();if(Date.now()-completionAt>5000){sawActive=false;bridge.hide();}}
     document.body.classList.toggle('running',s.active>0);document.body.classList.toggle('done',s.done);document.body.classList.toggle('failed',s.failed>0);

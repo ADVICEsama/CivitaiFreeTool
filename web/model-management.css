@@ -1,7 +1,7 @@
 /* Independent lanes do not rebalance when a thumbnail decodes or leaves the viewport. */
 html[data-endfield=true] body #mmMasonry[data-model-view=masonry]{display:flex;column-width:auto;column-count:auto;gap:12px;align-items:flex-start}
 #mmMasonry .ms-stable-column{flex:0 0 min(var(--model-card-width,220px),100%);min-width:0;display:flex;flex-direction:column;gap:12px}
-#mmMasonry .ms-stable-column>.ms-card{width:100%;margin:0;break-inside:auto;content-visibility:auto;contain-intrinsic-size:auto 300px}
+#mmMasonry .ms-stable-column>.ms-card{width:100%;margin:0;break-inside:auto;content-visibility:visible;contain:none}
 html[data-endfield=true] body #mmMasonry[data-model-view=grid]{grid-template-columns:repeat(auto-fill,minmax(min(100%,var(--model-grid-size,220px)),1fr));gap:18px 16px}
 html[data-endfield=true] #detailPanel .ef-inspector-heading{min-width:0;overflow:hidden}
 html[data-endfield=true] #detailPanel .detail-title{display:block;min-width:0;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.35!important;font-size:clamp(18px,1.7vw,26px)!important}
@@ -29,3 +29,22 @@ html[data-endfield=true] #detailPanel .ef-inspector-more{border:0!important;bord
 
 html[data-endfield=true] body #mmTable .ml-cover{position:absolute;inset:0 auto 0 0;width:52%;overflow:hidden;pointer-events:none;z-index:0;mask-image:linear-gradient(90deg,#000 0%,#000b 40%,transparent 100%)}
 html[data-endfield=true] body #mmTable .ml-cover .ml-thumb{position:static!important;display:block!important;width:100%!important;height:100%!important;object-fit:cover;object-position:center center;mask-image:none;aspect-ratio:auto!important}
+
+/* Visibility skips offscreen paint without paint containment clipping selected halos.
+   Dimensions remain in layout, so returning thumbnails cannot rebalance the lanes. */
+html[data-endfield=true] body #mmMasonry .ms-card[data-model-visible=false],
+html[data-endfield=true] body #mmMasonry .ms-card[data-model-visible=false] *{visibility:hidden!important}
+html[data-endfield=true] body #mmMasonry .ms-card[data-model-visible=false]:is(:before,:after){animation-play-state:paused!important}
+
+/* Native CSS grid owns all columns; card spans preserve the waterfall without JS lane containers. */
+html[data-endfield=true] body #mmMasonry[data-model-view=masonry]{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(min(100%,var(--model-card-width,220px)),var(--model-card-width,220px)));grid-auto-rows:8px;grid-auto-flow:row;column-gap:12px;row-gap:0;align-content:start;align-items:start;column-width:auto!important;column-count:auto!important;box-sizing:border-box}
+html[data-endfield=true] body #mmMasonry[data-model-view=masonry]>.ms-card{width:100%;margin:0!important;align-self:start;grid-row-end:span 40;contain:none;content-visibility:visible}
+
+body.models-workspace.model-toolbar-locked #mmMasonryViewport{width:100%!important;min-width:0;box-sizing:border-box}html[data-endfield=true] body #mmMasonry{width:100%!important;min-width:0;max-width:100%;box-sizing:border-box}
+
+html[data-endfield=true] body #mmMasonry[data-model-view=masonry]{contain:layout style}
+
+html[data-endfield=true] body #mmUpdOnly.active{color:var(--ef-yellow)!important;background:color-mix(in srgb,var(--text) 5%,transparent);box-shadow:inset 0 -2px var(--ef-yellow)}
+html[data-endfield=true] #ctxMenu{box-sizing:border-box;overflow-x:hidden}
+html[data-endfield=true] #ctxMenu .ctx-caption{display:block;width:100%;box-sizing:border-box;text-overflow:ellipsis;white-space:nowrap;overflow:hidden}
+html[data-endfield=true] #ctxMenu .ctx-item>span{min-width:0;overflow:hidden;text-overflow:ellipsis}

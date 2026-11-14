@@ -77,7 +77,7 @@ function settingCategory(key, oldGroup) {
 // Fallback for older/sparse configs as well as the isolated preview. Keep in sync with config.DEFAULTS.
 const SETTING_NUMBER_DEFAULTS=Object.freeze({max_concurrent_downloads:3,download_timeout:300,download_retry:5,hash_threads:4,name_scroll_speed:70,name_scroll_start_pause:350,name_scroll_end_pause:250,window_wait_seconds:30,effects_fps_limit:60,gallery_cache_mb:1024});
 function settingRow(key, label, type, opts, tip) {
-  const value = state.cfg[key] ?? ({...SETTING_NUMBER_DEFAULTS,ui_text_size:"standard",window_appearance:"theme",performance_profile:"custom",ui_animations:true,pause_effects_while_dragging:true})[key];
+  const value = state.cfg[key] ?? ({...SETTING_NUMBER_DEFAULTS,ui_text_size:"standard",window_appearance:"theme",performance_profile:"custom",ui_animations:true,pause_effects_while_dragging:true,download_cover:true})[key];
   const numberDefault=SETTING_NUMBER_DEFAULTS[key];
   const numericHint=type==='number'&&numberDefault!==undefined?' data-default="'+numberDefault+'" placeholder="默认 '+numberDefault+'"':'';
   const id = "setting-" + key;
@@ -113,7 +113,7 @@ function settingRow(key, label, type, opts, tip) {
   if(key === "window_appearance") input += '<p id="windowAppearanceStatus" role="status"></p>';
   const help = tip || "保持默认即可，按需要调整。";
   return '<div class="setting-row" data-setting-key="' + key + '" data-setting-search="' + esc((label + " " + help + " " + key).toLowerCase()) + '">' +
-    '<div class="setting-copy"><label for="' + id + '">' + esc(label) + '</label><p id="' + id + '-help">' + esc(help) + '</p></div><div class="setting-control">' + input + '</div></div>';
+    '<div class="setting-copy"><label '+(key==='download_cover'?'data-i18n="settings.cover.local" ':'')+'for="' + id + '">' + esc(key==='download_cover'?CFTI18n.t('settings.cover.local'):label) + '</label><p '+(key==='download_cover'?'data-i18n="settings.cover.localHelp" ':'')+'id="' + id + '-help">' + esc(key==='download_cover'?CFTI18n.t('settings.cover.localHelp'):help) + '</p></div><div class="setting-control">' + input + '</div></div>';
 }
 
 function parseOrganizeRules(raw) {
@@ -482,7 +482,7 @@ function decorateWorkbenchIcons(root = document) {
     button.innerHTML = _icon(button.dataset.navIcon) + '<span class="nav-label">' + esc(label) + '</span>';
   });
   root.querySelectorAll("button").forEach(button => {
-    if (button.matches(".font-choice,.window-control,.shortcut-key,.ef-footer-action") || button.closest('#fontMenu')) return;
+    if (button.matches(".font-choice,.window-control,.shortcut-key,.ef-footer-action,.model-fav-toggle,.sp-caret") || button.closest('#fontMenu')) return;
     const emoji=button.textContent.match(/[\p{Extended_Pictographic}▶]/u)?.[0];
     Array.from(button.childNodes).filter(node => node.nodeType === Node.TEXT_NODE).forEach(node => {
       const clean = node.data.replace(/^[\s\p{Extended_Pictographic}\uFE0F\u200D▶►]+/u, " ");
@@ -557,7 +557,7 @@ function initializeWorkbench() {
   }
   let queued = false;
   new MutationObserver(records => {
-    if (!records.some(record => [...record.addedNodes].some(n=>n.nodeType===1&&(n.matches?.('button,.page-title,.shortcut-row')||n.querySelector?.('button,.page-title,.shortcut-row')))) || queued) return;
+    if (!records.some(record => [...record.addedNodes].some(n=>n.nodeType===1&&!n.matches?.('.ms-card,.ms-stable-column')&&(n.matches?.('button,.page-title,.shortcut-row')||n.querySelector?.('button,.page-title,.shortcut-row')))) || queued) return;
     queued = true;
     queueMicrotask(() => { queued = false; decorateWorkbenchIcons(); });
   }).observe(document.body, {childList:true, subtree:true});
