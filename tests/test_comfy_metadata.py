@@ -28,6 +28,38 @@ def fixture():
 
 
 class ComfyPromptTests(unittest.TestCase):
+    def test_full_weilin_api_conditioning_and_saved_text(self):
+        g=fixture();g['45']['class_type']='WeiLinPromptUI'
+        g['45']['inputs'].update(lora_str='editor-only-lora',temp_str='unused draft',temp_lora_str='unused draft lora')
+        original=copy.deepcopy(g)
+        self.assertEqual(parser.extract_prompts(g)['prompt'],'mountain landscape')
+        self.assertEqual(g,original)
+
+    def test_full_weilin_ui_widgets_use_correct_random_template_slot(self):
+        wf={'nodes':[
+            {'id':1,'type':'KSampler','inputs':[{'name':'positive','link':1},{'name':'negative','link':2}]},
+            {'id':2,'type':'WeiLinPromptUI','widgets_values':['saved landscape',True,'lora editor','draft tokens','draft lora','saved template.txt']},
+            {'id':3,'type':'CLIPTextEncode','widgets_values':['bad quality']}],
+            'links':[[1,2,1,1,0,'CONDITIONING'],[2,3,0,1,1,'CONDITIONING']]}
+        r=parser.extract_prompts(workflow=wf)
+        self.assertEqual(r['prompt'],'saved landscape')
+        self.assertEqual(r['negativePrompt'],'bad quality')
+        self.assertIn('无法重建',r['promptExtractionNote'])
+        wf['nodes'][1]['widgets_values'][5]=''
+        self.assertNotIn('无法重建',parser.extract_prompts(workflow=wf).get('promptExtractionNote',''))
+
+    def test_full_weilin_string_output_can_feed_clip(self):
+        g=fixture();g['45']['class_type']='WeiLinPromptUI'
+        g['90']=node('CLIPTextEncode',text=['45',0]);g['2']['inputs']['positive']=['90',0]
+        self.assertEqual(parser.extract_prompts(g)['prompt'],'mountain landscape')
+
+    def test_full_weilin_disabled_ui_is_not_a_prompt(self):
+        for mode in (2,4):
+            wf={'nodes':[{'id':1,'type':'KSampler','inputs':[{'name':'positive','link':1}]},
+                         {'id':2,'type':'WeiLinPromptUI','mode':mode,'widgets_values':['old text']}],
+                'links':[[1,2,1,1,0,'CONDITIONING']]}
+            self.assertFalse(parser.extract_prompts(workflow=wf).get('prompt'))
+
     def test_weilin_and_zero_negative(self):
         r = parser.extract_prompts(fixture())
         self.assertEqual(r['prompt'], 'mountain landscape')

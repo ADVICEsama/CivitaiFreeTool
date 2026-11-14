@@ -1,9 +1,15 @@
 """Read-only prompt extraction. Never execute custom nodes, templates or cached UI outputs."""
 import json
 
-PARSER_REVISION = 'comfy-prompts-3-novelai'
+PARSER_REVISION = 'comfy-prompts-4-weilin-ui'
 SAMPLERS = ('KSampler', 'KSamplerAdvanced', 'SamplerCustom', 'SamplerCustomAdvanced')
 WEILIN = 'WeiLinPromptUIWithoutLora'
+WEILIN_TYPES = (WEILIN, 'WeiLinPromptUI')
+WEILIN_WIDGETS = {
+    WEILIN: ('positive', 'auto_random', 'temp_str', 'random_template'),
+    'WeiLinPromptUI': ('positive', 'auto_random', 'lora_str', 'temp_str',
+                        'temp_lora_str', 'random_template'),
+}
 
 
 def ui_graph(workflow):
@@ -24,8 +30,7 @@ def ui_graph(workflow):
         ins = {}
         widgets = node.get('widgets_values') or []
         if isinstance(widgets, list):
-            names = ('text',) if kind == 'CLIPTextEncode' else (
-                ('positive', 'auto_random', 'temp_str', 'random_template') if kind == WEILIN else ())
+            names = ('text',) if kind == 'CLIPTextEncode' else WEILIN_WIDGETS.get(kind, ())
             ins.update(zip(names, widgets))
         ports = node.get('inputs') or []
         for port in ports if isinstance(ports, list) else []:
@@ -71,7 +76,7 @@ def extract_prompts(graph=None, workflow=None):
         if not isinstance(ins, dict):
             return ''
         trail = (*trail, key)
-        if kind == WEILIN and slot == 0:
+        if kind in WEILIN_TYPES and slot == 0:
             return weilin(ins, trail)
         if slot == 0 and kind in ('CR Text', 'StringConstant', 'PrimitiveString', 'PrimitiveStringMultiline'):
             return resolve_text(ins.get('text', ins.get('value', '')), trail)
@@ -108,7 +113,7 @@ def extract_prompts(graph=None, workflow=None):
         trail = (*trail, key)
         if kind == 'ConditioningZeroOut':
             return []  # Deliberately do NOT follow its upstream positive text.
-        if kind == WEILIN and slot == 1:
+        if kind in WEILIN_TYPES and slot == 1:
             return [weilin(ins, trail)]
         if kind.startswith('CLIPTextEncode') and slot == 0:
             return [resolve_text(ins[f], trail) for f in ('text', 'text_g', 'text_l') if f in ins]
