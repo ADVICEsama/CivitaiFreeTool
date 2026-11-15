@@ -50,9 +50,34 @@ html[data-endfield=true] #ctxMenu .ctx-caption{display:block;width:100%;box-sizi
 html[data-endfield=true] #ctxMenu .ctx-item>span{min-width:0;overflow:hidden;text-overflow:ellipsis}
 
 /* Keep dedup selection controls readable instead of six competing footer capsules. */
+.rename-dialog.dedup-dialog{box-sizing:border-box;max-width:calc(100vw / var(--ui-zoom-factor,1) - 32px);max-height:calc(100dvh / var(--ui-zoom-factor,1) - 32px);top:50%;overflow:auto}
 .dedup-dialog .dedup-actions{display:flex;flex-direction:column;gap:12px;align-items:stretch}
-.dedup-selection{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:8px;background:color-mix(in srgb,var(--text) 4%,transparent)}
-.dedup-selection-action{font:inherit;font-size:13px;color:var(--text);background:transparent;border:1px solid var(--border);padding:10px 12px;min-width:0;white-space:normal;line-height:1.4;text-align:center;cursor:pointer}
-.dedup-selection-action:hover,.dedup-selection-action:focus-visible{background:color-mix(in srgb,var(--ef-yellow) 12%,transparent);outline:1px solid var(--ef-yellow)}
+.dedup-selection{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 16px;padding:14px 0;border-top:1px solid var(--border)}
+.dedup-dialog .dedup-selection-action{width:100%;min-width:0;min-height:40px;font-size:13px}
 .dedup-confirm{display:flex;justify-content:center;gap:16px;flex-wrap:wrap}
 .dedup-dialog .dedup-confirm>.btn{width:220px;max-width:100%;flex:0 1 220px;min-width:160px}
+
+/* Standalone duplicate review: shared horizontal band, terrain, persistent results. */
+.dedup-mask{backdrop-filter:blur(9px);background:#080d0cb3}
+.rename-dialog.dedup-dialog{left:0;top:50%;transform:translateY(-50%);width:100%;max-width:none;height:min(980px,calc((100dvh - 140px) / var(--ui-zoom-factor,1)));max-height:calc((100dvh - 100px) / var(--ui-zoom-factor,1));border-radius:0;border-inline:0;padding:24px max(28px,calc((100vw / var(--ui-zoom-factor,1) - 1500px)/2)) 38px;display:flex;flex-direction:column;gap:12px;overflow:visible;isolation:isolate}
+.dedup-dialog:before{content:'';position:absolute;inset:0 0 auto;height:3px;background:var(--ef-band-stripe);pointer-events:none}
+.dedup-contours{position:absolute;inset:3px 0 0;z-index:-1;pointer-events:none;opacity:.11;background:url('terrain-contours.svg') left top/700px auto repeat}
+.dedup-header{display:flex;align-items:center;justify-content:space-between;gap:20px;order:0}
+.dedup-header small{font-size:10px;letter-spacing:.12em;color:var(--text-dim)}
+.dedup-header h2{font-size:24px;margin:8px 0}
+.dedup-close{width:36px;height:36px;display:grid;place-items:center;color:var(--text);background:transparent;border:0;cursor:pointer}.dedup-close svg{width:21px;height:21px}
+.dedup-run{display:flex;justify-content:space-between;align-items:center;gap:20px;order:1}.dedup-run p{font-size:12px;color:var(--text-dim);margin:6px 0}.dedup-run>.btn{width:220px;flex:none}
+#ddProgress{order:2;font-size:12px;color:var(--text-dim);margin:0}
+.dedup-dialog .dedup-actions{display:contents}
+.dedup-dialog .dedup-selection{order:3;display:flex;flex-wrap:wrap;gap:12px;padding:10px 0;border-block:1px solid var(--border)}
+.dedup-dialog .dedup-selection-action{flex:1 1 180px;max-width:240px;width:auto}
+.dedup-results{order:4;display:flex;flex-direction:column;min-height:0;flex:1}
+.dedup-dialog .rd-title{font-size:15px;margin-bottom:10px}
+.dedup-result-list{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding-right:6px}
+.dedup-empty{display:grid;place-items:center;min-height:100px;color:var(--text-dim)}
+.dedup-dialog .dedup-confirm{position:absolute;left:50%;bottom:0;transform:translate(-50%,50%);gap:24px;flex-wrap:nowrap;max-width:calc(100% - 32px)}
+.dedup-dialog .dedup-confirm>.btn{width:220px;min-width:120px;flex:0 1 220px}
+.dedup-close:focus-visible{outline:2px solid var(--ef-yellow)}
+@media(max-width:700px){.rename-dialog.dedup-dialog{padding:18px 16px 34px;gap:8px;height:calc((100dvh - 100px) / var(--ui-zoom-factor,1))}.dedup-header h2{font-size:21px}.dedup-run{flex-wrap:wrap;gap:8px}.dedup-run>.btn{width:180px}.dedup-dialog .dedup-selection{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.dedup-dialog .dedup-selection-action{max-width:none;width:100%;font-size:11px}.dedup-dialog .dedup-confirm{gap:16px}.dedup-dialog .dd-hint{font-size:11px}.dedup-header small{font-size:9px}}
+html[data-theme=dark_endfield] .dedup-contours{filter:invert(1);opacity:.10}
+@media(max-width:700px){.dedup-run{flex-wrap:nowrap}.dedup-run>div{flex:1;min-width:0}.dedup-run>.btn{width:150px}.dedup-run p{font-size:11px}}

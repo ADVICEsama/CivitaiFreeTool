@@ -840,20 +840,13 @@ function fmtBytes(n) {
   return (i === 0 ? n + " B" : n.toFixed(1) + " " + u[i]);
 }
 
+let mmDedupeSnapshot = null;
 async function mmDedupeFlow() {
-  const r = await api.call("mm_dedupe", null);
-  if (!r || !r.started) { setStatus((r && r.msg) || "查重未开始"); return; }
-  setStatus("查重中：正在计算文件哈希并整理新旧版本（大库需要一会儿）…");
-  const timer = setInterval(async () => {
-    const p = await api.call("get_mm_progress");
-    if (!p) return;
-    if (p.running) { setStatus("查重中 " + (p.done || 0) + "/" + (p.total || 0) + (p.msg ? " · " + p.msg : "")); return; }
-    clearInterval(timer);
-    setStatus(p.msg || "查重完成");
-    const dupGroups = Array.isArray(p.result) ? p.result : [];
-    const modelGroups = Array.isArray(p.model_groups) ? p.model_groups : [];
-    if (dupGroups.length || modelGroups.length) showDedupeDialog(dupGroups, modelGroups);
-  }, 800);
+  if (document.querySelector('.dedup-dialog')) return;
+  const paths = (state.display || []).filter(row => state.mmChecked.has(row.path)).map(row => row.path);
+  try { const saved = await api.call('get_dedupe_result'); if(saved?.completed_at) mmDedupeSnapshot=saved; } catch (_) {}
+  const saved=mmDedupeSnapshot;
+  showDedupeDialog(saved?.groups || [],saved?.model_groups || [],{paths,completedAt:saved?.completed_at});
 }
 
 function fmtDate(ts) {
@@ -862,7 +855,7 @@ function fmtDate(ts) {
   return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
 }
 
-async function showDedupeDialog(groups, modelGroups) {
+async function showDedupeDialog(groups, modelGroups, options={}) {
   groups = groups || [];
   modelGroups = modelGroups || [];
   const totalDups = groups.reduce((s, g) => s + g.dups.length, 0);
@@ -906,26 +899,53 @@ async function showDedupeDialog(groups, modelGroups) {
         '<div class="dedup-dir">' + esc(o.dir) + ' · <a href="#" class="dd-link" data-url="' + esc(o.url) + '">这一版</a></div></div></label>').join("") +
       "</div>").join("")) : "";
 
-  const mask = document.createElement("div");
-  mask.className = "rd-mask";
-  const dlg = document.createElement("div");
-  dlg.className = "rename-dialog dedup-dialog";
-  dlg.style.width = "720px";
+  let dlg=document.querySelector('.dedup-dialog'),mask=document.querySelector('.dedup-mask');
+  const fresh=!dlg;
+  if(fresh){mask=document.createElement('div');mask.className='rd-mask dedup-mask';dlg=document.createElement('section');dlg.className='rename-dialog dedup-dialog';}
+  dlg.setAttribute('role','dialog');dlg.setAttribute('aria-modal','true');dlg.setAttribute('aria-labelledby','ddTitle');
+  dlg._events?.abort();dlg._events=new AbortController();
+  const paths=options.paths || (state.display || []).filter(row=>state.mmChecked.has(row.path)).map(row=>row.path);
+  const text=key=>esc(CFTI18n.t('models.dedupe.'+key));
+
   dlg.innerHTML =
-    '<div class="rd-title">查重结果：' + groups.length + " 组完全相同 + " + modelGroups.length + " 组同模型多版本（可清理约 " + fmtBytes(sizeA + sizeB) + "）</div>" +
+    '<div class="dedup-contours" aria-hidden="true"></div><header class="dedup-header"><div><small>COLLECTION / DUPLICATE REVIEW</small><h2 id="ddTitle">'+text('title')+'</h2></div><button type="button" class="dedup-close" id="ddExit" aria-label="'+esc(CFTI18n.t('models.close'))+'">'+_icon('x')+'</button></header>'+
+    '<div class="dedup-run"><div><strong>'+text('scope')+' '+paths.length+'</strong><p>'+text('selectionOnly')+'</p></div><button class="btn btn-primary" id="ddStart" data-action-icon="scan">'+text('start')+'</button></div>'+
+    '<p id="ddProgress" role="status">'+(options.completedAt ? text('previous')+' · '+esc(new Date(options.completedAt*1000).toLocaleString()) : text('empty'))+'</p>'+
+    '<div class="dedup-results"><div class="rd-title">查重结果：' + groups.length + " 组完全相同 + " + modelGroups.length + " 组同模型多版本（可清理约 " + fmtBytes(sizeA + sizeB) + "）</div>" +
     '<div class="dd-hint" style="border:1px solid var(--border);border-radius:8px;padding:6px 8px;margin-bottom:8px">' +
     "<b>勾选 = 移入回收站</b>（可在回收站还原，不会真删）。「<b>删旧留新</b>」= 把所有旧版都勾上；「<b>旧版共存</b>」= 全部取消勾选、什么都不删。</div>" +
-    '<div style="max-height:400px;overflow:auto">' + secA + secB + "</div>" +
-    '<div class="rd-actions dedup-actions"><div class="dedup-selection" role="group" aria-label="选择待清理文件"><button class="dedup-selection-action" id="ddSelAll">全选</button><button class="dedup-selection-action" id="ddSelNone">全不选</button>' +
-    '<button class="dedup-selection-action" id="ddOldsAll" title="把所有旧版都勾上（只保留最新版）">删旧留新（勾选旧版）</button>' +
-    '<button class="dedup-selection-action" id="ddCoexist" title="取消勾选全部旧版 = 新旧版本都留着，什么都不删">旧版共存（不删）</button>' +
+    '<div class="dedup-result-list">' + (secA + secB || '<p class="dedup-empty">'+text(options.completedAt?'noDuplicates':'empty')+'</p>') + "</div></div>" +
+    '<div class="rd-actions dedup-actions"><div class="dedup-selection" role="group" aria-label="选择待清理文件">' +
+    [['ddSelAll','models.dedupe.all','check'],['ddSelNone','models.dedupe.clear','x'],['ddOldsAll','models.dedupe.latest','refresh'],['ddCoexist','models.dedupe.keep','folder']].map(([id,key,icon])=>'<button type="button" class="btn dedup-selection-action" id="'+id+'" data-action-icon="'+icon+'" data-i18n="'+key+'">'+esc(CFTI18n.t(key))+'</button>').join('') +
     '</div><div class="dedup-confirm"><button class="btn" id="ddClose">关闭</button>' +
     '<button class="btn btn-danger" id="ddDel">移入回收站</button></div></div>';
-  document.body.appendChild(mask);
-  document.body.appendChild(dlg);
-  const close = () => { CFTModalMotion.remove(mask); CFTModalMotion.remove(dlg); };
-  mask.addEventListener("click", close);
-  $("#ddClose", dlg).addEventListener("click", close);
+  if(fresh){document.body.appendChild(mask);document.body.appendChild(dlg);}
+  const close = () => { dlg._events?.abort();clearInterval(dlg._poll);CFTModalMotion.remove(mask);CFTModalMotion.remove(dlg); };
+  if(fresh)mask.addEventListener('click',close);
+  $('#ddClose',dlg).addEventListener('click',close);$('#ddExit',dlg).addEventListener('click',close);
+  $('#ddStart',dlg).disabled=!paths.length;
+  if(!paths.length)$('#ddProgress',dlg).textContent+=' · '+CFTI18n.t('models.dedupe.selectFirst');
+  const poll=async()=>{
+    if(!dlg.isConnected)return;
+    const progress=await api.call('get_mm_progress');if(!progress || progress.operation!=='dedupe')return;
+    $('#ddProgress',dlg).textContent=(progress.msg||'')+' '+(progress.done||0)+' / '+(progress.total||0);
+    if(progress.running)return;
+    clearInterval(dlg._poll);
+    const saved=await api.call('get_dedupe_result');
+    mmDedupeSnapshot=!progress.cache_warning&&saved?.completed_at?saved:{groups:progress.result||[],model_groups:progress.model_groups||[],completed_at:Date.now()/1000};
+    if(dlg.isConnected)showDedupeDialog(mmDedupeSnapshot.groups,mmDedupeSnapshot.model_groups,{paths,completedAt:mmDedupeSnapshot.completed_at});
+  };
+  $('#ddStart',dlg).addEventListener('click',async()=>{
+    const start=$('#ddStart',dlg);start.disabled=true;
+    try{const result=await api.call('mm_dedupe',paths);if(!result?.started){$('#ddProgress',dlg).textContent=result?.msg||CFTI18n.t('models.dedupe.failed');start.disabled=!paths.length;return;}
+      dlg.setAttribute('aria-busy','true');$('#ddDel',dlg).disabled=true;$('#ddProgress',dlg).textContent=CFTI18n.t('models.dedupe.running');
+      dlg._poll=setInterval(()=>poll().catch(()=>{$('#ddProgress',dlg).textContent=CFTI18n.t('models.dedupe.failed');}),800);
+    }catch(_){$('#ddProgress',dlg).textContent=CFTI18n.t('models.dedupe.failed');start.disabled=!paths.length;}
+  });
+  dlg.removeAttribute('aria-busy');
+  if(fresh)api.call('get_mm_progress').then(progress=>{if(!dlg.isConnected||progress?.operation!=='dedupe'||!progress.running)return;$('#ddStart',dlg).disabled=true;$('#ddDel',dlg).disabled=true;dlg.setAttribute('aria-busy','true');dlg._poll=setInterval(()=>poll().catch(()=>{}),800);}).catch(()=>{});
+  dlg.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();close();}if(event.key==='Tab'){const items=[...dlg.querySelectorAll('button,input,a[href]')].filter(el=>!el.disabled&&el.getClientRects().length);const first=items[0],last=items.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}}},{signal:dlg._events.signal});
+  if(fresh)$('#ddExit',dlg).focus({preventScroll:true});
   dlg.querySelectorAll(".dd-link").forEach((a) => a.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -937,8 +957,9 @@ async function showDedupeDialog(groups, modelGroups) {
       if (c.dataset.mg !== undefined || c.dataset.g !== undefined) n++;
     });
     $("#ddDel", dlg).textContent = n ? "移入回收站（" + n + " 个）" : "移入回收站";
+    $('#ddDel',dlg).disabled=!n || dlg.getAttribute('aria-busy')==='true';
   }
-  dlg.addEventListener("change", updCount);
+  dlg.addEventListener("change", updCount,{signal:dlg._events.signal});
   $("#ddSelAll", dlg).addEventListener("click", () => { dlg.querySelectorAll("input[type=checkbox]").forEach((c) => (c.checked = true)); updCount(); });
   $("#ddSelNone", dlg).addEventListener("click", () => { dlg.querySelectorAll("input[type=checkbox]").forEach((c) => (c.checked = false)); updCount(); });
   $("#ddOldsAll", dlg).addEventListener("click", () => { dlg.querySelectorAll("input[data-mg]").forEach((c) => (c.checked = true)); updCount(); setStatus("已勾选全部旧版：确认后只保留每个模型的最新版"); });

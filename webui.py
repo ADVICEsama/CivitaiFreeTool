@@ -15,7 +15,7 @@ import uuid
 
 import webview
 
-APP_VERSION = "3.0.20"
+APP_VERSION = "3.0.21"
 
 from functools import wraps
 
@@ -2947,16 +2947,31 @@ class Api:
     def get_mm_progress(self):
         return self.mm_progress
 
+    def get_dedupe_result(self):
+        """Last completed review, independent of the shared operation progress."""
+        try:
+            with open(os.path.join(config.APP_DIR, "dedupe_result.json"), encoding="utf-8") as source:
+                result = json.load(source)
+            if isinstance(result, dict) and isinstance(result.get("groups"), list) and isinstance(result.get("model_groups"), list):
+                return result
+        except (OSError, ValueError, TypeError):
+            pass
+        return {"groups": [], "model_groups": [], "completed_at": None}
+
     def mm_dedupe(self, paths=None):
         """SHA256 查重（后台线程）：同哈希且多于 1 个文件的为一组。
 
         结果放 self.mm_progress["result"]：每组的 keep（建议保留，路径层级最浅的）与 dups（可清理）。
         删除走前端调用 rm_file（移入回收站），本方法只算不删。"""
-        rows = [r for r in self.model_rows if (not paths or r["path"] in paths)]
+        if not paths:
+            return {"started": False, "msg": "请先选择需要查重的模型"}
+        if getattr(self, "mm_progress", {}).get("running"):
+            return {"started": False, "msg": "请等待当前模型操作完成后再查重"}
+        rows = [r for r in self.model_rows if r["path"] in paths]
         if not rows:
             return {"started": False, "msg": "请先在模型管理页扫描模型"}
         self._mm_cancel = False
-        self.mm_progress = {"running": True, "total": len(rows), "done": 0, "msg": "计算哈希…", "result": None}
+        self.mm_progress = {"operation": "dedupe", "running": True, "total": len(rows), "done": 0, "msg": "计算哈希…", "result": None}
 
         def work():
             import collections
@@ -3092,6 +3107,22 @@ class Api:
 
             self.mm_progress["result"] = groups
             self.mm_progress["model_groups"] = model_groups
+            snapshot = {"groups": groups, "model_groups": model_groups, "completed_at": time.time(), "paths": [r["path"] for r in rows]}
+            target = os.path.join(config.APP_DIR, "dedupe_result.json")
+            temporary = target + "." + uuid.uuid4().hex + ".tmp"
+            try:
+                os.makedirs(config.APP_DIR, exist_ok=True)
+                with open(temporary, "w", encoding="utf-8") as output:
+                    json.dump(snapshot, output, ensure_ascii=False)
+                os.replace(temporary, target)
+            except OSError:
+                self.mm_progress["cache_warning"] = "查重结果未能保存到本地"
+            finally:
+                try:
+                    if os.path.exists(temporary):
+                        os.remove(temporary)
+                except OSError:
+                    pass
             self.mm_progress["running"] = False
             waste_all = waste + sum(o["size"] for g in model_groups for o in g["olds"])
             parts = []

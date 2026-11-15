@@ -443,10 +443,10 @@ html[data-endfield=true] .model-update-marker:focus-visible{outline:2px solid va
 
 /* Appearance editor uses the viewport height instead of a short centered band. */
 .model-style-mask{padding:20px 0;box-sizing:border-box}
-.model-style-dialog{height:calc((100dvh - 112px) / var(--ui-zoom-factor,1));max-height:none;box-sizing:border-box;padding-top:22px;padding-bottom:42px;gap:14px}
-.model-style-workspace{flex:1;min-height:0}
+.model-style-dialog{height:auto;max-height:calc((100dvh - 140px) / var(--ui-zoom-factor,1));box-sizing:border-box;padding-top:22px;padding-bottom:42px;gap:14px}
+.model-style-workspace{flex:0 1 auto;min-height:0}
 .model-style-main{min-height:0;display:flex;flex-direction:column}
-.model-frame-grid{flex:1;min-height:120px}
+.model-style-main>.model-frame-grid{flex:0 1 auto;min-height:120px;max-height:min(640px,calc((100dvh - 440px) / var(--ui-zoom-factor,1)))}
 html[data-endfield=true] .mm-pagination-options .cft-model-select{min-width:110px}
 html[data-endfield=true] .mm-pagination-options .ef-select-trigger{justify-content:space-between;padding-inline:15px 12px}
 html[data-endfield=true] .mm-pagination-options [hidden]{display:none!important}
