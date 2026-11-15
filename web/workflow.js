@@ -81,6 +81,7 @@ window.CftWorkflow = (() => {
       const ok = await window.__copyText(btn.dataset.prompt === 'positive' ? pos : neg);
       setStatus(ok ? '提示词已复制' : '复制失败，可选中文字手动复制');
     }));
+    let notice=q('#wfMatchNotice');if(!notice){notice=document.createElement('p');notice.id='wfMatchNotice';notice.className='wf-hint';notice.dataset.i18n='workflow.matchNotice';q('#wfModels').before(notice);}notice.textContent=CFTI18n.t('workflow.matchNotice');
     q('#wfModels').innerHTML = '<div class="wf-hint">本地匹配计算中…</div>';
     window.CFTWorkflowAtlas?.render(r);
     overview(r,refs.length,[],'loading');

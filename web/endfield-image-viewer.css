@@ -1,7 +1,7 @@
 /* The image stays the focal point; controls share the Endfield paper/ink language. */
-html[data-endfield=true] .image-viewer{--iv-paper:#222827;--iv-ink:#edf0e7;--iv-dim:#a9b2ac;--iv-line:#9aa69b38;box-sizing:border-box;padding-top:3px;background:#171d1bfa;color:var(--iv-ink);backdrop-filter:none}
+html[data-endfield=true] .image-viewer{--iv-paper:#222827;--iv-ink:#edf0e7;--iv-dim:#a9b2ac;--iv-line:#9aa69b38;box-sizing:border-box;padding-top:3px;background:#171d1b94;color:var(--iv-ink);backdrop-filter:none}
 html[data-endfield=true] .image-viewer:before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#fff100 0 50%,#00c8df 50% 75%,#ed39df 75%);z-index:10;pointer-events:none}
-html[data-theme=light_endfield] .image-viewer{--iv-paper:#f0f1eb;--iv-ink:#28322c;--iv-dim:#647169;--iv-line:#687d6b38;background:#edf0e9fa}
+html[data-theme=light_endfield] .image-viewer{--iv-paper:#f0f1eb;--iv-ink:#28322c;--iv-dim:#647169;--iv-line:#687d6b38;background:#edf0e994}
 html[data-endfield=true] .image-viewer .iv-toolbar{flex:none;gap:14px;padding:16px 22px;background:var(--iv-paper);border:0;border-bottom:1px solid var(--iv-line);cursor:default}
 html[data-endfield=true] .iv-heading{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1 1 120px;max-width:280px}
 .iv-heading small{font-size:8px;letter-spacing:.14em;color:var(--iv-dim)}

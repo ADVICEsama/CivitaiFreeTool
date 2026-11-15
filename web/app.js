@@ -909,18 +909,18 @@ async function showDedupeDialog(groups, modelGroups) {
   const mask = document.createElement("div");
   mask.className = "rd-mask";
   const dlg = document.createElement("div");
-  dlg.className = "rename-dialog";
+  dlg.className = "rename-dialog dedup-dialog";
   dlg.style.width = "720px";
   dlg.innerHTML =
     '<div class="rd-title">查重结果：' + groups.length + " 组完全相同 + " + modelGroups.length + " 组同模型多版本（可清理约 " + fmtBytes(sizeA + sizeB) + "）</div>" +
     '<div class="dd-hint" style="border:1px solid var(--border);border-radius:8px;padding:6px 8px;margin-bottom:8px">' +
     "<b>勾选 = 移入回收站</b>（可在回收站还原，不会真删）。「<b>删旧留新</b>」= 把所有旧版都勾上；「<b>旧版共存</b>」= 全部取消勾选、什么都不删。</div>" +
     '<div style="max-height:400px;overflow:auto">' + secA + secB + "</div>" +
-    '<div class="rd-actions"><button class="btn" id="ddSelAll">全选</button><button class="btn" id="ddSelNone">全不选</button>' +
-    '<button class="btn" id="ddOldsAll" title="把所有旧版都勾上（只保留最新版）">删旧留新（勾选旧版）</button>' +
-    '<button class="btn" id="ddCoexist" title="取消勾选全部旧版 = 新旧版本都留着，什么都不删">旧版共存（不删）</button>' +
-    '<button class="btn" id="ddClose">关闭</button>' +
-    '<button class="btn btn-danger" id="ddDel">移入回收站</button></div>';
+    '<div class="rd-actions dedup-actions"><div class="dedup-selection" role="group" aria-label="选择待清理文件"><button class="dedup-selection-action" id="ddSelAll">全选</button><button class="dedup-selection-action" id="ddSelNone">全不选</button>' +
+    '<button class="dedup-selection-action" id="ddOldsAll" title="把所有旧版都勾上（只保留最新版）">删旧留新（勾选旧版）</button>' +
+    '<button class="dedup-selection-action" id="ddCoexist" title="取消勾选全部旧版 = 新旧版本都留着，什么都不删">旧版共存（不删）</button>' +
+    '</div><div class="dedup-confirm"><button class="btn" id="ddClose">关闭</button>' +
+    '<button class="btn btn-danger" id="ddDel">移入回收站</button></div></div>';
   document.body.appendChild(mask);
   document.body.appendChild(dlg);
   const close = () => { CFTModalMotion.remove(mask); CFTModalMotion.remove(dlg); };
@@ -1442,9 +1442,9 @@ function _applyCoverCache(root) {
 const mmMissingCovers=new Set(),mmCoverEdges=new Map(),mmCoverRevisions=new Map();
 function mmInvalidateCover(path){state.coverCache.delete(path);mmMissingCovers.delete(path);mmCoverEdges.delete(path);mmCoverRevisions.set(path,(mmCoverRevisions.get(path)||0)+1);}let mmThumbObserver=null,mmThumbQueue=new Map(),mmThumbNodes=new Map(),mmThumbBusy=false;
 function mmRequiredCoverEdge(){const zoom=Number(document.documentElement.style.zoom)||1,dpr=Math.max(1,devicePixelRatio||1),width=state.mmView==='list'?Math.max(1024,($('#mmTableWrap')?.clientWidth||1200)*.65):Number(state.cfg.masonry_card_width||320);return Math.min(1280,Math.max(320,Math.ceil(width*zoom*dpr/64)*64));}
-function mmApplyThumb(path,source,phase){for(const img of mmThumbNodes.get(path)||[]){if(!img.isConnected||img.dataset.coverNear!=='true')continue;const wrap=img.closest('.ms-img-wrap');if(source&&img.getAttribute('src')!==source){img.onload=()=>{if(img.naturalWidth&&img.naturalHeight)img.style.aspectRatio=img.naturalWidth+'/'+img.naturalHeight;if(wrap)wrap.dataset.ph='ok';};img.onerror=()=>{if(wrap)wrap.dataset.ph='fail';};img.src=source;}if(wrap)wrap.dataset.ph=phase;}}
+function mmApplyThumb(path,source,phase){for(const img of mmThumbNodes.get(path)||[]){if(!img.isConnected||img.dataset.coverNear!=='true')continue;const wrap=img.closest('.ms-img-wrap');if(source&&img.getAttribute('src')!==source){img.onload=()=>{if(img.naturalWidth&&img.naturalHeight)img.style.aspectRatio=img.naturalWidth+'/'+img.naturalHeight;if(wrap)wrap.dataset.ph='ok';};img.onerror=()=>{img.removeAttribute('src');mmInvalidateCover(path);if(wrap)wrap.dataset.ph='fail';};img.src=source;}if(wrap)wrap.dataset.ph=phase;}}
 function mmTrimCoverCache(){let bytes=0;for(const v of state.coverCache.values())bytes+=v.length*2;while(state.coverCache.size>128||bytes>32*1024*1024){const key=state.coverCache.keys().next().value;if(key===undefined)break;bytes-=state.coverCache.get(key).length*2;state.coverCache.delete(key);mmCoverEdges.delete(key);}}
-async function mmPumpThumbs(){if(mmThumbBusy)return;mmThumbBusy=true;try{while(mmThumbQueue.size){if(!$('#page-models.active')||document.hidden){mmThumbQueue.clear();break;}const batch=[...mmThumbQueue.keys()].slice(0,4);batch.forEach(p=>mmThumbQueue.delete(p));const edge=mmRequiredCoverEdge(),missing=batch.filter(p=>(!state.coverCache.has(p)||(mmCoverEdges.get(p)||0)<edge)&&!mmMissingCovers.has(p));for(const p of batch)if(state.coverCache.has(p))mmApplyThumb(p,state.coverCache.get(p),'ok');if(missing.length){try{const revisions=new Map(missing.map(p=>[p,mmCoverRevisions.get(p)||0]));const raw=await api.call('get_covers',missing,edge),covers=typeof raw==='string'?JSON.parse(raw||'{}'):raw||{};for(const p of missing){if((mmCoverRevisions.get(p)||0)!==revisions.get(p))continue;if(covers[p]){const source='data:image/jpeg;base64,'+covers[p];state.coverCache.delete(p);state.coverCache.set(p,source);mmCoverEdges.set(p,edge);mmApplyThumb(p,source,'ok');}else{mmMissingCovers.add(p);mmApplyThumb(p,null,'none');}}mmTrimCoverCache();}catch(_){for(const p of missing)mmApplyThumb(p,null,'fail');}}await new Promise(r=>setTimeout(r,12));}}finally{mmThumbBusy=false;}}
+async function mmPumpThumbs(){if(mmThumbBusy)return;mmThumbBusy=true;try{while(mmThumbQueue.size){if(!$('#page-models.active')||document.hidden){mmThumbQueue.clear();break;}const batch=[...mmThumbQueue.keys()].slice(0,4);batch.forEach(p=>mmThumbQueue.delete(p));const edge=mmRequiredCoverEdge(),missing=batch.filter(p=>(!state.coverCache.has(p)||(mmCoverEdges.get(p)||0)<edge)&&!mmMissingCovers.has(p));for(const p of batch)if(state.coverCache.has(p))mmApplyThumb(p,state.coverCache.get(p),'ok');if(missing.length){try{const revisions=new Map(missing.map(p=>[p,mmCoverRevisions.get(p)||0]));const raw=await api.call('get_covers',missing,edge),covers=typeof raw==='string'?JSON.parse(raw||'{}'):raw||{};for(const p of missing){if((mmCoverRevisions.get(p)||0)!==revisions.get(p))continue;if(covers[p]){const source='data:image/jpeg;base64,'+covers[p];state.coverCache.delete(p);state.coverCache.set(p,source);mmCoverEdges.set(p,edge);mmApplyThumb(p,source,'ok');}else{mmMissingCovers.add(p);mmApplyThumb(p,null,'none');}}mmTrimCoverCache();}catch(_){for(const p of missing)mmApplyThumb(p,null,'fail');}}await new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0)));}}finally{mmThumbBusy=false;}}
 function mmObserveThumbs(scope){for(const img of scope.querySelectorAll('img.ms-img[data-path],img.thumb[data-path]')){img.loading='lazy';img.decoding='async';const path=img.dataset.path;if(!mmThumbNodes.has(path))mmThumbNodes.set(path,new Set());mmThumbNodes.get(path).add(img);mmThumbObserver.observe(img.closest('.ms-card,tr[data-path]')||img);}}
 function mmStartThumbs(scope){mmThumbObserver?.disconnect();mmThumbQueue.clear();mmThumbNodes=new Map();mmThumbObserver=new IntersectionObserver(entries=>{for(const e of entries)for(const img of e.target.matches('img')?[e.target]:e.target.querySelectorAll('img.ms-img[data-path],img.thumb[data-path]')){const path=img.dataset.path;img.dataset.coverNear=String(e.isIntersecting);if(!e.isIntersecting){if(!e.target.isConnected||!$('#page-models').classList.contains('active'))continue;if(img.naturalWidth&&img.naturalHeight)img.style.aspectRatio=img.naturalWidth+'/'+img.naturalHeight;img.removeAttribute('src');mmThumbQueue.delete(path);continue;}if(state.coverCache.has(path)){mmApplyThumb(path,state.coverCache.get(path),'ok');}if(!mmMissingCovers.has(path)&&(!state.coverCache.has(path)||(mmCoverEdges.get(path)||0)<mmRequiredCoverEdge()))mmThumbQueue.set(path,true);}mmPumpThumbs();},{rootMargin:'250px'});mmObserveThumbs(scope);}
 async function loadThumbs(start){if(!start)mmStartThumbs($('#mmTable'));}
@@ -2763,7 +2763,7 @@ function mmOp(name, fn) {
     setStatus(name + " 开始 ...");
     fn(paths).then(result=>{
       if(!result?.started){setStatus(result?.msg||"操作未开始");return;}
-      pollMmProgress();
+      pollMmProgress(name === "mmCovers" ? paths : null);
     }).catch(()=>setStatus("操作未开始，请重试"));
   });
 }
@@ -3185,6 +3185,7 @@ async function showModelDetail(path, historyId = "", options = {}) {
     const image=panel.querySelector('#dMain');delete image.dataset.hdIndex;
     panel.querySelectorAll('.detail-thumb').forEach(t=>t.classList.toggle('on',Number(t.dataset.i)===i));
     const current=()=>generation===detailGeneration && detailImgIdx===i && choice===imageChoiceGeneration;
+    if(c.b64){image.src='data:image/jpeg;base64,'+c.b64;image.style.opacity='1';delete image.dataset.empty;}
     const warm=typeof warmViewedGallery==='function'?await warmViewedGallery(detailRow,i):null;
     if(!current())return;
     if(warm){image.src=warm.url;image.dataset.hdIndex=String(i);image.style.opacity='1';delete image.dataset.empty;return;}
@@ -3376,7 +3377,7 @@ async function showModelDetail(path, historyId = "", options = {}) {
     closeDetail();
   });
   $("#dFavorite", panel).addEventListener("click", () => toggleModelFavorite(d.path));
-  window.CFTModelCards?.finalizeInspector(panel);window.CFTFullModel?.mount(panel,d,fullRequested);panel.scrollTop=0;
+  panel.selectDetailImage=loadB64;window.CFTModelCards?.finalizeInspector(panel);window.CFTFullModel?.mount(panel,d,fullRequested);panel.scrollTop=0;
   // 只准备本地已有缓存的在线图；未知在线图不会后台下载。串行、空闲调度，避免同时解码整组图片。
   if(typeof warmViewedGallery==='function'){
     const prepare=async i=>{
@@ -3921,7 +3922,7 @@ async function showMoveDialog(path) {
   finally{mmMoving=false;}
 }
 
-function pollMmProgress() {
+function pollMmProgress(coverPaths = null) {
   const t = setInterval(async () => {
     const p = await api.call("get_mm_progress");
     if (p && p.running) {
@@ -3933,6 +3934,7 @@ function pollMmProgress() {
       if (p.result && typeof p.result === "object" && !Array.isArray(p.result) && p.result.ok !== undefined) {
         setStatus(p.msg + "（成功 " + p.result.ok + "，跳过 " + (p.result.skip || 0) + "）");
       }
+      if (coverPaths) for (const path of coverPaths) mmInvalidateCover(path);
       await api.call("scan_models");
       pollMmScan();
     }

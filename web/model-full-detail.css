@@ -1,4 +1,4 @@
-.model-dossier-expand{position:absolute;left:4px;top:48%;z-index:3;background:var(--surface);border:1px solid var(--border);width:30px;height:38px}
+.model-dossier-expand{position:absolute;left:4px;top:160px;z-index:3;background:var(--surface);border:1px solid var(--border);width:30px;height:38px}
 html[data-endfield=true] body.large-model-open #detailMask{position:fixed!important;inset:0!important;width:calc(100vw / var(--ui-zoom-factor,1))!important;height:calc(100vh / var(--ui-zoom-factor,1))!important;max-width:none!important;display:flex!important;align-items:center!important;justify-content:center!important;background:#0009!important;z-index:650!important;padding:30px!important;box-sizing:border-box;backdrop-filter:blur(8px)}
 html[data-endfield=true] body.large-model-open #detailPanel{position:relative!important;inset:auto!important;transform:none!important;width:min(1320px,calc(94vw / var(--ui-zoom-factor,1)))!important;height:min(900px,calc(90vh / var(--ui-zoom-factor,1)))!important;max-width:none!important;max-height:none!important;display:block!important;overflow:auto!important;padding:28px!important;background:var(--surface,#232728)!important;color:var(--text)!important;border-top:3px solid var(--ef-yellow);box-sizing:border-box;animation:dossier-in .2s ease-out}
 html[data-endfield=true] body.large-model-open #detailPanel .model-dossier-expand{display:none}
@@ -7,7 +7,7 @@ html[data-endfield=true] body.large-model-open #detailPanel .dt-head{position:re
 html[data-endfield=true] body.large-model-open #detailPanel .detail-title{font-size:clamp(23px,2.5vw,36px)!important;line-height:1.3!important;white-space:normal!important;overflow:visible!important;display:block!important;-webkit-line-clamp:unset!important;max-width:none!important;min-width:0;overflow-wrap:anywhere;margin:0!important;flex:1}
 html[data-endfield=true] body.large-model-open #detailPanel .dt-body{display:grid!important;grid-template-columns:minmax(0,1.65fr) minmax(260px,1fr)!important;gap:30px!important;overflow:visible!important;padding:24px 0!important}
 html[data-endfield=true] body.large-model-open #detailPanel .detail-left,html[data-endfield=true] body.large-model-open #detailPanel .detail-right{display:block!important;min-width:0!important;overflow:visible!important;max-height:none!important;width:auto!important}
-html[data-endfield=true] body.large-model-open #detailPanel .ef-inspector-hero{display:grid!important;grid-template-columns:1fr 1fr!important;gap:12px!important;min-height:0!important;align-items:start}
+html[data-endfield=true] body.large-model-open #detailPanel .ef-inspector-hero{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:12px!important;min-height:0!important;align-items:start}
 html[data-endfield=true] body.large-model-open #detailPanel #dMain,html[data-endfield=true] body.large-model-open #detailPanel .model-dossier-second img{width:100%!important;height:430px!important;max-height:none!important;object-fit:contain!important;position:static!important;grid-column:auto!important;background:color-mix(in srgb,var(--text) 4%,transparent)}
 .model-dossier-second{border:0;background:none;padding:0;cursor:zoom-in;min-width:0}
 html[data-endfield=true] body.large-model-open #detailPanel .ef-inspector-heading{display:block!important;padding:0!important}
@@ -56,7 +56,22 @@ html[data-endfield=true] body.large-model-open #detailPanel .model-dossier-favor
 
 /* Full-window dossier, like the image archive; no letterboxed modal margins. */
 html[data-endfield=true] body.large-model-open #detailMask{padding:0!important;backdrop-filter:none}
-html[data-endfield=true] body.large-model-open #detailPanel{width:100%!important;height:100%!important;max-width:none!important;max-height:none!important;padding:18px 30px 30px!important;box-shadow:none}
+html[data-endfield=true] body.large-model-open #detailPanel{width:calc(100% - 100px)!important;height:100%!important;max-width:none!important;max-height:none!important;padding:18px 30px 30px!important;box-shadow:none}
 html[data-endfield=true] body.large-model-open #detailPanel .model-dossier-header{position:sticky;top:-18px;z-index:4;background:var(--surface);min-height:66px;padding:12px 0;box-sizing:border-box}
 html[data-endfield=true] body.large-model-open #detailPanel #dMain,html[data-endfield=true] body.large-model-open #detailPanel .model-dossier-second img{height:clamp(320px,58vh,760px)!important}
 @media(max-width:850px){html[data-endfield=true] body.large-model-open #detailPanel{padding:12px 18px 24px!important}html[data-endfield=true] body.large-model-open #detailPanel .model-dossier-header{top:-12px}}
+
+/* The gallery is one cached image stage, not a second empty network-loading pane. */
+html[data-endfield=true] body.large-model-open #detailPanel .ef-inspector-hero{position:relative}
+.model-dossier-image-nav,.model-dossier-model-nav{display:grid!important;place-items:center;width:34px;height:46px;padding:6px;background:var(--surface);color:var(--text);border:1px solid var(--border);cursor:pointer}
+.model-dossier-image-nav{position:absolute;top:calc(50% - 23px);z-index:2}.model-dossier-image-nav.previous{left:8px}.model-dossier-image-nav.next{right:8px}
+.model-dossier-model-nav{position:absolute;top:calc(50% - 23px);z-index:5}.model-dossier-model-nav.previous{left:8px}.model-dossier-model-nav.next{right:8px}
+html[data-endfield=true] body.large-model-open #detailPanel .ef-inspector-actions,html[data-endfield=true] body.large-model-open #detailPanel .dt-ag-b{justify-content:center}
+html[data-endfield=true] body.large-model-open #detailPanel .model-dossier-heading-actions .ef-model-detail-close{width:40px!important;padding:8px!important}
+html[data-endfield=true] body.large-model-open #detailPanel{background-image:url('terrain-contours.svg')!important;background-position:right top!important;background-size:900px auto!important;background-repeat:repeat-y!important;background-attachment:local!important}
+html[data-endfield=true] body.large-model-open #detailPanel:after{display:none}
+
+/* Dedicated edge gutter keeps the expand control out of trigger words. */
+body.model-detail-open:not(.large-model-open) #detailPanel{padding-left:42px!important}
+
+html[data-endfield=true] body.large-model-open #detailPanel .model-dossier-header .detail-title{display:-webkit-box!important;-webkit-box-orient:vertical;-webkit-line-clamp:2!important;overflow:hidden!important;max-height:2.5em}

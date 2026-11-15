@@ -26,7 +26,7 @@ html[data-endfield=true] body.external-model-detail-open .ef-model-detail-close 
 @media(max-width:700px){html[data-endfield=true] body.external-model-detail-open #detailPanel .dt-body{grid-template-columns:minmax(0,1fr);gap:4px}html[data-endfield=true] body.external-model-detail-open #detailMask{padding:12px}html[data-endfield=true] body.external-model-detail-open #detailPanel{max-height:calc(var(--app-height,100vh) - 30px)}}
 
 /* Reserve the native caption controls, rather than allowing the settings action under them. */
-html[data-endfield=true][data-window-buttons=true] #page-settings>.card>.title-row{padding-right:140px!important;min-height:34px}
+html[data-endfield=true][data-window-buttons=true] #page-settings>.card>.title-row{padding-right:0!important;min-height:34px}
 html[data-endfield=true] body #mmMasonry[data-model-view=grid]>.ms-card{overflow:visible!important;contain:none!important;content-visibility:visible!important;contain-intrinsic-size:none!important;isolation:isolate}
 html[data-endfield=true] body #mmMasonry[data-model-view=grid]{padding:22px 22px 34px!important;gap:26px}
 html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery) .ms-card.checked>.ms-img-wrap{box-shadow:0 0 18px 4px #ffd746b0,0 0 38px 8px #ffdc4450!important}
@@ -56,7 +56,7 @@ html[data-endfield=true] body #mmMasonry .ms-card.checked .ms-info :is(.ms-name,
 /* Header and category rail are separate rows; variable-width tabs must never
    share an absolutely positioned layer with the log action. */
 html[data-endfield=true] body #page-settings>.card>.title-row{position:relative!important;inset:auto!important;display:flex;min-height:48px;flex:none;padding:0!important;pointer-events:auto}
-html[data-endfield=true][data-window-buttons=true] body #page-settings>.card>.title-row{padding-right:140px!important}
+html[data-endfield=true][data-window-buttons=true] body #page-settings>.card>.title-row{padding-right:0!important}
 html[data-endfield=true] body #page-settings #settingsForm .settings-nav{margin-left:0!important;margin-right:0!important}
 html[data-endfield=true] body #page-settings #openLogs{position:relative!important;inset:auto!important;margin-left:auto!important;flex:0 0 auto;width:auto;max-width:48%}
 /* Update selection and external detail dialogs share the Endfield visual hierarchy. */

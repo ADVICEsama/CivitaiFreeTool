@@ -1,7 +1,7 @@
 /* UI strings only. Never translate user/model data. */
 window.CFTLocales={
   "zh-CN": {
-    "name": "简体中文",
+    "name": "简体中文（Simplified Chinese）",
     "nav.download": "批量下载",
     "nav.dlmanager": "下载管理",
     "nav.models": "模型管理",
@@ -76,7 +76,12 @@ window.CFTLocales={
     "translation.test.failed": "翻译失败，请检查地址、模型、密钥和额度",
     "models.close": "关闭",
     "models.appearance.random": "随机分配",
-    "translation.translation_protocol": "API 协议"
+    "translation.translation_protocol": "API 协议",
+    "models.image.previous": "上一张图片",
+    "models.image.next": "下一张图片",
+    "models.previous": "上一个模型",
+    "models.next": "下一个模型",
+    "workflow.matchNotice": "匹配说明：当前按文件名查找本地模型；本地缺失时仅按名称搜索 C站，不代表哈希校验一致，请核对版本与底模。"
   },
   "zh-TW": {
     "name": "繁體中文（台灣）",
@@ -154,7 +159,12 @@ window.CFTLocales={
     "translation.test.failed": "翻譯失敗，請檢查位址、模型、金鑰與額度",
     "models.close": "關閉",
     "models.appearance.random": "隨機配置",
-    "translation.translation_protocol": "API 通訊協定"
+    "translation.translation_protocol": "API 通訊協定",
+    "models.image.previous": "上一張圖片",
+    "models.image.next": "下一張圖片",
+    "models.previous": "上一個模型",
+    "models.next": "下一個模型",
+    "workflow.matchNotice": "比對說明：目前依檔名尋找本機模型；缺少時僅依名稱搜尋 C站，不代表雜湊驗證一致，請確認版本及基礎模型。"
   },
   "en": {
     "name": "English",
@@ -232,7 +242,12 @@ window.CFTLocales={
     "translation.test.failed": "Translation failed; check endpoint, model, key and quota",
     "models.close": "Close",
     "models.appearance.random": "Randomize",
-    "translation.translation_protocol": "API protocol"
+    "translation.translation_protocol": "API protocol",
+    "models.image.previous": "Previous image",
+    "models.image.next": "Next image",
+    "models.previous": "Previous model",
+    "models.next": "Next model",
+    "workflow.matchNotice": "Matching: local models are found by filename. Missing models use a name search on Civitai, not hash verification. Check the version and base model."
   },
   "ja": {
     "name": "日本語",
@@ -310,7 +325,12 @@ window.CFTLocales={
     "translation.test.failed": "URL、モデル、キー、利用上限を確認してください",
     "models.close": "閉じる",
     "models.appearance.random": "ランダムに割り当て",
-    "translation.translation_protocol": "API プロトコル"
+    "translation.translation_protocol": "API プロトコル",
+    "models.image.previous": "前の画像",
+    "models.image.next": "次の画像",
+    "models.previous": "前のモデル",
+    "models.next": "次のモデル",
+    "workflow.matchNotice": "照合について：ローカルモデルはファイル名で検索します。見つからない場合は Civitai で名前を検索するだけで、ハッシュの一致は検証されません。バージョンとベースモデルを確認してください。"
   },
   "ko": {
     "name": "한국어",
@@ -388,7 +408,12 @@ window.CFTLocales={
     "translation.test.failed": "주소, 모델, 키 및 할당량을 확인하세요",
     "models.close": "닫기",
     "models.appearance.random": "무작위 배정",
-    "translation.translation_protocol": "API 프로토콜"
+    "translation.translation_protocol": "API 프로토콜",
+    "models.image.previous": "이전 이미지",
+    "models.image.next": "다음 이미지",
+    "models.previous": "이전 모델",
+    "models.next": "다음 모델",
+    "workflow.matchNotice": "일치 안내: 로컬 모델은 파일 이름으로 찾습니다. 없는 모델은 Civitai에서 이름으로 검색하며 해시 일치를 검증하지 않습니다. 버전과 기본 모델을 확인하세요."
   },
   "de": {
     "name": "Deutsch",
@@ -466,7 +491,12 @@ window.CFTLocales={
     "translation.test.failed": "URL, Modell, Schlüssel und Kontingent prüfen",
     "models.close": "Schließen",
     "models.appearance.random": "Zufällig zuweisen",
-    "translation.translation_protocol": "API-Protokoll"
+    "translation.translation_protocol": "API-Protokoll",
+    "models.image.previous": "Vorheriges Bild",
+    "models.image.next": "Nächstes Bild",
+    "models.previous": "Vorheriges Modell",
+    "models.next": "Nächstes Modell",
+    "workflow.matchNotice": "Abgleich: Lokale Modelle werden nach Dateinamen gesucht. Fehlende Modelle werden auf Civitai nur nach Namen gesucht, nicht per Hash geprüft. Version und Basismodell überprüfen."
   },
   "fr": {
     "name": "Français",
@@ -544,7 +574,12 @@ window.CFTLocales={
     "translation.test.failed": "Vérifiez URL, modèle, clé et quota",
     "models.close": "Fermer",
     "models.appearance.random": "Répartir au hasard",
-    "translation.translation_protocol": "Protocole API"
+    "translation.translation_protocol": "Protocole API",
+    "models.image.previous": "Image précédente",
+    "models.image.next": "Image suivante",
+    "models.previous": "Modèle précédent",
+    "models.next": "Modèle suivant",
+    "workflow.matchNotice": "Correspondance : les modèles locaux sont recherchés par nom de fichier. Pour les modèles absents, la recherche Civitai se fait par nom, sans vérification du hachage. Vérifiez la version et le modèle de base."
   },
   "es": {
     "name": "Español",
@@ -622,7 +657,12 @@ window.CFTLocales={
     "translation.test.failed": "Compruebe URL, modelo, clave y cuota",
     "models.close": "Cerrar",
     "models.appearance.random": "Asignar al azar",
-    "translation.translation_protocol": "Protocolo API"
+    "translation.translation_protocol": "Protocolo API",
+    "models.image.previous": "Imagen anterior",
+    "models.image.next": "Imagen siguiente",
+    "models.previous": "Modelo anterior",
+    "models.next": "Modelo siguiente",
+    "workflow.matchNotice": "Coincidencia: los modelos locales se buscan por nombre de archivo. Los ausentes se buscan por nombre en Civitai, sin verificar el hash. Comprueba la versión y el modelo base."
   },
   "pt-BR": {
     "name": "Português (Brasil)",
@@ -700,7 +740,12 @@ window.CFTLocales={
     "translation.test.failed": "Verifique URL, modelo, chave e cota",
     "models.close": "Fechar",
     "models.appearance.random": "Atribuir aleatoriamente",
-    "translation.translation_protocol": "Protocolo da API"
+    "translation.translation_protocol": "Protocolo da API",
+    "models.image.previous": "Imagem anterior",
+    "models.image.next": "Próxima imagem",
+    "models.previous": "Modelo anterior",
+    "models.next": "Próximo modelo",
+    "workflow.matchNotice": "Correspondência: os modelos locais são procurados pelo nome do arquivo. Os ausentes são pesquisados pelo nome no Civitai, sem verificar o hash. Confira a versão e o modelo base."
   },
   "ru": {
     "name": "Русский",
@@ -778,6 +823,11 @@ window.CFTLocales={
     "translation.test.failed": "Проверьте URL, модель, ключ и квоту",
     "models.close": "Закрыть",
     "models.appearance.random": "Случайное оформление",
-    "translation.translation_protocol": "Протокол API"
+    "translation.translation_protocol": "Протокол API",
+    "models.image.previous": "Предыдущее изображение",
+    "models.image.next": "Следующее изображение",
+    "models.previous": "Предыдущая модель",
+    "models.next": "Следующая модель",
+    "workflow.matchNotice": "Сопоставление: локальные модели ищутся по имени файла. Отсутствующие модели ищутся на Civitai по имени, без проверки хеша. Проверьте версию и базовую модель."
   }
 };

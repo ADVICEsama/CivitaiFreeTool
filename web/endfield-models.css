@@ -189,7 +189,7 @@ html[data-endfield=true] body :is(#mmMasonry,.model-card-gallery)[data-model-vie
 /* Full-width transactional appearance chooser, matching the font chooser rather than a settings subsection. */
 html body .setting-row.model-card-settings{display:grid!important}
 .model-style-mask{position:fixed;inset:0;z-index:100100;display:flex;align-items:center;justify-content:center;background:#070b0dc7;backdrop-filter:blur(12px);padding:55px 0}
-.model-style-dialog{position:relative;width:100%;height:min(700px,84dvh);min-height:280px;display:flex;flex-direction:column;gap:17px;padding:27px max(28px,calc((100vw - 1320px)/2)) 46px;background:var(--surface);color:var(--text);border-block:1px solid var(--border);box-shadow:0 7px 25px #0006;outline:0}
+.model-style-dialog{position:relative;width:100%;height:min(700px,84dvh);min-height:280px;display:flex;flex-direction:column;gap:17px;padding:27px max(28px,calc((100vw - 1540px)/2)) 46px;background:var(--surface);color:var(--text);border-block:1px solid var(--border);box-shadow:0 7px 25px #0006;outline:0}
 .model-style-dialog:before{content:'';position:absolute;left:0;right:0;top:-1px;height:3px;background:var(--ef-band-stripe)}
 .model-style-dialog>header{display:flex;align-items:center;justify-content:space-between;gap:20px;flex:none}
 .model-style-dialog h2{font-size:23px;font-weight:700;margin:0 0 6px}
@@ -443,7 +443,7 @@ html[data-endfield=true] .model-update-marker:focus-visible{outline:2px solid va
 
 /* Appearance editor uses the viewport height instead of a short centered band. */
 .model-style-mask{padding:20px 0;box-sizing:border-box}
-.model-style-dialog{height:calc((100dvh - 64px) / var(--ui-zoom-factor,1));max-height:none;box-sizing:border-box;padding-top:22px;padding-bottom:42px;gap:14px}
+.model-style-dialog{height:calc((100dvh - 112px) / var(--ui-zoom-factor,1));max-height:none;box-sizing:border-box;padding-top:22px;padding-bottom:42px;gap:14px}
 .model-style-workspace{flex:1;min-height:0}
 .model-style-main{min-height:0;display:flex;flex-direction:column}
 .model-frame-grid{flex:1;min-height:120px}

@@ -15,7 +15,7 @@ html[data-endfield=true] .ef-model-filters{flex-wrap:wrap;row-gap:8px}
 @media(max-width:800px){.mm-pagination{flex-basis:100%}.mm-pagination-options{margin-left:auto}#mmGridSizeControl{max-width:195px}#mmGridSizeControl input{width:55px}}
 /* Appearance editor: real assignments, compact batch tools and a single information group. */
 .model-style-dialog{isolation:isolate}.model-style-dialog>*:not(.model-style-contours){position:relative}.model-style-dialog .model-style-actions{position:absolute}
-.model-style-contours{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:-1}.model-style-contours:before,.model-style-contours:after{content:'';position:absolute;top:0;bottom:0;width:34%;background:url('terrain-contours.svg') center/650px 650px;opacity:.12;mask-image:linear-gradient(90deg,#000,transparent)}.model-style-contours:before{left:0}.model-style-contours:after{right:0;transform:rotate(180deg)}html[data-theme=dark_endfield] .model-style-contours{filter:invert(1)}
+.model-style-contours{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:-1}.model-style-contours:before,.model-style-contours:after{content:'';position:absolute;top:0;bottom:0;width:34%;background:url('terrain-contours.svg') left top/650px auto repeat;opacity:.12;mask-image:linear-gradient(90deg,#000,transparent)}.model-style-contours:before{left:0}.model-style-contours:after{right:0;transform:rotate(180deg)}html[data-theme=dark_endfield] .model-style-contours{filter:invert(1)}
 .model-style-dialog header p{font-size:11px}.model-style-kicker{display:block;letter-spacing:.15em;color:var(--text-dim);font-size:9px;margin-bottom:8px}.model-style-dialog header h2{margin:0 0 8px}
 .model-style-dialog .model-style-workspace{grid-template-columns:230px minmax(0,1fr)}.model-style-bases{min-height:0;display:flex;flex-direction:column}.model-style-bases>p{font-size:10px;line-height:1.7;color:var(--text-dim);margin-bottom:0}.model-style-bases>.input{width:100%;box-sizing:border-box;font-size:11px;padding:8px;border-radius:0;margin:10px 0 7px}
 .model-assignment-tabs{display:flex;border-bottom:1px solid var(--border);flex:none}.model-assignment-tabs>button{flex:1;background:transparent;color:var(--text-dim);border:0;border-bottom:3px solid transparent;padding:8px 2px;font:inherit;font-size:12px;cursor:pointer}.model-assignment-tabs>button[aria-pressed=true]{color:var(--text);border-bottom-color:var(--ef-yellow);font-weight:750}
@@ -48,3 +48,11 @@ html[data-endfield=true] body #mmUpdOnly.active{color:var(--ef-yellow)!important
 html[data-endfield=true] #ctxMenu{box-sizing:border-box;overflow-x:hidden}
 html[data-endfield=true] #ctxMenu .ctx-caption{display:block;width:100%;box-sizing:border-box;text-overflow:ellipsis;white-space:nowrap;overflow:hidden}
 html[data-endfield=true] #ctxMenu .ctx-item>span{min-width:0;overflow:hidden;text-overflow:ellipsis}
+
+/* Keep dedup selection controls readable instead of six competing footer capsules. */
+.dedup-dialog .dedup-actions{display:flex;flex-direction:column;gap:12px;align-items:stretch}
+.dedup-selection{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:8px;background:color-mix(in srgb,var(--text) 4%,transparent)}
+.dedup-selection-action{font:inherit;font-size:13px;color:var(--text);background:transparent;border:1px solid var(--border);padding:10px 12px;min-width:0;white-space:normal;line-height:1.4;text-align:center;cursor:pointer}
+.dedup-selection-action:hover,.dedup-selection-action:focus-visible{background:color-mix(in srgb,var(--ef-yellow) 12%,transparent);outline:1px solid var(--ef-yellow)}
+.dedup-confirm{display:flex;justify-content:center;gap:16px;flex-wrap:wrap}
+.dedup-dialog .dedup-confirm>.btn{width:220px;max-width:100%;flex:0 1 220px;min-width:160px}
