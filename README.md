@@ -10,7 +10,7 @@
 
 下载 · 整理 · 检查更新 · 反向解析 · 工作流分析
 
-**[下载 Windows 版 ↗](https://github.com/ADVICEsama/CivitaiFreeTool/releases/tag/v3.0.21)**　 /　 **[探索软件官网 ↗](https://advicesama.github.io/CivitaiFreeTool/)**　 /　 [反馈问题](https://github.com/ADVICEsama/CivitaiFreeTool/issues)
+**[下载 Windows 版 ↗](https://github.com/ADVICEsama/CivitaiFreeTool/releases/tag/v3.0.22)**　 /　 **[探索软件官网 ↗](https://advicesama.github.io/CivitaiFreeTool/)**　 /　 [反馈问题](https://github.com/ADVICEsama/CivitaiFreeTool/issues)
 
 Windows 10 / 11 · 便携应用 · 亮 / 暗主题
 
@@ -27,26 +27,26 @@ CivitaiFreeTool 将 Civitai / Hugging Face 模型下载、本地归档与生成�
 | 批量链接 → 下载队列 → 分批历史 | 哈希反查、同底模版本检查 | 亮暗主题、字体回退与快捷键 |
 | 瀑布流 / 方格 / 列表，收藏与筛选 | 真实节点连接、提示词与引用模型 | 四档性能、后台降占用 |
 
-**当前稳定版 3.0.21** · Chrome 扩展 1.3.1 · Firefox 扩展 1.3.2
+**当前稳定版 3.0.22** · Chrome 扩展 1.3.1 · Firefox 扩展 1.3.2
 
 > 十语言为预览：目前覆盖新手引导与导航，其他页面尚未全量翻译。本文界面截图采用隔离示例数据，不含个人模型、账号与任务。
 
-## 3.0.21 更新
+## 3.0.22 更新
 
-查重改为独立二级页面，进入先显示上次结果，确认后仅检查选中的模型；支持本地保存结果和重启恢复。调整主题操作按钮，并让模型卡片外观页按内容收紧高度。详见[更新说明](docs/releases/v3.0.21.md)。
+修复查重页点击开始后立即关闭时的异步报错。关闭后不再创建遗留轮询，重新进入可接续观察原任务，不会重复启动。保留 3.0.21 的独立查重页面与选中范围规则。详见[更新说明](docs/releases/v3.0.22.md)。
 
 ## 下载与更新
 
 | 需要什么 | 下载入口 |
 | --- | --- |
-| Windows 10 / 11 主程序 | [便携 ZIP](https://github.com/ADVICEsama/CivitaiFreeTool/releases/download/v3.0.21/CivitaiFreeTool-Windows-v3.0.21.zip) · [独立 EXE](https://github.com/ADVICEsama/CivitaiFreeTool/releases/download/v3.0.21/CivitaiFreeToolWeb-3.0.21.exe) |
-| Chrome / Edge 插件 | [Chrome ZIP](https://github.com/ADVICEsama/CivitaiFreeTool/releases/download/v3.0.21/CivitaiFreeTool-ChromeExtension-v3.0.21.zip) |
-| Firefox 插件 | [Firefox ZIP](https://github.com/ADVICEsama/CivitaiFreeTool/releases/download/v3.0.21/CivitaiFreeTool-FirefoxExtension-v3.0.21.zip)（未签名，临时加载） |
-| 对应源码与校验 | [源码 ZIP](https://github.com/ADVICEsama/CivitaiFreeTool/releases/download/v3.0.21/CivitaiFreeTool-Source-v3.0.21.zip) · [SHA256SUMS](https://github.com/ADVICEsama/CivitaiFreeTool/releases/download/v3.0.21/SHA256SUMS.txt) |
+| Windows 10 / 11 主程序 | [便携 ZIP](https://github.com/ADVICEsama/CivitaiFreeTool/releases/download/v3.0.22/CivitaiFreeTool-Windows-v3.0.22.zip) · [独立 EXE](https://github.com/ADVICEsama/CivitaiFreeTool/releases/download/v3.0.22/CivitaiFreeToolWeb-3.0.22.exe) |
+| Chrome / Edge 插件 | [Chrome ZIP](https://github.com/ADVICEsama/CivitaiFreeTool/releases/download/v3.0.22/CivitaiFreeTool-ChromeExtension-v3.0.22.zip) |
+| Firefox 插件 | [Firefox ZIP](https://github.com/ADVICEsama/CivitaiFreeTool/releases/download/v3.0.22/CivitaiFreeTool-FirefoxExtension-v3.0.22.zip)（未签名，临时加载） |
+| 对应源码与校验 | [源码 ZIP](https://github.com/ADVICEsama/CivitaiFreeTool/releases/download/v3.0.22/CivitaiFreeTool-Source-v3.0.22.zip) · [SHA256SUMS](https://github.com/ADVICEsama/CivitaiFreeTool/releases/download/v3.0.22/SHA256SUMS.txt) |
 
 - ZIP 解压后运行 `CivitaiFreeToolWeb.exe`，不是安装向导；Windows 窗口使用 WebView2。
 - **更新前正常退出旧版**，再替换 EXE。保留原有配置、任务、历史和缓存，不需要重新下载模型。
-- 请从本仓库 Releases 获取文件。上表对应 3.0.21；后续版本见「所有版本」。
+- 请从本仓库 Releases 获取文件。上表对应 3.0.22；后续版本见「所有版本」。
 - Linux / macOS 使用源码与 Qt 后端，见 [平台说明](LINUX.md)；本文的 EXE、原生窗框与桌面悬浮窗说明针对 Windows。
 
 ## 三步开始
@@ -133,9 +133,9 @@ Windows 发布构建使用 PyInstaller 与 `CivitaiFreeToolWeb.spec`；构建环
 python -m unittest discover -s tests -p "test_*.py"
 ```
 
-[更新日志](CHANGELOG.md)保留历史版本；[发布说明](docs/releases/v3.0.21.md)记录本版修复；[发布流程](docs/RELEASING.md)供维护者使用。反馈问题请附版本、操作步骤与脱敏日志，不要附账号凭据。
+[更新日志](CHANGELOG.md)保留历史版本；[发布说明](docs/releases/v3.0.22.md)记录本版修复；[发布流程](docs/RELEASING.md)供维护者使用。反馈问题请附版本、操作步骤与脱敏日志，不要附账号凭据。
 
 字体与素材请遵守各自授权，见 [字体声明](docs/FONT-NOTICES.md)。终末地风格为视觉参考，本项目不代表《明日方舟：终末地》官方，也不承诺对所有元数据和来源提供完整兼容。
 
-### v3.0.21 界面与后台占用
+### v3.0.22 界面与后台占用
 独立设置面板保持居中的操作范围；非前台背景上限 10 FPS，隐藏/最小化暂停视觉动效，返回前台恢复。下载任务照常运行。

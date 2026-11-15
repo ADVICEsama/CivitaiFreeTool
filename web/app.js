@@ -904,6 +904,8 @@ async function showDedupeDialog(groups, modelGroups, options={}) {
   if(fresh){mask=document.createElement('div');mask.className='rd-mask dedup-mask';dlg=document.createElement('section');dlg.className='rename-dialog dedup-dialog';}
   dlg.setAttribute('role','dialog');dlg.setAttribute('aria-modal','true');dlg.setAttribute('aria-labelledby','ddTitle');
   dlg._events?.abort();dlg._events=new AbortController();
+  const signal=dlg._events.signal;
+  const alive=()=>dlg.isConnected&&!dlg.inert&&!signal.aborted;
   const paths=options.paths || (state.display || []).filter(row=>state.mmChecked.has(row.path)).map(row=>row.path);
   const text=key=>esc(CFTI18n.t('models.dedupe.'+key));
 
@@ -925,25 +927,31 @@ async function showDedupeDialog(groups, modelGroups, options={}) {
   $('#ddClose',dlg).addEventListener('click',close);$('#ddExit',dlg).addEventListener('click',close);
   $('#ddStart',dlg).disabled=!paths.length;
   if(!paths.length)$('#ddProgress',dlg).textContent+=' · '+CFTI18n.t('models.dedupe.selectFirst');
+  let polling=false;
   const poll=async()=>{
-    if(!dlg.isConnected)return;
-    const progress=await api.call('get_mm_progress');if(!progress || progress.operation!=='dedupe')return;
-    $('#ddProgress',dlg).textContent=(progress.msg||'')+' '+(progress.done||0)+' / '+(progress.total||0);
-    if(progress.running)return;
-    clearInterval(dlg._poll);
-    const saved=await api.call('get_dedupe_result');
-    mmDedupeSnapshot=!progress.cache_warning&&saved?.completed_at?saved:{groups:progress.result||[],model_groups:progress.model_groups||[],completed_at:Date.now()/1000};
-    if(dlg.isConnected)showDedupeDialog(mmDedupeSnapshot.groups,mmDedupeSnapshot.model_groups,{paths,completedAt:mmDedupeSnapshot.completed_at});
+    if(!alive()||polling)return;
+    polling=true;
+    try{
+      const progress=await api.call('get_mm_progress');if(!alive()||!progress||progress.operation!=='dedupe')return;
+      $('#ddProgress',dlg).textContent=(progress.msg||'')+' '+(progress.done||0)+' / '+(progress.total||0);
+      if(progress.running)return;
+      clearInterval(dlg._poll);dlg._poll=null;
+      const saved=await api.call('get_dedupe_result');if(!alive())return;
+      mmDedupeSnapshot=!progress.cache_warning&&saved?.completed_at?saved:{groups:progress.result||[],model_groups:progress.model_groups||[],completed_at:Date.now()/1000};
+      showDedupeDialog(mmDedupeSnapshot.groups,mmDedupeSnapshot.model_groups,{paths,completedAt:mmDedupeSnapshot.completed_at});
+    }finally{polling=false;}
   };
+  const observe=()=>{clearInterval(dlg._poll);dlg._poll=setInterval(()=>poll().catch(()=>{if(alive())$('#ddProgress',dlg).textContent=CFTI18n.t('models.dedupe.failed');}),800);};
   $('#ddStart',dlg).addEventListener('click',async()=>{
     const start=$('#ddStart',dlg);start.disabled=true;
-    try{const result=await api.call('mm_dedupe',paths);if(!result?.started){$('#ddProgress',dlg).textContent=result?.msg||CFTI18n.t('models.dedupe.failed');start.disabled=!paths.length;return;}
-      dlg.setAttribute('aria-busy','true');$('#ddDel',dlg).disabled=true;$('#ddProgress',dlg).textContent=CFTI18n.t('models.dedupe.running');
-      dlg._poll=setInterval(()=>poll().catch(()=>{$('#ddProgress',dlg).textContent=CFTI18n.t('models.dedupe.failed');}),800);
-    }catch(_){$('#ddProgress',dlg).textContent=CFTI18n.t('models.dedupe.failed');start.disabled=!paths.length;}
+    try{
+      const result=await api.call('mm_dedupe',paths);if(!alive())return;
+      if(!result?.started){$('#ddProgress',dlg).textContent=result?.msg||CFTI18n.t('models.dedupe.failed');start.disabled=!paths.length;return;}
+      dlg.setAttribute('aria-busy','true');$('#ddDel',dlg).disabled=true;$('#ddProgress',dlg).textContent=CFTI18n.t('models.dedupe.running');observe();
+    }catch(_){if(alive()){$('#ddProgress',dlg).textContent=CFTI18n.t('models.dedupe.failed');start.disabled=!paths.length;}}
   });
   dlg.removeAttribute('aria-busy');
-  if(fresh)api.call('get_mm_progress').then(progress=>{if(!dlg.isConnected||progress?.operation!=='dedupe'||!progress.running)return;$('#ddStart',dlg).disabled=true;$('#ddDel',dlg).disabled=true;dlg.setAttribute('aria-busy','true');dlg._poll=setInterval(()=>poll().catch(()=>{}),800);}).catch(()=>{});
+  if(fresh)api.call('get_mm_progress').then(progress=>{if(!alive()||progress?.operation!=='dedupe'||!progress.running)return;$('#ddStart',dlg).disabled=true;$('#ddDel',dlg).disabled=true;dlg.setAttribute('aria-busy','true');observe();}).catch(()=>{});
   dlg.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();close();}if(event.key==='Tab'){const items=[...dlg.querySelectorAll('button,input,a[href]')].filter(el=>!el.disabled&&el.getClientRects().length);const first=items[0],last=items.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}}},{signal:dlg._events.signal});
   if(fresh)$('#ddExit',dlg).focus({preventScroll:true});
   dlg.querySelectorAll(".dd-link").forEach((a) => a.addEventListener("click", (e) => {
