@@ -16,6 +16,7 @@
   for(let i=0;i<pages.length;i++)if(top(pages[i])<=scrollY+innerHeight*.3)index=i;
   if(index===current)return;
   current=index;
+  root.dataset.scene=pages[index].id;
   links.forEach((link,i)=>{if(i===index)link.setAttribute('aria-current','location');else link.removeAttribute('aria-current');});
   document.getElementById('pageNumber').textContent=String(index+1).padStart(2,'0')+' / 07';
   const [x,y]=offsets[index];

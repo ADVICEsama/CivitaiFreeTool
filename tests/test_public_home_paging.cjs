@@ -18,6 +18,11 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,'.'+deco
   const ids=['home','capabilities','analysis','performance','download','start','questions'];
   for(let i=0;i<ids.length;i++){
    await page.locator('.page-rail a').nth(i).click();await page.waitForFunction(n=>document.querySelector('#pageNumber').textContent.startsWith(n),String(i+1).padStart(2,'0'));
+   assert.equal(await page.locator('html').getAttribute('data-scene'),ids[i]);
+   const header=await page.locator('.top').boundingBox();assert.equal(header.x,0);assert.equal(header.width,width,'header must cover viewport');
+   assert.equal(await page.locator('.map-contours').count(),1);
+   assert.equal(await page.locator('.analysis').evaluate(e=>getComputedStyle(e).backgroundColor),'rgba(0, 0, 0, 0)');
+   assert.equal(await page.locator('.download').evaluate(e=>getComputedStyle(e).backgroundColor),'rgba(0, 0, 0, 0)');
    const rect=await page.locator('#'+ids[i]).boundingBox();assert(Math.abs(rect.y-96)<4,'chapter alignment '+ids[i]+' '+rect.y);
    await page.screenshot({path:path.resolve(__dirname,`../.test_tmp/chapter-${ids[i]}-${width}-${theme}.png`)});
   }

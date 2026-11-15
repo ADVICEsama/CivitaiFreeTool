@@ -16,9 +16,9 @@ h1 i svg{width:72%;height:72%;fill:#202723;display:block;flex:none}
 .page-rail,.page-guide{display:none}
 .cap-feature{background:color-mix(in srgb,var(--panel) 88%,transparent)}
 .product-view img{background:#171c1a}
-.analysis{position:relative;background:#202923f2}
-.download{position:relative}
-.download:before{content:'';position:absolute;inset:0;pointer-events:none;background:url('assets/contours.svg') center/cover;opacity:.075}
+.analysis{position:relative;background:transparent;color:var(--ink)}
+.download{position:relative;background:transparent;color:var(--ink)}
+.download:before{display:none}
 .download>.shell{position:relative}
 .footer{position:relative}
 @media(min-width:1000px) and (min-height:720px){
@@ -27,7 +27,7 @@ h1 i svg{width:72%;height:72%;fill:#202723;display:block;flex:none}
  html.paged{scroll-snap-type:y proximity}
  body{padding-top:var(--site-header)}
  .shell{width:min(1280px,calc(100% - 176px))}
- .top.shell{position:fixed;top:0;left:0;right:0;height:var(--site-header);z-index:20;background:color-mix(in srgb,var(--paper) 96%,transparent);border-bottom:1px solid var(--line)}
+ .top.shell{position:fixed;top:0;left:0;right:0;width:100%;padding-inline:max(88px,calc((100% - 1280px)/2));height:var(--site-header);z-index:20;background:var(--paper);border-bottom:1px solid var(--line)}
  .top:before{content:'';position:absolute;top:0;left:calc((1280px - 100vw)/2);right:calc((1280px - 100vw)/2);height:3px;background:var(--stripe)}
  .page{min-height:var(--screen);scroll-snap-align:start;scroll-margin-top:0;position:relative}
  .page:after{content:'';position:absolute;top:30px;right:0;width:6px;height:6px;border-top:1px solid var(--muted);border-right:1px solid var(--muted);opacity:.6;pointer-events:none}
@@ -89,6 +89,7 @@ h1 i svg{width:72%;height:72%;fill:#202723;display:block;flex:none}
 }
 @media(min-width:1000px) and (max-width:1200px) and (min-height:720px){
  .shell,.download>.shell{width:calc(100% - 128px)}
+ .top.shell{width:100%;padding-inline:64px}
  .hero-layout{gap:30px;grid-template-columns:1.4fr 1fr}
  h1{font-size:62px;letter-spacing:-3px}
  .hero-aside .lead{font-size:19px}
@@ -116,5 +117,23 @@ h1 i svg{width:72%;height:72%;fill:#202723;display:block;flex:none}
 [data-theme=dark] .map-contours{opacity:.105}
 @media(min-width:1000px) and (min-height:720px){
  .top.shell{background:var(--paper)}
- .hero .product-view img{object-fit:cover;object-position:center 27%}
+ .hero .product-view img{object-fit:contain;object-position:center;background:var(--panel)}
 }
+
+/* One viewport-sized map; chapters only change its palette, never replace it. */
+:root[data-scene="analysis"]{--paper:#202923;--ink:#f1f2e9;--muted:#b5c0b3;--line:#4b584d;--panel:#2c382e;color-scheme:dark}
+:root[data-scene="download"]{--paper:#fff000;--ink:#202723;--muted:#505522;--line:#a6a12a;--panel:#e6db26;color-scheme:light}
+body,.top.shell,.page-guide span,.page-rail b{transition:background-color .55s ease,color .4s ease,border-color .4s ease}
+.site-map{transition:color .4s ease}
+.analysis-heading>.eyebrow,.analysis-heading>div,.analysis-screen figcaption,.analysis-notes span{color:var(--muted)}
+.analysis-notes{border-color:var(--line)}
+.analysis-heading em{color:var(--ink);text-decoration:underline;text-decoration-color:#c1b500;text-underline-offset:.16em;text-decoration-thickness:3px}
+:root[data-scene="analysis"] .analysis-heading em{color:var(--yellow);text-decoration:none}
+:root[data-scene="analysis"] .brand-logo,:root[data-scene="analysis"] .footer-brand img{filter:invert(1)}
+:root[data-scene="analysis"] .map-contours{filter:invert(1);opacity:.105}
+:root[data-scene="download"] .brand-logo,:root[data-scene="download"] .footer-brand img{filter:none}
+:root[data-scene="download"] .map-contours{filter:none;opacity:.075}
+:root[data-scene="download"] .page-rail a[aria-current=location] i{background:var(--ink)}
+:root[data-scene="analysis"] .page-rail a[aria-current=location] i{background:var(--yellow)}
+.download .fine,.download-status{color:var(--muted)}
+@media(prefers-reduced-motion:reduce){body,.top.shell,.site-map,.page-guide span,.page-rail b{transition:none}}
