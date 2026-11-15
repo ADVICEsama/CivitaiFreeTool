@@ -1,0 +1,120 @@
+/* Product identity and a continuous map shared by the seven chapters. */
+body{isolation:isolate}
+.site-map{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none;color:var(--ink)}
+.map-contours{position:absolute;inset:-20%;background:url('assets/contours.svg') center/cover;opacity:.12;transform:translate(var(--map-x,0),var(--map-y,0)) rotate(-8deg) scale(1.08);transition:transform 1.3s cubic-bezier(.2,.7,.2,1)}
+.map-grid{position:absolute;inset:0;background-image:linear-gradient(90deg,var(--line) 1px,transparent 1px),linear-gradient(var(--line) 1px,transparent 1px);background-size:120px 120px;opacity:.16;mask-image:linear-gradient(125deg,#000,transparent 65%)}
+.map-geometry{position:absolute;inset:0;width:100%;height:100%;opacity:.13;stroke-width:.7;transform:translate(var(--map-gx,0),var(--map-gy,0));transition:transform 1.3s cubic-bezier(.2,.7,.2,1)}
+.map-coordinate{position:absolute;left:28px;bottom:95px;font-size:8px;letter-spacing:2px;line-height:1.7;writing-mode:vertical-rl;opacity:.35}
+.brand-logo{width:156px;height:auto;flex:none;filter:none}
+[data-theme=dark] .brand-logo{filter:invert(1)}
+.brand .brand-name{font-size:8px;line-height:1.6;letter-spacing:1px;color:var(--muted)}
+h1 i{letter-spacing:0;line-height:1;overflow:visible;vertical-align:4%;width:.9em;height:.9em}
+h1 i svg{width:72%;height:72%;fill:#202723;display:block;flex:none}
+.download-arrow svg{display:block;width:100%;height:100%;fill:currentColor}
+.download h2>.download-arrow{width:1em;height:1em;top:.25em}
+.hero-layout:before{display:none}
+.page-rail,.page-guide{display:none}
+.cap-feature{background:color-mix(in srgb,var(--panel) 88%,transparent)}
+.product-view img{background:#171c1a}
+.analysis{position:relative;background:#202923f2}
+.download{position:relative}
+.download:before{content:'';position:absolute;inset:0;pointer-events:none;background:url('assets/contours.svg') center/cover;opacity:.075}
+.download>.shell{position:relative}
+.footer{position:relative}
+@media(min-width:1000px) and (min-height:720px){
+ :root{--site-header:96px;--screen:calc(100svh - var(--site-header))}
+ html{scroll-padding-top:var(--site-header)}
+ html.paged{scroll-snap-type:y proximity}
+ body{padding-top:var(--site-header)}
+ .shell{width:min(1280px,calc(100% - 176px))}
+ .top.shell{position:fixed;top:0;left:0;right:0;height:var(--site-header);z-index:20;background:color-mix(in srgb,var(--paper) 96%,transparent);border-bottom:1px solid var(--line)}
+ .top:before{content:'';position:absolute;top:0;left:calc((1280px - 100vw)/2);right:calc((1280px - 100vw)/2);height:3px;background:var(--stripe)}
+ .page{min-height:var(--screen);scroll-snap-align:start;scroll-margin-top:0;position:relative}
+ .page:after{content:'';position:absolute;top:30px;right:0;width:6px;height:6px;border-top:1px solid var(--muted);border-right:1px solid var(--muted);opacity:.6;pointer-events:none}
+ .hero{height:var(--screen);padding-block:24px 30px;display:grid;grid-template-rows:24px auto minmax(120px,1fr) 42px}
+ .hero-layout{padding:28px 0 30px;gap:60px;grid-template-columns:1.7fr 1fr;align-items:center}
+ h1{font-size:clamp(60px,6.2vw,90px);line-height:1.15;letter-spacing:-4px}
+ .hero-aside{max-width:none;display:grid;grid-template-columns:1fr auto;gap:12px 15px;padding-top:0}
+ .hero-aside .section-index{grid-column:1/-1}
+ .hero-aside .lead{grid-column:1/-1;font-size:21px;line-height:1.5;margin:0}
+ .hero-description{grid-column:1/-1;margin:0;max-width:360px;font-size:12px}
+ .hero-aside>.inline-link{margin:0;font-size:9px;align-self:center}
+ .hero-aside>.button{font-size:11px;min-height:42px;padding-inline:16px;gap:12px;white-space:nowrap}
+ .workspace{min-height:0;display:grid;grid-template-rows:42px minmax(0,1fr)}
+ .workspace-bar{min-height:0}
+ .view-tab{padding-block:9px}
+ .product-view{min-height:0;display:grid;grid-template-rows:minmax(0,1fr) 28px}
+ .product-view img{height:100%;width:100%;object-fit:contain;border:1px solid var(--line)}
+ .product-view figcaption{padding:5px 0;font-size:9px}
+ .hero-foot{padding:10px 0 0;border-bottom:0}
+ .hero-foot p{font-size:13px}
+ .capabilities,.performance,.getting-started{padding-block:clamp(45px,7vh,80px);display:flex;flex-direction:column;justify-content:center}
+ .section-heading{margin-bottom:35px}
+ .section-heading>.eyebrow{margin-bottom:18px}
+ .cap-layout{gap:50px}
+ .cap-feature{min-height:330px;padding:30px}
+ .large-number{font-size:65px;margin-bottom:22px}
+ .cap-list article{padding-block:19px}
+ .cap-list h3{font-size:18px}
+ .archive-diagram{margin-top:28px}
+ .analysis{padding-block:40px;display:flex;align-items:center}
+ .analysis>.shell{display:grid;grid-template-columns:minmax(250px,.7fr) minmax(0,1.5fr);gap:35px 45px;align-items:center}
+ .analysis-heading{grid-template-columns:1fr;gap:25px;margin:0}
+ .analysis-heading h2{font-size:clamp(34px,3.8vw,56px)}
+ .analysis-heading>div{font-size:12px}
+ .analysis-screen{min-width:0}
+ .analysis-screen img{max-height:calc(var(--screen) - 160px);object-fit:contain;background:#171c1a}
+ .analysis-screen figcaption{font-size:8px;padding-bottom:0}
+ .analysis-notes{grid-column:1/-1;gap:60px;margin:0;padding-top:20px}
+ .download{padding-block:40px 30px;display:flex;align-items:center}
+ .download>.shell{width:min(1280px,calc(100% - 176px))}
+ .download h2{font-size:clamp(50px,5.4vw,78px);margin:25px 0 32px}
+ .getting-started .section-heading{margin-bottom:50px}
+ .getting-started ol{min-height:250px}
+ .closing-page{display:flex;flex-direction:column;justify-content:center;padding-block:40px 35px;gap:55px}
+ .closing-page .faq{padding-bottom:0}
+ .closing-page .footer{padding-top:28px;padding-bottom:0}
+ .page-rail{display:flex;position:fixed;z-index:30;right:22px;top:50%;transform:translateY(-50%);flex-direction:column;gap:11px;font-size:10px}
+ .page-rail a{position:relative;display:flex;align-items:center;justify-content:flex-end;gap:9px;min-width:36px;height:28px;color:var(--muted)}
+ .page-rail b{position:absolute;right:45px;white-space:nowrap;padding:3px 8px;background:var(--paper);border:1px solid var(--line);opacity:0;transform:translateX(5px);transition:opacity .16s,transform .16s;pointer-events:none;font-size:10px}
+ .page-rail a:hover b,.page-rail a:focus-visible b{opacity:1;transform:none}
+ .page-rail i{display:block;width:5px;height:5px;background:var(--muted);transition:height .2s,background .2s}
+ .page-rail a[aria-current=location]{color:var(--ink)}
+ .page-rail a[aria-current=location] i{height:24px;background:#c1ae00}
+ [data-theme=dark] .page-rail a[aria-current=location] i{background:var(--yellow)}
+ .page-guide{display:flex;position:fixed;z-index:15;bottom:16px;left:28px;right:28px;justify-content:space-between;pointer-events:none;font-size:8px;letter-spacing:1.2px;color:var(--muted);mix-blend-mode:normal}
+ .page-guide span{background:var(--paper);padding:2px 6px}
+ .page.is-entering>.section-heading,.page.is-entering>.analysis-heading,.page.is-entering>.shell,.page.is-entering>.hero-layout{animation:chapter-in .55s cubic-bezier(.2,.7,.2,1) both}
+ @keyframes chapter-in{from{opacity:.2;transform:translateY(20px)}to{opacity:1;transform:none}}
+}
+@media(min-width:1000px) and (max-width:1200px) and (min-height:720px){
+ .shell,.download>.shell{width:calc(100% - 128px)}
+ .hero-layout{gap:30px;grid-template-columns:1.4fr 1fr}
+ h1{font-size:62px;letter-spacing:-3px}
+ .hero-aside .lead{font-size:19px}
+ .hero-aside>.inline-link{display:none}
+ .section-heading>p:last-child:not(.eyebrow){max-width:310px}
+ nav{gap:18px}
+ .brand .brand-name{display:none}
+ .download-grid{gap:35px}
+ .download-extension{padding-left:30px}
+}
+@media(max-width:999px),(max-height:719px){
+ .site-map .map-contours{opacity:.1}
+ .map-coordinate{display:none}
+ .brand-logo{width:135px}
+ .hero{scroll-margin-top:20px}
+ .closing-page .faq{padding-top:20px}
+ .download h2>.download-arrow{width:.8em;height:.8em}
+}
+@media(prefers-reduced-motion:reduce){.map-contours,.map-geometry,.page-rail b,.page-rail i{transition:none}}
+[data-theme=dark] .map-contours{filter:invert(1);opacity:.18}
+.map-geometry circle{stroke:#b6a900;stroke-width:1.1}
+@media(min-width:1000px) and (min-height:720px){.top:before{left:0;right:0}}
+/* Keep map detail present without cutting across the reading hierarchy. */
+.map-contours{opacity:.075}
+[data-theme=dark] .map-contours{opacity:.105}
+@media(min-width:1000px) and (min-height:720px){
+ .top.shell{background:var(--paper)}
+ .hero .product-view img{object-fit:cover;object-position:center 27%}
+}
