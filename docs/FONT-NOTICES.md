@@ -8,3 +8,5 @@
 ## LINE Seed Sans Bold
 
 用户提供的未修改 OTF，PostScript LINESeedSans-Bold，Version 1.002；Dalton Maag Ltd；© LINE 2020。字体内部 name 表确认 SIL OFL 1.1。来源 https://seed.line.me/ ，用途为默认英文、拉丁字母及数字；已自定义字库优先。完整许可保存于 web/fonts/LINESeedSans-OFL.txt；仅新增默认字体，不修改系统字体。
+
+官网同步使用同一份未修改的 LINE Seed Sans Bold；网站分发文件与完整 OFL 位于 `docs/assets/LINESeedSans_Bd.otf`、`docs/assets/LINESeedSans-OFL.txt`。中文使用设备已有的无衬线字体回退，不随官网额外分发中文字体。

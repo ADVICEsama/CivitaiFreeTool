@@ -1,16 +1,35 @@
-# CivitaiFreeTool
+<p align="center">
+  <a href="https://advicesama.github.io/CivitaiFreeTool/">
+    <img src="docs/assets/repository-cover.png" alt="CivitaiFreeTool — 模型收藏，从这里开始。下载、归档、反向解析与工作流分析。" width="100%">
+  </a>
+</p>
 
-**把模型下载、整理和生成信息，放在一个工作台。**
+<div align="center">
 
-免费的 Civitai / Hugging Face 模型下载与本地模型管理工具。当前 Windows 稳定版 **3.0.19**，Chrome 扩展 **1.3.1**、Firefox 扩展 **1.3.2**。
+### 你的模型，一个工作台。
 
-[下载 Windows 版](https://github.com/ADVICEsama/CivitaiFreeTool/releases/tag/v3.0.19) · [项目首页](https://advicesama.github.io/CivitaiFreeTool/) · [所有版本](https://github.com/ADVICEsama/CivitaiFreeTool/releases) · [反馈问题](https://github.com/ADVICEsama/CivitaiFreeTool/issues)
+下载 · 整理 · 检查更新 · 反向解析 · 工作流分析
 
-![终末地暗色工作台示例](docs/screenshots/overview-models-v3.png)
+**[下载 Windows 版 ↗](https://github.com/ADVICEsama/CivitaiFreeTool/releases/tag/v3.0.19)**　 /　 **[探索软件官网 ↗](https://advicesama.github.io/CivitaiFreeTool/)**　 /　 [反馈问题](https://github.com/ADVICEsama/CivitaiFreeTool/issues)
 
-> 截图使用隔离的示例数据，展示当前界面布局，不包含用户模型、账号或下载任务。
+Windows 10 / 11 · 便携应用 · 亮 / 暗主题
 
-> **语言预览**：十语言目前覆盖新手引导和导航，设置及其他页面尚未全量翻译；不作为完整多语言版宣传。
+</div>
+
+---
+
+## 从链接到收藏，不必反复切换工具。
+
+CivitaiFreeTool 将 Civitai / Hugging Face 模型下载、本地归档与生成信息分析连成一个工作台。浏览器负责发现，CFT 负责接收、整理和查看。
+
+| 收集与管理 | 来源与过程 | 自己的使用习惯 |
+| :--- | :--- | :--- |
+| 批量链接 → 下载队列 → 分批历史 | 哈希反查、同底模版本检查 | 亮暗主题、字体回退与快捷键 |
+| 瀑布流 / 方格 / 列表，收藏与筛选 | 真实节点连接、提示词与引用模型 | 四档性能、后台降占用 |
+
+**当前稳定版 3.0.19** · Chrome 扩展 1.3.1 · Firefox 扩展 1.3.2
+
+> 十语言为预览：目前覆盖新手引导与导航，其他页面尚未全量翻译。本文界面截图采用隔离示例数据，不含个人模型、账号与任务。
 
 ## 3.0.19 更新
 
@@ -36,7 +55,7 @@
 2. **按需填写账号**：在设置保存 Civitai API Key。新手引导可跳过，之后再配置；联网查询和下载仍需满足来源的访问要求。
 3. **发送模型链接**：在批量下载页粘贴链接，或使用浏览器插件。先检查保存位置，再到下载管理查看状态。
 
-## 七个页面，各司其职
+## 一个工作台，七种能力
 
 | 页面 | 可以做什么 |
 | --- | --- |
@@ -75,6 +94,9 @@
 
 实际帧率取决于屏幕、设备与 WebView，不保证达到设定上限。首次升级可选择档位或保留现有设置。GPU 默认不禁用；“禁用 GPU 加速”是兼容性排障选项，不是性能加速开关。
 
+<details>
+<summary><strong>浏览器插件 · 安装、权限与使用边界</strong></summary>
+
 ## 浏览器插件
 
 插件可发送当前 C 站模型页，或从当前 / 全部浏览器窗口勾选模型标签页批量发送。支持搜索和重复链接合并；提交在扩展后台执行，关闭小窗不会中断已开始的提交。
@@ -86,6 +108,9 @@
 - 仅向本机 `127.0.0.1:47531` 发送所选模型链接，不发送 Cookie、API Key 或网页正文。不需要在插件填写 Key。
 
 详细安装与权限说明：[Chrome / Edge](chrome-extension/README.md) · [Firefox](firefox-extension/README.md)。
+
+
+</details>
 
 ## 数据与操作边界
 
