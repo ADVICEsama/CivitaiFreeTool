@@ -1734,6 +1734,157 @@ function renderMasonry(rows,restore={}) {
 
 async function loadMasonryThumbs(start){if(!start)mmStartThumbs($('#mmMasonry'));}
 
+// ===== 瀑布流视口外占位（保留盒子与列高，只把内容挪到离屏片段） =====
+// 卡片节点本身不动，孩子节点移入 DocumentFragment 保存；回来时原样塞回，
+// 所以 img 引用、勾选状态、事件委托全部不受影响。
+// 盒子高度按实测值钉死，多列布局的列高与滚动长度因此完全不变。
+// 拆解成每帧少量处理，避免"一次性占位 300 张"自己变成新的卡顿。
+const mmVirtFragments = new Map();   // path -> { frag, card }
+let mmVirtIndex = null;              // [{ el, top, height }]
+let mmVirtIndexDirty = true;
+let mmVirtTick = 0;
+let mmVirtEnabled = !(window.CFT_VIRT_DISABLE === true || /[?&]novirtual=1/.test(location.search));
+let mmVirtQueue = [];                // 待占位的条目
+
+function mmVirtSupported(){
+  const root = $('#mmMasonry'), vp = $('#mmMasonryViewport');
+  if(!root || !vp) return false;
+  if(state.mmView !== 'masonry') return false;
+  if(root.dataset.rendering === 'true') return false;
+  return true;
+}
+function mmVirtInvalidate(){ mmVirtIndexDirty = true; }
+
+function mmVirtBuildIndex(){
+  const root = $('#mmMasonry'), vp = $('#mmMasonryViewport');
+  const vpTop = vp.getBoundingClientRect().top;
+  const base = vp.scrollTop;
+  const idx = [];
+  for (const el of root.children){
+    if(!el.classList || !el.classList.contains('ms-card')) continue;
+    const stub = el.dataset.stub === '1';
+    const r = el.getBoundingClientRect();
+    const h = stub ? (parseFloat(el.style.height) || r.height) : r.height;   // 均为精确值
+    idx.push({ el, top: r.top - vpTop + base, height: h });
+  }
+  mmVirtIndex = idx;
+  mmVirtIndexDirty = false;
+}
+
+function mmVirtStub(entry){
+  const el = entry.el, path = el.dataset.path;
+  if(!path || el.dataset.stub === '1') return false;
+  const h = entry.height || el.getBoundingClientRect().height;
+  if(!(h > 0)) return false;
+  const frag = document.createDocumentFragment();
+  frag.append(...el.childNodes);
+  mmVirtFragments.set(path, { frag, card: el });
+  el.style.height = h.toFixed(3) + 'px';
+  el.style.overflow = 'hidden';
+  el.style.contain = 'layout paint style';
+  el.dataset.stub = '1';
+  window.CFTModelManagement?.releaseCards([el]);
+  return true;
+}
+
+function mmVirtRestore(entry){
+  const el = entry.el, path = el.dataset.path;
+  if(!path || el.dataset.stub !== '1') return false;
+  el.dataset.stub = '';
+  el.style.height = '';
+  el.style.overflow = '';
+  el.style.contain = '';
+  const saved = mmVirtFragments.get(path);
+  if(saved && saved.card === el){ el.append(saved.frag); mmVirtFragments.delete(path); }
+  window.CFTModelManagement?.observeCards([el]);
+  entry.height = el.getBoundingClientRect().height || entry.height;
+  return true;
+}
+
+// 每帧最多处理这么多张，剩下的下一帧继续
+const MM_VIRT_PER_TICK = 48;
+
+function mmVirtDrain(){
+  mmVirtTick = 0;
+  if(!mmVirtEnabled || !mmVirtSupported()) { mmVirtQueue = []; return; }
+  const vp = $('#mmMasonryViewport');
+  const top = vp.scrollTop, h = vp.clientHeight;
+  let done = 0;
+  while(mmVirtQueue.length && done < MM_VIRT_PER_TICK){
+    const entry = mmVirtQueue.shift();
+    if(!entry.el.isConnected) continue;
+    const start = entry.top, end = entry.top + entry.height;
+    const far = end < top - h * 2 || start > top + h * 2;
+    if(!far) continue;                      // 已经不算远了，跳过
+    const live = entry.el.getBoundingClientRect();
+    if(live.bottom > -h * 2 && live.top < h + h * 2) continue;   // 实时复核：其实不远，不动
+    if(mmVirtStub(entry)) { done++; mmVirtIndexDirty = true; }
+  }
+  if(mmVirtQueue.length) mmVirtTick = requestAnimationFrame(mmVirtDrain);
+}
+
+function mmVirtScan(){
+  mmVirtTick = 0;                      // 本函数由 rAF 调度，先清标记，否则后续占位永远排不上
+  if(!mmVirtEnabled || !mmVirtSupported()) return;
+  const vp = $('#mmMasonryViewport');
+  if(mmVirtIndexDirty || !mmVirtIndex) mmVirtBuildIndex();
+  // 回收已脱离文档的缓存，避免重渲染后把旧内容塞回新卡片
+  for(const [path, saved] of mmVirtFragments){
+    if(!saved.card.isConnected) mmVirtFragments.delete(path);
+  }
+  const top = vp.scrollTop, h = vp.clientHeight;
+  const keepPad = h * 0.5;    // 视口 ±0.5 屏保持内容（越小，跳转时要重建的卡片越少）
+  let restored = false;
+  mmVirtQueue = [];
+  for(const entry of mmVirtIndex){
+    const start = entry.top, end = entry.top + entry.height;
+    const near = end > top - keepPad && start < top + h + keepPad;
+    if(entry.el.dataset.stub === '1'){
+      // 索引只用于缩小检查范围；最终是否恢复以实时矩形为准（索引会因封面加载过期）
+      if(end > top - h * 3 && start < top + h * 3){
+        const live = entry.el.getBoundingClientRect();
+        if(live.bottom > -keepPad && live.top < h + keepPad){
+          if(mmVirtRestore(entry)) restored = true;
+        }
+      }
+    } else if(end < top - h * 2 || start > top + h * 2){
+      mmVirtQueue.push(entry);
+    }
+  }
+  if(restored){
+    // 恢复会触发封面加载/高度变化，索引随即过期；再补一次扫描直到收敛（最多几轮，不会自激）
+    mmVirtIndexDirty = true;
+    setTimeout(() => { mmVirtInvalidate(); mmVirtSchedule(); }, 120);
+  }
+  if(mmVirtQueue.length && !mmVirtTick) mmVirtTick = requestAnimationFrame(mmVirtDrain);
+}
+
+function mmVirtSchedule(){
+  if(mmVirtTick) return;
+  mmVirtTick = requestAnimationFrame(mmVirtScan);
+}
+
+window.addEventListener('cft:model-layout-ready', () => { mmVirtInvalidate(); mmVirtSchedule(); });
+window.addEventListener('resize', () => { mmVirtInvalidate(); mmVirtSchedule(); });
+document.addEventListener('DOMContentLoaded', () => {
+  const vp = document.getElementById('mmMasonryViewport');
+  if(!vp) return;
+  let idleTimer = 0;
+  vp.addEventListener('scroll', () => {
+    mmVirtSchedule();
+    // 滚动停下后再校一次：封面陆续加载会改变卡片高度，索引需要刷新
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => { mmVirtInvalidate(); mmVirtSchedule(); }, 300);
+  }, { passive: true });
+});
+window.CFTMasonryVirtual = {
+  scan: () => { mmVirtInvalidate(); mmVirtScan(); },
+  setEnabled: (v) => { mmVirtEnabled = !!v; if(!v){ mmVirtQueue = []; } else { mmVirtInvalidate(); mmVirtSchedule(); } },
+  enabled: () => mmVirtEnabled,
+  stats: () => ({ stubbed: mmVirtFragments.size, indexed: mmVirtIndex ? mmVirtIndex.length : 0, queued: mmVirtQueue.length }),
+};
+
+
 $("#mmViewToggle").addEventListener("click", () => {
   state.mmView = state.mmView === "masonry" ? "list" : "masonry";
   $("#mmViewToggle").textContent = state.mmView === "masonry" ? "列表视图" : "瀑布流";

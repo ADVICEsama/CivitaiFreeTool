@@ -186,7 +186,7 @@ function closeMasonrySizeMenu(){
 
 function setMasonrySize(value,save=false) {
   const width=Math.max(140,Math.min(420,Math.round((Number(value)||220)/10)*10));
-  const previousWidth=state.cfg.masonry_card_width;
+  const previousWidth=(state.cfg||{}).masonry_card_width;   // state.cfg 可能尚未加载
   document.documentElement.style.setProperty('--model-card-width',width+'px');
   if(typeof state!=='undefined' && state.cfg)state.cfg.masonry_card_width=width;
   if(Number(previousWidth)!==width)window.dispatchEvent(new Event('cft:model-card-size'));
