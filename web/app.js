@@ -1714,8 +1714,10 @@ function mmMasonryColumns(root){
  const columns=getComputedStyle(root).gridTemplateColumns;
  return columns&&columns!=='none'?columns.split(' ').length:1;
 }
-const mmViewCache=new Map();let mmFilterRevision=0;
-function mmViewStamp(rows){return mmFilterRevision+'|'+JSON.stringify(rows.map(r=>[r.path,r.name,r.civitai_name,r.base,r.ver,r.size,r.author,r.type,r.upd]))+'|'+JSON.stringify(Object.fromEntries(Object.entries(state.cfg||{}).filter(([k])=>k.startsWith('model_')||k.startsWith('masonry_'))));}
+const mmViewCache=new Map();let mmFilterRevision=0;let mmFilterSignature=null;
+// 缓存键只放真正影响卡片外观的字段；has_cover / mtime / type_filter 也要放，
+// 否则换封面或替换文件后不会重绘。
+function mmViewStamp(rows){return mmFilterRevision+'|'+JSON.stringify(rows.map(r=>[r.path,r.name,r.civitai_name,r.base,r.ver,r.size,r.author,r.type,r.upd,r.has_cover,r.mtime,r.type_filter]))+'|'+JSON.stringify(Object.fromEntries(Object.entries(state.cfg||{}).filter(([k])=>k.startsWith('model_')||k.startsWith('masonry_'))));}
 function mmSyncCachedSelection(root){for(const card of root.querySelectorAll('.ms-card')){const on=state.mmChecked.has(card.dataset.path);card.classList.toggle('checked',on);card.setAttribute('aria-selected',String(on));}for(const row of root.querySelectorAll('tr[data-path]'))row.classList.toggle('sel-row',state.mmChecked.has(row.dataset.path));$('#mmCheckLabel').textContent='已勾选 '+state.mmChecked.size+' 个';}
 function renderMasonry(rows,restore={}) {
  $('#mmTableWrap').style.display='none';const root=$('#mmMasonry'),view=state.mmView,key=mmViewStamp(rows),version=++mmMasonryRenderVersion;
@@ -1823,7 +1825,20 @@ $("#mmTable tbody").addEventListener("click", (e) => {
 let mmFilterTimer = null;
 // 统一过滤：关键词 + 「只看有更新」
 function applyMmFilter() {
-  ++mmFilterRevision;mmViewCache.clear();
+  // 只有过滤条件本身变化时才让缓存键失效。
+  // 以前每次调用都 ++mmFilterRevision，导致"数据没变的重复扫描"也要把
+  // 362 张卡片整体重建一遍（实测卡顿 700~860ms）。
+  const signature = [
+    ($("#mmFilter").value || "").trim().toLowerCase(),
+    state.mmTypeF, state.mmBaseF, state.mmAuthorF, state.mmFolderF, state.mmStF,
+    !!state.mmPinnedOnly, !!state.mmUpdOnly,
+    !!(state.cfg || {}).model_pagination, Number((state.cfg || {}).model_page_size || 0),
+  ].join("\u0001");
+  if (signature !== mmFilterSignature) {
+    mmFilterSignature = signature;
+    ++mmFilterRevision;
+    mmViewCache.clear();
+  }
   const kw = $("#mmFilter").value.trim().toLowerCase();
   window.CFTModelManagement?.filterChanged();
   let rows = state.models;
@@ -4540,8 +4555,6 @@ function buildSettingsForm() {
   normalizeThemeConfig(state.cfg);
   buildWorkbenchSettings();
 }
-
-
 
 // 密码框小眼睛（切换明文显示）
 $("#settingsForm").addEventListener("click", (e) => {
