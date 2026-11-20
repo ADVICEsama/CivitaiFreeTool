@@ -15,9 +15,68 @@ import uuid
 
 import webview
 
-APP_VERSION = "3.0.25"
+APP_VERSION = "3.0.26"
 
 from functools import wraps
+
+# ===== 封面路径索引：模型路径 -> 封面路径（落盘复用，避免每次 15 次文件探测）=====
+def _cover_index_path():
+    return os.path.join(config.APP_DIR, "cover_index.json")
+
+_cover_index = None
+_cover_index_dirty = False
+
+
+def _cover_index_load():
+    global _cover_index
+    if _cover_index is None:
+        try:
+            with open(_cover_index_path(), "r", encoding="utf-8") as fh:
+                data = json.load(fh)
+            _cover_index = {str(k): str(v) for k, v in data.items()} if isinstance(data, dict) else {}
+        except Exception:
+            _cover_index = {}
+    return _cover_index
+
+
+def _cover_index_remember(model_path, cover_path):
+    global _cover_index_dirty
+    if not cover_path:
+        return
+    idx = _cover_index_load()
+    key = os.path.normcase(model_path)
+    if idx.get(key) != cover_path:
+        idx[key] = cover_path
+        _cover_index_dirty = True
+
+
+def _cover_index_save():
+    global _cover_index_dirty
+    if not _cover_index_dirty:
+        return
+    idx = _cover_index_load()
+    try:
+        tmp = _cover_index_path() + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as fh:
+            json.dump(idx, fh, ensure_ascii=False)
+        os.replace(tmp, _cover_index_path())
+        _cover_index_dirty = False
+    except Exception:
+        pass
+
+
+def _cover_for(model_path):
+    """优先用索引里的封面路径（一次 stat），失效才退回完整探测。"""
+    idx = _cover_index_load()
+    key = os.path.normcase(model_path)
+    cover = idx.get(key)
+    if cover and os.path.isfile(cover):
+        return cover
+    cover = model_manager.find_cover(model_path)
+    if cover:
+        _cover_index_remember(model_path, cover)
+    return cover
+
 
 API_KEY_REQUIRED_MSG = "请先在设置 → 目录与账号填写并保存 Civitai API Key"
 
@@ -1401,7 +1460,7 @@ class Api:
                         "url": meta.get("url", ""),
                         "trainedWords": tw,
                         "civitai_name": meta.get("name", ""),
-                        "has_cover": bool(model_manager.find_cover(f["path"])),
+                        "has_cover": bool(_cover_for(f["path"])),
                         "author": _cre,
                         "info": meta,
                     })
@@ -1409,6 +1468,7 @@ class Api:
                 self._model_scan_cache = new_cache
                 self._model_inventory = rows
                 self._apply_model_visibility()
+                _cover_index_save()
                 self.mm_scan_state["msg"] = "扫描完成：%d 个模型（共 %d 个）" % (len(self.mm_scan_state['rows']), len(rows))
             except Exception as e:
                 self.mm_scan_state["msg"] = "扫描失败: %s" % e
@@ -2620,7 +2680,7 @@ class Api:
         try:size=max(64,min(1280,int(size)))
         except (TypeError,ValueError):size=64
         for p in (paths or [])[:80]:
-            cover = model_manager.find_cover(p)
+            cover = _cover_for(p)
             if not cover or not os.path.exists(cover):
                 continue
             try:
@@ -2632,6 +2692,24 @@ class Api:
                 if hit:
                     out[p] = hit
                     continue
+                import hashlib as _hl
+                import base64 as _b64
+                _disk_dir = os.path.join(config.APP_DIR, "detail_thumb_cache")
+                _sig = "%s|%d|%d|%d" % (os.path.normcase(os.path.abspath(cover)), int(stt.st_mtime_ns), stt.st_size, int(size))
+                _disk_path = os.path.join(_disk_dir, "cov-%d-%s.jpg" % (int(size), _hl.sha1(_sig.encode("utf-8")).hexdigest()[:32]))
+                # 先读磁盘缩略图：重启软件后不再重新解码原图
+                if os.path.exists(_disk_path):
+                    try:
+                        with open(_disk_path, "rb") as _fh:
+                            _raw = _fh.read()
+                        if _raw:
+                            b64s = _b64.b64encode(_raw).decode()
+                            with self._cover_cache_lock:
+                                self._cover_cache[key] = b64s
+                            out[p] = b64s
+                            continue
+                    except Exception:
+                        pass
                 from PIL import Image
                 import io
                 import base64
@@ -2643,15 +2721,30 @@ class Api:
                 im.save(buf, "JPEG", quality=(94 if size>=640 else 88), subsampling=0 if size>=640 else 2)
                 im.close()
                 b64s = base64.b64encode(buf.getvalue()).decode()
+                # 写盘：下次启动直接读缩略图，不再解码原图
+                try:
+                    if not hasattr(self, "_cover_disk_ready"):
+                        os.makedirs(_disk_dir, exist_ok=True)
+                        self._cover_disk_count = len([n for n in os.listdir(_disk_dir) if n.startswith("cov-")])
+                        self._cover_disk_ready = True
+                    if getattr(self, "_cover_disk_count", 0) < 20000:
+                        _tmp = _disk_path + ".tmp"
+                        with open(_tmp, "wb") as _fh2:
+                            _fh2.write(buf.getvalue())
+                        os.replace(_tmp, _disk_path)
+                        self._cover_disk_count = getattr(self, "_cover_disk_count", 0) + 1
+                except Exception:
+                    pass
                 with self._cover_cache_lock:
                     self._cover_cache[key] = b64s
                     # Keep a bounded encoded cache, never thousands of decoded originals.
                     cache_bytes=sum(len(v) for v in self._cover_cache.values())
-                    while len(self._cover_cache)>192 or cache_bytes>32*1024*1024:
+                    while len(self._cover_cache)>2048 or cache_bytes>96*1024*1024:
                         oldest=next(iter(self._cover_cache));cache_bytes-=len(self._cover_cache.pop(oldest))
                 out[p] = b64s
             except Exception:
                 continue
+        _cover_index_save()
         return json.dumps(out, ensure_ascii=False)
 
     def get_settings_dirty(self):

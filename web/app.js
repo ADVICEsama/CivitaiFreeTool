@@ -1367,7 +1367,7 @@ function pollMmScan() {
       const cfg = await api.call('get_config'); if(cfg?.model_favorites)state.cfg.model_favorites=cfg.model_favorites;
       const alive=new Set(rows.map(r=>r.path));for(const set of [state.mmChecked,state.mmSel])for(const p of set)if(!alive.has(p))set.delete(p);
       try { const u=await api.call('get_model_updates');if(u?.items)applyUpdatePayload(u); } catch(_){}
-      applyMmFilter(); setStatus(status.msg || '扫描完成：'+rows.length+' 个模型'); $('#mmCount').textContent=rows.length+' 个';
+      applyMmFilter(); setStatus(status.msg || '扫描完成：'+rows.length+' 个模型'); $('#mmCount').textContent=rows.length+' 个'; try{mmPrefetchAllCovers();}catch(_){}
       break;
     }
   }catch(e){setStatus('读取扫描结果失败，请重试');}finally{mmScanPolling=false;}})();
@@ -1472,11 +1472,124 @@ const mmMissingCovers=new Set(),mmCoverEdges=new Map(),mmCoverRevisions=new Map(
 function mmInvalidateCover(path){state.coverCache.delete(path);mmMissingCovers.delete(path);mmCoverEdges.delete(path);mmCoverRevisions.set(path,(mmCoverRevisions.get(path)||0)+1);}let mmThumbObserver=null,mmThumbQueue=new Map(),mmThumbNodes=new Map(),mmThumbBusy=false;
 function mmRequiredCoverEdge(){const zoom=Number(document.documentElement.style.zoom)||1,dpr=Math.max(1,devicePixelRatio||1),width=state.mmView==='list'?Math.max(1024,($('#mmTableWrap')?.clientWidth||1200)*.65):Number(state.cfg.masonry_card_width||320);return Math.min(1280,Math.max(320,Math.ceil(width*zoom*dpr/64)*64));}
 function mmApplyThumb(path,source,phase){for(const img of mmThumbNodes.get(path)||[]){if(!img.isConnected||img.dataset.coverNear!=='true')continue;const wrap=img.closest('.ms-img-wrap');if(source&&img.getAttribute('src')!==source){img.onload=()=>{if(img.naturalWidth&&img.naturalHeight)img.style.aspectRatio=img.naturalWidth+'/'+img.naturalHeight;if(wrap)wrap.dataset.ph='ok';};img.onerror=()=>{img.removeAttribute('src');mmInvalidateCover(path);if(wrap)wrap.dataset.ph='fail';};img.src=source;}if(wrap)wrap.dataset.ph=phase;}}
-function mmTrimCoverCache(){let bytes=0;for(const v of state.coverCache.values())bytes+=v.length*2;while(state.coverCache.size>128||bytes>32*1024*1024){const key=state.coverCache.keys().next().value;if(key===undefined)break;bytes-=state.coverCache.get(key).length*2;state.coverCache.delete(key);mmCoverEdges.delete(key);}}
+function mmTrimCoverCache(){let bytes=0;for(const v of state.coverCache.values())bytes+=v.length*2;while(state.coverCache.size>mmPlan().cacheEntries||bytes>mmPlan().cacheMB*1024*1024){const key=state.coverCache.keys().next().value;if(key===undefined)break;bytes-=state.coverCache.get(key).length*2;state.coverCache.delete(key);mmCoverEdges.delete(key);}}
 async function mmPumpThumbs(){if(mmThumbBusy)return;mmThumbBusy=true;try{while(mmThumbQueue.size){if(!$('#page-models.active')||document.hidden){mmThumbQueue.clear();break;}const batch=[...mmThumbQueue.keys()].slice(0,4);batch.forEach(p=>mmThumbQueue.delete(p));const edge=mmRequiredCoverEdge(),missing=batch.filter(p=>(!state.coverCache.has(p)||(mmCoverEdges.get(p)||0)<edge)&&!mmMissingCovers.has(p));for(const p of batch)if(state.coverCache.has(p))mmApplyThumb(p,state.coverCache.get(p),'ok');if(missing.length){try{const revisions=new Map(missing.map(p=>[p,mmCoverRevisions.get(p)||0]));const raw=await api.call('get_covers',missing,edge),covers=typeof raw==='string'?JSON.parse(raw||'{}'):raw||{};for(const p of missing){if((mmCoverRevisions.get(p)||0)!==revisions.get(p))continue;if(covers[p]){const source='data:image/jpeg;base64,'+covers[p];state.coverCache.delete(p);state.coverCache.set(p,source);mmCoverEdges.set(p,edge);mmApplyThumb(p,source,'ok');}else{mmMissingCovers.add(p);mmApplyThumb(p,null,'none');}}mmTrimCoverCache();}catch(_){for(const p of missing)mmApplyThumb(p,null,'fail');}}await new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0)));}}finally{mmThumbBusy=false;}}
 function mmObserveThumbs(scope){for(const img of scope.querySelectorAll('img.ms-img[data-path],img.thumb[data-path]')){img.loading='lazy';img.decoding='async';const path=img.dataset.path;if(!mmThumbNodes.has(path))mmThumbNodes.set(path,new Set());mmThumbNodes.get(path).add(img);mmThumbObserver.observe(img.closest('.ms-card,tr[data-path]')||img);}}
 function mmStartThumbs(scope){mmThumbObserver?.disconnect();mmThumbQueue.clear();mmThumbNodes=new Map();mmThumbObserver=new IntersectionObserver(entries=>{for(const e of entries)for(const img of e.target.matches('img')?[e.target]:e.target.querySelectorAll('img.ms-img[data-path],img.thumb[data-path]')){const path=img.dataset.path;img.dataset.coverNear=String(e.isIntersecting);if(!e.isIntersecting){if(!e.target.isConnected||!$('#page-models').classList.contains('active'))continue;if(img.naturalWidth&&img.naturalHeight)img.style.aspectRatio=img.naturalWidth+'/'+img.naturalHeight;img.removeAttribute('src');mmThumbQueue.delete(path);continue;}if(state.coverCache.has(path)){mmApplyThumb(path,state.coverCache.get(path),'ok');}if(!mmMissingCovers.has(path)&&(!state.coverCache.has(path)||(mmCoverEdges.get(path)||0)<mmRequiredCoverEdge()))mmThumbQueue.set(path,true);}mmPumpThumbs();},{rootMargin:'250px'});mmObserveThumbs(scope);}
 async function loadThumbs(start){if(!start)mmStartThumbs($('#mmTable'));}
+
+// ===== 全量封面预取 + 首次启动自动扫描 =====
+// 原管线只给视口附近（rootMargin 250px）的卡片加载封面，滚动离开还会把 src 去掉，
+// 所以远一点的卡片永远是空的。这里在扫描完成后按批把【全部】模型的封面取回来放进缓存。
+let mmPrefetchToken = 0;
+
+// ===== 按性能档位分级：档位越高，封面预取越激进、缓存越大、占位缓冲越宽 =====
+const MM_PROFILE_PLAN = {
+  extreme:  { prefetch: true,  batch: 32, gap: 8,  cacheEntries: 1536, cacheMB: 128, keepPad: 0.60 },
+  high:     { prefetch: true,  batch: 24, gap: 12, cacheEntries: 1024, cacheMB: 96,  keepPad: 0.50 },
+  balanced: { prefetch: true,  batch: 16, gap: 24, cacheEntries: 512,  cacheMB: 48,  keepPad: 0.45 },
+  low:      { prefetch: false, batch: 8,  gap: 32, cacheEntries: 128,  cacheMB: 32,  keepPad: 0.35 },
+};
+function mmPlan(){
+  const name = document.documentElement.dataset.performanceProfile || '';
+  return MM_PROFILE_PLAN[name] || MM_PROFILE_PLAN.high;
+}
+function mmPlanLabel(){
+  const name = document.documentElement.dataset.performanceProfile || '';
+  return ({ extreme: '极致', high: '高', balanced: '均衡', low: '低' })[name] || '自定义';
+}
+
+function mmAllCoverPaths(){
+  const rows = (Array.isArray(state.display) && state.display.length) ? state.display : (state.models || []);
+  return rows.map(r => r && r.path).filter(Boolean);
+}
+
+async function mmPrefetchAllCovers(){
+  const token = ++mmPrefetchToken;
+  if(document.hidden) return { skipped: true };
+  const plan = mmPlan();
+  if(!plan.prefetch){
+    setStatus(`性能档位「${mmPlanLabel()}」：封面仅在滚动到卡片时按需加载`);
+    return { total: 0, skipped: "profile" };
+  }
+  const edge = mmRequiredCoverEdge();
+  const all = mmAllCoverPaths();
+  if(!all.length) return { total: 0 };
+  const todo = all.filter(p => (!state.coverCache.has(p) || (mmCoverEdges.get(p) || 0) < edge) && !mmMissingCovers.has(p));
+  if(!todo.length){
+    setStatus(`封面已就绪：${all.length} 个模型`);
+    return { total: all.length, done: 0 };
+  }
+  const BATCH = plan.batch;
+  let done = 0;
+  for(let i = 0; i < todo.length; i += BATCH){
+    if(token !== mmPrefetchToken) return { cancelled: true, done, total: todo.length };
+    if(document.hidden) return { paused: true, done, total: todo.length };
+    const batch = todo.slice(i, i + BATCH);
+    try{
+      const raw = await api.call('get_covers', batch, edge);
+      const covers = typeof raw === 'string' ? JSON.parse(raw || '{}') : (raw || {});
+      for(const p of batch){
+        if(covers[p]){
+          const src = 'data:image/jpeg;base64,' + covers[p];
+          state.coverCache.set(p, src);
+          mmCoverEdges.set(p, edge);
+          mmApplyThumb(p, src, 'ok');
+        }else{
+          mmMissingCovers.add(p);
+          mmApplyThumb(p, null, 'none');
+        }
+      }
+    }catch(_){ /* 单批失败不影响其它批 */ }
+    done = Math.min(i + batch.length, todo.length);
+    setStatus(`正在加载封面 ${done} / ${todo.length}（${mmPlanLabel()}）`);
+    await new Promise(r => setTimeout(r, plan.gap));
+  }
+  mmTrimCoverCache();
+  _applyCoverCache(document);
+  const ok = all.length - mmMissingCovers.size;
+  setStatus(`封面加载完成：${ok} / ${all.length}`);
+  return { total: all.length, done };
+}
+
+// 首次打开（本地还没有扫描结果）时自动扫描一次，并把进度写在左下角状态栏
+let mmAutoScanDone = false;
+async function mmAutoScanIfEmpty(){
+  if(mmAutoScanDone) return;
+  mmAutoScanDone = true;
+  if(state.cfg && state.cfg.onboarding_done === false) return;   // 引导未完成时不打扰
+  const rows = Array.isArray(state.models) ? state.models : [];
+  if(rows.length){
+    mmPrefetchAllCovers();                                       // 有缓存：直接补封面
+    return;
+  }
+  setStatus('正在自动扫描模型 ...');
+  try{
+    await api.call('scan_models');
+    pollMmScan();                                                // 完成后会自动触发全量封面
+  }catch(_){
+    setStatus('自动扫描未开始，可手动点「扫描模型」');
+  }
+}
+
+// 切性能档位后立即生效：调下限、换批大小，必要时重新预取
+let mmPlanSnapshot = null;
+function mmSyncPlanOnProfileChange(){
+  const name = document.documentElement.dataset.performanceProfile || '';
+  if(name === mmPlanSnapshot) return;
+  mmPlanSnapshot = name;
+  mmTrimCoverCache();                              // 换到低档时把缓存收回来
+  if(mmPlan().prefetch) mmPrefetchAllCovers();     // 换到高档时补预取
+}
+window.addEventListener('cft:config-saved', () => setTimeout(mmSyncPlanOnProfileChange, 250));
+window.addEventListener('cft:ui-ready', () => {
+  setTimeout(() => { mmAutoScanIfEmpty(); }, 700);
+});
+window.addEventListener('cft:model-layout-ready', () => {
+  // 渲染完成后补一次可见封面的应用（缓存里已有的话立刻上屏）
+  _applyCoverCache(document);
+});
+
 
 // ===== 表头列宽拖拽（v2.1.74 重做）=====
 // 规则：拖动某列右缘的分隔线 → 调整【该列】；若该列是"模型信息"（弹性 auto 列），则调整它右边那一列。
@@ -1833,7 +1946,7 @@ function mmVirtScan(){
     if(!saved.card.isConnected) mmVirtFragments.delete(path);
   }
   const top = vp.scrollTop, h = vp.clientHeight;
-  const keepPad = h * 0.5;    // 视口 ±0.5 屏保持内容（越小，跳转时要重建的卡片越少）
+  const keepPad = h * mmPlan().keepPad;   // 内容保留缓冲按性能档位调节
   let restored = false;
   mmVirtQueue = [];
   for(const entry of mmVirtIndex){
