@@ -1475,7 +1475,7 @@ function mmApplyThumb(path,source,phase){for(const img of mmThumbNodes.get(path)
 function mmTrimCoverCache(){let bytes=0;for(const v of state.coverCache.values())bytes+=v.length*2;while(state.coverCache.size>mmPlan().cacheEntries||bytes>mmPlan().cacheMB*1024*1024){const key=state.coverCache.keys().next().value;if(key===undefined)break;bytes-=state.coverCache.get(key).length*2;state.coverCache.delete(key);mmCoverEdges.delete(key);}}
 async function mmPumpThumbs(){if(mmThumbBusy)return;mmThumbBusy=true;try{while(mmThumbQueue.size){if(!$('#page-models.active')||document.hidden){mmThumbQueue.clear();break;}const batch=[...mmThumbQueue.keys()].slice(0,4);batch.forEach(p=>mmThumbQueue.delete(p));const edge=mmRequiredCoverEdge(),missing=batch.filter(p=>(!state.coverCache.has(p)||(mmCoverEdges.get(p)||0)<edge)&&!mmMissingCovers.has(p));for(const p of batch)if(state.coverCache.has(p))mmApplyThumb(p,state.coverCache.get(p),'ok');if(missing.length){try{const revisions=new Map(missing.map(p=>[p,mmCoverRevisions.get(p)||0]));const raw=await api.call('get_covers',missing,edge),covers=typeof raw==='string'?JSON.parse(raw||'{}'):raw||{};for(const p of missing){if((mmCoverRevisions.get(p)||0)!==revisions.get(p))continue;if(covers[p]){const source='data:image/jpeg;base64,'+covers[p];state.coverCache.delete(p);state.coverCache.set(p,source);mmCoverEdges.set(p,edge);mmApplyThumb(p,source,'ok');}else{mmMissingCovers.add(p);mmApplyThumb(p,null,'none');}}mmTrimCoverCache();}catch(_){for(const p of missing)mmApplyThumb(p,null,'fail');}}await new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0)));}}finally{mmThumbBusy=false;}}
 function mmObserveThumbs(scope){for(const img of scope.querySelectorAll('img.ms-img[data-path],img.thumb[data-path]')){img.loading='lazy';img.decoding='async';const path=img.dataset.path;if(!mmThumbNodes.has(path))mmThumbNodes.set(path,new Set());mmThumbNodes.get(path).add(img);mmThumbObserver.observe(img.closest('.ms-card,tr[data-path]')||img);}}
-function mmStartThumbs(scope){mmThumbObserver?.disconnect();mmThumbQueue.clear();mmThumbNodes=new Map();mmThumbObserver=new IntersectionObserver(entries=>{for(const e of entries)for(const img of e.target.matches('img')?[e.target]:e.target.querySelectorAll('img.ms-img[data-path],img.thumb[data-path]')){const path=img.dataset.path;img.dataset.coverNear=String(e.isIntersecting);if(!e.isIntersecting){if(!e.target.isConnected||!$('#page-models').classList.contains('active'))continue;if(img.naturalWidth&&img.naturalHeight)img.style.aspectRatio=img.naturalWidth+'/'+img.naturalHeight;img.removeAttribute('src');mmThumbQueue.delete(path);continue;}if(state.coverCache.has(path)){mmApplyThumb(path,state.coverCache.get(path),'ok');}if(!mmMissingCovers.has(path)&&(!state.coverCache.has(path)||(mmCoverEdges.get(path)||0)<mmRequiredCoverEdge()))mmThumbQueue.set(path,true);}mmPumpThumbs();},{rootMargin:'250px'});mmObserveThumbs(scope);}
+function mmStartThumbs(scope){mmThumbObserver?.disconnect();mmThumbQueue.clear();mmThumbNodes=new Map();mmThumbObserver=new IntersectionObserver(entries=>{for(const e of entries)for(const img of e.target.matches('img')?[e.target]:e.target.querySelectorAll('img.ms-img[data-path],img.thumb[data-path]')){const path=img.dataset.path;img.dataset.coverNear=String(e.isIntersecting);if(!e.isIntersecting){if(mmKeepCoversInMemory())continue;if(!e.target.isConnected||!$('#page-models').classList.contains('active'))continue;if(img.naturalWidth&&img.naturalHeight)img.style.aspectRatio=img.naturalWidth+'/'+img.naturalHeight;img.removeAttribute('src');mmThumbQueue.delete(path);continue;}if(state.coverCache.has(path)){mmApplyThumb(path,state.coverCache.get(path),'ok');}if(!mmMissingCovers.has(path)&&(!state.coverCache.has(path)||(mmCoverEdges.get(path)||0)<mmRequiredCoverEdge()))mmThumbQueue.set(path,true);}mmPumpThumbs();},{rootMargin:'250px'});mmObserveThumbs(scope);}
 async function loadThumbs(start){if(!start)mmStartThumbs($('#mmTable'));}
 
 // ===== 全量封面预取 + 首次启动自动扫描 =====
@@ -1485,11 +1485,17 @@ let mmPrefetchToken = 0;
 
 // ===== 按性能档位分级：档位越高，封面预取越激进、缓存越大、占位缓冲越宽 =====
 const MM_PROFILE_PLAN = {
-  extreme:  { prefetch: true,  batch: 32, gap: 8,  cacheEntries: 1536, cacheMB: 128, keepPad: 0.60 },
-  high:     { prefetch: true,  batch: 24, gap: 12, cacheEntries: 1024, cacheMB: 96,  keepPad: 0.50 },
-  balanced: { prefetch: true,  batch: 16, gap: 24, cacheEntries: 512,  cacheMB: 48,  keepPad: 0.45 },
-  low:      { prefetch: false, batch: 8,  gap: 32, cacheEntries: 128,  cacheMB: 32,  keepPad: 0.35 },
+  // keepInMemory：为 true 时封面常驻内存，卡片滚出视口也不清 src，滚回来立刻可见
+  // keepInMemory：封面数据常驻内存（滚动回来不再向后端取图）；
+  // keepPad 控制实际挂在 DOM 里的图数量——挂得越多滚动越慢，实测 0.5~0.6 屏最平衡。
+  // virtualize：视口外占位。滚回上方时恢复不可靠（会出现空白卡），默认关闭；
+  // 需要时可加 ?virtual=1 或把下面改成 true 做实验。
+  extreme:  { prefetch: true,  batch: 32, gap: 8,  cacheEntries: 4096, cacheMB: 256, keepPad: 0.6, keepInMemory: true,  virtualize: false },
+  high:     { prefetch: true,  batch: 24, gap: 12, cacheEntries: 2048, cacheMB: 192, keepPad: 0.55, keepInMemory: true,  virtualize: false },
+  balanced: { prefetch: true,  batch: 16, gap: 24, cacheEntries: 512,  cacheMB: 48,  keepPad: 0.45, keepInMemory: true,  virtualize: false },
+  low:      { prefetch: false, batch: 8,  gap: 32, cacheEntries: 256,  cacheMB: 64,  keepPad: 0.35, keepInMemory: false, virtualize: false },
 };
+function mmKeepCoversInMemory(){ return mmPlan().keepInMemory === true; }
 function mmPlan(){
   const name = document.documentElement.dataset.performanceProfile || '';
   return MM_PROFILE_PLAN[name] || MM_PROFILE_PLAN.high;
@@ -1864,6 +1870,8 @@ function mmVirtSupported(){
   if(!root || !vp) return false;
   if(state.mmView !== 'masonry') return false;
   if(root.dataset.rendering === 'true') return false;
+  const forced = /[?&]virtual=1/.test(location.search);
+  if(!forced && mmPlan().virtualize !== true) return false;
   return true;
 }
 function mmVirtInvalidate(){ mmVirtIndexDirty = true; }
@@ -1946,7 +1954,7 @@ function mmVirtScan(){
     if(!saved.card.isConnected) mmVirtFragments.delete(path);
   }
   const top = vp.scrollTop, h = vp.clientHeight;
-  const keepPad = h * mmPlan().keepPad;   // 内容保留缓冲按性能档位调节
+  const keepPad = h * mmPlan().keepPad;   // 内容保留缓冲按性能档位调节（越大越少恢复，但挂载的图更多）
   let restored = false;
   mmVirtQueue = [];
   for(const entry of mmVirtIndex){
@@ -1979,17 +1987,22 @@ function mmVirtSchedule(){
 
 window.addEventListener('cft:model-layout-ready', () => { mmVirtInvalidate(); mmVirtSchedule(); });
 window.addEventListener('resize', () => { mmVirtInvalidate(); mmVirtSchedule(); });
-document.addEventListener('DOMContentLoaded', () => {
+// 绑定滚动监听：脚本可能在 DOMContentLoaded 之后才执行，所以立即绑一次，
+// 并在布局就绪/重渲染后再绑（元素可能被替换），保证滚动一定能触发占位与恢复。
+let mmVirtIdleTimer = 0;
+function mmVirtBindScroll(){
   const vp = document.getElementById('mmMasonryViewport');
-  if(!vp) return;
-  let idleTimer = 0;
+  if(!vp || vp.dataset.virtBound === '1') return;
+  vp.dataset.virtBound = '1';
   vp.addEventListener('scroll', () => {
     mmVirtSchedule();
-    // 滚动停下后再校一次：封面陆续加载会改变卡片高度，索引需要刷新
-    clearTimeout(idleTimer);
-    idleTimer = setTimeout(() => { mmVirtInvalidate(); mmVirtSchedule(); }, 300);
+    clearTimeout(mmVirtIdleTimer);
+    mmVirtIdleTimer = setTimeout(() => { mmVirtInvalidate(); mmVirtSchedule(); }, 250);
   }, { passive: true });
-});
+}
+if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mmVirtBindScroll);
+else mmVirtBindScroll();
+window.addEventListener('cft:model-layout-ready', mmVirtBindScroll);
 window.CFTMasonryVirtual = {
   scan: () => { mmVirtInvalidate(); mmVirtScan(); },
   setEnabled: (v) => { mmVirtEnabled = !!v; if(!v){ mmVirtQueue = []; } else { mmVirtInvalidate(); mmVirtSchedule(); } },
