@@ -30,8 +30,8 @@ def main():
     if remote!=head:raise RuntimeError('origin/main 未包含当前提交；请先安全推送源码')
     manifest=json.loads((args.assets_dir/'release_assets.json').read_text(encoding='utf-8'))
     if manifest['version']!=version or manifest['commit']!=head:raise RuntimeError('附件清单与版本或源码提交不一致')
-    required={'CivitaiFreeToolWeb-'+version+'.exe','CivitaiFreeTool-Windows-'+tag+'.zip','CivitaiFreeTool-ChromeExtension-'+tag+'.zip','CivitaiFreeTool-FirefoxExtension-'+tag+'.zip','CivitaiFreeTool-Source-'+tag+'.zip','SHA256SUMS.txt'}
-    if {a['name'] for a in manifest['assets']}!=required:raise RuntimeError('缺少必要附件')
+    required={'CivitaiFreeToolWeb-'+version+'-Standalone.exe','CivitaiFreeToolWeb-'+version+'-Setup.exe','CivitaiFreeTool-'+tag+'-Portable.zip','CivitaiFreeTool-ChromeExtension-'+tag+'.zip','CivitaiFreeTool-FirefoxExtension-'+tag+'.zip','CivitaiFreeTool-Source-'+tag+'.zip','SHA256SUMS.txt'}
+    if not required<={a['name'] for a in manifest['assets']}:raise RuntimeError('缺少必要附件')
     for a in manifest['assets']:
         data=(args.assets_dir/a['name']).read_bytes()
         if len(data)!=a['size'] or hashlib.sha256(data).hexdigest()!=a['sha256']:raise RuntimeError('本地附件校验失败: '+a['name'])

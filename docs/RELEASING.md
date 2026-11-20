@@ -8,7 +8,7 @@
 4. 校验 EXE 中的页面、后端版本、原生 DLL、托盘与 Tcl/Tk。备份旧 EXE 后替换本机安装，确认原生窗口启动。
 5. 只提交应用源码、长期测试与发布文档；**不能上传 API Key、用户配置、任务/历史 JSON、图片缓存或用户模型/素材目录**。
 6. 正常推送 main，不强推。附件清单须绑定这次提交的完整 SHA。
-7. Release 附件为版本号 EXE、Windows 便携 ZIP、Chrome 扩展 ZIP、Firefox 扩展 ZIP、源码 ZIP、SHA256SUMS.txt；扩展 ZIP 的 manifest.json 必须位于根目录，不嵌套旧 ZIP。
+7. Release 附件按发行形态命名：`CivitaiFreeToolWeb-<版本>-Standalone.exe`（纯 EXE）、`CivitaiFreeToolWeb-<版本>-Setup.exe`（安装器）、`CivitaiFreeTool-<版本>-Portable.zip`（免安装 exe+文件），另加 Chrome 扩展 ZIP、Firefox 扩展 ZIP、源码 ZIP、SHA256SUMS.txt；扩展 ZIP 的 manifest.json 必须位于根目录，不嵌套旧 ZIP。
 8. `python scripts/release_github.py <版本> docs/releases/v<版本>.md --assets-dir <附件目录>` 只发布完整、哈希匹配的附件：先草稿，上传并验证远端 SHA256/大小，全部通过后才公开。出错保持草稿，不把“建了 Release”当作完成。
 
 认证使用环境变量或 Git Credential Manager，认证信息不写日志、源码、清单或聊天。Firefox 包未签名，仅支持临时加载；永久安装需要 Mozilla 签名。
