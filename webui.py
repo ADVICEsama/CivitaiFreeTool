@@ -15,7 +15,7 @@ import uuid
 
 import webview
 
-APP_VERSION = "3.0.27"
+APP_VERSION = "3.0.28"
 
 from functools import wraps
 
@@ -61,6 +61,73 @@ def _cover_index_save():
             json.dump(idx, fh, ensure_ascii=False)
         os.replace(tmp, _cover_index_path())
         _cover_index_dirty = False
+    except Exception:
+        pass
+
+
+# ===== 封面写盘：同时满足 SD WebUI 的预览命名与 CFT 自己的 .cover.png =====
+_WEBUI_PREVIEW_EXTS = ("png", "jpg", "jpeg", "webp", "gif")
+
+
+def _save_cover_image(image, dest):
+    low = dest.lower()
+    if low.endswith((".jpg", ".jpeg")):
+        image.save(dest, "JPEG", quality=95)
+    elif low.endswith(".webp"):
+        image.save(dest, "WEBP", quality=95)
+    else:
+        image.save(dest, "PNG")
+
+
+def _write_cover_everywhere(model_path, image):
+    """SD WebUI 只认 <模型>.<ext> / <模型>.preview.<ext>，不认 CFT 的 .cover.png。
+
+    这里把同一张图写进：
+      1) 所有已存在的 WebUI 命名文件（覆盖掉旧的，保证 WebUI 里立刻变）
+      2) 没有的话新建 <模型>.preview.png（WebUI 一定会读到）
+      3) 始终同步 <模型>.cover.png（CFT 自己的最高优先级）
+    返回写过的文件列表。
+    """
+    base, _ = os.path.splitext(model_path)
+    written = []
+    for ext in _WEBUI_PREVIEW_EXTS:
+        for cand in ("%s.%s" % (base, ext), "%s.preview.%s" % (base, ext)):
+            if os.path.isfile(cand):
+                try:
+                    _save_cover_image(image, cand)
+                    written.append(cand)
+                except Exception:
+                    pass
+    if not written:
+        try:
+            target = base + ".preview.png"
+            _save_cover_image(image, target)
+            written.append(target)
+        except Exception:
+            pass
+    cft_target = base + ".cover.png"
+    if not any(os.path.abspath(w) == os.path.abspath(cft_target) for w in written):
+        try:
+            _save_cover_image(image, cft_target)
+            written.append(cft_target)
+        except Exception:
+            pass
+    return written
+
+
+def _cover_index_forget(model_path):
+    """封面文件被改写后，删掉索引里的旧记录，下一次 _cover_for 会重新探测。"""
+    idx = _cover_index_load()
+    if idx.pop(os.path.normcase(model_path), None) is not None:
+        _cover_index_save()
+
+
+def _cover_memory_forget(client, model_path):
+    """丢掉该模型在内存里的封面缓存（键形如 (path, mtime, size, edge)）。"""
+    try:
+        with client._cover_cache_lock:
+            for k in [k for k in client._cover_cache if k[0] == model_path]:
+                client._cover_cache.pop(k, None)
     except Exception:
         pass
 
@@ -1891,20 +1958,18 @@ class Api:
             in_imgs = idir.lower().startswith((bimg + _os.sep).lower())
             if cached_data is None and not (same_dir or in_imgs):
                 return {"ok": False, "msg": "图片不在该模型目录内，已拒绝"}
-            target=base+'.cover.png'
-            import tempfile
             from PIL import ImageOps
-            fd,tmp=tempfile.mkstemp(dir=mdir,prefix='.cft-cover-',suffix='.png');_os.close(fd)
-            try:
-                with Image.open(source) as original:
-                    image=ImageOps.exif_transpose(original).convert('RGB');image.save(tmp,'PNG');image.close()
-                _os.replace(tmp,target)
-                for row in (getattr(self, '_model_inventory', []) + getattr(self, 'model_rows', [])):
-                    if row.get('path') == path:
-                        row['has_cover'] = True
-            finally:
-                if _os.path.exists(tmp):_os.unlink(tmp)
-            return {"ok": True, "msg": "已设为缩略图：" + _os.path.basename(target), "cover": target}
+            with Image.open(source) as original:
+                image = ImageOps.exif_transpose(original).convert('RGB')
+            written = _write_cover_everywhere(path, image)
+            image.close()
+            _cover_index_forget(path)
+            _cover_memory_forget(self, path)
+            for row in (getattr(self, '_model_inventory', []) + getattr(self, 'model_rows', [])):
+                if row.get('path') == path:
+                    row['has_cover'] = True
+            names = "、".join(_os.path.basename(w) for w in written) or "无"
+            return {"ok": True, "msg": "已更新缩略图（含 WebUI 预览）：" + names, "cover": written[0] if written else None}
         except Exception as e:
             return {"ok": False, "msg": "设置失败: %s" % str(e)[:120]}
 
@@ -4395,16 +4460,22 @@ class Api:
             return {"ok": False, "msg": "图片过大（>20MB）"}
         base, _ = os.path.splitext(path)
         dest = base + ".preview.png"
+        # 若模型旁边已有本软件管理的封面文件，直接覆盖那一张，
+        # 避免留下两张互相冲突的图（find_cover 只认优先级最高的那张）。
         try:
             from PIL import Image
             import io as _io
             im = Image.open(_io.BytesIO(raw))
             im = im.convert("RGB")
             im.thumbnail((1024, 1024), Image.LANCZOS)
-            im.save(dest, "PNG")
         except Exception as e:
             return {"ok": False, "msg": "图片处理失败: %s" % e}
-        return {"ok": True, "msg": "封面已更新: %s" % os.path.basename(dest)}
+        written = _write_cover_everywhere(path, im)
+        im.close()
+        _cover_index_forget(path)
+        _cover_memory_forget(self, path)
+        names = "、".join(os.path.basename(w) for w in written) or "无"
+        return {"ok": True, "msg": "封面已更新（含 WebUI 预览）：" + names, "cover": written[0] if written else None}
 
     def mm_restore_organize(self, preview=True):
         """恢复误整理：日志反向 + 非标准目录扫描。preview=True 只列不执行。

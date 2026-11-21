@@ -3556,6 +3556,10 @@ async function showModelDetail(path, historyId = "", options = {}) {
         setStatus("上传封面中 …");
         const res = await api.call("set_custom_cover", path, b64);
         setStatus(res && res.msg ? res.msg : "封面已更新");
+        if (res && res.ok !== false) {
+          // 清掉旧封面并让当前卡片立刻重新取图
+          try { mmInvalidateCover(path); if (typeof mmThumbQueue !== "undefined") { mmThumbQueue.set(path, true); mmPumpThumbs(); } } catch (e) {}
+        }
         showModelDetail(path);
       };
       reader.readAsDataURL(f);
